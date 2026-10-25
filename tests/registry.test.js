@@ -25,7 +25,7 @@ describe('реестр модулей', () => {
       m.color = color;
     }
     expect(skippedModules).toEqual([]);
-  });
+  }, 60_000); // все 16 модулей целиком — под общей нагрузкой тестов дольше 5 с
   it('шаблон модуля проходит проверку контракта', () => {
     expect(validate(template)).toBe(null);
   });
