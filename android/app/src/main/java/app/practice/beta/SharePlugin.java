@@ -81,10 +81,27 @@ public class SharePlugin extends Plugin {
         return p == null ? "file" : p;
     }
 
-    // Отправить файл: { name, data (base64), title } → системный выбор приложения
+    // Большой файл — частями до отправки: { name, data (base64), append } — первая часть очищает папку
+    @PluginMethod
+    public void put(PluginCall call) {
+        String name = call.getString("name", "file").replaceAll("[\\\\/:*?\"<>|]", "_");
+        boolean append = Boolean.TRUE.equals(call.getBoolean("append", false));
+        try {
+            File dir = new File(getContext().getCacheDir(), "share");
+            if (!dir.exists()) dir.mkdirs();
+            if (!append) { File[] old = dir.listFiles(); if (old != null) for (File f : old) f.delete(); }
+            try (FileOutputStream out = new FileOutputStream(new File(dir, name), append)) {
+                out.write(Base64.decode(call.getString("data", ""), Base64.DEFAULT));
+            }
+            call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage()); }
+    }
+
+    // Отправить файл: { name, data (base64), title } → системный выбор приложения; ready — файл уже собран put
     @PluginMethod
     public void send(PluginCall call) {
         String name = call.getString("name", "songs.melete").replaceAll("[\\\\/:*?\"<>|]", "_");
+        boolean ready = Boolean.TRUE.equals(call.getBoolean("ready", false));
         String data = call.getString("data", "");
         String title = call.getString("title", "Melete");
         String text = call.getString("text", "");
@@ -92,11 +109,13 @@ public class SharePlugin extends Plugin {
         try {
             File dir = new File(getContext().getCacheDir(), "share");
             if (!dir.exists()) dir.mkdirs();
-            File[] old = dir.listFiles();
-            if (old != null) for (File f : old) f.delete();
             File f = new File(dir, name);
-            try (FileOutputStream out = new FileOutputStream(f)) {
-                out.write(Base64.decode(data, Base64.DEFAULT));
+            if (!ready) {
+                File[] old = dir.listFiles();
+                if (old != null) for (File o : old) o.delete();
+                try (FileOutputStream out = new FileOutputStream(f)) {
+                    out.write(Base64.decode(data, Base64.DEFAULT));
+                }
             }
             Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
             Intent send = new Intent(Intent.ACTION_SEND);

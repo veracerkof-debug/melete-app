@@ -3,7 +3,8 @@
 //   • плавающая кнопка поверх других приложений (FloatService) — пауза и каждый звучащий источник: громкость и вкл/выкл;
 //   • всплывающее окно — режим «картинка в картинке»: пока открыт инструмент и что-то звучит, при выходе на рабочий стол
 //     окно приложения становится маленьким, его можно двигать и менять размер.
-// Каждое — переключателем в «Модулях и функциях → Работа в фоне» (settings.bgCtl: notify, float, pip; по умолчанию вкл).
+// Каждое — переключателем в «Модулях и функциях → Работа в фоне» (settings.bgCtl: notify, float — по умолчанию вкл;
+// всплывающее окно — по умолчанию выкл, решение автора 25.10.2026: выход на рабочий стол — это выход; включённое — pipOn).
 // Пауза — заморозка общего звукового контекста (метроном, пэды, инструменты и медиа замирают и продолжают с того же места).
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../i18n/index.js';
@@ -13,8 +14,9 @@ import { log } from './log.js';
 
 const P = Capacitor.isNativePlatform() ? registerPlugin('Player') : null;
 export const playerAvailable = () => !!P;
-export const BGCTL_DEF = { notify: true, float: true, pip: true };
-export const bgCtl = (st) => ({ ...BGCTL_DEF, ...(st.bgCtl || {}) });
+export const BGCTL_DEF = { notify: true, float: true, pip: false };
+// pip — только явно включённое (pipOn): прежнее «pip: true» сохранялось само при правке других переключателей
+export const bgCtl = (st) => ({ ...BGCTL_DEF, ...(st.bgCtl || {}), pip: !!(st.bgCtl && st.bgCtl.pipOn) });
 export const canOverlay = () => (P ? P.canOverlay().then((r) => !!(r && r.ok)).catch(() => false) : Promise.resolve(false));
 export const askOverlay = () => P && P.askOverlay().catch(() => {});
 

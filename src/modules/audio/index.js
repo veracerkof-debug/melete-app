@@ -1198,7 +1198,7 @@ function menuSheet(id) {
   const body = () => {
     const songs = ctx.songs();
     return ui.snav(x.name) + '<div class="mlmh">' + artHTML(x, 'big') + '<div><b>' + esc(x.name) + '</b><div class="l2" style="font-size:13px">' + [x.dur ? fmtT(x.dur) : '', sizeMb(x)].filter(Boolean).join(' · ') +
-      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
+      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="send">' + t('shareRec') + '</button><button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
       '<div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>';
@@ -1210,8 +1210,19 @@ function menuSheet(id) {
     if (m === 'play') { load(x); playEl(); sh.close(); render(); }
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
+    else if (m === 'send') shareRec(x, b);
     else if (m === 'del') { sh.close(); removeTrack(x); }
   }));
+}
+
+// Поделиться записью (Telegram, почта, другое приложение — системный выбор; на компьютере — «Сохранить как»): файл как есть
+async function shareRec(x, btn) {
+  if (!x.blob) return;
+  btn.disabled = true;
+  try {
+    const type = x.type || (x.video ? 'video/mp4' : 'audio/wav');
+    await ctx.sendFile(new Uint8Array(await x.blob.arrayBuffer()), x.name, x.name, type);
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(ctx.t('shareFail')); } finally { btn.disabled = false; }
 }
 
 // Запись MIDI: проиграть в инструменте, отправить файлом .mid, переименовать, удалить

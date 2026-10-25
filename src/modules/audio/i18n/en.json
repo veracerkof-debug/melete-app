@@ -246,5 +246,7 @@
   "rpre.title": "Speed steps",
   "rpre.aria": "Speed {p}%",
   "rpre.step": "Step {n}",
-  "rpre.def": "Reset: 50 · 75 · 90 · 100"
+  "rpre.def": "Reset: 50 · 75 · 90 · 100",
+  "shareRec": "Share",
+  "shareFail": "Could not share the recording"
 }

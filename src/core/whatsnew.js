@@ -18,6 +18,9 @@ export const NEWS = [
   { n: 5, d: '2026-10-25', ru: ['Диктофон: исправлена запись длиннее 8 секунд — начало больше не повторяется по кругу', 'Диктофон: исходники прошлых записей можно открыть снова и сохранить («Записи в памяти диктофона»)'],
     en: ['Recorder: recordings longer than 8 seconds are fixed — the beginning no longer repeats', 'Recorder: originals of earlier recordings can be reopened and saved (“Recordings in recorder memory”)'],
     uz: ['Diktofon: 8 soniyadan uzun yozuv tuzatildi — boshi endi takrorlanmaydi', 'Diktofon: oldingi yozuvlarning aslini qayta ochib saqlash mumkin («Diktofon xotirasidagi yozuvlar»)'] },
+  { n: 6, d: '2026-10-25', ru: ['Медиатека: «Поделиться» в меню записи — отправить в Telegram, почту или другое приложение', 'Всплывающее окно при выходе на рабочий стол теперь выключено (включается в «Работе в фоне»)', 'Сообщение о неожиданном закрытии — только при настоящем сбое, не когда приложение закрыли сами'],
+    en: ['Media library: “Share” in a recording’s menu — send to Telegram, email or another app', 'The pop-up window on leaving to the home screen is now off (turn on in “Background”)', 'The unexpected-close message appears only after a real failure, not when the app was closed on purpose'],
+    uz: ['Mediateka: yozuv menyusida «Ulashish» — Telegram, pochta yoki boshqa ilovaga yuborish', 'Bosh ekranga chiqqanda qalqib chiquvchi oyna endi oʻchirilgan («Fonda ishlash»da yoqiladi)', 'Kutilmagan yopilish haqidagi xabar faqat haqiqiy nosozlikda chiqadi, ilova ataylab yopilganda emas'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);
