@@ -298,7 +298,10 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void read(PluginCall call) {
         File f = fileOf(call);
-        long off = call.getLong("offset", 0L);
+        // номер из JS приходит как Integer — getLong принимает только Long и вернул бы 0: каждый кусок читался с начала
+        // файла, и в записи по кругу повторялись первые ~8 с
+        Object ov = call.getData().opt("offset");
+        long off = ov instanceof Number ? ((Number) ov).longValue() : 0L;
         int len = call.getInt("length", 1 << 20);
         try (RandomAccessFile r = new RandomAccessFile(f, "r")) {
             long size = r.length();
@@ -325,6 +328,22 @@ public class VoicePlugin extends Plugin {
 
     @PluginMethod
     public void remove(PluginCall call) { fileOf(call).delete(); call.resolve(); }
+
+    // Исходники записей в памяти диктофона (rec-*.wav): после сбоя или закрытия запись можно открыть снова
+    @PluginMethod
+    public void list(PluginCall call) {
+        JSArray a = new JSArray();
+        File[] fs = new File(getContext().getCacheDir(), "voice").listFiles();
+        if (fs != null) for (File f : fs) {
+            if (!f.getName().startsWith("rec-") || !f.getName().endsWith(".wav") || f.length() <= 44) continue;
+            JSObject o = new JSObject();
+            o.put("path", f.getName()); o.put("size", f.length()); o.put("at", f.lastModified());
+            a.put(o);
+        }
+        JSObject r = new JSObject();
+        r.put("files", a);
+        call.resolve(r);
+    }
 
     /* ---------- воспроизведение на выбранный выход ---------- */
 

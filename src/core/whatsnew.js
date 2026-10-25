@@ -15,6 +15,9 @@ export const NEWS = [
   { n: 4, d: '2026-10-24', ru: ['Обновление можно скачивать и по мобильной сети: Профиль → Обновления → «Мобильная сеть» или «Сейчас» на полосе ожидания Wi-Fi'],
     en: ['Updates can download over mobile data too: Profile → Updates → “Mobile data”, or “Now” on the waiting-for-Wi-Fi bar'],
     uz: ['Yangilanishni mobil tarmoq orqali ham yuklash mumkin: Profil → Yangilanishlar → «Mobil tarmoq» yoki Wi-Fi kutish satridagi «Hozir»'] },
+  { n: 5, d: '2026-10-25', ru: ['Диктофон: исправлена запись длиннее 8 секунд — начало больше не повторяется по кругу', 'Диктофон: исходники прошлых записей можно открыть снова и сохранить («Записи в памяти диктофона»)'],
+    en: ['Recorder: recordings longer than 8 seconds are fixed — the beginning no longer repeats', 'Recorder: originals of earlier recordings can be reopened and saved (“Recordings in recorder memory”)'],
+    uz: ['Diktofon: 8 soniyadan uzun yozuv tuzatildi — boshi endi takrorlanmaydi', 'Diktofon: oldingi yozuvlarning aslini qayta ochib saqlash mumkin («Diktofon xotirasidagi yozuvlar»)'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

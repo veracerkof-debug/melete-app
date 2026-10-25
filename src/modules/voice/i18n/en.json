@@ -99,5 +99,11 @@
   "live.hear": "Hear yourself in headphones",
   "live.off": "The input is not being listened to — tap the wave above.",
   "live.hint": "The equalizer and effects are heard right away — in headphones, if the headphones icon is on. The original is written to the file; on save the same chain is applied, plus noise reduction, gate, gain and normalisation. Through the speaker without headphones, feedback may whistle.",
-  "fx.file": "On save"
+  "fx.file": "On save",
+  "kept.title": "Recordings in recorder memory",
+  "kept.open": "Open",
+  "kept.del": "Delete",
+  "kept.delTitle": "Delete the original recording?",
+  "kept.hint": "Originals of earlier recordings. Open to listen and save to the media library.",
+  "mb": "MB"
 }

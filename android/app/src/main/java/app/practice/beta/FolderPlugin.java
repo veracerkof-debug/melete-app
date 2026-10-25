@@ -191,7 +191,8 @@ public class FolderPlugin extends Plugin {
         try {
             String id = resolve(t, call.getString("path", ""), false, null);
             if (id == null) { call.reject("nofile"); return; }
-            long off = call.getLong("offset", 0L);
+            Object ov = call.getData().opt("offset"); // из JS — Integer: getLong вернул бы 0, и каждый кусок читался бы с начала
+            long off = ov instanceof Number ? ((Number) ov).longValue() : 0L;
             int len = call.getInt("length", 1 << 20);
             try (ParcelFileDescriptor pfd = cr().openFileDescriptor(docUri(t, id), "r");
                  FileInputStream in = new FileInputStream(pfd.getFileDescriptor())) {

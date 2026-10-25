@@ -31,7 +31,7 @@ const FX_DEF = { denoise: 0, gate: -90, gain: 0, normalize: true }; // своё 
 const METER_DEF = { spec: true, style: 'bars', mode: 'both', clip: -0.3, hold: 2, range: 60, smooth: 'mid' };
 
 let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null, pm = null, pmb = null;
-const S = { phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null };
+const S = { phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null, kept: [] };
 
 const st = () => {
   const s = ctx.store.all();
@@ -133,6 +133,25 @@ async function stopRec() {
     Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null });
     ctx.log('записано ' + S.take.sec.toFixed(1) + ' с');
   } catch (e) { ctx.logErr(e); S.phase = 'idle'; ctx.ui.toast(t('recFail')); }
+  render();
+}
+// Исходники прошлых записей в памяти диктофона (Android): после сбоя, закрытия или неудачного чтения запись не теряется —
+// её можно открыть снова и сохранить
+async function loadKept() {
+  const fs = engine().list ? await engine().list() : [];
+  S.kept = fs.filter((f) => !S.take || f.path !== S.take.path).sort((a, b) => b.at - a.at);
+  render();
+}
+async function openKept(path) {
+  if (S.phase !== 'idle') return;
+  try {
+    await liveStop();
+    const u8 = await engine().read(path), w = decodeWav(u8);
+    if (!w || !w.ch[0].length) throw new Error('empty');
+    S.take = { path, ch: w.ch, sr: w.sr, sec: w.ch[0].length / w.sr, peaks: peaks(w.ch, 600), saved: false };
+    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null, kept: S.kept.filter((f) => f.path !== path) });
+    ctx.log('открыта запись из памяти: ' + S.take.sec.toFixed(1) + ' с');
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(t('recFail')); }
   render();
 }
 async function dropTake() {
@@ -325,8 +344,18 @@ function html() {
   if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div>' + err + '</div>';
   // сверху — мини-окно (спектр и уровень), посередине — звук до записи и устройства, внизу — кнопка записи
   return '<div class="vc-top">' + meterHTML(true) + '</div>' +
-    '<div class="vc-mid">' + err + fxHTML(true) + '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p></div>' +
+    '<div class="vc-mid">' + err + keptHTML() + fxHTML(true) + '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p></div>' +
     bottom('<span class="vc-btn ghost"></span><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button><span class="vc-btn ghost"></span>');
+}
+
+function keptHTML() {
+  if (!S.kept.length) return '';
+  const d = (ms) => { const x = new Date(ms), p = (n) => String(n).padStart(2, '0'); return p(x.getDate()) + '.' + p(x.getMonth() + 1) + ' ' + p(x.getHours()) + ':' + p(x.getMinutes()); };
+  return '<div class="hdr">' + t('kept.title') + '</div><div class="group">' + S.kept.slice(0, 5).map((f) =>
+    '<div class="cell"><span class="grow num">' + d(f.at) + ' · ' + (f.size / 1048576).toFixed(1) + ' ' + t('mb') + '</span>' +
+    '<button class="link" data-kopen="' + esc(f.path) + '">' + t('kept.open') + '</button>' +
+    '<button class="link danger" data-kdel="' + esc(f.path) + '" aria-label="' + esc(t('kept.del')) + '">' + t('kept.del') + '</button></div>').join('') +
+    '</div><p class="ftr">' + t('kept.hint') + '</p>';
 }
 
 function render() {
@@ -409,6 +438,9 @@ export default {
         st().chain = normalizeFx({ ...ch, mode: 'adv', adv: [hp, ...VOICE_BANDS(EQ_PRESETS[ep.dataset.eqp])] });
         ctx.store.save(); liveFx(); S.proc = null; render(); return;
       }
+      const ko = e.target.closest('[data-kopen]'), kd = e.target.closest('[data-kdel]');
+      if (ko) { openKept(ko.dataset.kopen); return; }
+      if (kd) { ctx.ui.confirm(t('kept.delTitle'), '', t('discardYes')).then((ok) => { if (!ok) return; engine().remove(kd.dataset.kdel); S.kept = S.kept.filter((f) => f.path !== kd.dataset.kdel); render(); }); return; }
       const x = e.target.closest('[data-x]');
       if (!x || S.busy) return;
       const a = x.dataset.x;
@@ -459,6 +491,7 @@ export default {
     pmb = pm.bind(host, { update: render });
     render();
     loadDevices();
+    loadKept();
   },
   resize(sz) { size = sz; render(); },
   unmount() {

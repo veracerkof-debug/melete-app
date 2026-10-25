@@ -99,5 +99,11 @@
   "live.hear": "Quloqchinda oʻzini eshitish",
   "live.off": "Kirish tinglanmayapti — yuqoridagi toʻlqinni bosing.",
   "live.hint": "Ekvalayzer va effektlar darhol eshitiladi — quloqchin belgisi yoqilgan boʻlsa, quloqchinda. Faylga asl nusxa yoziladi; saqlashda oʻsha zanjir hamda shovqin bostirish, geyt, kuchaytirish va normallashtirish qoʻllanadi. Quloqchinsiz karnay orqali hushtak boʻlishi mumkin.",
-  "fx.file": "Saqlashda"
+  "fx.file": "Saqlashda",
+  "kept.title": "Diktofon xotirasidagi yozuvlar",
+  "kept.open": "Ochish",
+  "kept.del": "Oʻchirish",
+  "kept.delTitle": "Yozuv asli oʻchirilsinmi?",
+  "kept.hint": "Oldingi yozuvlarning asli. Ochish — tinglash va mediatekaga saqlash.",
+  "mb": "MB"
 }

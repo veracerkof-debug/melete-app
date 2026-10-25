@@ -94,3 +94,12 @@ describe('диктофон: старые настройки → общая це�
     expect(VOICE_BANDS().length).toBe(5);
   });
 });
+
+describe('диктофон: чтение WAV', () => {
+  it('размер данных 0 (запись оборвалась до стопа) — читается до конца файла', () => {
+    const x = new Float32Array(4800).map((_, i) => Math.sin(i / 10) * 0.5), u8 = encodeWav([x], 48000);
+    new DataView(u8.buffer).setUint32(40, 0, true);
+    const w = decodeWav(u8);
+    expect(w.ch[0].length).toBe(4800);
+  });
+});

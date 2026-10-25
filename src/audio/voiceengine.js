@@ -39,6 +39,8 @@ function nativeEngine() {
     },
     async write(path, u8) { for (let off = 0; off < u8.length || off === 0; off += CHUNK) { await V.write({ path, data: b64(u8.subarray(off, off + CHUNK)), append: off > 0 }); if (!u8.length) break; } },
     remove: (path) => V.remove({ path }).catch(() => {}),
+    // исходники записей в памяти (rec-*.wav): { path, size, at }
+    list: () => V.list().then((r) => r.files || []).catch(() => []),
     play: (path, deviceId, from = 0) => V.play({ path, deviceId: deviceId ?? -1, from }),
     stopPlay: () => V.stopPlay(),
     route: (deviceId) => V.route({ deviceId: deviceId == null || deviceId === '' ? -1 : +deviceId }).catch(() => ({})),
@@ -101,6 +103,7 @@ function webEngine() {
     read: async (path) => mem.get(path),
     write: async (path, u8) => { mem.set(path, u8); },
     remove: async (path) => { mem.delete(path); },
+    list: async () => [], // в браузере запись живёт в памяти страницы — после закрытия её нет
     async play(path, deviceId, from = 0) {
       this.stopPlay();
       const url = URL.createObjectURL(new Blob([mem.get(path)], { type: 'audio/wav' }));

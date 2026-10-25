@@ -273,7 +273,8 @@ export function decodeWav(u8) {
     const id = s(o, 4), size = v.getUint32(o + 4, true);
     if (id === 'fmt ') fmt = { tag: v.getUint16(o + 8, true), nc: v.getUint16(o + 10, true), sr: v.getUint32(o + 12, true), bits: v.getUint16(o + 22, true) };
     else if (id === 'data' && fmt) {
-      const bps = fmt.bits / 8, frames = Math.floor(Math.min(size, u8.length - o - 8) / (bps * fmt.nc)), ch = Array.from({ length: fmt.nc }, () => new Float32Array(frames));
+      const rest = u8.length - o - 8, len = size && size !== 0xFFFFFFFF ? Math.min(size, rest) : rest; // размер 0 — запись оборвалась до стопа: данные до конца файла
+      const bps = fmt.bits / 8, frames = Math.floor(len / (bps * fmt.nc)), ch = Array.from({ length: fmt.nc }, () => new Float32Array(frames));
       let p = o + 8;
       for (let i = 0; i < frames; i++) for (let c = 0; c < fmt.nc; c++) {
         ch[c][i] = fmt.tag === 3 ? v.getFloat32(p, true) : bps === 2 ? v.getInt16(p, true) / 32768 : bps === 3 ? ((v.getInt8(p + 2) << 16) | (u8[p + 1] << 8) | u8[p]) / 8388608 : v.getInt32(p, true) / 2147483648;
