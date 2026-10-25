@@ -245,5 +245,7 @@
   "rpre.title": "Tezlik pog‘onalari",
   "rpre.aria": "Tezlik {p} %",
   "rpre.step": "{n}-pog‘ona",
-  "rpre.def": "Asli: 50 · 75 · 90 · 100"
+  "rpre.def": "Asli: 50 · 75 · 90 · 100",
+  "shareRec": "Ulashish",
+  "shareFail": "Yozuvni ulashib boʻlmadi"
 }

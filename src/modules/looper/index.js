@@ -12,7 +12,7 @@ import { encodeWav } from '../../audio/voicefx.js';
 import { onHold, holdMenu, holdRepeat } from '../../ui/hold.js';
 import { swipe } from '../../ui/gestures.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 18.5V14h4.5"/><circle cx="12" cy="12" r="2" style="fill:currentColor"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" style="fill:currentColor"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" style="fill:currentColor"/></svg>',
@@ -367,14 +367,7 @@ function onKey(e) {
 }
 
 export default {
-  id: 'looper',
-  order: 46,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#B5533C',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  record: false, // лупер сам пишет микрофон; сведение — кнопкой «В медиатеку»
+  ...meta,
   status(c) { return c.t(c.store.get('metro') ? 'st.metro' : 'st.free'); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

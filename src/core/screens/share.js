@@ -20,7 +20,16 @@ const chk = (attrs, on) => '<input type="checkbox" ' + attrs + (on ? ' checked' 
 
 // Отправить готовый файл: Android — выбор приложения; компьютер — «Сохранить как»; веб — «Поделиться» браузера или скачивание
 export async function sendFile(u8, name, title, type = 'application/octet-stream') {
-  if (Share) { await Share.send({ name, data: b64(u8), title, text: title, mime: type }); return 'shared'; }
+  if (Share) {
+    // большой файл (запись, видео) — частями по 3 МБ: одна строка base64 на десятки мегабайт не пролезает через мост
+    const CH = 3 << 20;
+    if (u8.length <= CH) await Share.send({ name, data: b64(u8), title, text: title, mime: type });
+    else {
+      for (let o = 0; o < u8.length; o += CH) await Share.put({ name, data: b64(u8.subarray(o, o + CH)), append: o > 0 });
+      await Share.send({ name, ready: true, title, text: title, mime: type });
+    }
+    return 'shared';
+  }
   if (isDesktop()) return saveFile(u8, name, type); // компьютер: «Сохранить как»
   const file = new File([u8], name, { type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {

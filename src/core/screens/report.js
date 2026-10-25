@@ -1,6 +1,7 @@
 // «Сообщить о проблеме»: человек пишет, что случилось (можно не писать), может посмотреть весь отчёт и
 // отправляет его сам — через системное «Поделиться» (Telegram, почта…). После неожиданного закрытия
 // приложение один раз предлагает отправить отчёт; без согласия ничего не происходит.
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, toast, leave } from '../../ui/index.js';
 import { reportText, sendReport, REPORT_EMAIL } from '../report.js';
@@ -92,9 +93,18 @@ export function ideaSheet(app) {
 }
 
 // После неожиданного закрытия — одно предложение отправить отчёт (через пару секунд после запуска)
-export function crashOffer(app) {
+// Android: только настоящее падение (система называет причину закрытия) — закрытое человеком (смахнул, «Остановить»,
+// всплывающее окно) не спрашивается (решение автора 25.10.2026)
+export async function crashOffer(app) {
   if (!crashedLast()) return;
   crashSeen();
+  if (Capacitor.isNativePlatform()) {
+    let x = null;
+    try { x = await registerPlugin('Report').lastExit(); } catch { /* старая сборка — не спрашивать */ }
+    const real = x && (x.reason ? x.reason === 'crash' : x.java);
+    log('app', 'прошлое закрытие: ' + ((x && x.reason) || (x && x.java ? 'падение Java' : 'неизвестно')));
+    if (!real) return;
+  }
   setTimeout(() => {
     if (document.querySelector('.ask, .tosbox')) return; // поверх соглашения и других окон — не предлагать
     const d = document.createElement('div');

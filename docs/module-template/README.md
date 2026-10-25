@@ -12,6 +12,10 @@
 
 ## Встроенный модуль (для всех)
 То же, но папка — `src/modules/<id>/`, плюс строка в `LICENSES.md`, если модуль тянет новую зависимость.
+Встроенный модуль делится на два файла (загрузка по требованию): `meta.js` — лёгкое описание (`id`, `order`, `name`,
+`i18n`, `icon`, `color`, `sizes` и признаки вроде `tab`, `pure`, `record`, `accepts`) — грузится при запуске;
+`index.js` — сам модуль: `export default { ...meta, status, mount, resize, unmount, … }` — грузится при первом открытии.
+Образец — любой модуль в `src/modules/` (например, `drone/meta.js` и `drone/index.js`).
 
 ## Что обязательно
 `id`, `name`, `icon`, `sizes`, `mount`, `resize`, `unmount` — иначе модуль не подключится, а в «Модулях и функциях»

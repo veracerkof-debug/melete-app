@@ -32,7 +32,7 @@ import { keyLabel } from '../../music/transpose.js';
 import { mName } from '../../music/notes.js';
 
 // значок студии: плейлист — три дорожки с клипами разной длины и бегунок
-const ICON = '<svg viewBox="0 0 24 24"><circle cx="7" cy="9" r="4.6"/><circle cx="17" cy="9" r="4.6"/><circle cx="7" cy="9" r="1.2" style="fill:currentColor;stroke:none"/><circle cx="17" cy="9" r="1.2" style="fill:currentColor;stroke:none"/><path d="M3.6 15.5 7 13.6M20.4 15.5 17 13.6M4.5 19.5h15"/></svg>'; // катушки: студия звукозаписи
+import meta, { ICON } from './meta.js';
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" style="fill:currentColor"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" style="fill:currentColor"/></svg>',
@@ -631,14 +631,7 @@ function onClick(e) {
 }
 
 export default {
-  id: 'studio',
-  order: 47,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#3E8C8C',
-  tab: true, // своя вкладка внизу, не инструмент: в «Инструментах», быстром доступе и окнах сессии её нет
-  sizes: ['full'],
+  ...meta,
   status(c) { const n = (c.projects ? c.projects.list() : []).length; return c.tn('projects', n); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

@@ -3,7 +3,7 @@ import { visibleTabs, hiddenTabs, editTabs, DEFAULT_TABS } from '../src/core/set
 
 globalThis.document ??= { documentElement: {}, addEventListener() {}, createElement: () => ({ style: {} }) };
 globalThis.navigator ??= { language: 'ru' };
-const { modules, skippedModules, validate } = await import('../src/modules/index.js');
+const { modules, skippedModules, validate, loadModule } = await import('../src/modules/index.js');
 const template = (await import('../docs/module-template/index.js')).default;
 
 describe('реестр модулей', () => {
@@ -12,6 +12,20 @@ describe('реестр модулей', () => {
     expect(modules.map((m) => m.id)).toEqual(['bible', 'metro', 'tuner', 'piano', 'glider', 'theremin', 'drone', 'looper', 'studio', 'theory', 'ear', 'timer', 'audio', 'notes', 'voice', 'spectrum']);
     modules.forEach((m) => expect(m.i18n.ru.about, m.id).toBeTruthy());
   });
+  it('при запуске — только описания; сам модуль догружается по требованию и совпадает с описанием', async () => {
+    expect(modules.every((m) => !m.loaded)).toBe(true);
+    for (const m of modules) {
+      const color = m.color;
+      m.color = '#123456'; // поле описания, изменённое ядром на ходу (палитра), загрузка не перетирает
+      const full = await loadModule(m.id);
+      expect(full, m.id).toBe(m);
+      expect(validate(m), m.id).toBe(null);
+      expect(m.loaded && typeof m.mount, m.id).toBe('function');
+      expect(m.color).toBe('#123456');
+      m.color = color;
+    }
+    expect(skippedModules).toEqual([]);
+  }, 60_000); // все 16 модулей целиком — под общей нагрузкой тестов дольше 5 с
   it('шаблон модуля проходит проверку контракта', () => {
     expect(validate(template)).toBe(null);
   });

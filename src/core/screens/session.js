@@ -91,6 +91,7 @@ export function createSessionScreen(app) {
   async function lockWake() { try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch { /* нет поддержки */ } }
   function releaseWake() { try { if (wake) wake.release(); } catch { /* ignore */ } wake = null; }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && app.active && !wake) lockWake(); });
+  addEventListener('melete:modloaded', () => rotCheck()); // модуль окна догрузился (src/modules/index.js) — поворот мог появиться
 
   /* ---------- старт ---------- */
   function start(type, songId = null, tool = null) {

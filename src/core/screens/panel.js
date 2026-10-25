@@ -774,7 +774,7 @@ export function createPanel(app, onChange) {
       if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
       if (d.bgctl) {
         const st = app.store.state.settings, k = d.bgctl, on = e.target.checked;
-        st.bgCtl = { ...bgCtl(st), [k]: on };
+        st.bgCtl = { ...bgCtl(st), ...(k === 'pip' ? { pipOn: on } : { [k]: on }) };
         app.store.settingsChanged();
         if (app.player) app.player.sync(true);
         // плавающей кнопке нужно разрешение «Поверх других приложений» — системный экран, если его ещё нет

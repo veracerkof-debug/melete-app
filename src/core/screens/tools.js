@@ -35,11 +35,26 @@ function renderToolsNow(app, root) {
   }).join('') + '</div>' +
     (T.off.size ? '<div class="group" style="margin-top:16px"><button class="cell act" data-tools-hidden>' + esc(t('tools.hidden', { n: T.off.size })) + '</button></div>' : '') +
     (st.uiStyle === 'mono' ? '' : '<p class="ftr">' + t('tools.holdHint') + '</p>');
+  if (st.uiStyle !== 'mono') idleStatus(app, root, list.filter((m) => !m.loaded && !heavyStub(m)));
   root.onclick = (e) => {
     const b = e.target.closest('[data-open-tool]');
     if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root));
     if (e.target.closest('[data-tools-hidden]')) hiddenSheet(app, () => renderTools(app, root));
   };
+}
+// Строка состояния — у загруженного модуля (src/modules/index.js): остальные догружаются по одному, когда экран свободен,
+// и строка дописывается в свою карточку (окно уже могли закрыть — тогда ничего)
+function idleStatus(app, root, todo) {
+  const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 120));
+  const next = () => {
+    const m = todo.shift();
+    if (!m || !root.isConnected) return;
+    m.load().then(() => {
+      const el = root.querySelector('[data-open-tool="' + m.id + '"] .tcs2');
+      if (el && m.status) { try { el.textContent = m.status(makeCtx(app, m)) || ''; } catch { /* статус необязателен */ } }
+    }).catch(() => {}).finally(() => idle(next));
+  };
+  idle(next);
 }
 // Убранные из вкладки — вернуть
 function hiddenSheet(app, rerender) {
@@ -86,7 +101,9 @@ function openToolViewNow(app, id, onClose) {
     tv.style.height = dir ? innerWidth + 'px' : '';
   };
   const onRot = () => requestAnimationFrame(rotCheck);
-  if (mod.rotate) { addEventListener('melete:rot', onRot); addEventListener('resize', onRot); rotCheck(); }
+  // поворот задаёт загруженный модуль: пока он грузится — проверить и после загрузки (melete:modloaded)
+  const rotOn = !!mod.rotate || !mod.loaded;
+  if (rotOn) { addEventListener('melete:rot', onRot); addEventListener('resize', onRot); addEventListener('melete:modloaded', onRot); rotCheck(); }
   // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут
   const track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id);
 
@@ -108,7 +125,7 @@ function openToolViewNow(app, id, onClose) {
     app.openTool = null;
     document.removeEventListener('keydown', onKey);
     recOff(); // идёт запись — сохраняется до того, как модуль отключит камеру и звук
-    removeEventListener('melete:rot', onRot); removeEventListener('resize', onRot);
+    if (rotOn) { removeEventListener('melete:rot', onRot); removeEventListener('resize', onRot); removeEventListener('melete:modloaded', onRot); }
     inst.unmount();
     ui.leave(layer.firstElementChild || layer, 260);
     setTimeout(() => layer.remove(), 280);

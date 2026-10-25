@@ -26,3 +26,20 @@ test('ступени скорости', async ({ page, melete, errors }) => {
   expect((await melete.toolsNow()).audio.rates).toBeUndefined();
   expect(errors).toEqual([]);
 });
+
+// Меню записи: «Поделиться» — файл уходит как есть (в браузере — системный выбор или скачивание)
+test('поделиться записью', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { autoStems: 'off', autoAna: false } });
+  await page.evaluate(async () => {
+    const { createFiles } = await import('/src/core/files.js'); const { encodeWav } = await import('/src/audio/voicefx.js');
+    const f = createFiles(); await f.ready;
+    await f.add({ id: 'r2', name: 'take.wav', size: 1, type: 'audio/wav', kind: 'audio', songs: [], created: Date.now(), blob: new Blob([encodeWav([new Float32Array(4410)], 44100)], { type: 'audio/wav' }), dur: 0.1 });
+  });
+  await melete.free('F', ['audio']);
+  await melete.click('[data-x="mlmenu"][data-id="r2"]'); await page.waitForTimeout(500);
+  const dl = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  await melete.click('.sheet [data-m="send"]');
+  const d = await dl;
+  expect(d && d.suggestedFilename()).toBe('take.wav');
+  expect(errors).toEqual([]);
+});

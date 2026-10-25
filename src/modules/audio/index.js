@@ -27,7 +27,7 @@ import { voice } from '../../audio/metronome.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
   mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
@@ -1198,7 +1198,7 @@ function menuSheet(id) {
   const body = () => {
     const songs = ctx.songs();
     return ui.snav(x.name) + '<div class="mlmh">' + artHTML(x, 'big') + '<div><b>' + esc(x.name) + '</b><div class="l2" style="font-size:13px">' + [x.dur ? fmtT(x.dur) : '', sizeMb(x)].filter(Boolean).join(' · ') +
-      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
+      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="send">' + t('shareRec') + '</button><button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
       '<div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>';
@@ -1210,8 +1210,19 @@ function menuSheet(id) {
     if (m === 'play') { load(x); playEl(); sh.close(); render(); }
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
+    else if (m === 'send') shareRec(x, b);
     else if (m === 'del') { sh.close(); removeTrack(x); }
   }));
+}
+
+// Поделиться записью (Telegram, почта, другое приложение — системный выбор; на компьютере — «Сохранить как»): файл как есть
+async function shareRec(x, btn) {
+  if (!x.blob) return;
+  btn.disabled = true;
+  try {
+    const type = x.type || (x.video ? 'video/mp4' : 'audio/wav');
+    await ctx.sendFile(new Uint8Array(await x.blob.arrayBuffer()), x.name, x.name, type);
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(ctx.t('shareFail')); } finally { btn.disabled = false; }
 }
 
 // Запись MIDI: проиграть в инструменте, отправить файлом .mid, переименовать, удалить
@@ -1578,20 +1589,11 @@ function bind() {
 }
 
 export default {
-  id: 'audio',
-  order: 80,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#A95E72',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  pure: true, // полный экран: плеер и видео без шапки приложения (src/core/pure.js)
+  ...meta,
   status(c) {
     const list = c.files.list('audio'), td = list.reduce((s, x) => s + (x.dur || 0), 0);
     return list.length ? c.tn('files', list.length) + (td ? ' · ' + fmtDur(td) : '') : c.t('empty');
   },
-  // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
-  accepts: (f) => /^(audio|video)\//.test(f.type) || VIDEO_EXT.test(f.name) || /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

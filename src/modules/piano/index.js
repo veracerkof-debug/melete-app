@@ -13,7 +13,7 @@ import { synBody, synBind, synthSheet } from './synth-panel.js';
 import { kbHTML, lastWhite } from '../../ui/keyboard.js';
 import { mName } from '../../music/notes.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v14M13 5v14M10.5 5v8M15.5 5v8"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   minus: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
@@ -217,20 +217,12 @@ function bind() {
 }
 
 export default {
-  id: 'piano',
-  order: 30,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#646493',
+  ...meta,
   // MIDI: запись игры, воспроизведение в самом пианино, MIDI-клавиатура (src/core/midi.js)
   midiIn, midiStop,
-  multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  onPure() { requestAnimationFrame(layout); },
   // Поворот: весь экран инструмента (и сессии) поворачивается, пока пианино в окне; если экран уже
   // горизонтальный (автоповорот телефона), поворачивать нечего
-  pure: true, // в отдельном окне — полный экран: только клавиатура
-  onPure() { requestAnimationFrame(layout); },
   rotate: (c) => { const p = c.store.all(); return p.rot && innerHeight > innerWidth ? (p.rotDir === 'l' ? 'l' : 'r') : null; },
   status(c) {
     const p = c.store.all(), nm = (s) => s.name || c.t('pre.' + (PRESETS[s.preset] ? s.preset : 'piano')), L = pianoLayer(p);

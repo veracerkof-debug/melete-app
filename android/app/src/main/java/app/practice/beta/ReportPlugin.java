@@ -1,6 +1,11 @@
 package app.practice.beta;
 
+import android.app.ActivityManager;
+import android.app.ApplicationExitInfo;
 import android.content.ClipData;
+import android.content.Context;
+import android.os.Build;
+import java.util.List;
 import android.content.Intent;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
@@ -17,6 +22,28 @@ import java.nio.charset.StandardCharsets;
 // Приложение само ничего не отправляет.
 @CapacitorPlugin(name = "Report")
 public class ReportPlugin extends Plugin {
+
+    // Почему закрылся прошлый запуск (Android 11+): crash — падение или «не отвечает»; other — закрыл человек
+    // (смахнул из недавних, «Остановить»), система освободила память и т. п.; null — неизвестно (Android до 11).
+    // На старых — падение кода Java в CrashLog. { reason, java }
+    @PluginMethod
+    public void lastExit(PluginCall call) {
+        com.getcapacitor.JSObject r = new com.getcapacitor.JSObject();
+        String reason = null;
+        if (Build.VERSION.SDK_INT >= 30) {
+            try {
+                ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+                List<ApplicationExitInfo> l = am.getHistoricalProcessExitReasons(getContext().getPackageName(), 0, 1);
+                if (l != null && !l.isEmpty()) {
+                    int x = l.get(0).getReason();
+                    reason = x == ApplicationExitInfo.REASON_CRASH || x == ApplicationExitInfo.REASON_CRASH_NATIVE || x == ApplicationExitInfo.REASON_ANR ? "crash" : "other";
+                }
+            } catch (Exception ignored) { }
+        }
+        r.put("reason", reason);
+        r.put("java", !CrashLog.read(getContext(), false).isEmpty());
+        call.resolve(r);
+    }
 
     // Последнее падение приложения (CrashLog): { text } — пусто, если не падало; clear — стереть после чтения
     @PluginMethod

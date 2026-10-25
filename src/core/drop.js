@@ -30,10 +30,13 @@ export async function dropFiles(app, files) {
   files.forEach((f) => { const m = modules.find((x) => x.accepts && x.accepts(f)); if (m) by.set(m.id, [...(by.get(m.id) || []), f]); });
   if (!by.size) { toast(t('drop.none')); return; }
   if (!(await app.confirmUpload())) return;
-  [...by].forEach(([id, fs], i) => {
+  let first = true;
+  for (const [id, fs] of by) {
     const mod = moduleById(id);
+    try { await mod.load(); } catch { toast(t('mod.loadErr')); continue; } // файлы берёт сам модуль — догрузить
     mod.drop(fs);
-    if (i) return; // открывается первый; остальные сохранятся, когда их модуль откроют
+    if (!first) continue; // открывается первый; остальные сохранятся, когда их модуль откроют
+    first = false;
     if (app.openTool) app.openTool(id); else openToolView(app, id);
-  });
+  }
 }

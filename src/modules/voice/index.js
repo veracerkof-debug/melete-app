@@ -16,7 +16,7 @@ import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, EQ_PRESETS, VOIC
 import { normalizeFx } from '../../audio/fx.js';
 import { createLiveFx, openInput, setOutput, levelOf } from '../../audio/livefx.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" stroke="none"/></svg>',
@@ -410,14 +410,7 @@ function onEnd() { if (S.playing) { S.playing = false; render(); } }
 /* ---------- модуль ---------- */
 
 export default {
-  id: 'voice',
-  order: 96,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#B0585C',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  record: false, // сам себе запись: общая кнопка записи не нужна
+  ...meta,
   status: (c) => c.t(S.phase === 'rec' ? 'st.rec' : S.take && !S.take.saved ? 'st.take' : 'st.idle'),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

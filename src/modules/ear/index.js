@@ -17,7 +17,7 @@ import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { noiseBuf } from '../../audio/waves.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M7 9.5a5 5 0 0 1 10 0c0 3-2.5 3.6-3.4 5.6-.6 1.4-.7 3.9-3.1 3.9A2.6 2.6 0 0 1 8 16.6"/><path d="M10 9.6a2 2 0 0 1 4 0c0 1.1-1.2 1.4-1.5 2.4"/></svg>';
+import meta, { ICON } from './meta.js';
 const DICON = {
   iv: '<svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="2.6"/><circle cx="16" cy="9" r="2.6"/><path d="M9.6 17V5M18.6 9V3"/></svg>',
   ch: '<svg viewBox="0 0 24 24"><ellipse cx="10" cy="18" rx="3" ry="2.2"/><ellipse cx="10" cy="12.5" rx="3" ry="2.2"/><ellipse cx="10" cy="7" rx="3" ry="2.2"/><path d="M13 18V3"/></svg>',
@@ -558,15 +558,7 @@ function bind() {
 }
 
 export default {
-  id: 'ear',
-  order: 60,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#34C759',
-  // В прототипе тренажёр открывался только целиком; компактные виды для четверти и полосы — не сделаны (см. DECISIONS.md)
-  sizes: ['full', 'half'],
-  session: false, // как в прототипе: тренажёр открывается во вкладке «Инструменты», не в окнах сессии
+  ...meta,
   status(c) {
     const d = (normalizeEarData(c.data()).days || {})[dayKey(Date.now())];
     return d && d.t ? c.tn('statusToday', d.t, { p: Math.round((d.c / d.t) * 100) }) : c.t('statusIdle');

@@ -7,7 +7,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { defaultAccents, tempoName, GROUPINGS, accentsOfGroups, groupsLabel } from '../../audio/metronome.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>';
+import meta, { ICON } from './meta.js';
 
 // Ноты дробления
 const SUBICON = (() => {
@@ -454,13 +454,7 @@ function bind() {
 }
 
 export default {
-  id: 'metro',
-  order: 10,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#9C7242',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  ...meta,
   status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }) + (c.audio.metro.cfg.poly >= 2 ? ' · ' + c.audio.metro.cfg.poly + ':' + c.audio.metro.cfg.num : ''),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

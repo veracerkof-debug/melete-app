@@ -11,7 +11,7 @@ import './spectrum.css';
 import { mName } from '../../music/notes.js';
 import { weightDb, levelDb, BASE_CAL, dominant } from './dsp.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M4 20v-4M8 20V9M12 20v-7M16 20V5M20 20v-9"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
@@ -224,15 +224,7 @@ function micStop() {
 }
 
 export default {
-  id: 'spectrum',
-  order: 100,
-  inner: true, // не отдельный инструмент: открывается нажатием на окно уровня в диктофоне
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#5988A7',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  stats: false, // рабочий инструмент: время в нём не идёт в статистику
+  ...meta,
   status: (c) => c.t(c.store.get('view', 'spec') === 'spl' ? 'view.spl' : 'view.spec'),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

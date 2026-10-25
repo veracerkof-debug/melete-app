@@ -25,7 +25,7 @@ import { melStrip, melSheet } from './melody.js';
 import { tabsHTML, chipHTML } from './settabs.js';
 import { after, cancel } from '../../audio/clock.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9 6"/><circle cx="12" cy="7" r="1.6" fill="currentColor"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
@@ -458,18 +458,9 @@ function bind() {
 }
 
 export default {
-  id: 'glider',
-  order: 35,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#866B9D',
-  multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
+  ...meta,
   // MIDI: запись игры (скольжение — MPE), воспроизведение на доске, MIDI-клавиатура (src/core/midi.js)
   midiIn, midiStop,
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  immersive: true, // в отдельном окне — на весь экран, без шапки
-  pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
   status(c) {
     const s = c.store.all(), lo = s.lo ?? 60, w = s.width ?? 12;
     return mName(lo) + '–' + mName(lo + w) + ' · ' + c.t('snap.' + (s.snap || 'magnet'));

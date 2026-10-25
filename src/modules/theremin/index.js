@@ -48,7 +48,7 @@ const createGlideVoice = (c, d, p, opt) => tapped(glideVoice(c, d, p, opt), { ki
 const padHall = () => { try { return +(ctx.peek('drone').hall) || 0; } catch { return 0; } };
 const createPadVoice = (c, d, sound, opt) => tapped(padVoice(c, d, sound, { ...opt, hall: padHall() }), { kind: 'pad', sound });
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M7 21V11.5a1.5 1.5 0 0 1 3 0V9a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1.5a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5z"/><path d="M3 7c1.5-2 3-2 4.5 0S10.5 9 12 7s3-2 4.5 0"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
@@ -916,17 +916,9 @@ function bind() {
 }
 
 export default {
-  id: 'theremin',
-  order: 36,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#866B9D',
+  ...meta,
   // MIDI: запись игры (голоса — MPE), воспроизведение без камеры, MIDI-клавиатура (src/core/midi.js)
   midiIn, midiStop,
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  immersive: true, // в отдельном окне — на весь экран, без шапки
-  pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
   status(c) {
     const s = c.store.all(), lo = s.lo ?? 60, w = s.width ?? 12;
     if (s.mode === 'guitar') return c.t('mode.guitar');

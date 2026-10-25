@@ -12,6 +12,8 @@ for (const [layout, per] of PLAN) {
     for (let i = 0; i < ids.length; i += per) {
       const panes = ids.slice(i, i + per);
       await melete.free(layout, panes);
+      // модули догружаются по требованию (src/modules/index.js): заставка уходит, ошибки загрузки нет
+      await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
       const got = await page.evaluate(() => [...document.querySelectorAll('.session .pane')].length);
       expect(got, layout + ':' + panes.join('+')).toBeGreaterThanOrEqual(panes.length); // в раскладке могут быть и пустые места
       const filled = await page.evaluate(() => [...document.querySelectorAll('.session .pane')].filter((x) => x.innerText.trim().length > 0 || x.querySelector('canvas, svg')).length);
@@ -20,3 +22,15 @@ for (const [layout, per] of PLAN) {
     }
   });
 }
+
+// Загрузка по требованию (src/modules/index.js): окно показывает значок модуля, пока он грузится, потом — сам инструмент,
+// без ошибки загрузки. На сервере разработки модули догружаются сразу после запуска — в сборках по требованию
+test('модуль догружается и открывается', async ({ page, melete, errors }) => {
+  await melete.open();
+  expect(await page.evaluate(async () => (await import('/src/modules/index.js')).modules.every((m) => typeof m.load === 'function'))).toBe(true);
+  await melete.free('F', ['drone']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  expect(await page.evaluate(() => document.querySelector('.session .pane[data-tool="drone"] .pbody')?.children.length || 0)).toBeGreaterThan(0);
+  expect(await page.locator('.session .pane .modload.err').count()).toBe(0);
+  void errors;
+});

@@ -8,7 +8,7 @@ import el from './i18n/el.json';
 import { SOUNDS, CHORDS, LAYERS, normalizeDrone } from '../../audio/drone.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M3 12h3l2-5 3 10 3-8 2 5 2-2h3"/></svg>';
+import meta, { ICON } from './meta.js';
 const NOTE_ICON = '<svg viewBox="0 0 24 24"><path d="M9 18V6l11-2.5V15.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.5" r="2.5"/></svg>';
 const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 // Что сохраняется в пресет пэдов
@@ -132,14 +132,7 @@ function bind() {
 }
 
 export default {
-  id: 'drone',
-  order: 40,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#548591',
-  multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  ...meta,
   status: (c) => { const d = c.store.all(); return c.t('status', { note: SH[d.pc], sound: c.t('snd.' + (SOUNDS[d.sound] != null ? d.sound : 'soft') + '.s') }); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

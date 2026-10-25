@@ -1899,5 +1899,6 @@
   "lic.aw.sub": "Galactic and Verbity2 reverbs (ported to JS)",
   "upd.mobile": "Mobile data",
   "upd.mobileSub": "Download without Wi-Fi too — about {mb} MB of traffic",
-  "upd.mobileNow": "Now"
+  "upd.mobileNow": "Now",
+  "mod.loadErr": "The tool did not load. Close the window and open it again."
 }
