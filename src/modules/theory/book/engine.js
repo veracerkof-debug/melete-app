@@ -159,6 +159,7 @@ const SCALES = [
   { g: 'harm', id: 'phrdom', f: ['1', 'b2', '3', '4', '5', 'b6', 'b7'], ch: 'b2', chord: '7♭9' },
   { g: 'harm', id: 'lyd2', f: ['1', '#2', '3', '#4', '5', '6', '7'], ch: '#2', chord: 'maj7♯11' },
   { g: 'harm', id: 'ultraloc', f: ['1', 'b2', 'b3', 'b4', 'b5', 'b6', 'bb7'], ch: 'bb7', chord: '°7' },
+  { g: 'harm', id: 'harmmaj', f: ['1', '2', '3', '4', '5', 'b6', '7'], ch: 'b6', chord: 'maj7' },
   // симметричные
   { g: 'sym', id: 'dimwh', f: ['1', '2', 'b3', '4', 'b5', 'b6', '6', '7'], ch: '7', chord: '°7' },
   { g: 'sym', id: 'dimhw', f: ['1', 'b2', '#2', '3', '#4', '5', '6', 'b7'], ch: 'b2', chord: '13♭9' },

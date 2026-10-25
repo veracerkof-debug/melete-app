@@ -2,15 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CHORDS, SCALES, INTERVALS, harmonize, rootN, scaleById, parseChord } from '../src/modules/theory/book/engine.js';
 import { createLabs } from '../src/modules/theory/book/labs.js';
-import { chapterHTML, fill, PARTS } from '../src/modules/theory/book/index.js';
-import ru from '../src/modules/theory/book/lang/ru.js';
-import uz from '../src/modules/theory/book/lang/uz.js';
-import en from '../src/modules/theory/book/lang/en.js';
+import { chapterHTML, fill, PARTS, ordered } from '../src/modules/theory/book/index.js';
+import ru from '../src/modules/theory/book/lang/ru/index.js';
+import uz from '../src/modules/theory/book/lang/uz/index.js';
+import en from '../src/modules/theory/book/lang/en/index.js';
 
 vi.mock('../src/modules/theory/book/book.css', () => ({}));
 const LANGS = { ru, uz, en };
 // Ключи, которые схемы и оболочка спрашивают у языкового файла
-const src = readFileSync('src/modules/theory/book/labs.js', 'utf8') + readFileSync('src/modules/theory/book/index.js', 'utf8');
+const src = ['labs.js', 'labs1.js', 'labs2.js', 'labs3.js', 'labs4.js', 'labs5.js', 'index.js'].map((f) => readFileSync('src/modules/theory/book/' + f, 'utf8')).join('\n');
 const used = new Set();
 const T = (k) => { used.add(k); return 'x'; };
 const snd = new Proxy({}, { get: () => () => {} });
@@ -42,10 +42,13 @@ describe('учебник: все схемы рисуются и отвечают
     });
     it(code + ': главы — те же, ссылки на термины и схемы существуют', () => {
       expect(L.CH.map((c) => c.id)).toEqual(ru.CH.map((c) => c.id));
-      expect(PARTS.flat().sort()).toEqual(L.CH.map((c) => c.id).sort());
+      // каждая глава — в одной из частей; источники глав — из SRC
+      L.CH.forEach((c) => expect(PARTS.flat(), c.id).toContain(c.id));
+      expect(ordered(L).length).toBe(L.CH.length);
+      L.CH.forEach((c) => (c.src || '').split(',').filter(Boolean).forEach((k) => expect(L.SRC[k.trim()], code + ' ' + c.id + ' источник ' + k).toBeTruthy()));
       const LABS = createLabs({ T, L, snd });
       for (const c of L.CH) {
-        for (const m of c.h.matchAll(/\[\[([a-z0-9]+)\|/g)) expect(L.TERMS[m[1]], code + ' ' + c.id + ' термин ' + m[1]).toBeTruthy();
+        for (const m of c.h.matchAll(/\[\[([a-zA-Z0-9]+)\|/g)) expect(L.TERMS[m[1]], code + ' ' + c.id + ' термин ' + m[1]).toBeTruthy();
         for (const m of c.h.matchAll(/\{\{lab:([a-z0-9]+)\}\}/g)) expect(LABS[m[1]], code + ' ' + c.id + ' схема ' + m[1]).toBeTruthy();
         expect(chapterHTML(c, L.TERMS)).not.toMatch(/\[\[|\{\{/);
         // те же схемы в том же порядке, что в русском

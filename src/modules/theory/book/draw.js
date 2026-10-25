@@ -2,6 +2,7 @@
 // приложения (ctx.audio, шина «theory»): аккорд, последовательность, оборот, удары по времени — через часы звука
 // (clock.js: after), новое нажатие прерывает прежнее.
 import { after, cancel } from '../../../audio/clock.js';
+import { perc } from './perc.js';
 import { LET, NAT, ACC, N, pcOf, nm, midiOf, CIRCLE, REL_MIN, SIG } from './engine.js';
 
 // Подписи для чтения с экрана — из языкового файла (index.js: setLabels)
@@ -10,11 +11,27 @@ export const setLabels = (o) => Object.assign(LBL, o);
 
 // Звук: A — ctx.audio (unlock, playChord, playSeq)
 export function createSound(getA) {
-  let ids = [];
+  let ids = [], pg = null, nk = 0;
   const at = (sec, fn) => { ids.push(after(Math.max(0, sec) * 1000, fn)); };
   const A = () => { const a = getA(); return a && a.unlock() ? a : null; };
+  const LEAD = 0.06; // упреждение ударов: всё в одном подходе стартует через LEAD от «сейчас»
+  // нота с силой нажатия (vel 0…1) — громкость в схемах динамики
+  const note = (a, m, dur, vel) => { const k = 'bk' + nk++; a.synth.on(m, k, { bus: 'theory', vel }); at(dur, () => a.synth.off(k)); };
   const S = {
-    stop() { ids.forEach(cancel); ids = []; },
+    stop() { ids.forEach(cancel); ids = []; if (pg) { try { pg.disconnect(); } catch { /* уже отключён */ } pg = null; } },
+    // Ритм: hits — [время с, вид удара (perc.js), сила]; notes — [время, midi | [midi], длит., сила]; marks — [время, fn]
+    // Удары — по часам контекста (точно), ноты и подсветка — через часы звука, с тем же упреждением
+    play({ hits = [], notes = [], marks = [] } = {}) {
+      const a = A(); if (!a) return; S.stop();
+      const bus = a.bus('theory');
+      if (hits.length && bus) {
+        const c = bus.context; pg = c.createGain(); pg.connect(bus);
+        const t0 = c.currentTime + LEAD;
+        hits.forEach(([t, kind, v]) => perc(c, pg, kind, t0 + t, v == null ? 0.8 : v));
+      }
+      notes.forEach(([t, ms, dur, vel]) => at(LEAD + t, () => (Array.isArray(ms) ? ms : [ms]).forEach((m) => note(a, m, dur || 0.4, vel))));
+      marks.forEach(([t, fn]) => at(LEAD + t, fn));
+    },
     chord(ms, { at: t0 = 0, dur = 1.4, arp = 0, keep = false } = {}) {
       const a = A(); if (!a) return; if (!keep) S.stop();
       if (arp) ms.forEach((m, i) => at(t0 + i * arp, () => a.playChord([m], { dur })));
