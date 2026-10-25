@@ -23,7 +23,7 @@ import { asciiToTex } from '../../music/asciitab.js';
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
 
-const ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>',
@@ -741,21 +741,12 @@ function act(a, el) {
 /* ---------- манифест ---------- */
 
 export default {
-  id: 'notes',
-  order: 90,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#A2845E',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  pure: true, // полный экран: только табы, ноты или текст (src/core/pure.js)
+  ...meta,
   onPure() { requestAnimationFrame(() => { render(); if (AT.beat) hlPlace(AT.beat, false); }); },
   status(c) {
     const n = c.files.list('tab').length;
     return n ? c.tn('tabs', n) : c.t('statusIdle');
   },
-  // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
-  accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|capx?|txt|tab|pdf|midi?|als|rpp|flp)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     onHold(el, '[data-x="ncapo"]', () => { const s = curSong(); if (s && s.capo) { updCur({ capo: 0 }); render(); c.ui.toast(c.t('capo.none')); } });

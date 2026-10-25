@@ -14,7 +14,7 @@ import { chroma } from '../../music/analyze.js';
 import { keyShift, keyTo, diatonic, transposeLine, capoOptions } from '../../music/keycalc.js';
 import { tonicName, keyLabel } from '../../music/transpose.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v4.5"/></svg>';
+import meta, { ICON } from './meta.js';
 const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals', 'book'];
 // Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
 const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
@@ -573,13 +573,7 @@ function bind() {
 }
 
 export default {
-  id: 'theory',
-  order: 50,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#567198',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  ...meta,
   status(c) {
     const th = c.store.all(), k = keyInfo(th.pc || 0, !!th.minor);
     return c.t(k.minor ? 'key.min' : 'key.maj', { root: k.root });

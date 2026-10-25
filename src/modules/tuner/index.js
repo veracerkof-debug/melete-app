@@ -11,7 +11,7 @@ import el from './i18n/el.json';
 import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { TUNINGS, TOL, STYLES, normalizeTuner, curTuning, reading, inRange, mName, splitN } from '../../music/tuning.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7"/></svg>';
+import meta, { ICON } from './meta.js';
 const WARN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2v.3"/></svg>';
 const TICK_MS = 70, SILENCE_MS = 1400, TAU = 0.09, TUNED_MS = 700;
 // Чувствительность: порог тишины. Микрофоны телефонов без автоусиления дают тихий сигнал, поэтому по умолчанию — «обычная»,
@@ -437,13 +437,7 @@ function bind() {
 }
 
 export default {
-  id: 'tuner',
-  order: 20,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#866B9D',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  ...meta,
   status(c) {
     const s = normalizeTuner(c.store.all()), beg = s.beginner ?? !!s.useTuning, tn = beg ? curTuning({ ...s, useTuning: true }) : null;
     return c.t('status', { tuning: tn ? (tn.custom ? tn.name : c.t(tn.nameKey)) : c.t('chromatic'), a4: s.a4 });

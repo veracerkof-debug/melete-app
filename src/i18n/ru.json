@@ -1921,5 +1921,6 @@
   "lic.aw.sub": "Ревербы Galactic и Verbity2 (порт на JS)",
   "upd.mobile": "Мобильная сеть",
   "upd.mobileSub": "Скачивать и без Wi-Fi — около {mb} МБ трафика",
-  "upd.mobileNow": "Сейчас"
+  "upd.mobileNow": "Сейчас",
+  "mod.loadErr": "Инструмент не загрузился. Закрыть окно и открыть снова."
 }

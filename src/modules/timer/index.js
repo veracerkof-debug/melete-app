@@ -10,7 +10,7 @@ import el from './i18n/el.json';
 import { POMO_LIMITS } from '../../core/pomodoro.js';
 import { createScene, SCENES } from './scene.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>',
@@ -233,14 +233,7 @@ function bind() {
 }
 
 export default {
-  id: 'timer',
-  order: 70,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#A75750',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  session: false, // в сессии помодоро — значок в заголовке и шторка
+  ...meta,
   status(c) {
     const sw = c.stopwatch;
     if (c.store.all().mode === 'watch') return sw.active() ? c.t(sw.running ? 'w.statusRun' : 'w.statusPaused', { time: fmtClock(sw.elapsed()) }) : c.t('mode.watch');

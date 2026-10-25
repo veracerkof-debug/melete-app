@@ -37,7 +37,7 @@ export const coreTopic = (id) => ({ id: 'core:' + id, name: t('hc.' + id + '.nam
 // Текст инструкции на текущем языке (чего нет — по-русски)
 export function helpOf(x) {
   if (!x) return null;
-  const tp = x.core ? x : x.mount ? modTopic(x) : x;
+  const tp = x.core ? x : x.sizes ? modTopic(x) : x;
   if (tp.core) {
     const k = (s) => { const v = t('hc.' + tp.core + '.' + s); return v === 'hc.' + tp.core + '.' + s ? null : v; };
     const what = k('what');
@@ -67,7 +67,7 @@ export const coreHelp = (app, id) => firstHelp(app, coreTopic(id));
 
 // Открыть по просьбе (значок «?», список инструкций): закрывается сразу и касанием мимо
 export function showHelp(app, x) {
-  const tp = x.core ? x : x.mount ? modTopic(x) : x;
+  const tp = x.core ? x : x.sizes ? modTopic(x) : x;
   if (!helpOf(tp)) return;
   queue.unshift({ app, tp, auto: false });
   next();

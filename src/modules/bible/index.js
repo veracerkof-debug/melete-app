@@ -36,7 +36,7 @@ async function providerOf(id) {
 const isBible = (r) => !r.meta || !r.meta.type || r.meta.type === 'bible'; // старые записи — без типа
 const shortOf = (rec) => String(rec.name || '').replace(/\.[^.]+$/, '').slice(0, 10);
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   prev: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
   next: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
@@ -297,15 +297,7 @@ function bind() {
 }
 
 export default {
-  id: 'bible',
-  order: 5,
-  church: true, // только в церковном режиме
-  tab: true, // своя вкладка внизу, а не инструмент: в «Инструментах», быстром доступе и окнах сессии её нет
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#A2845E',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  ...meta,
   status(c) { const p = c.bible.pos(); return p ? refText([chKey(p.code, p.ch)]) : c.t('name'); },
   mount(el, c, sz = 'full') {
     // Библия уже открыта в другом месте (вкладка внизу, а теперь — окно сессии): то место ждёт и вернётся после закрытия этого

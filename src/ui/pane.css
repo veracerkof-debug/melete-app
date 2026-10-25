@@ -103,3 +103,14 @@
 @keyframes tin{from{opacity:0;transform:translateY(10px)}}
 /* Полоса: подпись на кнопке («Текст ›», «Круг ›») не помещалась в квадрат 34 px */
 .comp.strip .cswb.txt{width:auto;padding:0 8px!important;white-space:nowrap}
+
+/* Модуль догружается (src/modules/index.js: загрузка по требованию): значок модуля посередине окна; появляется
+   с задержкой — быстрая загрузка не мелькает */
+.modload{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:0;padding:16px;text-align:center;animation:mlIn .25s ease .15s both}
+.modload .mlic{width:56px;height:56px;border-radius:18px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;animation:mlPulse 1.2s ease-in-out infinite alternate}
+.modload .mlic svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modload.err .mlic{animation:none;opacity:.5}
+.modload p{margin:0;max-width:260px;color:var(--l2)}
+@keyframes mlIn{from{opacity:0}to{opacity:1}}
+@keyframes mlPulse{from{transform:scale(.94);opacity:.75}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.modload,.modload .mlic{animation:none}}

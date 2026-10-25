@@ -2,7 +2,7 @@
 // учитывает время инструмента, открытого вне сессии.
 import { isDesk } from '../ui/desk.js';
 import { keyLabel } from './qwerty.js';
-import { getLang, makeT, makeTn, fmtNum, CORE_DICTS as coreDicts } from '../i18n/index.js';
+import { getLang, makeT, makeTn, fmtNum, t as coreT, CORE_DICTS as coreDicts } from '../i18n/index.js';
 import { ui } from '../ui/index.js';
 import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime, trackMode, countsWhileHidden, FREE_TAGS, freeTagName } from './session.js';
 import { overlapMs, mergeSegs } from './stopwatch.js';
@@ -223,29 +223,52 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     host.innerHTML = heavyHTML(ctx, mod);
     return { ctx, resize() {}, unmount() { host.innerHTML = ''; frame.classList.remove('pane', size); } };
   }
-  mod.mount(host, ctx, size);
-  // инструмент, где играют несколькими пальцами: пока открыт — системный снимок экрана тремя пальцами не срабатывает
-  // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)
-  const guarded = !!mod.multitouch;
-  if (guarded) guardOpen();
-  firstHelp(app, mod); // при первом открытии — инструкция
-  // понимает MIDI — слушает клавиатуру и воспроизводит свои записи, пока открыт
-  const midiOff = mod.midiIn && app.midi ? app.midi.attach(mod.id, mod) : () => {};
+  let cur = size, live = null, closed = false;
+  const setSize = (next) => { frame.classList.remove(...SIZES); frame.classList.add(next); frame.dataset.size = next; cur = next; };
+  const start = () => {
+    mod.mount(host, ctx, cur);
+    // инструмент, где играют несколькими пальцами: пока открыт — системный снимок экрана тремя пальцами не срабатывает
+    // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)
+    const guarded = !!mod.multitouch;
+    if (guarded) guardOpen();
+    firstHelp(app, mod); // при первом открытии — инструкция
+    // понимает MIDI — слушает клавиатуру и воспроизводит свои записи, пока открыт
+    const midiOff = mod.midiIn && app.midi ? app.midi.attach(mod.id, mod) : () => {};
+    live = { guarded, midiOff };
+  };
+  if (mod.loaded) start();
+  else {
+    // модуль ещё не загружен (src/modules/index.js): тихая заставка в окне, затем — сам модуль на том же месте
+    host.innerHTML = '<div class="modload" role="status" aria-busy="true" aria-label="' + ui.esc(moduleName(mod)) + '"><span class="mlic" style="--c:' + mod.color + '">' + mod.icon + '</span></div>';
+    const t0 = performance.now();
+    mod.load().then(() => {
+      if (closed) return;
+      host.replaceChildren();
+      start();
+      log('mod', mod.id + ' загружен за ' + Math.round(performance.now() - t0) + ' мс');
+      dispatchEvent(new Event('melete:modloaded')); // окна, которые смотрят на поля модуля (поворот), — пересчитать
+    }).catch((e) => {
+      logErr('mod', e);
+      if (closed) return;
+      host.innerHTML = '<div class="modload err" role="alert"><span class="mlic" style="--c:' + mod.color + '">' + mod.icon + '</span><p>' + ui.esc(coreT('mod.loadErr')) + '</p></div>';
+    });
+  }
   return {
     ctx,
     resize(next) {
-      frame.classList.remove(...SIZES);
-      frame.classList.add(next);
-      frame.dataset.size = next;
-      mod.resize(next);
+      setSize(next);
+      if (live) mod.resize(next);
       log('mod', mod.id + ' → ' + next);
     },
     unmount() {
+      closed = true;
       log('mod', 'закрыт ' + mod.id);
-      midiOff(); // воспроизведение останавливается, пока инструмент ещё на месте
-      try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
+      if (live) {
+        live.midiOff(); // воспроизведение останавливается, пока инструмент ещё на месте
+        try { mod.unmount(host); } catch (e) { logErr('mod', e); } // host — какое из мест закрывается (модуль может быть открыт в двух)
+        if (live.guarded) guardClose();
+      }
       host.replaceChildren();
-      if (guarded) guardClose();
     },
   };
 }

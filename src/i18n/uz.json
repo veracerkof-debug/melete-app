@@ -1863,5 +1863,6 @@
   "lic.aw.sub": "Galactic va Verbity2 reverblari (JS’ga koʻchirilgan)",
   "upd.mobile": "Mobil tarmoq",
   "upd.mobileSub": "Wi-Fi’siz ham yuklash — taxminan {mb} MB trafik",
-  "upd.mobileNow": "Hozir"
+  "upd.mobileNow": "Hozir",
+  "mod.loadErr": "Asbob yuklanmadi. Oynani yopib, qayta ochish kerak."
 }

@@ -27,7 +27,7 @@ import { voice } from '../../audio/metronome.js';
 import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
-const ICON = '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>';
+import meta, { ICON } from './meta.js';
 const I = {
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
   mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
@@ -1578,20 +1578,11 @@ function bind() {
 }
 
 export default {
-  id: 'audio',
-  order: 80,
-  name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
-  i18n: { ru, uz, en, el },
-  icon: ICON,
-  color: '#A95E72',
-  sizes: ['full', 'half', 'quarter', 'strip'],
-  pure: true, // полный экран: плеер и видео без шапки приложения (src/core/pure.js)
+  ...meta,
   status(c) {
     const list = c.files.list('audio'), td = list.reduce((s, x) => s + (x.dur || 0), 0);
     return list.length ? c.tn('files', list.length) + (td ? ' · ' + fmtDur(td) : '') : c.t('empty');
   },
-  // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт и что с ними делать
-  accepts: (f) => /^(audio|video)\//.test(f.type) || VIDEO_EXT.test(f.name) || /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i.test(f.name),
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;

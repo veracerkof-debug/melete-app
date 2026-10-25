@@ -249,7 +249,7 @@ export function bindRec(app, layer, mod, host, name) {
   layer.addEventListener('click', (e) => {
     if (!e.target.closest('[data-tv="rec"]')) return;
     if (app.midi && app.midi.playing && !app.rec.active) { app.midi.stop(); return; }
-    recSheet(app, mod, host, name);
+    if (mod.loaded) recSheet(app, mod, host, name); else mod.load().then(() => recSheet(app, mod, host, name)).catch(() => {});
   });
   // окно закрывается — запись сохраняется
   return () => {
