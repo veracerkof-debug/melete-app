@@ -1,0 +1,9 @@
+{
+  "name": "elachiston",
+  "private": true,
+  "description": "Ἐλάχιστον — главный экран телефона (отдельное приложение, docs/launcher.md). Зависимости — общие, в корне репозитория.",
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2"
+  }
+}

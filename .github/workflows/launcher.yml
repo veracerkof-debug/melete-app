@@ -1,0 +1,143 @@
+# Ἐλάχιστον (Elachiston) — отдельное приложение главного экрана (docs/launcher.md): своя сборка, свой ключ, свои релизы.
+# Каналы — как у Melete: main → релиз «launcher-dev», файл Elachiston-Dev.apk, приложение «Elachiston DEV» (app.elachiston.dev);
+# ветка pre (по слову автора) → релиз «launcher-pre», файл Elachiston.apk (app.elachiston). Последней в релиз кладётся
+# метка сборки launcher-<номер>.ver — по ней приложение видит, что новая сборка выложена целиком (src/launcher/update.js).
+name: Elachiston APK (dev и pre)
+
+on:
+  push:
+    branches: [main, pre]
+    paths:
+      - 'launcher/**'
+      - 'src/launcher/**'
+      - 'src/core/reading.js'
+      - 'src/core/bible.js'
+      - 'src/core/stats.js'
+      - 'src/core/time.js'
+      - 'src/core/integrity.js'
+      - 'src/core/verses.js'
+      - 'src/core/palettes.js'
+      - 'src/styles/tokens.css'
+      - 'tests/launcher.test.js'
+      - 'package-lock.json'
+      - '.github/workflows/launcher.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: launcher-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  LAUNCHER_CHANNEL: ${{ github.ref_name == 'pre' && 'pre' || 'dev' }}
+  BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Тесты главного экрана
+        run: npx vitest run tests/launcher.test.js
+
+      # dev — отдельное приложение рядом с основным: своё название (applicationId — в launcher/android/app/build.gradle)
+      - name: Название dev-сборки
+        if: env.LAUNCHER_CHANNEL == 'dev'
+        run: sed -i 's#>Elachiston</string>#>Elachiston DEV</string>#g' launcher/android/app/src/main/res/values/strings.xml
+
+      - name: Веб-сборка и перенос в Android
+        run: |
+          npm run launcher:build
+          cd launcher && npx cap sync android
+
+      # Свой ключ подписи (не ключ Melete) — из секретов: Settings → Secrets and variables → Actions,
+      # LAUNCHER_KEYSTORE_B64 (keystore в base64) и LAUNCHER_STORE_PASSWORD. Без него APK собирается, но в релиз не идёт:
+      # сборки с разной отладочной подписью не встают одна поверх другой
+      - name: Ключ подписи
+        id: key
+        env:
+          KEY_B64: ${{ secrets.LAUNCHER_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEY_B64" ]; then
+            echo "::warning::Нет секрета LAUNCHER_KEYSTORE_B64 — сборка с отладочной подписью, без выкладки в релиз (docs/launcher.md)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$KEY_B64" | base64 -d > "$RUNNER_TEMP/elachiston.jks"
+            echo "LAUNCHER_KEYSTORE=$RUNNER_TEMP/elachiston.jks" >> "$GITHUB_ENV"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Сборка APK
+        working-directory: launcher/android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          LAUNCHER_STORE_PASSWORD: ${{ secrets.LAUNCHER_STORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          if [ "$LAUNCHER_CHANNEL" = pre ]; then cp app/build/outputs/apk/debug/app-debug.apk ../../Elachiston.apk
+          else cp app/build/outputs/apk/debug/app-debug.apk ../../Elachiston-Dev.apk; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Elachiston-${{ env.LAUNCHER_CHANNEL }}-${{ github.run_number }}
+          path: Elachiston*.apk
+
+      # Проверка на Android до выкладки: эмулятор ставит APK и открывает; упало — сборка не выкладывается
+      - name: KVM для эмулятора
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Проверка на эмуляторе Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none -camera-front none
+          script: build/apk-smoke.sh "$(ls Elachiston-Dev.apk Elachiston.apk 2>/dev/null | head -1)" ${{ env.LAUNCHER_CHANNEL == 'dev' && 'app.elachiston.dev' || 'app.elachiston' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-elachiston-${{ env.LAUNCHER_CHANNEL }}-${{ github.run_number }}
+          path: |
+            smoke.png
+            logcat.txt
+          if-no-files-found: ignore
+
+      # Файл, затем метка сборки (последней — приложение не предложит недокачанное); только со своим ключом
+      - name: Выложить в релиз канала
+        if: steps.key.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="launcher-$LAUNCHER_CHANNEL"
+          FILE=$([ "$LAUNCHER_CHANNEL" = pre ] && echo Elachiston.apk || echo Elachiston-Dev.apk)
+          TITLE=$([ "$LAUNCHER_CHANNEL" = pre ] && echo "Elachiston" || echo "Elachiston DEV")
+          NOTES="Ἐλάχιστον — главный экран телефона. Сборка ${{ github.run_number }} (${GITHUB_SHA::7}), канал $LAUNCHER_CHANNEL."
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --prerelease --title "$TITLE" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+          gh release upload "$TAG" "$FILE" --clobber
+          N=${{ github.run_number }}; echo "$N" > "launcher-$N.ver"
+          gh release upload "$TAG" "launcher-$N.ver" --clobber
+          for a in $(gh release view "$TAG" --json assets -q '.assets[].name' | grep -E '^launcher-[0-9]+\.ver$'); do [ "$a" = "launcher-$N.ver" ] || gh release delete-asset "$TAG" "$a" -y; done
