@@ -7,7 +7,7 @@ import { initI18n, t, getLang } from './i18n.js';
 import { applyLook } from './look.js';
 import { mountHome, renderHome, renderSubline, renderPlayer, currentVerse, clockOpts, refreshTracker, refreshBalance } from './home.js';
 import { attachGestures, defaultGesture } from './gestures.js';
-import { mountDrawer, openDrawer, closeDrawer, drawerOpen, typeIntoSearch, openFolder } from './drawer.js';
+import { mountDrawer, openDrawer, closeDrawer, drawerOpen, typeIntoSearch, openFolder, drawerPanel, setDrawerFocus } from './drawer.js';
 import { openSettings, editHomeItem, editDockSlot } from './settings.js';
 import { registerCommand, runAction, setNotify, describeAction, openUrl } from './actions.js';
 import { loadApps, rolesOf, apps, appName } from './apps.js';
@@ -19,8 +19,8 @@ import { verseLinks } from './explain.js';
 import { refreshMelete, openMelete as openMeleteApp, watchMelete, onMeleteLive, meleteControl } from './melete.js';
 import { autoUpdate, onUpdate, install } from './update.js';
 import { verseByKey } from '../core/verses.js';
-import { openMoney, moneyOpen, moneyBack } from './money.js';
-import { openNotes, notesOpen, notesBack, closeNotes } from './notes.js';
+import { openMoney, moneyOpen, moneyBack, moneyPanel } from './money.js';
+import { openNotes, notesOpen, notesBack, closeNotes, notesPanel } from './notes.js';
 import { dailyCopy } from './backup.js';
 import { h, toast, openSheet, sheetOpen, closeTopSheet } from './ui.js';
 
@@ -112,7 +112,7 @@ mountHome(home, {
   onFolder: (id) => openFolder(id),
   onDockHold: (i) => editDockSlot(i, refresh),
   onVerse: openVerse,
-  onSettings: () => openSettings(refresh, gestureOf),
+  onSettings: (what) => openSettings(refresh, gestureOf, what === 'tracker' ? 'home' : what),
   onMelete: openMelete,
   onMeleteControl: (a) => meleteControl(a),
   onWallet: () => openMoney(),
@@ -122,7 +122,23 @@ mountHome(home, {
 mountDrawer(root, { onChange: renderHome });
 
 const blocked = () => sheetOpen() || drawerOpen() || !!rest;
-attachGestures(home, { isBlocked: blocked, onGesture: (id) => runAction(gestureOf(id), apps) });
+// панель за пальцем: какое действие назначено на смахивание — такая панель и тянется (всё приложения / кошелёк / блокнот)
+let dragPanel = null;
+const panelFor = (dir) => {
+  const a = gestureOf(dir);
+  if (a?.t !== 'cmd') return null;
+  if (a.id === 'drawer' || a.id === 'search') { setDrawerFocus(a.id === 'search'); return drawerPanel; }
+  if (a.id === 'money') return moneyPanel;
+  if (a.id === 'notes') return notesPanel;
+  return null;
+};
+attachGestures(home, {
+  isBlocked: blocked,
+  onGesture: (id) => runAction(gestureOf(id), apps),
+  onDragStart: (dir) => { dragPanel = panelFor(dir); if (dragPanel && !dragPanel.start(true)) dragPanel = null; return !!dragPanel; },
+  onDrag: (dir, px) => dragPanel?.move(px),
+  onDragEnd: (dir, px, v) => { const p = dragPanel; dragPanel = null; return p ? p.end(px, v, true) : false; },
+});
 
 loadApps().then(renderHome);
 onNowPlaying(renderPlayer);

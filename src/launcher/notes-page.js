@@ -40,7 +40,7 @@ function sample() {
 **Жирный**, \`код\`, > цитата, --- черта.
 [Am]Аккорды — в квадратных скобках перед слогом; \`\`\` — блок моноширинного текста.
 Внизу — кнопки для быстрого ввода. Поиск сверху: набрать название и «Ввод» — новая заметка.
-Удержание заметки в списке — закрепить, смахнуть влево — удалить.`, 3 * DAY, true),
+Удержание заметки в списке — закрепить или удалить. Смахнуть влево — назад, к списку и на главный экран.`, 3 * DAY, true),
     n(`Список дел
 - [ ] Струны для гитары
 - [ ] Позвонить насчёт репетиции
@@ -108,23 +108,13 @@ function row(n) {
     h('b', {}, n.pin ? h('i', {}, '★') : null, titleOf(n)),
     h('small', {}, h('em', {}, when(n.updated)), bodyOf(n) || ' '));
   const wrap = h('div', { class: 'rowwrap' }, el);
-  let x0 = null, y0, dx = 0, lock = null, timer, held = false;
-  el.addEventListener('pointerdown', (e) => { x0 = e.clientX; y0 = e.clientY; dx = 0; lock = null; held = false; timer = setTimeout(() => { held = true; vibr(); menu(n); }, 480); });
-  el.addEventListener('pointermove', (e) => {
-    if (x0 == null) return;
-    const mx = e.clientX - x0, my = e.clientY - y0;
-    if (!lock && Math.hypot(mx, my) > 8) { lock = Math.abs(mx) > Math.abs(my) ? 'x' : 'y'; clearTimeout(timer); }
-    if (lock === 'x') { dx = Math.min(0, mx); el.style.transform = `translateX(${dx}px)`; }
-  });
-  const end = () => {
-    clearTimeout(timer);
-    if (x0 == null) return;
-    if (lock === 'x' && dx < -100) { el.style.transition = 'transform .18s'; el.style.transform = 'translateX(-100%)'; setTimeout(() => remove(n), 170); }
-    else { el.style.transition = 'transform .2s'; el.style.transform = ''; setTimeout(() => (el.style.transition = ''), 200); if (!lock && !held) openNote(n.id); }
-    x0 = null;
-  };
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', () => { clearTimeout(timer); x0 = null; el.style.transform = ''; });
+  // касание — открыть, удержание — меню (закрепить, скопировать, удалить)
+  let timer, held = false, x0 = 0, y0 = 0;
+  el.addEventListener('pointerdown', (e) => { held = false; x0 = e.clientX; y0 = e.clientY; timer = setTimeout(() => { held = true; vibr(); menu(n); }, 480); });
+  el.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 10) clearTimeout(timer); });
+  el.addEventListener('pointerup', () => clearTimeout(timer));
+  el.addEventListener('pointercancel', () => clearTimeout(timer));
+  el.addEventListener('click', () => { if (!held) openNote(n.id); });
   el.addEventListener('contextmenu', (e) => e.preventDefault());
   return wrap;
 }
@@ -298,6 +288,39 @@ function toast(text, undo) {
 }
 
 // «Назад» из лаунчера и Esc: шторка → заметка → закрыть блокнот
+// Смахивание справа налево — назад: из заметки — к списку; из списка — закрыть блокнот (страница идёт за пальцем,
+// родитель двигает iframe: notes.js). Не с текста заметки в правке и не с полей ввода.
+(() => {
+  let st = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input, textarea, .tools, .tags')) { st = null; return; }
+    st = { x: e.screenX, y: e.screenY, lock: null, vel: [], top: !S.cur && !app.querySelector('.wrap') };
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (!st) return;
+    const dx = e.screenX - st.x, dy = e.screenY - st.y;
+    if (!st.lock) {
+      if (Math.hypot(dx, dy) < 10) return;
+      st.lock = Math.abs(dx) > Math.abs(dy) && dx < 0 ? 'x' : 'no';
+      if (st.lock === 'no') { st = null; return; }
+    }
+    st.vel.push({ dx, t: performance.now() }); if (st.vel.length > 6) st.vel.shift();
+    if (st.top && parent !== window) parent.postMessage({ notesDrag: Math.max(0, -dx) }, '*');
+  }, true);
+  const end = (e) => {
+    if (!st) return;
+    const s = st; st = null;
+    if (s.lock !== 'x') return;
+    const dx = Math.max(0, s.x - e.screenX);
+    const a = s.vel[0], b = s.vel[s.vel.length - 1];
+    const v = a && b && b.t > a.t ? (a.dx - b.dx) / (b.t - a.t) : 0;
+    if (s.top && parent !== window) { parent.postMessage({ notesDragEnd: dx, v }, '*'); return; }
+    if (dx > 80 || v > 0.5) window.__notesBack();
+  };
+  document.addEventListener('pointerup', end, true);
+  document.addEventListener('pointercancel', () => { if (st?.top && parent !== window) parent.postMessage({ notesDragEnd: 0, v: 0 }, '*'); st = null; }, true);
+})();
+
 window.__notesBack = () => {
   const w = app.querySelector('.wrap');
   if (w) w.remove();

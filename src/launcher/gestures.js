@@ -10,7 +10,9 @@ const BOTTOM = 44; // снизу — полоса жеста «Домой» и �
 const SWIPE_PX = 48;
 const DOUBLE_MS = 300;
 
-export function attachGestures(el, { onGesture, isBlocked }) {
+// onDragStart(dir) → true, если панель в эту сторону пойдёт за пальцем; onDrag(dir, px), onDragEnd(dir, px, v) → true, если
+// жест исчерпан перетаскиванием (обычное смахивание тогда не срабатывает)
+export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, onDragEnd }) {
   let start = null;
   let longTimer = null;
   let lastTap = null;
@@ -47,12 +49,26 @@ export function attachGestures(el, { onGesture, isBlocked }) {
     }, LONG_MS);
   });
 
+  const DIR = (dx, dy) => (Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? 'swipeUp' : 'swipeDown') : (dx < 0 ? 'swipeLeft' : 'swipeRight'));
+  const along = (dir, dx, dy) => (dir === 'swipeUp' ? -dy : dir === 'swipeDown' ? dy : dir === 'swipeLeft' ? -dx : dx);
+
   el.addEventListener('pointermove', (e) => {
     if (!start) return;
-    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) {
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!start.moved && Math.hypot(dx, dy) > 10) {
       start.moved = true;
       clearTimeout(longTimer);
       clearHalo();
+      // панель идёт за пальцем — направление запоминается по первому движению
+      if (!start.sys && !start.long && onDragStart) {
+        start.dir = DIR(dx, dy);
+        if (onDragStart(start.dir)) { start.drag = true; start.vel = []; try { el.setPointerCapture(e.pointerId); } catch { /* */ } }
+      }
+    }
+    if (start.drag) {
+      const px = Math.max(0, along(start.dir, dx, dy));
+      start.vel.push({ px, t: performance.now() }); if (start.vel.length > 6) start.vel.shift();
+      onDrag(start.dir, px);
     }
   });
 
@@ -65,6 +81,15 @@ export function attachGestures(el, { onGesture, isBlocked }) {
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
     const dt = performance.now() - s.t;
+
+    if (s.drag) {
+      const px = Math.max(0, along(s.dir, dx, dy));
+      const a = s.vel[0], b = s.vel[s.vel.length - 1];
+      const v = a && b && b.t > a.t ? (b.px - a.px) / (b.t - a.t) : 0;
+      if (s.el) { s.el.dataset.suppress = '1'; setTimeout(() => delete s.el.dataset.suppress, 50); }
+      if (onDragEnd(s.dir, px, v)) return;
+      // панель вернулась — считаем как обычное смахивание, если жест был взмахом
+    }
 
     // подавляем click после свайпа/долгого нажатия
     if (s.el && (s.long || s.moved)) {
@@ -94,7 +119,7 @@ export function attachGestures(el, { onGesture, isBlocked }) {
   };
 
   el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', () => { clearTimeout(longTimer); clearHalo(); start = null; });
+  el.addEventListener('pointercancel', () => { clearTimeout(longTimer); clearHalo(); if (start?.drag) onDragEnd(start.dir, 0, 0); start = null; });
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // колесо мыши / тачпад: прокрутка вниз = свайп вверх (открыть все приложения)

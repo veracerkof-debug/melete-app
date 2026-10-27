@@ -23,6 +23,7 @@ export const DEFAULTS = {
   note: '',
   align: 'right',       // left | center | right
   size: 'm',            // s | m | l — прежний размер названий (больше не настраивается: см. uiScale)
+  setTab: 'look',       // вкладка настроек: look | home | gestures | data
   layout: null,         // layout.js: порядок, видимость, размер блоков, место значков и папок
   clockScale: 100,      // размер часов, % (60–140)
   uiScale: 100,         // размер остального на главном: дата, названия, Melete, плеер, значки, % (60–130)
