@@ -1,0 +1,8 @@
+{
+  "appId": "app.elachiston",
+  "appName": "Elachiston",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

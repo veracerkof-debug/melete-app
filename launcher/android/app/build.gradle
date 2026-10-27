@@ -1,0 +1,75 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "app.elachiston"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        // каналы — как у Melete: dev (каждая отправка в main) — отдельное приложение «Elachiston DEV», pre — основное
+        applicationId(System.getenv('LAUNCHER_CHANNEL') == 'pre' ? "app.elachiston" : "app.elachiston.dev")
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
+        versionName(System.getenv('LAUNCHER_CHANNEL') == 'pre' ? "0.1-pre" : "0.1-dev")
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // Свой ключ подписи — отдельный от Melete (решение автора), только в секретах GitHub (LAUNCHER_KEYSTORE_B64 и пароль):
+    // каждая сборка канала встаёт поверх прежней, данные остаются. Без ключа (сборка у себя) — отладочная подпись
+    def launcherStore = System.getenv('LAUNCHER_KEYSTORE')
+    signingConfigs {
+        if (launcherStore) {
+            launcher {
+                storeFile file(launcherStore)
+                storePassword System.getenv('LAUNCHER_STORE_PASSWORD')
+                keyAlias System.getenv('LAUNCHER_KEY_ALIAS') ?: 'elachiston'
+                keyPassword System.getenv('LAUNCHER_STORE_PASSWORD')
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (launcherStore) signingConfig signingConfigs.launcher
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.biometric:biometric:1.1.0"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

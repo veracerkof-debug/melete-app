@@ -37,7 +37,7 @@ export function mountUpdateBar(app) {
 function stateLine(s) {
   if (s.st === 'checking') return t('upd.checking');
   if (s.st === 'none') return t('upd.none');
-  if (s.st === 'err') return t('upd.err');
+  if (s.st === 'err') return s.limit > Date.now() ? t('upd.limit', { t: new Date(s.limit).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : t('upd.err');
   if (s.st === 'avail') return t('upd.avail', { n: s.info.build });
   if (s.st === 'down') return s.wait ? t('upd.wait') : t('upd.down', { p: pct(s.f) });
   if (s.st === 'ready') return t('upd.ready');
@@ -59,6 +59,7 @@ export function updateSheet(app) {
       '</div><p class="ftr">' + (line ? esc(line) + '<br>' : '') + t('upd.hint') + '</p>';
   }, (el) => {
     un = U.subscribe(() => sh.update());
+    U.fresh(); // открыли «Обновления» — свежая проверка (не чаще раза в две минуты)
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-u]'); if (!b) return;
       if (b.dataset.u === 'check') U.check();

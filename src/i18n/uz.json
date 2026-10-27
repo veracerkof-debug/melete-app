@@ -1818,6 +1818,7 @@
   "upd.checking": "Tekshirilmoqda…",
   "upd.none": "Eng soʻnggi yigʻma oʻrnatilgan",
   "upd.err": "GitHub bilan aloqa yoʻq — keyinroq yangilanadi",
+  "upd.limit": "GitHub bu tarmoqdan tekshiruvlarni chekladi — {t} dan keyin yana",
   "upd.avail": "Melete yangi versiyasi · yigʻma {n}",
   "upd.get": "Yangilash",
   "upd.later": "Keyin",

@@ -1854,6 +1854,7 @@
   "upd.checking": "Checking…",
   "upd.none": "The latest build is installed",
   "upd.err": "No connection to GitHub — update later",
+  "upd.limit": "GitHub has limited checks from this network — again after {t}",
   "upd.avail": "New Melete version · build {n}",
   "upd.get": "Update",
   "upd.later": "Later",

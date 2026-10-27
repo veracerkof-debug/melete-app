@@ -24,6 +24,15 @@
 | Модель MediaPipe Hand Landmarker (float16, v1) — © Google LLC | Модель распознавания 21 точки руки, файл `vendor/mediapipe/hand_landmarker.task` (7,8 МБ) без изменений | Apache-2.0 |
 | GFS Didot — © Greek Font Society, пакет `@fontsource/gfs-didot` 5.3.0 (греческий набор) | Шрифт логотипа «Μελέτη» и греческих цитат | SIL OFL 1.1 |
 | Onest (вариативный) — © 2023 The Onest Project Authors, пакет `@fontsource-variable/onest` 5.3.1 | Дополнительный шрифт интерфейса, кириллица и латиница | SIL OFL 1.1 |
+| Unbounded (вариативный) — © The Unbounded Project Authors, пакет `@fontsource-variable/unbounded` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Geologica (вариативный) — © The Geologica Project Authors, пакет `@fontsource-variable/geologica` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Golos Text (вариативный) — © Paratype, пакет `@fontsource-variable/golos-text` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Manrope (вариативный) — © The Manrope Project Authors, пакет `@fontsource-variable/manrope` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Literata (вариативный) — © The Literata Project Authors, пакет `@fontsource-variable/literata` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Oranienbaum — © Oleg Pospelov, Jovanny Lemonad, пакет `@fontsource/oranienbaum` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον | SIL OFL 1.1 |
+| Monomakh — © Aleksandr Andreev (Slavonic Computing Initiative), пакет `@fontsource/monomakh` 5.3.0 | Шрифт на выбор главного экрана Ἐλάχιστον (церковный режим) | SIL OFL 1.1 |
+| AndroidX Biometric 1.1.0 — © The Android Open Source Project | Вход в кошелёк Ἐλάχιστον по отпечатку пальца или лицу (Android) | Apache 2.0 |
+| Natural Earth 1:110m, суша — naturalearthdata.com (растр 120×60 в `src/launcher/landmask.js`) | Карта Земли в живых обоях «Планета» главного экрана Ἐλάχιστον | Общественное достояние |
 | Библия, Синодальный перевод (1876), 66 книг — из архива [eBible.org](https://ebible.org/find/details.php?id=russyn) (russyn) | Текст Библии в церковном режиме, файлы `public/bible/synodal/*.json` (разбивка по книгам и главам — `build/bible-import.mjs`), текст без изменений | Общественное достояние |
 | [Ponomar](https://github.com/slavonic/Ponomar) — © 2025 The Ponomar Project Authors | Шрифт церковнославянских цитат у названий разделов; урезан до букв цитат (`src/styles/fonts/ponomar-verses.woff2`, текст лицензии — `Ponomar-OFL.txt` рядом) | SIL OFL 1.1 |
 | Стихи разделов: Елизаветинская Библия (1751, церковнославянский; набор по [azbyka.ru](https://azbyka.ru/biblia/)), [World English Bible](https://ebible.org/find/details.php?id=engwebp) (eBible.org), Синодальный перевод | Цитаты у названий разделов (`src/core/verses.js`) | Общественное достояние |

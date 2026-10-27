@@ -6,10 +6,15 @@ import {
   parseChord, FAM_DEGS, SCALES, scaleById, harmonize, roman, funcOf, CIRCLE, REL_MIN, SIG, iiVI,
 } from './engine.js';
 import { keyboardSVG, marksOf, staffSVG, fretSVG, circleSVG, esc, seg, sel, playBtn, simp } from './draw.js';
+import { grammarLabs } from './labs1.js';
+import { harmonyLabs } from './labs2.js';
+import { jazzLabs } from './labs3.js';
+import { playLabs } from './labs4.js';
+import { themeLabs, extraEx } from './labs5.js';
 
 IV['#1'] = [0, 1];
 
-export function createLabs({ T, L, snd }) {
+export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} } }) {
   const LABS = {};
   const deg = (d) => degLabel(d);
   const ROOT_OPTS = MAJ_ROOTS.map((r) => [r, r]), MIN_OPTS = MIN_ROOTS.map((r) => [r, r]), ALL_OPTS = ALL12.map((r) => [r, r]);
@@ -247,6 +252,8 @@ export function createLabs({ T, L, snd }) {
     ['t5', [['1', 'maj7'], ['#1', '°7'], ['2', 'm7'], ['5', '7']]], ['t6', [['1', 'maj7'], ['6', '7'], ['2', '7'], ['5', '7']]],
     ['t7', [['1', 'maj7'], ['b3', '7'], ['b6', '7'], ['b2', '7']]], ['t8', [['1', 'maj7'], ['b3', 'maj7'], ['b6', 'maj7'], ['b2', 'maj7']]],
     ['t9', [['1', 'm6'], ['b6', 'm7♭5'], ['2', 'm7♭5'], ['5', '7alt']], true],
+    ['t10', [['1', 'maj7'], ['b3', '7'], ['b6', 'maj7'], ['b2', '7']]], ['t11', [['1', 'maj7'], ['7', '7'], ['3', 'maj7'], ['5', '7']]],
+    ['t12', [['1', 'maj7'], ['2', 'm7'], ['3', 'm7'], ['4', 'maj7']]], ['t13', [['3', 'm7'], ['6', '7'], ['2', '7'], ['5', '7']]],
   ];
   const turnChords = (r, t) => t[1].map(([d, q]) => ({ r: simp(up(r, t[2] && d === '6' ? 'b6' : d)), id: q }));
   LABS.turn = {
@@ -286,12 +293,13 @@ export function createLabs({ T, L, snd }) {
     ['a1', 'C', 'Cmaj7 A7 | Dm7 G7 | Em7 A7 | Dm7 G7 | Cmaj7'], ['a2', 'C', 'Em7 A7 | Dm7 G7 | Cm7 F7 | B♭maj7 | Bm7♭5 E7 | Am7'],
     ['a3', 'F', 'Fmaj7 | E♭7 D7 | D♭7 C7 | Fmaj7'], ['a4', 'Cm', 'Cm6 | Dm7♭5 G7♭9 | Cm6 A♭7 | Dm7♭5 G7alt | Cm6'],
     ['a5', 'C', 'Cmaj7 C♯°7 | Dm7 D♯°7 | Em7 A7 | Dm7 G7'], ['a6', 'F', 'F7 | B♭7 | F7 | Cm7 F7 | B♭7 | B°7 | F7 | Am7 D7 | Gm7 | C7 | F7 D7 | Gm7 C7'],
-    ['a7', 'C', 'Cmaj7 | Fmaj7 | Fm7 B♭7 | Cmaj7 | A♭maj7 D♭maj7 | Cmaj7'],
+    ['a7', 'C', 'Cmaj7 | Fmaj7 | Fm7 B♭7 | Cmaj7 | A♭maj7 D♭maj7 | Cmaj7'], ['a8', 'F', 'Fmaj7 Am7 ‖ D7 Gm7 | C7 | Fmaj7'],
   ];
   function analyze(text, keyStr) {
     const minor = /m$/.test(keyStr.trim()), kp = parseNote(keyStr) || { n: N(0, 0) }, key = kp.n, kpc = pcOf(key), toks = [];
-    let bar = 0;
-    String(text).split('|').forEach((b) => { b.trim().split(/\s+/).filter(Boolean).forEach((t) => { const c = parseChord(t); if (c) toks.push({ ...c, sym: t, bar }); }); bar++; });
+    let bar = 0, sec = 0;
+    // «‖» — граница частей: доминанта через неё разрешается (стрелка), а пара ii–V не читается (скобки нет)
+    String(text).replace(/‖/g, '|‖|').split('|').forEach((b) => { if (b.trim() === '‖') { sec++; return; } let pos = 0; b.trim().split(/\s+/).filter(Boolean).forEach((t) => { const c = parseChord(t); if (c) toks.push({ ...c, sym: t, bar, sec, pos: pos++ }); }); if (b.trim()) bar++; });
     toks.forEach((c, i) => {
       const nx = toks[i + 1], pc = pcOf(c.root), d = nx ? (pcOf(nx.root) - pc + 12) % 12 : -1;
       c.rn = roman(key, c.root, c.fam === 'dom' ? '7' : c.fam === 'min' ? 'm' : c.fam === 'hdim' ? 'ø' : c.fam === 'dim' ? '°7' : c.fam === 'sus' ? '7sus4' : '').replace(/m$/, '');
@@ -302,8 +310,10 @@ export function createLabs({ T, L, snd }) {
         else if (d === 2 && pcOf(nx.root) === kpc) c.fn = '♭VII7 · ' + T('ana.backdoor');
       }
       if (c.fam === 'dim' && nx && d === 1) c.fn = '°7 → ' + tgt;
-      if ((c.fam === 'min' || c.fam === 'hdim') && nx && nx.fam === 'dom' && d === 5) c.br = true;
-      if ((c.fam === 'min' || c.fam === 'hdim') && nx && nx.fam === 'dom' && d === 6) c.br = 'sub';
+      // ii — на сильном месте: первым в такте; и в той же части, что V
+      const strong = c.pos === 0 && nx && nx.sec === c.sec;
+      if ((c.fam === 'min' || c.fam === 'hdim') && strong && nx.fam === 'dom' && d === 5) c.br = true;
+      if ((c.fam === 'min' || c.fam === 'hdim') && strong && nx.fam === 'dom' && d === 6) c.br = 'sub';
     });
     const dia = harmonize(key, scaleById('ionian')).map((h) => pcOf(h.root) + ':' + h.q);
     toks.forEach((c) => { if (!minor && !c.fn && !c.br && c.fam !== 'dom' && c.fam !== 'dim' && !dia.includes(pcOf(c.root) + ':' + ({ maj: 'maj7', min: 'm7', hdim: 'm7♭5' }[c.fam] || '')) && pcOf(c.root) !== kpc) c.mi = true; });
@@ -318,7 +328,9 @@ export function createLabs({ T, L, snd }) {
       let s = '<svg class="anasvg" viewBox="0 0 100 26" preserveAspectRatio="xMinYMin meet"><defs><marker id="bkah' + ri + '" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L6 3L0 6z" class="ahd"/></marker></defs>';
       row.forEach((c, i) => {
         const x = i * cw + cw / 2, prevBar = i ? row[i - 1].bar : ri ? toks[ri * PER - 1].bar : -1;
-        if (c.bar !== prevBar) s += '<line class="bl" x1="' + (i * cw + 0.2) + '" x2="' + (i * cw + 0.2) + '" y1="7.5" y2="14"/>';
+        const prevSec = i ? row[i - 1].sec : ri ? toks[ri * PER - 1].sec : 0;
+        if (c.sec !== prevSec) s += '<line class="bl sec" x1="' + (i * cw - 0.4) + '" x2="' + (i * cw - 0.4) + '" y1="6" y2="15.5"/><line class="bl sec" x1="' + (i * cw + 0.5) + '" x2="' + (i * cw + 0.5) + '" y1="6" y2="15.5"/>';
+        else if (c.bar !== prevBar) s += '<line class="bl" x1="' + (i * cw + 0.2) + '" x2="' + (i * cw + 0.2) + '" y1="7.5" y2="14"/>';
         s += '<text class="cs" x="' + x + '" y="12.4">' + esc(c.sym) + '</text><text class="rn' + (c.fn ? ' fn' : c.mi ? ' mi' : '') + '" x="' + x + '" y="23.6">' + esc(c.fn || c.rn + (c.mi ? ' *' : '')) + '</text>';
         if (c.arrow) s += '<path class="ar ' + c.arrow + '" d="M' + (x + 2.5) + ' 6 Q' + (x + cw / 2) + ' 1.2 ' + (x + cw - 2.5) + ' 6"' + (i < row.length - 1 ? ' marker-end="url(#bkah' + ri + ')"' : '') + '/>';
         if (c.br) s += '<path class="brk' + (c.br === 'sub' ? ' d' : '') + '" d="M' + (x - 3) + ' 15 V17 H' + Math.min(x + cw + 3, 100) + ' V15"/>';
@@ -340,7 +352,7 @@ export function createLabs({ T, L, snd }) {
 
   /* ---------- 7. Голоса ---------- */
   const RL = {
-    maj7: { A: ['3', '5', '7', '9'], B: ['7', '9', '3', '5'], three: ['3', '7', '9'] },
+    maj7: { A: ['3', '5', '7', '9'], B: ['7', '1', '3', '5'], three: ['3', '7', '9'] },
     m7: { A: ['b3', '5', 'b7', '9'], B: ['b7', '9', 'b3', '5'], three: ['b3', 'b7', '9'] },
     7: { A: ['3', '13', 'b7', '9'], B: ['b7', '9', '3', '13'], three: ['3', 'b7', '13'] },
     '7alt': { A: ['3', 'b13', 'b7', '#9'], B: ['b7', '#9', '3', 'b13'], three: ['3', 'b7', '#9'] },
@@ -446,6 +458,8 @@ export function createLabs({ T, L, snd }) {
     ['r4', 'Cmaj7 Am7 | Dm7 G7', 'Cmaj7 E♭7 | A♭maj7 D♭7'], ['r5', 'Cmaj7 | Dm7', 'Cmaj7 C♯°7 | Dm7'], ['r6', 'Cmaj7 | Cmaj7', 'Cmaj7 | C°7 Cmaj7'],
     ['r7', 'Fmaj7 | Cmaj7', 'Fmaj7 Fm6 | Cmaj7'], ['r8', 'Dm7 G7 | Cmaj7', 'Fm7 B♭7 | Cmaj7'], ['r9', 'G7 | G7 | Cmaj7', 'Dm7 | G7 | Cmaj7'],
     ['r10', 'Dm7 | Dm7', 'Dm7 | E♭m7 Dm7'], ['r11', 'Cm | Cm | Cm | Cm', 'Cm | Cm(maj7) | Cm7 | Cm6'], ['r12', 'Cmaj7 | Am7 | Dm7 | G7', 'Cmaj7 | E♭maj7 | A♭maj7 | D♭maj7'],
+    ['r13', 'Em7 A7 | Dmaj7', 'Em7♭5 A7♭9 | Dmaj7'], ['r14', 'Gm7 C7 | Fm7 B♭7 | E♭maj7', 'A7alt D7alt | G7alt C7alt | Fm7 B♭7 | E♭maj7'], ['r15', 'Cmaj7 | A7 | Dm7 | G7', 'Cmaj7 B7 | B♭7 A7 | Dm7 | G7'],
+    ['r16', 'Em7 A7 | Dm7 G7', 'A7sus4♭9 | G7sus4'], ['r17', 'G7 | C6', 'A♭7♯11/C | C6'], ['r18', 'Cmaj7 | Am7 | Dm7 | G7', 'Cmaj7 | E♭7 | A♭7 | D♭7'],
   ];
   const seqOf = (t) => t.replace(/\|/g, ' ').split(/\s+/).filter(Boolean).map(voiceSym);
   LABS.reharm = {
@@ -509,7 +523,7 @@ export function createLabs({ T, L, snd }) {
       const roots = [up(k, '2'), up(k, '5'), k, k].map((r) => 36 + pcOf(r));
       for (let bar = 0; bar < 4; bar++) {
         const g = s.grid.slice((bar % 2) * 8, (bar % 2) * 8 + 8);
-        for (let e = 0; e < 8; e++) if (g[e] === '1') hits.push([bar * 4 * beat + Math.floor(e / 2) * beat + (e % 2 ? beat * 0.66 : 0), ch[bar], beat * 0.55]);
+        for (let e = 0; e < 8; e++) if (g[e] === '1') hits.push([bar * 4 * beat + Math.floor(e / 2) * beat + (e % 2 ? beat * 0.66 : 0), e === 7 ? ch[(bar + 1) % 4] : ch[bar], beat * 0.55]); // на 4+ — уже следующий аккорд
         const rp = roots[bar], nx = roots[(bar + 1) % 4];
         [rp, rp + 7, rp + 4, nx + (nx > rp ? -1 : 1)].forEach((m, b) => hits.push([bar * 4 * beat + b * beat, [m], beat * 0.9]));
       }
@@ -556,19 +570,10 @@ export function createLabs({ T, L, snd }) {
       let t = 0;
       F.forEach((b) => { const ts = b.split(' '); ts.forEach((x) => { const c = rnChord(k, x); if (c) hits.push([t, voiceSimple(c), (bar / ts.length) * 0.95]); t += bar / ts.length; }); });
       snd.hits(hits);
-      F.forEach((_, i) => snd.mark(i * bar, () => el.querySelectorAll('.fb').forEach((c, j) => c.classList.toggle('on', j === i))));
-      snd.mark(F.length * bar, () => el.querySelectorAll('.fb').forEach((c) => c.classList.remove('on')));
+      F.forEach((_, i) => snd.mark(i * bar, () => el.querySelectorAll('.bkfb').forEach((c, j) => c.classList.toggle('on', j === i))));
+      snd.mark(F.length * bar, () => el.querySelectorAll('.bkfb').forEach((c) => c.classList.remove('on')));
       return false;
     },
-  };
-  const AABA = { aaba: ['A', 'A', 'B', 'A'], aba: ['A', 'B', 'A'], abac: ['A', 'B', 'A', 'C'], ab: ['A', 'B'], blues: ['12'] };
-  LABS.aaba = {
-    st: { f: 'aaba' },
-    render(s) {
-      return '<div class="bkctl">' + seg('f', Object.keys(AABA).map((k) => [k, k === 'blues' ? '12' : k.toUpperCase()]), s.f) + '</div><p><b>' + T('ab.' + s.f) + '</b></p><div class="form">' +
-        AABA[s.f].map((x) => '<div class="fs s' + x + '" style="flex:' + (x === '12' ? 12 : 8) + '"><b>' + (x === '12' ? T('ab.bars', { n: 12 }) : x) + '</b><small>' + (x === '12' ? '3 × 4' : T('ab.bars', { n: 8 })) + (x === 'B' && s.f === 'aaba' ? ' · ' + T('ab.bridge') : '') + '</small></div>').join('') + '</div>';
-    },
-    on() {},
   };
 
   /* ---------- 13. Импровизация ---------- */
@@ -648,7 +653,8 @@ export function createLabs({ T, L, snd }) {
     sig() { const i = rnd(12); return { q: T('ex.q.sig', { k: CIRCLE[i] }), a: sigText(SIG[i]), o: opts(sigText(SIG[i]), SIG.map(sigText)) }; },
     func() { const k = rootN(pick(MAJ_ROOTS)), h = harmonize(k, scaleById('ionian')), i = rnd(7); return { q: T('ex.q.func', { c: nm(simp(h[i].root)) + h[i].q, k: nm(k) }), a: T('fn.' + funcOf(i, false)), o: ['T', 'S', 'D'].map((f) => T('fn.' + f)), prog: [voiceSimple({ r: k, id: 'maj7' }), keyMs(h[i])] }; },
   };
-  const hear = (q) => { if (!q) return; if (q.prog) snd.prog(q.prog, 1.1); else if (q.block) snd.chord(q.block, { dur: 1.8 }); else if (q.play) snd.seq(q.play, 0.7, 0.9); };
+  Object.assign(EX, extraEx({ T, L, scName, opts, shuffle, voiceSimple }));
+  const hear = (q) => { if (!q) return; if (q.hits) snd.play({ hits: q.hits }); else if (q.prog) snd.prog(q.prog, 1.1); else if (q.block) snd.chord(q.block, { dur: 1.8 }); else if (q.play) snd.seq(q.play, 0.7, 0.9); };
   LABS.ex = {
     st: { on: Object.keys(EX).join(','), q: null, ok: 0, n: 0, ans: null },
     next(s) { const on = s.on.split(',').filter(Boolean); if (!on.length) { s.q = null; return; } const id = pick(on); s.q = { ...EX[id](), id }; s.ans = null; if (s.q.ear) hear(s.q); },
@@ -656,7 +662,7 @@ export function createLabs({ T, L, snd }) {
       if (!s.q && s.on) this.next(s);
       const on = s.on.split(','), q = s.q;
       return '<div class="extypes">' + Object.keys(EX).map((id) => '<button class="chk' + (on.includes(id) ? ' on' : '') + '" data-a="t:' + id + '" aria-pressed="' + on.includes(id) + '">' + T('ex.t.' + id) + '</button>').join('') + '</div>' +
-        (q ? '<div class="excard"><div class="exq">' + q.q + '</div>' + (q.show || '') + (q.play || q.prog || q.block ? '<div class="bkrow">' + playBtn('data-a="hear"', T(q.ear ? 'ex.again' : 'ui.play')) + '</div>' : '') +
+        (q ? '<div class="excard"><div class="exq">' + q.q + '</div>' + (q.show || '') + (q.play || q.prog || q.block || q.hits ? '<div class="bkrow">' + playBtn('data-a="hear"', T(q.ear ? 'ex.again' : 'ui.play')) + '</div>' : '') +
           '<div class="exo">' + q.o.map((o, i) => '<button class="eo' + (s.ans != null ? (o === q.a ? ' right' : i === s.ans ? ' wrong' : '') : '') + '" data-a="o:' + i + '"' + (s.ans != null ? ' disabled' : '') + '>' + o + '</button>').join('') + '</div>' +
           (s.ans != null ? '<div class="bkrow"><button class="primary" data-a="next">' + T('ex.next') + '</button></div>' : '') + '</div>' : '<p class="bkhint">' + T('ex.pick') + '</p>') +
         '<p class="score">' + T('ex.score', { ok: s.ok, n: s.n }) + '</p>';
@@ -670,12 +676,15 @@ export function createLabs({ T, L, snd }) {
     },
   };
   LABS.plan = {
-    st: { min: 45, focus: 'harm' },
+    st: { min: 45, focus: 'harm', day: -1 },
     render(s) {
+      // неделя от дня урока («Джазология»): тяжёлые дни сразу после урока, выходной — накануне
+      const W = ['heavy', 'heavy', 'mid', 'mid', 'light', 'off'], week = s.day < 0 ? '' : '<div class="plweek">' + [0, 1, 2, 3, 4, 5, 6].map((d) => { const k = (d - s.day + 7) % 7, w = k === 0 ? 'lesson' : W[k - 1]; return '<div class="plw ' + w + '"><b>' + T('pl.d' + d) + '</b><span>' + T('pl.w.' + w) + '</span></div>'; }).join('') + '</div><p class="bknote">' + T('pl.w.note') + '</p>';
       const F = { harm: [0.3, 0.15, 0.35, 0.2], impro: [0.2, 0.2, 0.35, 0.25], ear: [0.3, 0.4, 0.3], rep: [0.25, 0.25, 0.3, 0.2] };
       return '<div class="bkctl">' + seg('focus', Object.keys(F).map((k) => [k, T('pl.' + k)]), s.focus) + seg('min', [[20, T('pl.min', { n: 20 })], [45, T('pl.min', { n: 45 })], [90, T('pl.min', { n: 90 })]], s.min) + '</div>' +
         '<div class="bkplan">' + F[s.focus].map((f, i) => '<div class="pl"><b>' + Math.round(s.min * f) + '′</b><span>' + T('pl.' + s.focus + i) + '</span></div>').join('') + '</div>' +
-        '<p class="bknote">' + T('pl.keys', { list: [0, 1, 2, 3, 4, 5].map((i) => T('pl.d' + i) + ' — ' + CIRCLE[i * 2] + ', ' + CIRCLE[i * 2 + 1]).join('; ') }) + '</p>';
+        '<p class="bknote">' + T('pl.keys', { list: [0, 1, 2, 3, 4, 5].map((i) => T('pl.d' + i) + ' — ' + CIRCLE[i * 2] + ', ' + CIRCLE[i * 2 + 1]).join('; ') }) + '</p>' +
+        '<div class="bkctl">' + sel('day', [[-1, T('pl.noday')], ...[0, 1, 2, 3, 4, 5, 6].map((d) => [d, T('pl.d' + d)])], s.day, T('pl.day')) + '</div>' + week;
     },
     on() {},
   };
@@ -711,5 +720,7 @@ export function createLabs({ T, L, snd }) {
     on() {},
   };
 
+  // части учебника: схемы — в своих файлах, общие помощники — отсюда
+  Object.assign(LABS, grammarLabs({ T, L, snd, fact, sp, rootSel }), harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), jazzLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), playLabs({ T, L, snd, sp, rootSel, voiceSimple }), themeLabs({ T, L, snd, sp, mic, ui }));
   return LABS;
 }

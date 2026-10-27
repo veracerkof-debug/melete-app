@@ -21,7 +21,7 @@
 .bcard i{font-style:normal;font-size:13px;font-weight:700;color:var(--pc)}
 .bcard b{font-size:17px;line-height:1.2}
 .bcard span{font-size:13px;line-height:1.3;color:var(--l2)}
-.bcard.p0{--pc:var(--tint)}.bcard.p1{--pc:var(--bk-S)}.bcard.p2{--pc:var(--bk-alt)}.bcard.p3{--pc:var(--bk-b)}
+.bcard.p0{--pc:var(--bk-T)}.bcard.p1{--pc:var(--tint)}.bcard.p2{--pc:var(--bk-S)}.bcard.p3{--pc:var(--bk-alt)}.bcard.p4{--pc:var(--bk-D)}.bcard.p5{--pc:var(--bk-b)}
 /* чтение */
 .bkhbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;background:var(--cell);box-shadow:0 1px 0 var(--sep);padding:2px 0}
 .bback{color:var(--tint-text);font-weight:600;min-height:40px;padding:0 4px}
@@ -35,6 +35,7 @@
 .btip b,.bkey b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--l2);margin-bottom:2px}
 .bkey{background:color-mix(in srgb,var(--tint) 13%,transparent)}.bkey b{color:var(--tint-text)}
 .bexl{padding-left:22px;margin:6px 0}.bexl li{margin:4px 0}
+.bsrc{color:var(--l3);font-size:12.5px;margin:22px 2px 0;border-top:1px solid var(--sep);padding-top:8px}
 .bpn{display:flex;justify-content:space-between;gap:10px;margin-top:26px;padding-top:12px;border-top:1px solid var(--sep)}
 .bpn button{color:var(--tint-text);font-weight:600;min-height:44px;text-align:left}
 .bpn button:last-child{text-align:right}
@@ -191,3 +192,143 @@
 .gloss dt{font-weight:700;margin-top:8px}.gloss dd{margin:0;color:var(--l2)}
 .blab :focus-visible,.book :focus-visible{outline:2px solid var(--tint);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.book *{transition:none!important}}
+/* часть 1: нотная строка (score.js), шрифт нот — Bravura проекта */
+.bkscore{width:100%;max-height:220px;display:block;margin:4px 0;overflow:visible}
+.bkscore .smf{font-family:"Melete Bravura","Bravura";font-size:40px;fill:var(--ink)}
+.bkscore .smf.nh.root{fill:var(--tint)}.bkscore .smf.nh.alt{fill:var(--bk-alt)}.bkscore .smf.nh.b{fill:var(--bk-b)}
+.bkscore .smf.dyn{font-size:36px}
+.bkscore .lines line{stroke:var(--l2);stroke-width:1}
+.bkscore .ldg{stroke:var(--l2);stroke-width:1}
+.bkscore .stem{stroke:var(--ink);stroke-width:1.3}
+.bkscore .beam{stroke:var(--ink);stroke-width:5}
+.bkscore .bar{stroke:var(--l2);stroke-width:1.2}.bkscore .bar.thick{stroke-width:4;stroke:var(--ink)}
+.bkscore .rd,.bkscore .pcl{fill:var(--ink)}
+.bkscore .tie,.bkscore .tbr{fill:none;stroke:var(--ink);stroke-width:1.2}
+.bkscore .tn{font-size:12px;text-anchor:middle;fill:var(--ink);font-style:italic;font-weight:600}
+.bkscore .st{font-size:11px;text-anchor:middle;fill:var(--l2);font-weight:600}.bkscore .st.up{fill:var(--tint-text)}
+.bklbl{display:block;color:var(--l2);font-size:12.5px;margin-top:8px}
+/* таблица в тексте главы */
+.bktab{border-collapse:collapse;margin:8px 0;font-size:15px;width:100%;max-width:520px}
+.bktab th,.bktab td{border-bottom:1px solid var(--sep);padding:6px 6px;text-align:center}
+.bktab th{color:var(--l2);font-weight:600;text-align:left;font-size:13px}
+.blab .dim{color:var(--l3)}
+/* обертоны */
+.ovrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:5px}
+.ovc{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--fill);border-radius:10px;padding:6px 9px;min-height:44px}
+.ovc small{color:var(--l3);font-size:11px;font-weight:700}.ovc b{font-size:16px}.ovc span{font-size:11.5px;color:var(--l2);line-height:1.25}
+.ovc.maj{box-shadow:inset 3px 0 0 var(--bk-alt)}
+/* ключи */
+.clefs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.clefc{background:var(--fill);border-radius:10px;padding:4px 4px 0;display:flex;flex-direction:column;align-items:center}
+.clefc small{font-size:11px;color:var(--l2)}.clefc.on{box-shadow:inset 0 0 0 2px var(--tint)}
+.clefc .bkscore{max-height:110px}
+/* диапазоны */
+.rgw{position:relative;display:flex;flex-direction:column;gap:3px;padding-top:18px}
+.rgt{position:absolute;inset:0 0 auto 0;height:16px}
+.rgt em{position:absolute;transform:translateX(-50%);font-style:normal;font-size:10px;color:var(--l3)}
+.rgr{position:relative;display:block;width:100%;min-height:40px;background:var(--fill);border-radius:8px;text-align:left;overflow:hidden}
+.rgr i{position:absolute;top:22px;height:10px;border-radius:5px;background:color-mix(in srgb,var(--tint) 55%,transparent)}
+.rgr span{position:absolute;left:8px;top:3px;font-size:13px;font-weight:600}
+.rgr small{position:absolute;right:8px;top:4px;font-size:11px;color:var(--l2)}
+.rgr.on i{background:var(--tint)}
+/* длительности */
+.durs{display:flex;flex-direction:column;gap:4px}
+.durr{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:6px;background:var(--fill);border-radius:10px;padding:2px 8px;text-align:left;min-height:56px}
+.durr b{font-size:13.5px}.durr .bkscore{max-height:84px}
+.durr.on{box-shadow:inset 0 0 0 2px var(--tint)}
+@container (max-width:420px){.durr{grid-template-columns:1fr}}
+/* ритм-сетка */
+.rgg{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin:4px 0 8px}
+.rgc{min-height:40px;background:var(--fill);border-radius:6px;font-size:11px;color:var(--l3);padding:0}
+.rgc.beat{box-shadow:inset 2px 0 0 var(--l3)}.rgc.bar{box-shadow:inset 3px 0 0 var(--ink)}
+.rgc.on{background:var(--tint);color:var(--on-tint)}
+.rgc.lit{outline:2px solid var(--bk-alt);outline-offset:-2px}
+/* метр */
+.bkmeter{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 8px}
+.mbt{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;background:var(--fill);min-width:44px;min-height:52px;transition:transform .08s,background .08s}
+.mbt b{font-size:16px}.mbt small{font-size:10.5px;color:var(--l2)}
+.mbt.a2{background:color-mix(in srgb,var(--tint) 30%,var(--fill))}.mbt.a1{background:color-mix(in srgb,var(--tint) 14%,var(--fill))}
+.mbt.lit{background:var(--tint);color:var(--on-tint);transform:scale(1.06)}.mbt.lit small{color:inherit}
+.cond{width:100%;max-width:200px;display:block;margin:0 auto}
+.cond path{fill:none;stroke:var(--l3);stroke-width:1.2;stroke-dasharray:3 2}
+.cond circle{fill:var(--fill2);stroke:var(--l2);stroke-width:.8}.cond text{font-size:8px;text-anchor:middle;fill:var(--ink);font-weight:700}
+.cond .cpt.lit circle{fill:var(--tint)}.cond .cpt.lit text{fill:var(--on-tint)}
+/* стих */
+.verse{display:flex;flex-wrap:wrap;gap:4px 2px;align-items:baseline;font-size:20px;line-height:1.5;margin:4px 0}
+.vsy{padding:0 3px;border-radius:6px;color:var(--l2)}.vsy.st{color:var(--ink);font-weight:700;background:color-mix(in srgb,var(--tint) 14%,transparent)}
+.vsy.lit{background:var(--tint);color:var(--on-tint)}
+.vbar{font-style:normal;color:var(--tint-text);font-weight:700;margin:0 3px}
+/* лад: тоны и полутоны, тяготения */
+.steps{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.steps span{font-size:12px;background:var(--fill);border-radius:8px;padding:3px 7px;color:var(--l2)}
+.steps span.h{background:color-mix(in srgb,var(--bk-D) 18%,transparent);color:var(--ink)}
+.steps b{color:var(--ink)}
+.pulls{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.blab .pc{display:flex;flex-direction:column;align-items:center;background:var(--fill);border-radius:10px;padding:6px 2px;min-height:64px}
+.blab .pc b{font-size:15px}.blab .pc small{font-size:12px;color:var(--l2)}.blab .pc span{font-size:10.5px;color:var(--tint-text);text-align:center;line-height:1.2}
+.blab .pc.st{background:color-mix(in srgb,var(--bk-T) 18%,var(--fill))}.blab .pc.st span{color:var(--l2)}
+.blab .pc.on{box-shadow:inset 0 0 0 2px var(--tint)}
+/* тональности, темп, громкость */
+.ksn{font-size:20px;min-width:44px;text-align:center}
+.tempi{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
+.dynt{font-family:"Melete Bravura","Bravura",serif;font-style:italic;font-size:18px}
+/* переключатели схем: подписи целиком, лишнее — на новую строку */
+.blab .seg button{flex:1 0 auto;min-width:auto;padding:0 9px;min-height:36px}
+.chipc.wide .dynt{margin-right:6px}
+/* часть 2: интервалы в ладу, трезвучия, верхние структуры, аккорд над басом, семьи гамм, гармонизация */
+.blab .pc.off{opacity:.45}
+.blab .pc.qmin b{color:var(--bk-S)}.blab .pc.qdim b,.blab .pc.qaug b{color:var(--bk-D)}
+.usgrid.nine{grid-template-columns:repeat(3,1fr)}.usgrid.six{grid-template-columns:repeat(3,1fr)}
+@container (min-width:560px){.usgrid.nine{grid-template-columns:repeat(9,1fr)}.usgrid.six{grid-template-columns:repeat(6,1fr)}}
+.usgrid .us b{font-size:14px}
+.bd i.avd{color:var(--l3);text-decoration:line-through}
+.blab tr.on td{background:color-mix(in srgb,var(--tint) 12%,transparent)}
+.tsd{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0}
+@container (min-width:560px){.tsd{grid-template-columns:repeat(8,1fr)}}
+.tsdb{display:flex;flex-direction:column;gap:3px;align-items:stretch;background:var(--fill);border-radius:10px;padding:4px}
+.tsdb small{text-align:center;color:var(--l3);font-size:11px}.tsdb .chipc{min-height:36px;min-width:0;background:var(--cell)}
+.tsdb .chipc.on{background:var(--tint);color:var(--on-tint)}.tsdb.bad{box-shadow:inset 0 0 0 2px var(--red)}
+/* второе мнение: другой автор смотрит иначе */
+.btwo{display:block;margin:14px 0;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--bk-b) 12%,transparent);border-left:3px solid var(--bk-b)}
+.btwo b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--bk-b);margin-bottom:2px}
+.anasvg .bl.sec{stroke:var(--ink);stroke-width:.45}
+/* часть 4: клаве, проверка расположения, пентатоники в тональности, снаружи */
+.clrow{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px}
+.clrow>b{font-size:12px;color:var(--l2);font-weight:600}
+.clrow .rgg{margin:2px 0}
+span.rgc{display:flex;align-items:center;justify-content:center}
+.rgc.bmb{outline:2px dashed var(--bk-alt);outline-offset:-3px}
+.rgc.on.hit{background:var(--bk-alt);color:#fff}
+.clres{font-size:13px;color:var(--l2);padding:3px 0}.clres.cur b{color:var(--tint)}
+.vkl{display:flex;flex-direction:column;gap:3px;margin:6px 0}
+.vk{display:flex;gap:8px;font-size:13px;align-items:baseline}.vk b{width:14px;flex:none}
+.vk.ok{color:var(--l2)}.vk.ok b{color:var(--bk-T)}.vk.bad{color:var(--ink)}.vk.bad b{color:var(--bk-D)}
+.stkiv{font-size:13px;display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--l2)}.stkiv .bad{color:var(--bk-D);font-weight:600}
+.pkt th small{display:block;font-weight:400;color:var(--l3);font-size:11px}
+.pkc{min-width:44px;min-height:40px;border-radius:8px;background:var(--fill);font-size:12px;padding:2px 6px;color:var(--l2)}
+.pkc.ok{background:color-mix(in srgb,var(--tint) 18%,var(--fill));color:var(--ink)}.pkc.best{font-weight:700}
+.pkc.no{color:var(--l3)}.pkc.on{outline:2px solid var(--tint);outline-offset:-2px}
+.oumeter{height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin:6px 0 2px}.oumeter span{display:block;height:100%;background:var(--bk-D);transition:width .2s}
+/* части 5–6: детектив листа, сжатие формы, пение, неделя */
+.dtgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.dtc{background:var(--fill);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:4px}
+.dtc>b{font-size:16px}.dtc small{color:var(--l2);font-size:12px}.dtc p{font-size:12.5px;margin:0;line-height:1.35}
+.dtc.ok{box-shadow:inset 3px 0 0 var(--bk-T)}.dtc.bad{box-shadow:inset 3px 0 0 var(--bk-D)}
+.dtb{display:flex;flex-wrap:wrap;gap:4px}.dtb .chipc{flex:1 0 auto;min-height:40px;font-size:12px;padding:4px 6px}
+.dtc .bkrow{flex-wrap:wrap;gap:4px}
+.sqrow{display:grid;grid-template-columns:30px minmax(0,1fr);gap:6px;align-items:start;margin-bottom:6px}
+.sql{border-radius:8px;color:#fff;font-weight:700;text-align:center;padding:6px 0;font-size:13px;background:var(--bk-b)}
+.sql.sA{background:var(--tint)}.sql.sB{background:var(--bk-alt)}.sql.v{background:var(--fill);color:var(--l2)}
+.bkfb.v{box-shadow:inset 0 3px 0 var(--l3)}
+.sgrow{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.sgt{min-width:40px;min-height:40px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--l2)}
+.sgt.cur{outline:2px solid var(--tint);color:var(--ink)}.sgt.ok{background:var(--bk-T);color:#fff}
+.sgnow{font-size:22px;font-weight:700;min-height:30px;font-variant-numeric:tabular-nums}
+.sgm{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--fill),color-mix(in srgb,var(--bk-T) 45%,var(--fill)) 40% 60%,var(--fill));margin:4px 0 8px}
+.sgm span{position:absolute;top:-3px;width:4px;height:14px;border-radius:2px;background:var(--ink);transform:translateX(-50%);transition:left .08s}
+.plweek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:6px 0}
+.plw{border-radius:8px;padding:6px 2px;text-align:center;background:var(--fill);display:flex;flex-direction:column;gap:2px}
+.plw b{font-size:12px}.plw span{font-size:10.5px;color:var(--l2)}
+.plw.lesson{background:var(--tint);color:var(--on-tint)}.plw.lesson span{color:inherit}
+.plw.heavy{background:color-mix(in srgb,var(--tint) 30%,var(--fill))}.plw.off{opacity:.6}
+.bkscore{pointer-events:none}

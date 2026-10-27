@@ -10,6 +10,13 @@ test-results/
 android/app/build/
 android/.gradle/
 android/local.properties
+# главный экран Elachiston (launcher/): своя сборка и свой Android-проект
+launcher/dist/
+launcher/android/app/build/
+launcher/android/.gradle/
+launcher/android/local.properties
+launcher/android/app/src/main/assets/public/
+launcher/android/capacitor-cordova-android-plugins/
 *.keystore
 # Ключи подписи — только в секретах GitHub (DECISIONS.md, 2026-10)
 *.jks

@@ -1,13 +1,33 @@
-// «Теория» → «Учебник»: интерактивная книга по гармонии и джазу. Оглавление (части, главы, поиск термина) и чтение
-// главы: текст из языкового файла (lang/*.js), в нём живые схемы ({{lab:id}} → labs.js) и термины-ссылки
+// «Теория» → «Учебник»: интерактивная книга — от музыкальной грамоты до джаза. Оглавление (части, главы, поиск термина)
+// и чтение главы: текст из языковой папки (lang/<код>/: base.js + части pN.js), в нём живые схемы ({{lab:id}} → labs.js)
+// и термины-ссылки
 // ([[id|слово]] → определение в шторке и переход к главе). Грузится по требованию (модуль «Теория» — import()).
 // Состояние: глава — в настройках модуля (th.book), схемы — в памяти до закрытия окна.
 import { createLabs } from './labs.js';
+import { stopSing } from './labs5.js';
 import { createSound, setLabels, esc } from './draw.js';
 import './book.css';
+// Шрифт нот (SMuFL) — файл проекта alphaTab, без сети; грузится один раз при открытии учебника
+import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
+let fontOn = false;
+function loadFont() {
+  if (fontOn || typeof FontFace === 'undefined' || typeof document === 'undefined') return;
+  fontOn = true;
+  new FontFace('Melete Bravura', 'url(' + BRAVURA + ')').load().then((f) => document.fonts.add(f)).catch(() => { fontOn = false; });
+}
 
-const LANGS = { ru: () => import('./lang/ru.js'), uz: () => import('./lang/uz.js'), en: () => import('./lang/en.js') };
-export const PARTS = [['iv', 'chords', 'scales', 'key'], ['iivi', 'ana', 'voice', 'mod', 'reharm'], ['comp', 'forms', 'arr', 'impro', 'trad'], ['practice', 'ref']];
+const LANGS = { ru: () => import('./lang/ru/index.js'), uz: () => import('./lang/uz/index.js'), en: () => import('./lang/en/index.js') };
+// Части и порядок глав (главы, которых ещё нет в языковом файле, пропускаются)
+export const PARTS = [
+  ['sound', 'rhythm', 'meter', 'pitch', 'mode', 'keys', 'melody', 'perform'],
+  ['iv', 'chords', 'slash', 'scales', 'melmin', 'key'],
+  ['iivi', 'ana', 'voice', 'hands', 'mod', 'reharm', 'centers'],
+  ['comp', 'latin', 'forms', 'arr', 'impro', 'lines', 'outside', 'trad'],
+  ['tune'],
+  ['practice', 'ref'],
+];
+// Главы в порядке частей
+export const ordered = (L) => PARTS.flat().map((id) => L.CH.find((c) => c.id === id)).filter(Boolean);
 
 // Языковой файл (el и прочие — английский)
 const cache = {};
@@ -22,17 +42,19 @@ export const fill = (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (v && v[
 export function chapterHTML(ch, terms) {
   let n = 0;
   return ch.h.replace(/\{\{lab:([a-z0-9]+)\}\}/g, (m, id) => '<div class="blab" data-lab="' + id + '" data-k="' + ch.id + ':' + n++ + '"></div>')
-    .replace(/\[\[([a-z0-9]+)\|([^\]]+)\]\]/g, (m, id, txt) => (terms[id] ? '<a class="bterm" data-term="' + id + '" role="button" tabindex="0">' + txt + '</a>' : txt));
+    .replace(/\[\[([a-zA-Z0-9]+)\|([^\]]+)\]\]/g, (m, id, txt) => (terms[id] ? '<a class="bterm" data-term="' + id + '" role="button" tabindex="0">' + txt + '</a>' : txt));
 }
 
 // ctx — модуль «Теория»; L — языковой файл; th — настройки модуля (th.book)
 export function createBook(ctx, L, { save }) {
   const T = (k, v) => fill(L.S[k] ?? k, v);
+  loadFont();
   setLabels({ kb: T('bk.kb'), staff: T('sc.staff'), fret: T('sc.fret'), circle: T('bk.circle'), signs: T('bk.signs'), play: T('ui.play') });
   const snd = createSound(() => ctx.audio);
-  const LABS = createLabs({ T, L, snd });
+  const ui = { redraw: (el) => drawLab(el) };
+  const LABS = createLabs({ T, L, snd, mic: ctx.mic ? () => ctx.mic.request() : null, ui });
   const states = new Map();
-  const chs = L.CH, byId = (id) => chs.find((c) => c.id === id);
+  const chs = ordered(L), byId = (id) => chs.find((c) => c.id === id);
   const num = (id) => chs.findIndex((c) => c.id === id) + 1;
   let q = '', jumpTerm = null, toTop = false;
 
@@ -42,15 +64,17 @@ export function createBook(ctx, L, { save }) {
       '<h2>' + T('bk.title') + '</h2><p>' + T('bk.lead') + '</p>' +
       '<input class="bsearch" data-bq value="' + esc(q) + '" placeholder="' + T('bk.find') + '" aria-label="' + T('bk.find') + '"></div>' +
       (found ? '<div class="bfound">' + (found.length ? found.map(([id, [a, b]]) => '<button class="bfrow" data-term="' + id + '"><b>' + a + '</b><span>' + b + '</span></button>').join('') : '<p class="hint">' + T('bk.none') + '</p>') + '</div>' : '') +
-      PARTS.map((ids, p) => '<section class="bpart"><h3><span>' + (p + 1) + '</span>' + T('bk.part' + p) + '</h3><div class="bcards">' +
+      PARTS.map((ids, p) => !ids.some(byId) ? '' : '<section class="bpart"><h3><span>' + (p + 1) + '</span>' + T('bk.part' + p) + '</h3><div class="bcards">' +
         ids.map((id) => { const c = byId(id); return c ? '<button class="bcard p' + p + '" data-bch="' + id + '"><i class="num">' + num(id) + '</i><b>' + c.t + '</b><span>' + c.s + '</span></button>' : ''; }).join('') + '</div></section>').join('');
   }
   function readerHTML(id) {
     const c = byId(id), i = num(id), prev = chs[i - 2], next = chs[i];
     return '<div class="bkhbar"><button class="bback" data-btoc aria-label="' + T('bk.toc') + '">‹ ' + T('bk.toc') + '</button><span class="num">' + i + ' ' + T('bk.of', { n: chs.length }) + '</span></div>' +
-      '<header class="bkhead"><small>' + T('bk.ch', { n: i }) + '</small><h2>' + c.t + '</h2><p>' + c.s + '</p></header><article class="bktext">' + chapterHTML(c, L.TERMS) + '</article>' +
+      '<header class="bkhead"><small>' + T('bk.ch', { n: i }) + '</small><h2>' + c.t + '</h2><p>' + c.s + '</p></header><article class="bktext">' + chapterHTML(c, L.TERMS) + '</article>' + srcHTML(c) +
       '<nav class="bpn">' + (prev ? '<button data-bch="' + prev.id + '">‹ ' + prev.t + '</button>' : '<span></span>') + (next ? '<button data-bch="' + next.id + '">' + next.t + ' ›</button>' : '<span></span>') + '</nav>';
   }
+  // Источники главы: ключи из c.src → краткие названия книг (base.js: SRC)
+  const srcHTML = (c) => (c.src && L.SRC ? '<p class="bsrc">' + T('bk.src') + ' ' + c.src.split(',').map((k) => L.SRC[k.trim()] && L.SRC[k.trim()][0]).filter(Boolean).join('; ') + '</p>' : '');
   // Схема: состояние по месту в главе, перерисовка только её
   function drawLab(el, focus) {
     const lab = LABS[el.dataset.lab]; if (!lab) return;
@@ -88,7 +112,7 @@ export function createBook(ctx, L, { save }) {
         const sb = t.closest('.seg button');
         if (sb) { const k = sb.parentElement.dataset.seg; st[k] = coerce(st[k], sb.dataset.v); if (lab.set) lab.set(st, k); drawLab(el); return; }
         const key = t.closest('[data-midi]');
-        if (key) { if (ctx.audio.unlock()) ctx.audio.playNote(+key.dataset.midi, { bus: 'theory', dur: 1 }); key.classList.add('hit'); setTimeout(() => key.classList.remove('hit'), 250); return; }
+        if (key) { if (ctx.audio.unlock()) ctx.audio.playNote(+key.dataset.midi, { bus: 'theory', dur: 1 }); if (lab.tap && lab.tap(st, +key.dataset.midi) !== false) { drawLab(el); return; } key.classList.add('hit'); setTimeout(() => key.classList.remove('hit'), 250); return; }
         const ci = t.closest('[data-ci]');
         if (ci) { if (lab.on(st, 'ci:' + ci.dataset.ci + (ci.dataset.min ? ':m' : ''), el) !== false) drawLab(el); return; }
         const a = t.closest('[data-a]');
@@ -106,7 +130,7 @@ export function createBook(ctx, L, { save }) {
         const el = e.target.closest('.blab'); states.get(el.dataset.k)[e.target.dataset.in] = e.target.value; drawLab(el, e.target.dataset.in);
       });
     },
-    stop: () => snd.stop(),
+    stop: () => { snd.stop(); stopSing(); },
     open,
     chapterOf: (id) => byId(id),
   };

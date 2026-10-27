@@ -53,18 +53,31 @@ export function createUpdater(app) {
   const mode = () => modeOf(app.store.state.settings);
   let poll = 0, path = '';
 
+  // Запрос к GitHub; сбой сети (смена Wi-Fi ↔ мобильная, сеть ещё не поднялась) — ещё две попытки с паузой.
+  // Лимит GitHub (403/429: 60 запросов в час с одного адреса — общий у всех устройств одной сети Wi-Fi) — без повторов.
+  async function fetchRelease() {
+    for (let k = 0; ; k++) {
+      try {
+        const r = await fetch('https://api.github.com/repos/' + REPO + '/releases/tags/' + CHANNEL + '?t=' + Date.now(), { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+        if (r.ok) return r.json();
+        const left = r.headers.get('x-ratelimit-remaining'), reset = +r.headers.get('x-ratelimit-reset') || 0;
+        if (r.status === 429 || (r.status === 403 && left === '0')) throw Object.assign(new Error('GitHub: лимит запросов этой сети, до ' + new Date(reset * 1000).toLocaleTimeString()), { limit: reset * 1000 });
+        if (r.status < 500 || k >= 2) throw new Error('GitHub ' + r.status);
+      } catch (e) { if (e.limit || /^GitHub \d/.test(e.message) || k >= 2) throw e; }
+      await new Promise((ok) => setTimeout(ok, 2000 * (k + 1)));
+    }
+  }
+
   async function check() {
     if (!platform || s.st === 'checking' || s.st === 'down') return s;
     set({ st: 'checking' });
     try {
-      const r = await fetch('https://api.github.com/repos/' + REPO + '/releases/tags/' + CHANNEL, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
-      if (!r.ok) throw new Error('GitHub ' + r.status);
-      const info = parseRelease(await r.json(), platform, CHANNEL), at = Date.now();
+      const info = parseRelease(await fetchRelease(), platform, CHANNEL), at = Date.now();
       writeMem({ ...readMem(), at });
       const fresh = isNewer(info, BUILD);
       log('upd', 'проверка ' + CHANNEL + ': у нас ' + BUILD + ', на GitHub ' + (info ? info.build : '—') + (fresh ? ' — есть новая' : ''));
       set({ st: fresh ? 'avail' : 'none', info: fresh ? info : null, at });
-    } catch (e) { logErr('upd', e); set({ st: 'err' }); }
+    } catch (e) { logErr('upd', e); set({ st: 'err', limit: e.limit || 0 }); }
     return s;
   }
 
@@ -134,7 +147,17 @@ export function createUpdater(app) {
       if (!platform || !BUILD || !due(readMem(), Date.now(), mode())) return;
       setTimeout(() => { check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); }, 30000);
     },
+    // Проверка не удалась (нет сети, сеть переключилась) — повторить, когда сеть вернулась или приложение снова на экране;
+    // «Обновления» открыты — проверить, если последняя проверка старше пары минут
+    retry() { if (platform && BUILD && s.st === 'err' && !(s.limit > Date.now())) check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); },
+    fresh() { if (platform && (s.st === 'idle' || s.st === 'none' || (s.st === 'err' && !(s.limit > Date.now()))) && Date.now() - (s.at || 0) > 120000) check(); },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };
+  if (platform && typeof window !== 'undefined') {
+    window.addEventListener('online', () => setTimeout(() => api.retry(), 3000));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) api.retry(); });
+    const nc = typeof navigator !== 'undefined' && navigator.connection;
+    if (nc && nc.addEventListener) nc.addEventListener('change', () => setTimeout(() => api.retry(), 3000));
+  }
   return api;
 }

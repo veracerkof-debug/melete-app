@@ -239,6 +239,8 @@ export const TIMER = { 'set.title': 'ps89_4', 'mode.pomo': 'ps89_4', 'mode.watch
 export const EPIGRAPH = 'ps89_12';
 
 export const verseByKey = (k) => (V[k] ? { id: k, ...V[k] } : null);
+// Все стихи по порядку — для «стиха дня» на главном экране телефона (src/launcher)
+export const VERSE_IDS = Object.keys(V);
 
 // Текст и ссылка на языке интерфейса (обычный вид): ru — Синодальный, en — WEB, uz — Muqaddas Kitob; другие — русский
 export function verseIn(v, lang) {

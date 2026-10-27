@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Значок Elachiston (Ἐλάχιστον — «наименьшее»): тонкое кольцо и точка в центре -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#161514" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M54,32a22,22 0 1,1 -0.01,0z" />
+    <path android:fillColor="#161514" android:pathData="M54,48a6,6 0 1,1 -0.01,0z" />
+</vector>
