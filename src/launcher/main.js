@@ -21,6 +21,7 @@ import { autoUpdate, onUpdate, install } from './update.js';
 import { verseByKey } from '../core/verses.js';
 import { openMoney, moneyOpen, moneyBack } from './money.js';
 import { openNotes, notesOpen, notesBack, closeNotes } from './notes.js';
+import { dailyCopy } from './backup.js';
 import { h, toast, openSheet, sheetOpen, closeTopSheet } from './ui.js';
 
 const root = document.getElementById('l');
@@ -145,6 +146,8 @@ document.addEventListener('visibilitychange', () => {
 
 // Обновление из GitHub: «автоматически» — раз в сутки; скачано — тихая полоса «Установить»
 autoUpdate();
+// копия данных на телефоне — раз в сутки (backup.js)
+setTimeout(() => dailyCopy(), 5000);
 onUpdate((u) => {
   let bar = root.querySelector('.l-upd');
   if (u.st !== 'ready') { bar?.remove(); return; }

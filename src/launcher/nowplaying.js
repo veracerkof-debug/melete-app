@@ -2,6 +2,11 @@
 // его сам). В браузере строки нет.
 import { isNative, Launcher } from './native.js';
 
+// Доступ к медиасессиям других приложений (служба LauncherMedia) выключен до релиза: Google Play Защита блокирует
+// установку APK не из Play Маркета, если в нём есть служба доступа к уведомлениям (DECISIONS 2026-10-26).
+// Вернуть: служба в AndroidManifest.xml и MEDIA_SESSIONS = true (docs/launcher.md, «Вернуть перед релизом»).
+export const MEDIA_SESSIONS = false;
+
 let media = { access: null, active: false };
 const subs = new Set();
 let timer = null;
@@ -21,7 +26,7 @@ async function poll() {
 
 // Опрос раз в 2 с, пока главный экран на виду
 export function startNowPlaying() {
-  if (!isNative() || timer) return;
+  if (!isNative() || !MEDIA_SESSIONS || timer) return;
   poll();
   timer = setInterval(() => { if (!document.hidden) poll(); }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });

@@ -329,6 +329,49 @@ public class LauncherPlugin extends Plugin {
         call.resolve(r);
     }
 
+    // Копия данных главного экрана (src/launcher/backup.js): сохранить файл — человек выбирает, куда и под каким
+    // именем (окно системы «Сохранить»); загрузить — выбирает файл. Без разрешений на память.
+    @PluginMethod
+    public void saveDocument(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType(call.getString("mime", "application/json"))
+            .putExtra(Intent.EXTRA_TITLE, call.getString("name", "elachiston.json"));
+        startActivityForResult(call, i, "documentCreated");
+    }
+
+    @ActivityCallback
+    private void documentCreated(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        Intent data = result.getData();
+        if (result.getResultCode() != Activity.RESULT_OK || data == null || data.getData() == null) { call.reject("cancelled"); return; }
+        try (java.io.OutputStream out = getContext().getContentResolver().openOutputStream(data.getData(), "wt")) {
+            out.write(call.getString("text", "").getBytes(StandardCharsets.UTF_8));
+            call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage()); }
+    }
+
+    @PluginMethod
+    public void openDocument(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+        startActivityForResult(call, i, "documentOpened");
+    }
+
+    @ActivityCallback
+    private void documentOpened(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        Intent data = result.getData();
+        if (result.getResultCode() != Activity.RESULT_OK || data == null || data.getData() == null) { call.reject("cancelled"); return; }
+        try (InputStream in = getContext().getContentResolver().openInputStream(data.getData())) {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) { buf.write(b, 0, n); if (buf.size() > 50_000_000) throw new Exception("too big"); }
+            JSObject r = new JSObject();
+            r.put("text", buf.toString("UTF-8"));
+            call.resolve(r);
+        } catch (Exception e) { call.reject(e.getMessage()); }
+    }
+
     // Текстовый файл внутри выбранной папки по пути (Data/melete-data.json) и время его изменения
     @PluginMethod
     public void readText(PluginCall call) {

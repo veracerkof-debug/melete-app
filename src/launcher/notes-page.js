@@ -38,6 +38,7 @@ function sample() {
 - Метки: #идеи #музыка — касание показывает все заметки с меткой
 
 **Жирный**, \`код\`, > цитата, --- черта.
+[Am]Аккорды — в квадратных скобках перед слогом; \`\`\` — блок моноширинного текста.
 Внизу — кнопки для быстрого ввода. Поиск сверху: набрать название и «Ввод» — новая заметка.
 Удержание заметки в списке — закрепить, смахнуть влево — удалить.`, 3 * DAY, true),
     n(`Список дел
@@ -48,6 +49,11 @@ function sample() {
     n(`Песни на воскресенье
 1. Вступление — ре мажор
 2. Вторая песня — ля, капо 2
+[Am]Слова над ак[F]кордом — [C]ровно над [G]слогом
+\`\`\`
+Am      F       C     G
+моноширинно — пробелы не съезжают
+\`\`\`
 Темп держать ровно, без ускорения. #музыка`, 2 * 3600e3),
   ];
 }
@@ -197,6 +203,8 @@ function renderNote() {
       h('button', { onclick: () => ins('**', '**'), 'aria-label': 'Жирный' }, h('b', {}, 'Ж')),
       h('button', { onclick: () => ins('[[', ']]'), 'aria-label': 'Ссылка на заметку' }, '[[ ]]'),
       h('button', { onclick: () => ins('#'), 'aria-label': 'Метка' }, '#'),
+      h('button', { onclick: () => ins('[', ']'), 'aria-label': 'Аккорд' }, '[Am]'),
+      h('button', { onclick: () => ins('```\n', '\n```'), 'aria-label': 'Моноширинный блок' }, '```'),
       h('button', { onclick: () => ins(date()), 'aria-label': 'Дата' }, 'дата')));
     setTimeout(() => { ta.focus(); if (!n.text) return; }, 60);
   } else {
@@ -233,12 +241,33 @@ function inline(s) {
     .replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (m, sp, t) => `${sp}<a href="#" class="ht" data-tag="${t.toLowerCase()}">#${t}</a>`)
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
 }
+// аккорды: [Am]слова — аккорд над слогом (как в песнях Melete); ``` … ``` — моноширинно, пробелы не съезжают
+const CHORD = /^[A-H][#b♯♭]?(?:m|maj|min|dim|aug|sus|add|M)?\d{0,2}(?:sus\d|add\d|[#b]\d)*(?:\/[A-H][#b♯♭]?)?$/;
+const chordLine = (ln) => /(^|[^[])\[[^\[\]]+\](?!\])/.test(ln) && [...ln.matchAll(/(?:^|[^[])\[([^\[\]]+)\](?!\])/g)].every((m) => CHORD.test(m[1].trim()));
+function chords(ln) {
+  const parts = ln.split(/(?<!\[)\[([^\[\]]+)\](?!\])/);
+  // по словам: аккорд — над первым словом своего куска, строка переносится между словами
+  const seg = (chord, text) => {
+    const words = (text || ' ').split(/(?<= )/);
+    return words.map((w, j) => `<span class="cs"><b>${j === 0 && chord ? esc(chord) : ''}</b>${inline(w) || '&nbsp;'}</span>`).join('');
+  };
+  let html = parts[0] ? seg('', parts[0]) : '';
+  for (let i = 1; i < parts.length; i += 2) html += seg(parts[i].trim(), parts[i + 1]);
+  return `<p class="chords">${html}</p>`;
+}
+
 function render(text) {
   const out = [];
-  let list = false;
+  let list = false, pre = null;
   const close = () => { if (list) { out.push('</ul>'); list = false; } };
   text.split('\n').forEach((ln, i) => {
     let m;
+    if (/^```/.test(ln.trim())) {
+      if (pre) { out.push(`<pre class="mono">${esc(pre.join('\n'))}</pre>`); pre = null; } else { close(); pre = []; }
+      return;
+    }
+    if (pre) { pre.push(ln); return; }
+    if (i > 0 && chordLine(ln)) { close(); out.push(chords(ln)); return; }
     if ((m = ln.match(/^\s*[-*] \[( |x|X)\] (.*)$/))) {
       if (!list) { out.push('<ul>'); list = true; }
       const done = m[1] !== ' ';
@@ -256,6 +285,7 @@ function render(text) {
     }
   });
   close();
+  if (pre) out.push(`<pre class="mono">${esc(pre.join('\n'))}</pre>`); // не закрыли ``` — всё равно показать
   return out.join('');
 }
 

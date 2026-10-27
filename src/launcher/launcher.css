@@ -660,3 +660,12 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-bal-v.neg { color: var(--red); }
 .l-bal-c { font-size: 12px; color: var(--l3); }
 .l-home .l-balance { zoom: var(--l-ui, 1); }
+
+/* Разделы настроек — строкой вверху (settings.js); данные и копии */
+.l-set-nav { position: sticky; top: -1px; z-index: 3; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: -6px -20px 10px; padding: 8px 20px; background: var(--cell, var(--bg)); border-bottom: 1px solid var(--sep); }
+.l-set-nav::-webkit-scrollbar { display: none; }
+.l-set-nav button { flex: none; padding: 7px 12px; border-radius: 999px; font-size: 13px; color: var(--l2); border: 1px solid var(--sep); white-space: nowrap; }
+.l-set-nav button:active { background: var(--fill); }
+.l-sec { scroll-margin-top: 56px; }
+.l-copies .l-pick small { flex: none; font-family: var(--l-mono); font-size: 10.5px; color: var(--l2); }

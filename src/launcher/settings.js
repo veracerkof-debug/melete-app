@@ -10,16 +10,17 @@ import { pickIcon, pickAction } from './pickers.js';
 import { homeItems, dockSlots, appOf, appName } from './apps.js';
 import { placeOf } from './sun.js';
 import { isNative, Launcher } from './native.js';
-import { openMediaAccess } from './nowplaying.js';
+import { openMediaAccess, MEDIA_SESSIONS } from './nowplaying.js';
 import { infoLink, clockEntry, wallEntry, ornamentEntry, markerEntry } from './explain.js';
 import { clockOpts } from './home.js';
 import { ACCENTS } from './look.js';
 import { hueColor, ACCENT_HUE } from '../core/palettes.js';
 import { fontsFor, fontStack, applyLook } from './look.js';
 import { layout, setLayout, resetLayout } from './layout.js';
+import { saveFile, pickFile, restore, summary, localCopies } from './backup.js';
 import { meleteBridge, connectMelete, refreshMelete, disconnectMelete } from './melete.js';
 import { updAvailable, updState, onUpdate, check, download, install, CHANNEL, BUILD } from './update.js';
-import { t } from './i18n.js';
+import { t, getLang } from './i18n.js';
 import { h, openSheet, segmented, toggle, field, section, toast } from './ui.js';
 
 let changed = () => {};
@@ -156,8 +157,8 @@ export function openSettings(onChange, getGesture) {
         segmented([{ value: 'icons', label: t('set.dock.icons') }, { value: 'line', label: t('set.dock.line') }, { value: 'none', label: t('set.dock.none') }], prefs.dockStyle, (v) => up({ dockStyle: v }), t('set.dock')),
         dockList,
         dockSlots().length < 6 ? h('button', { class: 'l-btn', onclick: () => { ownDock().push({ icon: 'grid', action: { t: 'cmd', id: 'drawer' } }); save(); changed(); rerender(); } }, t('set.dockAdd')) : null,
-        toggle(t('set.player'), prefs.player, (v) => up({ player: v }), t('set.playerHint')),
-        prefs.player && isNative() ? h('button', { class: 'l-btn', onclick: openMediaAccess }, t('set.mediaAccess')) : null,
+        MEDIA_SESSIONS ? toggle(t('set.player'), prefs.player, (v) => up({ player: v }), t('set.playerHint')) : null,
+        MEDIA_SESSIONS && prefs.player && isNative() ? h('button', { class: 'l-btn', onclick: openMediaAccess }, t('set.mediaAccess')) : null,
       ));
 
       // — Мост с Melete: чтение и практика —
@@ -186,6 +187,25 @@ export function openSettings(onChange, getGesture) {
         h('button', { class: 'l-edit-main', onclick: () => pickAction(gestureOf(id), (a) => { prefs.gestures[id] = a; save(); rerender(); }) },
           h('span', {}, t('gest.' + id)), h('small', {}, '→ ' + describeAction(gestureOf(id), appName))))));
       body.append(section(t('set.gestures'), church ? 'κινήσεις' : '', gList, h('p', { class: 'l-hint' }, t('set.gesturesHint'))));
+
+      // — Данные: копия кошелька, блокнота и настроек —
+      const copies = h('div', { class: 'l-copies' });
+      localCopies().then((list) => {
+        if (!list.length) return;
+        copies.append(h('div', { class: 'l-label' }, t('data.local')), ...list.map((c) => {
+          const n = summary(c);
+          return h('button', { class: 'l-pick', onclick: () => askRestore(c, rerender) },
+            h('span', {}, new Date(c.at).toLocaleString(getLang() === 'en' ? 'en-GB' : getLang() === 'uz' ? 'uz-Latn' : 'ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
+              c.why === 'before-restore' ? ' · ' + t('data.before') : ''),
+            h('small', {}, t('data.counts', { n: n.notes, r: n.recs })));
+        }));
+      });
+      body.append(section(t('set.data'), church ? 'θησαυρός' : '',
+        h('p', { class: 'l-hint' }, t('data.hint')),
+        h('div', { class: 'l-btn-row' },
+          h('button', { class: 'l-btn primary', onclick: () => saveFile().then(() => toast(t('data.saved')), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.err')); }) }, t('data.save')),
+          h('button', { class: 'l-btn', onclick: () => pickFile().then((c) => askRestore(c, rerender), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.bad')); }) }, t('data.load'))),
+        copies));
 
       // — Обновление —
       if (updAvailable()) {
@@ -218,6 +238,11 @@ export function openSettings(onChange, getGesture) {
         h('p', { class: 'l-colophon', lang: 'el' }, 'Ἐλάχιστον', h('small', {}, t('about.motto'))),
         // лицензии: код — GPL-3.0, шрифты — SIL OFL, карта — общественное достояние (LICENSES.md)
         h('button', { class: 'l-ex-link', onclick: () => openUrl('https://github.com/veracerkof-debug/melete-app/blob/main/LICENSES.md', t('about.lic')) }, h('span', {}, t('about.lic')), h('small', {}, 'github.com'))));
+
+      // разделы — строкой вверху: касание — к разделу (настройки длинные, а искать тумблер — быстро)
+      const secs = [...body.querySelectorAll('section.l-sec')];
+      body.prepend(h('nav', { class: 'l-set-nav', 'aria-label': t('set.sections') }, secs.map((sec) =>
+        h('button', { onclick: () => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, sec.querySelector('h3')?.firstChild?.textContent || ''))));
     },
   });
 }
@@ -233,7 +258,13 @@ function locate(up) {
   );
 }
 
-// Подпись приложения на главном (удержание названия)
+// Загрузить копию: что в ней — и подтверждение; текущее перед этим само сохраняется копией на телефоне
+function askRestore(c, after) {
+  const n = summary(c);
+  if (!confirm(t('data.ask', { d: new Date(c.at).toLocaleDateString(), n: n.notes, r: n.recs }))) return;
+  restore(c).then(() => { toast(t('data.restored')); setTimeout(() => location.reload(), 600); after?.(); });
+}
+
 // Раскладка: блоки главного экрана — порядок (↑ ↓), видно или нет, размер (касание названия); место значков;
 // «Все приложения» — место папок и поиска, размер названий. «Как было» — раскладка по умолчанию.
 function layoutEditor(redraw, keep) {
@@ -298,6 +329,7 @@ function scaleRow(label, key, min, max) {
   return h('div', { class: 'l-scale-row' }, h('div', { class: 'l-label' }, label, ' ', val), input);
 }
 
+// Подпись приложения на главном (удержание названия)
 export function editHomeItem(i, after, onChange = changed) {
   const item = homeItems()[i];
   if (!item) return;

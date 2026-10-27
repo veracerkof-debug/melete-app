@@ -10,7 +10,7 @@ import { biblicalTime, placeOf } from './sun.js';
 import { homeItems, dockSlots, appOf, apps } from './apps.js';
 import { openApp, runAction } from './actions.js';
 import { explain, canonicalEntry, biblicalEntry, greekDayEntry } from './explain.js';
-import { current, togglePlayback, nowPlaying, openMediaAccess } from './nowplaying.js';
+import { current, togglePlayback, nowPlaying, openMediaAccess, MEDIA_SESSIONS } from './nowplaying.js';
 import { trackerData, fmtDur } from './tracker.js';
 import { folderOfKey, folderName, folderApps } from './folders.js';
 import { layout, homeOrder } from './layout.js';
@@ -280,10 +280,10 @@ export function renderPlayer() {
   const el = root?.querySelector('.l-player');
   if (!el) return;
   el.replaceChildren();
-  const c = prefs.player && isNative() ? current() : null;
+  const c = prefs.player && isNative() && MEDIA_SESSIONS ? current() : null;
   if (!c) {
     // доступа к медиасессиям нет — одна тихая строка-приглашение (пока строка плеера включена)
-    const ask = prefs.player && isNative() && nowPlaying().access === false;
+    const ask = prefs.player && isNative() && MEDIA_SESSIONS && nowPlaying().access === false;
     el.hidden = !ask;
     if (ask) el.append(h('button', { class: 'l-pl-info l-pl-ask', onclick: openMediaAccess }, h('span', {}, t('player.ask'))));
     return;

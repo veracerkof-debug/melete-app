@@ -135,3 +135,19 @@ describe('главный экран: церковный режим', () => {
     });
   });
 });
+
+describe('главный экран: копия данных', () => {
+  it('копия — кошелёк, блокнот, настройки, замок; загрузка заменяет их; чужой файл не принимается', async () => {
+    mem['elachiston.notes'] = JSON.stringify([{ id: 'n', text: 'Заметка' }]);
+    mem['elachiston.money.draft'] = JSON.stringify({ recs: [{ id: 'r', k: 'e', a: 5000, c: 'food', t: 1 }], budget: 0 });
+    mem['elachiston.melete'] = JSON.stringify({ tree: 'content://…' }); // связь с папкой — своя у каждого телефона, в копию не идёт
+    const { snapshot, parse, restore, summary } = await import('../src/launcher/backup.js');
+    const s = parse(JSON.stringify(snapshot()));
+    expect(summary(s)).toEqual({ notes: 1, recs: 1 });
+    expect(s.data['elachiston.melete']).toBeUndefined();
+    mem['elachiston.notes'] = '[]';
+    await restore(s);
+    expect(JSON.parse(mem['elachiston.notes'])).toHaveLength(1);
+    expect(() => parse(JSON.stringify({ version: 1, sessions: [] }))).toThrow();
+  });
+});

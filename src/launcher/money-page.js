@@ -102,6 +102,9 @@ function renderEntry() {
       left != null ? h('button', { onclick: openOver }, 'остаток ', h('b', { class: 'num' + (left < 0 ? ' neg' : '') }, fmt(left))) : null,
       parent !== window ? h('button', { class: 'lockbtn', onclick: () => parent.postMessage('money:lock', '*'), 'aria-label': 'Код и отпечаток',
         html: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>' }) : null),
+    // бюджет месяца — тонкой полосой: сколько ушло из лимита (касание — обзор месяца)
+    db.budget ? h('button', { class: 'ebar', onclick: openOver, 'aria-label': `Бюджет: потрачено ${fmt(spent)} из ${fmt(db.budget)}` },
+      h('i', { class: spent > db.budget ? 'over' : '', style: { width: Math.min(100, spent / db.budget * 100) + '%' } })) : null,
     h('div', { class: 'seg kindseg', role: 'tablist' },
       h('button', { class: S.kind === 'e' ? 'on' : '', onclick: () => setKind('e') }, 'Расход'),
       h('button', { class: S.kind === 'i' ? 'on' : '', onclick: () => setKind('i') }, 'Доход')),
