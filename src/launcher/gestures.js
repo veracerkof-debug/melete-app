@@ -7,7 +7,7 @@ const LONG_MS = 450; // = HOLD_MS в ui/hold.js (не импортируется
 const EDGE = 32;   // px от левого и правого края — «Назад» жестом и боковая панель мультиокна (Honor, MagicOS)
 const TOP = 28;    // сверху — шторка уведомлений
 const BOTTOM = 44; // снизу — полоса жеста «Домой» и недавних: смахивание отсюда не наше (касание и удержание — можно)
-const SWIPE_PX = 48;
+const SWIPE_PX = 32;
 const DOUBLE_MS = 300;
 
 // onDragStart(dir) → true, если панель в эту сторону пойдёт за пальцем; onDrag(dir, px), onDragEnd(dir, px, v) → true, если
@@ -55,7 +55,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
   el.addEventListener('pointermove', (e) => {
     if (!start) return;
     const dx = e.clientX - start.x, dy = e.clientY - start.y;
-    if (!start.moved && Math.hypot(dx, dy) > 10) {
+    if (!start.moved && Math.hypot(dx, dy) > 6) {
       start.moved = true;
       clearTimeout(longTimer);
       clearHalo();
@@ -99,7 +99,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
     if (s.long) return;
 
     if (s.moved && s.sys) return; // начато в зоне жестов системы — уступаем ей
-    if (s.moved && dt < 800) {
+    if (s.moved && dt < 1000) {
       const ax = Math.abs(dx), ay = Math.abs(dy);
       if (Math.max(ax, ay) < SWIPE_PX) return;
       if (ay > ax) onGesture(dy < 0 ? 'swipeUp' : 'swipeDown');

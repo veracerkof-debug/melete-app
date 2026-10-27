@@ -97,7 +97,8 @@ test('панели идут за пальцем: потянуть вверх —
   await open(page);
   // недалеко — панель возвращается
   await page.mouse.move(200, 640); await page.mouse.down();
-  await page.mouse.move(200, 600, { steps: 3 }); await page.waitForTimeout(150); await page.mouse.move(200, 560, { steps: 3 }); await page.waitForTimeout(250);
+  for (let y = 632; y >= 560; y -= 8) { await page.mouse.move(200, y); await page.waitForTimeout(40); } // медленно, не взмах
+  await page.waitForTimeout(250);
   await expect(page.locator('.l-drawer.dragging')).toHaveCount(1);
   await page.mouse.up();
   await expect(page.locator('.l-drawer')).not.toHaveClass(/open/);
@@ -126,6 +127,7 @@ test('кошелёк: смахнуть слева направо внутри �
   await page.mouse.move(box.x + 120, box.y + 22, { steps: 4 }); await page.mouse.move(box.x + 330, box.y + 24, { steps: 8 });
   await page.mouse.up();
   await expect(page.locator('iframe.l-money.open:not(.l-notes)')).toHaveCount(0);
+  await page.waitForTimeout(400); // панель уехала, фокус — снова у главного экрана
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('iframe.l-notes.open')).toHaveCount(1);
   const notes = page.frameLocator('iframe.l-notes');

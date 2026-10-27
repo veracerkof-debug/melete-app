@@ -27,7 +27,7 @@ export function openNotes() {
   setTimeout(() => frame.contentWindow?.focus(), 300);
 }
 
-export function closeNotes() { frame?.classList.remove('open'); frame?.blur(); window.focus(); }
+export function closeNotes() { frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); }
 
 export const notesPanel = panel({ el: ensure, from: 'left', open: openNotes, close: closeNotes, isOpen: notesOpen });
 

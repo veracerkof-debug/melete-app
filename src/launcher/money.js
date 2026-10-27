@@ -37,7 +37,7 @@ function show() {
   setTimeout(() => frame.contentWindow?.focus(), 300);
 }
 
-export function closeMoney() { frame?.classList.remove('open'); frame?.blur(); window.focus(); dispatchEvent(new Event('wallet:changed')); }
+export function closeMoney() { frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); dispatchEvent(new Event('wallet:changed')); }
 
 // панель для перетаскивания: с кодом кошелёк за пальцем не идёт — сначала замок (откроется по отпусканию)
 export const moneyPanel = panel({ el: () => (hasLock() ? null : ensure()), from: 'right', open: show, close: closeMoney, isOpen: moneyOpen });

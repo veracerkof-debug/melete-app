@@ -44,7 +44,7 @@ export function mountDrawer(container, { onChange }) {
     if (!st) return;
     const dy = e.clientY - st.y, dx = e.clientX - st.x;
     if (!st.drag) {
-      if (!st.can || dy < 10 || Math.abs(dx) > dy) { if (Math.hypot(dx, dy) > 10 && !(st.can && dy > 0)) st = null; return; }
+      if (!st.can || dy < 6 || Math.abs(dx) > dy) { if (Math.hypot(dx, dy) > 6 && !(st.can && dy > 0)) st = null; return; }
       st.drag = true; drawerPanel.start(false);
       try { drawer.setPointerCapture(e.pointerId); } catch { /* */ }
     }

@@ -25,6 +25,9 @@ import { dailyCopy } from './backup.js';
 import { h, toast, openSheet, sheetOpen, closeTopSheet } from './ui.js';
 
 const root = document.getElementById('l');
+root.tabIndex = -1; // сюда возвращается фокус из кошелька и блокнота (клавиатура компьютера снова у главного экрана)
+root.style.outline = 'none';
+window.__homeFocus = () => { try { root.focus({ preventScroll: true }); } catch { /* */ } };
 const home = h('main', { class: 'l-home' });
 root.append(home);
 // фокус в поле ввода может прокрутить контейнер с overflow: hidden — возвращаем
