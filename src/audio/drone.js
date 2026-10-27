@@ -2,7 +2,7 @@
 // Настройки — объект device.drone (как в прототипе).
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
-import { airVoice } from './airsound.js';
+import { airVoice, sideInto } from './airsound.js';
 import { every, cancel } from './clock.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
@@ -162,11 +162,15 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
         vib.start(t);
         os.push(vib);
       }
-      const det = 2 + d.width * 16, pan = d.width * 0.85;
+      // Каждая нота — середина без расстройки и пара ±расстройка только в разности каналов (sideInto): в стерео — ширина,
+      // в моно (маленькая Bluetooth-колонка, телефон, зал) пара исчезает и громкость не «качает» — раньше две
+      // расстроенные копии, сложенные в один канал, раз в секунду гасили друг друга
+      const det = 2 + d.width * 16, sideK = Math.min(0.6, d.width * 1.1);
       const lvlK = { pad: 0.05, bow: 0.07, choir: 0.045, glass: 0.12 }[d.sound] || 0.11;
+      const side = sideK > 0.01 ? sideInto(c, amp) : null;
       droneNotes(d).forEach(([m, lvl]) => {
         const f = mf(m);
-        [[-det, -pan], [det, pan]].forEach(([dt, pn]) => {
+        [[0, 1.4], ...(side ? [[det, sideK], [-det, -sideK]] : [])].forEach(([dt, k], i) => {
           const o = c.createOscillator();
           if (d.sound === 'pad' || d.sound === 'choir') o.type = 'sawtooth';
           else if (d.sound === 'glass') o.type = 'sine';
@@ -175,9 +179,8 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
           o.detune.value = dt;
           if (vibG) vibG.connect(o.detune);
           const g = c.createGain();
-          g.gain.value = lvl * lvlK;
-          if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pn; o.connect(g).connect(p).connect(amp); }
-          else o.connect(g).connect(amp);
+          g.gain.value = lvl * lvlK * k;
+          o.connect(g).connect(i ? side : amp);
           o.start(t);
           os.push(o);
         });

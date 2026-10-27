@@ -105,6 +105,17 @@ export const airOf = (kind, mul) => {
   return { ...B, breath: (B.breath || 0) * k('breath'), chiff: (B.chiff || 0) * k('breath'), oct: (B.oct || 0) * k('shim'), fifth: (B.fifth || 0) * k('shim'),
     drift: (B.drift || 0) * k('drift'), vib: B.vib && [B.vib[0], B.vib[1] * k('vib'), B.vib[2]], thump: (B.thump || 0) * k('hammer'), pingAmp: 0.55 * k('hammer') };
 };
+// Вход «разности каналов»: моно-сигнал уходит в левый канал как есть, в правый — с обратным знаком. В стерео это
+// ширина, при сложении каналов (моно-колонка) — ноль: расстроенные голоса не гасят середину и громкость не «качает»
+export function sideInto(c, dest) {
+  const s = c.createGain(), inv = c.createGain(), m = c.createChannelMerger(2);
+  s.channelCount = 1; s.channelCountMode = 'explicit';
+  inv.gain.value = -1;
+  s.connect(m, 0, 0); s.connect(inv).connect(m, 0, 1);
+  m.connect(dest);
+  return s;
+}
+
 export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.5, vibIn = null, body = null, uni = 0, mul = null } = {}) {
   if (airEngine(c) === 'wl') return airVoiceWl(c, dest, airOf(kind, mul), f, t, { width, bright, fade, vibIn, body, uni });
   const R = airOf(kind, mul), srcs = [], tr = [], tier = tierNow(); // tr — [параметр, множитель частоты, предел]
@@ -165,11 +176,18 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
     tr.push([o.frequency, mult]);
     return { o, g };
   };
-  // основа: унисон с расстройкой и медленным неровным «плаванием» каждого голоса (автоматизацией, без генераторов)
-  const n = uniCap(budget(tier, uni ? Math.min(uni, R.uni) : R.uni)), wave = partsWave(c, R.parts), lv = 1 / Math.sqrt(n), ds = [];
-  for (let i = 0; i < n; i++) {
-    const k = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, det = k * R.det * width + rnd(-1, 1), { o } = osc(1, wave, lv, det, k * 0.7 * Math.min(1, width));
-    if (R.drift && tier === 0) ds.push(drift(c, o.detune, det, R.drift, t));
+  // основа: унисон, который не «качает» в моно (маленькая колонка, телефон, зал складывают каналы): голос 0 —
+  // середина без расстройки; остальные — пары ±расстройка только в разности каналов (sideInto); стартуют вместе —
+  // в каждом ухе громкость почти не плавает, в моно разность исчезает. Плавание — только у одиночного голоса
+  const n = uniCap(budget(tier, uni ? Math.min(uni, R.uni) : R.uni)), wave = partsWave(c, R.parts), ds = [], pairs = Math.ceil((n - 1) / 2);
+  const { o: o0 } = osc(1, wave, 0.8, 0, 0);
+  if (n === 1 && R.drift && tier === 0) ds.push(drift(c, o0.detune, 0, R.drift, t));
+  if (n > 1) {
+    const side = sideInto(c, mix);
+    for (let i = 1; i < n; i++) {
+      const sg = i % 2 ? 1 : -1;
+      osc(1, wave, sg * (n === 2 ? 0.15 : 0.4) * Math.min(1, width), sg * (Math.ceil(i / 2) / pairs) * R.det * width, 0, side);
+    }
   }
   // учёт живых голосов: первый генератор основы кончается — голос кончился
   live++;
@@ -184,7 +202,8 @@ export function airVoice(c, dest, kind, f, t, { width = 1, bright = 1, fade = 2.
   };
   if (R.oct) { // мерцание: два генератора по сторонам; под нагрузкой — один (с расстройкой, в середине)
     const g = swell(R.oct);
-    if (budget(tier, 2) > 1) { osc(2, null, 0.5, -4, -0.5, g); osc(2, null, 0.5, 4, 0.5, g); } else osc(2, null, 0.7, rnd(-4, 4), 0, g);
+    osc(2, null, 0.7, 0, 0, g);
+    if (budget(tier, 2) > 1) osc(2, null, 0.3, 4, 0, sideInto(c, g)); // расстроенный — только в разности каналов
   }
   if (R.fifth) osc(3, null, 1, rnd(-3, 3), 0, swell(R.fifth));
   if (R.sub) osc(0.5, null, R.sub, 0, 0);

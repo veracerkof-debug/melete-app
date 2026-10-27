@@ -21,6 +21,9 @@ export const NEWS = [
   { n: 6, d: '2026-10-25', ru: ['Медиатека: «Поделиться» в меню записи — отправить в Telegram, почту или другое приложение', 'Всплывающее окно при выходе на рабочий стол теперь выключено (включается в «Работе в фоне»)', 'Сообщение о неожиданном закрытии — только при настоящем сбое, не когда приложение закрыли сами'],
     en: ['Media library: “Share” in a recording’s menu — send to Telegram, email or another app', 'The pop-up window on leaving to the home screen is now off (turn on in “Background”)', 'The unexpected-close message appears only after a real failure, not when the app was closed on purpose'],
     uz: ['Mediateka: yozuv menyusida «Ulashish» — Telegram, pochta yoki boshqa ilovaga yuborish', 'Bosh ekranga chiqqanda qalqib chiquvchi oyna endi oʻchirilgan («Fonda ishlash»da yoqiladi)', 'Kutilmagan yopilish haqidagi xabar faqat haqiqiy nosozlikda chiqadi, ilova ataylab yopilganda emas'] },
+  { n: 7, d: '2026-10-27', ru: ['Пэды на маленькой Bluetooth-колонке и динамике телефона звучат ровно — громкость больше не «проваливается»'],
+    en: ['Pads on a small Bluetooth speaker or phone speaker sound steady — the volume no longer dips'],
+    uz: ['Kichik Bluetooth karnay va telefon dinamigida pedlar bir tekis yangraydi — ovoz endi «tushib» ketmaydi'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);
