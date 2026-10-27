@@ -445,6 +445,8 @@ window.__moneyFresh = () => { S.amt = ''; S.kind = 'e'; closeSheets(); closeOver
     if (s.top && parent !== window) { parent.postMessage({ moneyDragEnd: dx, v }, '*'); return; }
     if (dx > 50 || v > 0.3) window.__moneyBack();
   };
+  // палец пошёл вбок — браузер не должен начать прокрутку (иначе pointercancel и жест гибнет)
+  document.addEventListener('touchmove', (e) => { if (st?.lock === 'x') e.preventDefault(); }, { passive: false, capture: true });
   document.addEventListener('pointerup', end, true);
   document.addEventListener('pointercancel', (e) => { if (st?.top && parent !== window) parent.postMessage({ moneyDragEnd: 0, v: 0 }, '*'); st = null; }, true);
 })();

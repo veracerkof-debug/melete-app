@@ -127,7 +127,8 @@ test('кошелёк: смахнуть слева направо внутри �
   await page.mouse.move(box.x + 120, box.y + 22, { steps: 4 }); await page.mouse.move(box.x + 330, box.y + 24, { steps: 8 });
   await page.mouse.up();
   await expect(page.locator('iframe.l-money.open:not(.l-notes)')).toHaveCount(0);
-  await page.waitForTimeout(400); // панель уехала, фокус — снова у главного экрана
+  await page.waitForTimeout(400); // панель уехала
+  await page.mouse.click(200, 420); // касание пустого места — фокус точно у главного экрана (клавиши — ему)
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('iframe.l-notes.open')).toHaveCount(1);
   const notes = page.frameLocator('iframe.l-notes');

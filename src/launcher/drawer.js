@@ -61,6 +61,7 @@ export function mountDrawer(container, { onChange }) {
     }
     st = null;
   };
+  drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
   drawer.addEventListener('pointerup', endDrag);
   drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
   // смахнуть влево-вправо по списку — соседняя вкладка

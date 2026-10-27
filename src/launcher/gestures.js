@@ -4,9 +4,8 @@
 import { isNative } from './native.js';
 
 const LONG_MS = 450; // = HOLD_MS в ui/hold.js (не импортируется: тянет словари ядра в лёгкую страницу)
-const EDGE = 32;   // px от левого и правого края — «Назад» жестом и боковая панель мультиокна (Honor, MagicOS)
-const TOP = 28;    // сверху — шторка уведомлений
-const BOTTOM = 44; // снизу — полоса жеста «Домой» и недавних: смахивание отсюда не наше (касание и удержание — можно)
+// Зон «для системы» нет: жесты «Назад», «Домой», шторку система забирает сама и до страницы они не доходят;
+// то, что дошло, — наше (раньше касания у краёв и у низа экрана отбрасывались, и смахивание от значков внизу терялось)
 const SWIPE_PX = 32;
 const DOUBLE_MS = 300;
 
@@ -30,9 +29,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
 
   el.addEventListener('pointerdown', (e) => {
     if (isBlocked() || e.button > 0) return;
-    if (e.pointerType !== 'mouse' && (e.clientX < EDGE || e.clientX > innerWidth - EDGE)) return; // край — «Назад» системы
-    const sys = e.pointerType !== 'mouse' && (e.clientY < TOP || e.clientY > innerHeight - BOTTOM);
-    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), moved: false, long: false, sys };
+    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), moved: false, long: false };
     halo = document.createElement('div');
     halo.className = 'l-halo';
     halo.style.left = e.clientX + 'px';
@@ -60,7 +57,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
       clearTimeout(longTimer);
       clearHalo();
       // панель идёт за пальцем — направление запоминается по первому движению
-      if (!start.sys && !start.long && onDragStart) {
+      if (!start.long && onDragStart) {
         start.dir = DIR(dx, dy);
         if (onDragStart(start.dir)) { start.drag = true; start.vel = []; try { el.setPointerCapture(e.pointerId); } catch { /* */ } }
       }
@@ -98,7 +95,6 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
     }
     if (s.long) return;
 
-    if (s.moved && s.sys) return; // начато в зоне жестов системы — уступаем ей
     if (s.moved && dt < 1000) {
       const ax = Math.abs(dx), ay = Math.abs(dy);
       if (Math.max(ax, ay) < SWIPE_PX) return;

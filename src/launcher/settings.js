@@ -220,20 +220,26 @@ export function openSettings(onChange, getGesture, tab) {
           h('button', { class: 'l-btn', onclick: () => pickFile().then((c) => askRestore(c, rerender), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.bad')); }) }, t('data.load'))),
         copies));
 
-      // — Обновление —
+      // — Обновление — свой раздел перерисовывается сам по событиям загрузки, остальные настройки не трогаются
       if (updAvailable()) {
-        const u = updState();
-        const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
-          : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
-        body.append(S('data', t('set.upd'), '',
-          h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
-          segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => up({ updMode: v }), t('set.upd')),
-          toggle(t('upd.mobile'), prefs.updMobile, (v) => up({ updMobile: v })),
-          h('div', { class: 'l-btn-row' },
-            u.st === 'avail' ? h('button', { class: 'l-btn primary', onclick: () => download().then(rerender) }, t('upd.get')) : null,
-            u.st === 'ready' ? h('button', { class: 'l-btn primary', onclick: () => install() }, t('upd.install')) : null,
-            ['avail', 'down', 'ready'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check().then(rerender) }, t('upd.check')))));
-        if (!unbindUpd) unbindUpd = onUpdate(() => rerender());
+        const updSec = () => {
+          const u = updState();
+          const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
+            : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
+          return S('data', t('set.upd'), '',
+            h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
+            segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => { setPrefs({ updMode: v }); changed(); swap(); }, t('set.upd')),
+            toggle(t('upd.mobile'), prefs.updMobile, (v) => { setPrefs({ updMobile: v }); changed(); }),
+            h('div', { class: 'l-btn-row' },
+              u.st === 'avail' ? h('button', { class: 'l-btn primary', onclick: () => download() }, t('upd.get')) : null,
+              u.st === 'ready' ? h('button', { class: 'l-btn primary', onclick: () => install() }, t('upd.install')) : null,
+              ['avail', 'down', 'ready'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check() }, t('upd.check'))));
+        };
+        let updEl = updSec();
+        const swap = () => { if (!updEl.isConnected) return; const n = updSec(); updEl.replaceWith(n); updEl = n; };
+        body.append(updEl);
+        unbindUpd?.();
+        unbindUpd = onUpdate(swap);
       }
 
       // — Главный экран телефона —
