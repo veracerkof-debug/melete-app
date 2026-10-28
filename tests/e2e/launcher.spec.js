@@ -110,6 +110,29 @@ test('правка на месте: удержание часов — перес
   expect(errors).toEqual([]);
 });
 
+test('скрыть приложение: из «Всех приложений» — нет нигде, в поиске тоже; вернуть — из настроек', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer')).toHaveClass(/open/);
+  const app = page.locator('.l-d-app', { hasText: 'Музыка' });
+  const box = await app.boundingBox();
+  await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
+  await page.locator('.l-sheet .l-pick', { hasText: 'Скрыть приложение' }).click();
+  await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(0);
+  await page.locator('.l-drawer .l-search').fill('муз');
+  await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.l-app .label', { hasText: 'Музыка' })).toHaveCount(0); // и с главного
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Главный' }).click();
+  await expect(page.locator('.l-edit-row', { hasText: 'Музыка' })).toHaveCount(1);
+  await page.locator('.l-edit-row', { hasText: 'Музыка' }).locator('.l-hide-back').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
 test('старые настройки: украшения убраны, приложения на месте', async ({ page, errors }) => {
   await page.goto(PAGE);
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('elachiston.prefs', JSON.stringify({ intro: true, lang: 'ru', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', theme: 'paper', style: 'rich' })); });

@@ -1,6 +1,6 @@
 // Главный экран: все приложения (смахнуть вверх) — по алфавиту, с поиском. Удержание — меню приложения.
 import { prefs, save, HOME_MAX } from './data.js';
-import { allApps, homeItems, loadApps } from './apps.js';
+import { allApps, homeItems, loadApps, setHidden } from './apps.js';
 import { openApp, openUrl } from './actions.js';
 import { isNative, Launcher } from './native.js';
 import { t } from './i18n.js';
@@ -251,6 +251,8 @@ function appMenu(a) {
           fill(); changed(); toast(added ? t('fold.added') : t('fold.removed'));
         } }, folderName(f))),
         h('button', { class: 'l-chip', onclick: () => { close(); newFolder(a.key); } }, '+ ' + t('fold.new'))));
+      // скрыть — приложения нет нигде, кроме Настройки → «Главный» → «Скрытые»
+      body.append(h('button', { class: 'l-pick danger', onclick: () => { setHidden(a.key, true); fill(); changed(); close(); toast(t('hide.done')); } }, h('span', {}, t('hide.app'))));
       if (isNative()) body.append(h('button', { class: 'l-pick', onclick: () => { Launcher.appInfo({ pkg: a.pkg }); close(); } }, h('span', {}, t('drawer.info'))));
       if (!isNative() && a.url) body.append(h('button', { class: 'l-pick', onclick: () => openUrl(a.url, a.label) }, h('span', {}, a.url)));
       if (!isNative() && (prefs.web || []).some((w) => w.id === a.key)) {

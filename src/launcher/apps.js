@@ -1,7 +1,7 @@
 // Главный экран: приложения. Android — список приложений со значком запуска и приложения по ролям (LauncherPlugin);
 // браузер (знакомство с главным экраном) — несколько ссылок вместо приложений. У каждого — ключ key (pkg или id).
 import { isNative, Launcher } from './native.js';
-import { prefs, HOME_MAX } from './data.js';
+import { prefs, save, HOME_MAX } from './data.js';
 import { t } from './i18n.js';
 
 const WEB = [
@@ -34,7 +34,22 @@ export async function loadApps() {
   return list;
 }
 
-export const allApps = () => list;
+// Скрытые приложения (решение автора 2026-10-28 — самая важная функция): их нет во «Всех приложениях», в поиске,
+// на главном, в значках, в папках и в выборе приложения; вернуть или открыть — Настройки → «Главный» → «Скрытые»
+export const isHidden = (key) => (prefs.hidden || []).includes(key);
+export function setHidden(key, on = true) {
+  const s = new Set(prefs.hidden || []);
+  if (on) s.add(key); else s.delete(key);
+  prefs.hidden = [...s];
+  // скрыли — уходит и с главного, и из значков (списки становятся своими; вернуть на место — как обычно)
+  if (on) {
+    prefs.home = (prefs.home || defaultHome()).filter((x) => x.key !== key);
+    prefs.dock = (prefs.dock || defaultDock()).filter((d) => !(d.action?.t === 'app' && d.action.key === key));
+  }
+  save();
+}
+export const hiddenApps = () => list.filter((a) => isHidden(a.key));
+export const allApps = () => list.filter((a) => !isHidden(a.key));
 export const appOf = (key) => list.find((a) => a.key === key) || null;
 export const rolesOf = () => roles;
 

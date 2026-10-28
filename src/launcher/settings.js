@@ -6,9 +6,9 @@ import { prefs, save, setPrefs, resetPrefs, isChurch, HOME_MAX } from './data.js
 import { iconSVG } from './icons.js';
 import { CROSS_IDS, CROSS_PLACES, crossSVG } from './cross.js';
 import { GESTURES } from './gestures.js';
-import { describeAction, openUrl } from './actions.js';
+import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
-import { homeItems, dockSlots, appOf, appName } from './apps.js';
+import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
 import { applyLook } from './look.js';
@@ -88,6 +88,16 @@ export function openSettings(onChange, getGesture, tab) {
 
       // — Раскладка: главный экран и «Все приложения» —
       
+      // — Скрытые приложения: нигде не видны; здесь — открыть или вернуть —
+      const hid = hiddenApps();
+      body.append(S('home', t('hide.title'),
+        h('p', { class: 'l-hint' }, t('hide.hint')),
+        h('div', { class: 'l-edit-list' }, hid.map((a) => h('div', { class: 'l-edit-row' },
+          h('button', { class: 'l-edit-main', onclick: () => openApp(a) }, h('span', {}, a.label), h('small', {}, t('hide.open'))),
+          h('button', { class: 'l-btn l-hide-back', onclick: keep(() => { setHidden(a.key, false); changed(); rerender(); }) }, t('hide.back'))))),
+        h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { setHidden(a.key, true); changed(); rerender(); toast(t('hide.done')); }, { appsOnly: true }) }, '＋ ' + t('hide.add')),
+      ));
+
       // — Главный экран: приложения —
       const homeList = h('div', { class: 'l-edit-list' });
       homeItems().forEach((item, i, all) => {
@@ -260,6 +270,7 @@ export function editHomeItem(i, after, onChange = changed) {
           h('button', { class: 'l-btn', disabled: i === 0, onclick: () => { move(ownHome(), i, -1); save(); onChange(); close(); } }, '↑ ' + t('set.up')),
           h('button', { class: 'l-btn', disabled: i === homeItems().length - 1, onclick: () => { move(ownHome(), i, 1); save(); onChange(); close(); } }, '↓ ' + t('set.down')),
           h('button', { class: 'l-btn danger', onclick: () => { ownHome().splice(i, 1); save(); onChange(); close(); } }, t('set.remove'))),
+        app ? h('button', { class: 'l-pick danger', onclick: () => { setHidden(item.key, true); onChange(); close(); toast(t('hide.done')); } }, h('span', {}, t('hide.app'))) : null,
       );
     },
   });

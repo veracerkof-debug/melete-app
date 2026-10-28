@@ -410,3 +410,6 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-arr-chip.danger { color: var(--red); }
 .l-arr-done { margin-left: auto; min-height: 44px; padding: 0 22px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500; }
 .l-arr-hint { margin: 2px 0 10px; font-size: 13px; color: var(--l2); }
+
+/* скрытые приложения: «Вернуть» — в строке */
+.l-hide-back { margin: 0; flex: none; }

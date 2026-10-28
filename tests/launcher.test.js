@@ -105,6 +105,26 @@ describe('главный экран: минимальный', () => {
     expect(homeItems()).toHaveLength(7);
     data.prefs.home = null;
   });
+  it('скрытое приложение пропадает отовсюду: все приложения, главный, значки, папки; вернуть — снова видно', async () => {
+    vi.resetModules();
+    const data = await import('../src/launcher/data.js');
+    const apps = await import('../src/launcher/apps.js');
+    await apps.loadApps(); // браузер: ссылки вместо приложений
+    const key = 'web.music';
+    data.prefs.home = [{ key, label: '' }, { key: 'web.maps', label: '' }];
+    data.prefs.dock = [{ icon: 'music', action: { t: 'app', key } }];
+    expect(apps.allApps().some((a) => a.key === key)).toBe(true);
+    apps.setHidden(key, true);
+    expect(apps.allApps().some((a) => a.key === key)).toBe(false);
+    expect(apps.hiddenApps().map((a) => a.key)).toEqual([key]);
+    expect(apps.homeItems().map((x) => x.key)).toEqual(['web.maps']);
+    expect(apps.dockSlots()).toHaveLength(0);
+    const { folderApps } = await import('../src/launcher/folders.js');
+    expect(folderApps({ apps: [key, 'web.maps'] }).map((a) => a.key)).toEqual(['web.maps']);
+    apps.setHidden(key, false);
+    expect(apps.allApps().some((a) => a.key === key)).toBe(true);
+    data.prefs.hidden = []; data.prefs.home = null; data.prefs.dock = null;
+  });
   it('старые настройки переходят на минимальный экран: украшения убраны, приложения и жесты на месте', async () => {
     const old = { theme: 'paper', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', style: 'rich', font: 'literata', church: true,
       home: Array.from({ length: 9 }, (_, i) => ({ key: 'k' + i, label: '' })), gestures: { swipeUp: { t: 'cmd', id: 'drawer' } } };

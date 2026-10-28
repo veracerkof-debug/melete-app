@@ -380,6 +380,7 @@ Object.assign(S.en, {
 });
 // Минимальный главный экран: крест, своя строка состояния, не больше 7 приложений (DECISIONS 2026-10-28)
 Object.assign(S.ru, {
+  'hide.title': 'Скрытые приложения', 'hide.hint': 'Скрытых нет нигде: ни во всех приложениях, ни в поиске, ни на главном, ни в папках. Открыть или вернуть — только здесь.', 'hide.app': 'Скрыть приложение', 'hide.add': 'Скрыть приложение', 'hide.done': 'Скрыто. Вернуть — Настройки → Главный', 'hide.open': 'Открыть', 'hide.back': 'Вернуть',
   'arr.title': 'Правка главного', 'arr.done': 'Готово', 'arr.hide': 'Убрать', 'arr.smaller': 'Меньше', 'arr.bigger': 'Больше', 'arr.reset': 'Как было', 'arr.addApp': 'Приложение', 'arr.addIcon': 'Значок', 'arr.hint': 'Перетащить — переставить, щипок — размер, касание — выбрать.',
   'crossAt.center': 'Посередине', 'status.wifi': 'Wi-Fi', 'status.battery': 'заряд {p}', 'status.charging': 'заряжается',
   'set.churchSec': 'Крест и чтение', 'set.churchHint': 'Крест на главном и чтение Библии из Melete',
@@ -389,6 +390,7 @@ Object.assign(S.ru, {
   'home.full': 'На главном уже {n} — сначала одно убрать', 'home.count': 'Сейчас {n} из {max}.', 'set.homeHint': 'Не больше семи: приложения и папки. Удержание любого элемента на главном — переставить, размер, убрать.',
 });
 Object.assign(S.uz, {
+  'hide.title': 'Yashirin ilovalar', 'hide.hint': 'Yashirin ilovalar hech qayerda yoʻq: barcha ilovalarda ham, qidiruvda ham, bosh ekranda ham, jildlarda ham. Ochish yoki qaytarish — faqat shu yerda.', 'hide.app': 'Ilovani yashirish', 'hide.add': 'Ilovani yashirish', 'hide.done': 'Yashirildi. Qaytarish — Sozlamalar → Bosh ekran', 'hide.open': 'Ochish', 'hide.back': 'Qaytarish',
   'arr.title': 'Bosh ekranni tahrirlash', 'arr.done': 'Tayyor', 'arr.hide': 'Olib tashlash', 'arr.smaller': 'Kichikroq', 'arr.bigger': 'Kattaroq', 'arr.reset': 'Avvalgidek', 'arr.addApp': 'Ilova', 'arr.addIcon': 'Belgi', 'arr.hint': 'Sudrash — joyini almashtirish, chimdish — oʻlcham, bosish — tanlash.',
   'crossAt.center': 'Oʻrtada', 'status.wifi': 'Wi-Fi', 'status.battery': 'quvvat {p}', 'status.charging': 'quvvatlanmoqda',
   'set.churchSec': 'Xoch va oʻqish', 'set.churchHint': 'Bosh ekranda xoch va Melete dan Muqaddas Kitob oʻqishi',
@@ -398,6 +400,7 @@ Object.assign(S.uz, {
   'home.full': 'Bosh ekranda allaqachon {n} ta — avval bittasini olib tashlang', 'home.count': 'Hozir {n} / {max}.', 'set.homeHint': 'Yettitadan koʻp emas: ilovalar va jildlar. Bosh ekranda istalgan elementni bosib turish — joyini, oʻlchamini oʻzgartirish, olib tashlash.',
 });
 Object.assign(S.en, {
+  'hide.title': 'Hidden apps', 'hide.hint': 'Hidden apps appear nowhere: not in all apps, search, home or folders. Open or bring back — only here.', 'hide.app': 'Hide app', 'hide.add': 'Hide an app', 'hide.done': 'Hidden. Bring back — Settings → Home', 'hide.open': 'Open', 'hide.back': 'Bring back',
   'arr.title': 'Edit home', 'arr.done': 'Done', 'arr.hide': 'Remove', 'arr.smaller': 'Smaller', 'arr.bigger': 'Bigger', 'arr.reset': 'Reset', 'arr.addApp': 'App', 'arr.addIcon': 'Icon', 'arr.hint': 'Drag to move, pinch to resize, tap to select.',
   'crossAt.center': 'Centre', 'status.wifi': 'Wi-Fi', 'status.battery': 'battery {p}', 'status.charging': 'charging',
   'set.churchSec': 'Cross and reading', 'set.churchHint': 'A cross on home and Bible reading from Melete',
