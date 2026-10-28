@@ -55,11 +55,17 @@ describe('пакеты: tar', () => {
   });
 });
 
-describe('пакеты: сборка без пакетов (у себя, тесты)', () => {
-  it('всё встроено: пакет «есть», адрес — из сборки', () => {
-    expect(packList()).toEqual([]);
-    expect(isPacked('piano')).toBe(false);
-    expect(hasPack('piano')).toBe(true);
+describe('пакеты: что вынуто из этой сборки', () => {
+  // у себя и в тестах — всё встроено; сборка APK (MELETE_TARGET=android, и CI) — пакеты своей системы вынуты
+  const target = process.env.MELETE_TARGET, want = idx.list.filter((p) => target && p.on.includes(target)).map((p) => p.id);
+  it('список пакетов сборки — по MELETE_TARGET', () => {
+    expect(packList().map((p) => p.id)).toEqual(want);
+  });
+  it('встроенное «есть», вынутое без скачивания — нет; адрес до скачивания — из сборки', () => {
+    for (const p of idx.list) {
+      expect(isPacked(p.id)).toBe(want.includes(p.id));
+      expect(hasPack(p.id)).toBe(!want.includes(p.id)); // скачанных в тестах нет
+    }
     expect(packUrl('models/piano/pack.json')).toMatch(/\/models\/piano\/pack\.json$/);
   });
 });
