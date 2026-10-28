@@ -451,4 +451,18 @@ public class LauncherPlugin extends Plugin {
             try { prompt.authenticate(info); } catch (Exception e) { call.reject(e.getMessage()); }
         });
     }
+
+    // Значки строки состояния и полосы жестов: тёмные на светлом фоне, светлые на тёмном (look.js → setBars)
+    @PluginMethod
+    public void setBars(PluginCall call) {
+        boolean lightBg = call.getBoolean("lightBg", true);
+        Activity a = getActivity();
+        if (a == null) { call.resolve(); return; }
+        a.runOnUiThread(() -> {
+            androidx.core.view.WindowInsetsControllerCompat c = androidx.core.view.WindowCompat.getInsetsController(a.getWindow(), a.getWindow().getDecorView());
+            c.setAppearanceLightStatusBars(lightBg);
+            c.setAppearanceLightNavigationBars(lightBg);
+        });
+        call.resolve();
+    }
 }

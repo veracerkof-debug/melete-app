@@ -20,6 +20,7 @@ function ensure() {
   // скрипт — отдельным файлом: CSP главного экрана (launcher/index.html) не пускает встроенные скрипты
   frame.srcdoc = page.replace('<!--SCRIPT-->', `<script src="${new URL(script, location.href).href}"></script>`);
   document.body.append(frame);
+  frame.addEventListener('load', () => window.__applyInsets?.(frame.contentDocument)); // отступы системы — и этой странице
   return frame;
 }
 
