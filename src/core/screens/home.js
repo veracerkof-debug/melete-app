@@ -192,14 +192,17 @@ export function homeHTML(app) {
   // «Только инструменты»: без недели, цели и лиги — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   P.voice = quoteHTML(app, false);
-  if (!plain) P.week = '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) }), { cap: t('home.left'), v: shortDur(goal - w.total) }) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
+  // лига — вторым кольцом в той же плитке (решение автора 28.10.2026): путь до следующего самоцвета, камень внутри;
+  // в правке главной — отдельным блоком, чтобы его можно было убрать или переставить
+  const gemIn = !plain && !EDIT && isOn(st, 'mastery') && !homeLayout(st).off.has('league');
+  if (!plain) P.week = '<div class="hcard' + (gemIn ? ' hwgem' : '') + '"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) }), { cap: t('home.left'), v: shortDur(goal - w.total) }) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
-    streakPill(app) + '</div></div>' +
+    streakPill(app) + '</div>' + (gemIn ? gemRing(app) : '') + '</div>' +
     '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
       esc(w.per[i] ? fmtDur(w.per[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d"></span>' + d + '</div>').join('') + '</div>' +
     '<button class="hlink" data-pp="' + (st.configured ? 'stats' : 'week') + '">' +
     (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
-  P.league = gemRow(app);
+  P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
   P.start = '<button class="hcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
@@ -382,6 +385,15 @@ function gemRow(app) {
   return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemCanvas(g.gem.id, g.frac, 52) +
     '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + (total >= 60 ? fmtDur(total) : '') + (g.next ? (total >= 60 ? ' · ' : '') + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
     (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
+}
+
+// Лига кольцом: доля пути до следующего самоцвета, камень внутри, название под ним; касание — все лиги
+function gemRing(app) {
+  const hrs = leagueHours(app), g = gemOf(hrs), name = t('gem.' + g.gem.id), r = 40, c = 2 * Math.PI * r, f = g.next ? g.frac : 1;
+  return '<button class="hgring" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(hrs * 3600) })) + '">' +
+    '<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="' + r + '" class="hgtrack"/>' +
+    (f > 0.001 ? '<circle cx="48" cy="48" r="' + r + '" class="hgfill" stroke-dasharray="' + c * f + ' ' + c + '" transform="rotate(-90 48 48)"/>' : '') + '</svg>' +
+    gemCanvas(g.gem.id, g.frac, 46) + '<span class="hgname">' + esc(name) + '</span></button>';
 }
 
 export function gemSheet(app) {

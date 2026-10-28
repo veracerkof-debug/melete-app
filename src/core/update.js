@@ -11,7 +11,7 @@
 // После обновления — «Что нового» (whatsnew.js). Веб-версия обновляется сама (service worker); Mac — позже.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isDesktop } from './desktop.js';
-import { log, logErr } from './log.js';
+import { log, logErr, markUpdateQuit } from './log.js';
 
 export const REPO = 'veracerkof-debug/melete-app';
 export const CHANNEL = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? 'pre' : 'dev';
@@ -70,6 +70,9 @@ export function createUpdater(app) {
 
   async function check() {
     if (!platform || s.st === 'checking' || s.st === 'down') return s;
+    // лимит GitHub ещё действует (помнится и после перезапуска) — не спрашивать зря, ответ всё равно «лимит»
+    const lim = Math.max(s.limit || 0, readMem().limit || 0);
+    if (lim > Date.now()) { set({ st: 'err', limit: lim }); return s; }
     set({ st: 'checking' });
     try {
       const info = parseRelease(await fetchRelease(), platform, CHANNEL), at = Date.now();
@@ -77,7 +80,11 @@ export function createUpdater(app) {
       const fresh = isNewer(info, BUILD);
       log('upd', 'проверка ' + CHANNEL + ': у нас ' + BUILD + ', на GitHub ' + (info ? info.build : '—') + (fresh ? ' — есть новая' : ''));
       set({ st: fresh ? 'avail' : 'none', info: fresh ? info : null, at });
-    } catch (e) { logErr('upd', e); set({ st: 'err', limit: e.limit || 0 }); }
+    } catch (e) {
+      // лимит запросов — не ошибка приложения: запомнить срок и подождать (предупреждение, не ошибка в диагностике)
+      if (e.limit) { writeMem({ ...readMem(), limit: e.limit }); log('upd', e.message, 'w'); } else logErr('upd', e);
+      set({ st: 'err', limit: e.limit || 0 });
+    }
     return s;
   }
 
@@ -121,6 +128,7 @@ export function createUpdater(app) {
     if (s.st !== 'ready') return;
     await safeCopy();
     log('upd', 'установка сборки ' + (s.info ? s.info.build : '?'));
+    markUpdateQuit(); // закрытие на установку — не вылет
     if (platform === 'android') {
       const { ok } = await Native.canInstall();
       if (!ok) { await Native.allowInstall(); return 'allow'; } // разрешить установку из Melete — один раз, в настройках системы

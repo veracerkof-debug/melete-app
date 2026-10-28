@@ -14,7 +14,7 @@ export const KEEP_MS = 3 * 3600e3;
 export const MAX_CHARS = 200_000;
 const LINE_MAX = 600;
 
-let lines = null, timer = 0, crashed = null;
+let lines = null, timer = 0, crashed = null, updated = false, quitting = false;
 const store = () => { try { return globalThis.localStorage; } catch { return null; } };
 
 function load() {
@@ -79,8 +79,9 @@ export function startLog(info = '') {
   const s = store();
   let prev = null;
   try { prev = JSON.parse(s?.getItem(RUN_KEY) || 'null'); } catch { /* */ }
-  crashed = !!(prev && prev.vis);
-  const mark = (vis) => { try { s?.setItem(RUN_KEY, JSON.stringify({ t: Date.now(), vis })); } catch { /* */ } };
+  crashed = !!(prev && prev.vis && !prev.upd); // закрытие на установку обновления — не вылет (отчёт 28.10.2026)
+  updated = !!(prev && prev.upd);
+  const mark = (vis) => { try { s?.setItem(RUN_KEY, JSON.stringify({ t: Date.now(), vis, upd: quitting })); } catch { /* */ } };
   mark(document.visibilityState === 'visible');
   document.addEventListener('visibilitychange', () => {
     const vis = document.visibilityState === 'visible';
@@ -96,7 +97,10 @@ export function startLog(info = '') {
   }, true);
   addEventListener('unhandledrejection', (e) => log('js', 'promise ' + errText(e.reason), 'e'));
   if (crashed) { log('app', 'прошлый запуск закрылся неожиданно', 'w'); dCount('app.crash'); }
+  else if (updated) log('app', 'перезапуск после установки обновления');
   log('app', 'запуск ' + info);
 }
 export const crashedLast = () => !!crashed;
+// Сейчас приложение закроется на установку обновления: следующий запуск не считает это вылетом
+export const markUpdateQuit = () => { quitting = true; try { globalThis.localStorage?.setItem(RUN_KEY, JSON.stringify({ t: Date.now(), vis: false, upd: true })); } catch { /* */ } };
 export const crashSeen = () => { crashed = false; };

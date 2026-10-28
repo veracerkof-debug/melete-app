@@ -29,7 +29,8 @@ export function diagnose(state, env = {}, now = Date.now()) {
   if ((c['audio.squeeze'] || 0) >= 3) add('squeeze', 'warn', { n: c['audio.squeeze'] });
   if (g['audio.underrun'] && g['audio.underrun'].max > 0.01) add('underrun', 'warn', { pct: r1(g['audio.underrun'].max * 100) });
   const a = env.audio;
-  if (a && a.base + a.out > 150) add('latency', 'warn', { ms: a.base + a.out });
+  // буфер приложения уже мал, а задержка — в выходе устройства (Bluetooth, динамик телефона): совет — другой выход
+  if (a && a.base + a.out > 150) add('latency', 'warn', { ms: a.base + a.out }, a.base < 40 && a.out > 120 ? 'latencyOut' : 'latency');
   // Студия: ноты планировались позже своего времени
   if ((c['studio.late'] || 0) > 0) add('late', 'warn', { n: c['studio.late'], ms: Math.round((g['studio.lateMs'] || {}).max || 0) });
   // Интерфейс подвисал (длинные задачи главного потока — звук и касания запаздывают)

@@ -19,10 +19,14 @@ export const loadLevel = (v) => (v >= LOAD_HIGH ? 'high' : v >= LOAD_WARN ? 'war
 // detail() — строка с подробностями для журнала (буфер, голоса, экран) — подставляет ядро; onHeavy() — ужатие уже
 // предельное, а нагрузка выше 90 %: звук облегчает то, что не голоса (реверберация), — один раз
 // onSample(state, m) — каждый замер (ядро ведёт диагностику: src/core/diag.js)
-export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy = () => {}, onSample = () => {}) {
+// idle() — приложение в фоне и ничего не звучит: телефон душит процессор свёрнутого приложения, и замер показывает
+// «перегрузку» тишины (отчёт 28.10.2026: 76–98 % при 0 голосов, экран погашен) — такие замеры не считаются
+// перегрузкой, не ужимают голоса и не идут в диагностику
+export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy = () => {}, onSample = () => {}, idle = () => false) {
   let state = null, subs = new Set(), node = null, cap = null, warned = false, lowSince = 0, lastStep = 0, heavy = false;
   const emit = () => subs.forEach((fn) => { try { fn(api); } catch { /* */ } });
   const take = (m) => {
+    if (idle()) { state = foldLoad(state, { load: Math.min(m.load, 0.5), peak: Math.min(m.peak ?? m.load, 0.5) }); state.over = 0; emit(); return; }
     state = foldLoad(state, m);
     if (state.over >= 2 && !warned) { warned = true; logger('перегрузка звука: ' + Math.round(state.avg * 100) + ' % · ' + detail()); }
     if (state.over === 0) warned = false;

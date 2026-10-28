@@ -1,7 +1,7 @@
 // Варианты (dev): раздел в профиле, переключатель ревербов; ревербы Airwindows работают в звуковом движке браузера
 import { test, expect } from './melete.js';
 
-test('варианты: ревербы Airwindows', async ({ page, melete, errors }) => {
+test('варианты и ревербы Airwindows', async ({ page, melete, errors }) => {
   await melete.open();
   // сам звук: OfflineAudioContext с worklet — удар → хвост, без NaN
   const r = await page.evaluate(async () => {
@@ -23,11 +23,14 @@ test('варианты: ревербы Airwindows', async ({ page, melete, error
   // раздел «Варианты» (сборка у себя — канал dev)
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-act="variants"]'); await page.waitForTimeout(400);
-  const seg = page.locator('.sheet [data-seg="var-verb"]');
-  await expect(seg.locator('[data-v="melete"]')).toHaveAttribute('aria-pressed', 'true');
-  await seg.locator('[data-v="galactic"]').click();
-  await expect(seg.locator('[data-v="galactic"]')).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.variants')).verb)).toBe('galactic');
+  const seg = page.locator('.sheet [data-seg="var-tabs"]');
+  await expect(seg.locator('[data-v="icons"]')).toHaveAttribute('aria-pressed', 'true');
+  await seg.locator('[data-v="labels"]').click();
+  await expect(seg.locator('[data-v="labels"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.variants')).tabs)).toBe('labels');
+  // звук пространств — обычная настройка звука (не вариант)
+  const al = await page.evaluate(async () => (await import('/src/audio/perf.js')).verbAlgo());
+  expect(al).toBe('melete');
   await page.screenshot({ path: 'test-results/variants.png' });
   void errors;
 });

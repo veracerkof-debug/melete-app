@@ -2,7 +2,7 @@
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
 import { createLoadMeter } from './load.js';
 import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock, hold, isHeld } from './context.js';
-import { createMixer } from './mixer.js';
+import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
@@ -95,21 +95,23 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
       ', голосов ' + synth.voiceCount + (drone.on ? ', пэды' : '') + (metro.running ? ', метроном' : '') + ', экран ' + (typeof document !== 'undefined' ? document.visibilityState : '?');
   };
   // Экран погас при звуке: нагрузка в момент и через 20 с (так видно, душит ли телефон процессор при блокировке)
+  let offLogged = false;
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
     if (!loadMeter || !audio.onLoadLog) return;
     const pct = () => Math.round(loadMeter.value * 100) + ' %';
     if (document.visibilityState === 'hidden') {
       if (!synth.voiceCount && !drone.on && !metro.running) return;
+      offLogged = true;
       audio.onLoadLog('экран погашен: нагрузка ' + pct() + ' · ' + diag());
       after(20000, () => { if (document.visibilityState === 'hidden') audio.onLoadLog('через 20 с без экрана: нагрузка ' + pct() + ', пик ' + Math.round(loadMeter.peak * 100) + ' %'); });
-    } else audio.onLoadLog('экран включён: нагрузка ' + pct());
+    } else if (offLogged) { offLogged = false; audio.onLoadLog('экран включён: нагрузка ' + pct()); } // пара к «экран погашен», без звука — не шум в журнале
   });
   const audio = {
     // Нагрузка звукового потока (load.js): создаётся с контекстом, читают микшер и настройки
     get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m), diag, () => {
       // голоса уже ужаты, а поток не успевает: свёртка — самое дорогое из постоянного; лёгкая — в десятки раз дешевле
       if (mixer.verb === 'conv') { mixer.setVerb('light'); if (audio.onLoadLog) audio.onLoadLog('перегрузка — реверберация переключена на лёгкую'); }
-    }, (st, m) => audio.onLoadSample && audio.onLoadSample(st, m)); loadMeter.start(); } return loadMeter; },
+    }, (st, m) => audio.onLoadSample && audio.onLoadSample(st, m), () => typeof document !== 'undefined' && document.visibilityState === 'hidden' && !BUSES.some((b) => mixer.isActive(b))); loadMeter.start(); } return loadMeter; },
     onLoadLog: null, // ядро подставляет запись в журнал
     onLoadSample: null, // и счёт нагрузки для диагностики (src/core/diag.js)
     // обстановка звука для диагностики: что звучит и как настроено (без названий)
