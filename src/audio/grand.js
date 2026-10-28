@@ -1,6 +1,6 @@
 // Рояль по записям настоящего инструмента: Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0).
 // Два набора:
-//  — полный (APK, Windows; public/models/piano/, пакет build/models.json): 30 нот через малую терцию от A0 до C8 ×
+//  — полный (пакет piano: скачивается по кнопке, src/core/packs.js; у себя — public/models/piano/ из build/models.json): 30 нот через малую терцию от A0 до C8 ×
 //    16 слоёв силы удара (<нота>v<1…16>.ogg, стерео 48 кГц, Ogg Vorbis) и звуки отпускания клавиш (rel<1…88>.ogg);
 //    признак пакета — pack.json. Слой выбирается по силе нажатия; записи раскодируются по мере надобности в моно
 //    (вдвое меньше памяти; панорама — узлом) и держатся в кэше ограниченного размера (телефон);
@@ -8,6 +8,7 @@
 // Остальные ноты — ближайшая запись с другой скоростью (не дальше полутора тонов). Пока запись не готова —
 // звучит синтезированное пианино (synth.js).
 import { eco } from './perf.js';
+import { packUrl, packsReady, onPacks } from '../core/packs.js';
 
 export const ROOTS = Array.from({ length: 30 }, (_, i) => 21 + i * 3);
 export const LAYERS = 16;
@@ -17,7 +18,8 @@ export const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1); // 21 �
 export const rootOf = (m) => ROOTS[Math.max(0, Math.min(ROOTS.length - 1, Math.round((m - 21) / 3)))];
 const base = () => (typeof document !== 'undefined' ? document.baseURI : 'http://localhost/');
 const urlLite = (r) => new URL('piano/' + r + '.mp3', base()).href;
-const urlFull = (name) => new URL('models/piano/' + name + '.ogg', base()).href;
+// полный набор — из сборки или из скачанного пакета piano (src/core/packs.js)
+const urlFull = (name) => packUrl('models/piano/' + name + '.ogg');
 
 // Слои силы удара, между которыми выбираем: в экономном режиме — 4 (меньше записей в памяти), иначе 8
 const layerSet = () => (eco() ? [2, 6, 10, 14] : [1, 3, 5, 7, 9, 11, 13, 15]);
@@ -33,12 +35,15 @@ let packWait = null;
 export const grandPack = () => pack;
 export function checkPack() {
   if (packWait) return packWait;
-  packWait = fetch(new URL('models/piano/pack.json', base()).href).then((r) => (r.ok ? r.json() : null)).then((j) => {
+  packWait = packsReady().then(() => fetch(packUrl('models/piano/pack.json'))).then((r) => (r.ok ? r.json() : null)).then((j) => {
     pack = j && Array.isArray(j.files) ? { files: new Set(j.files) } : false;
     return pack;
   }).catch(() => { pack = false; return pack; });
   return packWait;
 }
+
+// Пакет скачали или удалили — проверить заново (записи старого набора — из кэша вон)
+onPacks(() => { packWait = null; pack = null; raw.clear(); cache = { c: null, bufs: new Map(), order: [] }; });
 
 /* ---------- записи ---------- */
 const raw = new Map(); // ключ → обещание ArrayBuffer (сам файл)

@@ -66,7 +66,8 @@ export function updateSheet(app) {
       else if (b.dataset.u === 'get') U.download();
       else if (b.dataset.u === 'install') U.install().then((r) => { if (r === 'allow') toast(t('upd.allow')); }).catch(() => toast(t('upd.err')));
     });
-    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'updMobile') { st.updMobile = e.target.checked; app.store.settingsChanged(); } });
+    // включили мобильную сеть, а скачивание ждёт Wi-Fi — сразу заново по любой сети
+    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'updMobile') { st.updMobile = e.target.checked; app.store.settingsChanged(); if (st.updMobile && U.state.st === 'down' && U.state.wait) U.now(); } });
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-seg="updMode"] [data-v]'); if (!b) return;
       st.updMode = b.dataset.v; app.store.settingsChanged(); sh.update();

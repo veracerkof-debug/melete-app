@@ -1,8 +1,9 @@
 # Мост Melete ↔ Ἐλάχιστον (главный экран)
 
-Договор между двумя отдельными приложениями (DECISIONS 2026-10-26). Сторона Ἐλάχιστον готова
+Договор между двумя отдельными приложениями (DECISIONS 2026-10-26). **Сторона Melete сделана 28.10.2026** (`BridgePlugin.java`, `BridgeReceiver.java`,
+`src/core/bridge.js`, `app.route`; DECISIONS 2026-10-28). Сторона Ἐλάχιστον готова
 (`launcher/android/.../LauncherPlugin.java`: `openMelete`, `meleteState`, `meleteControl`; `src/launcher/melete.js`,
-`tracker.js`, `home.js`). Сторона Melete — ниже, что нужно сделать. Пока Melete этого не умеет, главный экран
+`tracker.js`, `home.js`). Ниже — что делает каждая сторона. Старый Melete без моста: главный экран
 открывает Melete как обычно, а неделю и чтение берёт из папки Melete (`Data/melete-data.json`), как раньше.
 
 Пакеты: Melete — `app.melete`, `app.melete.dev`; главный экран — `app.elachiston`, `app.elachiston.dev`.

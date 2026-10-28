@@ -133,3 +133,36 @@ describe('копии с подписью', async () => {
     expect((await listBackups(d))).toHaveLength(2);
   });
 });
+
+// Демо-набор (решение автора 27.10.2026): в папку не пишется, из папки не берётся, найденные копии — удаляются;
+// две Melete (DEV и обычная) на одной папке раньше множили демо-песни сотнями
+describe('папка Melete: демо', async () => {
+  const { DEMO_SONGS, isDemoFile, isDemoName, isDemoSong, isDemoText, stripDemo } = await import('../src/core/demo.js');
+  const { CORE_DICTS } = await import('../src/i18n/index.js');
+  const G = DEMO_SONGS.find((s) => s.title === 'Greensleeves');
+  const withDemo = (app) => Object.assign(app.api, {
+    skipFile: (r) => isDemoFile(r, CORE_DICTS), skipName: (n) => isDemoName(n, CORE_DICTS), skipSong: isDemoSong, skipText: (p) => isDemoText(p.title, p.notes),
+  });
+  it('демо не выгружается; копии демо в папке удаляются и не становятся песнями', async () => {
+    const drv = memDrive(), app = memApp(), mem = {};
+    withDemo(app);
+    app.songs.push({ id: 'demo-1', title: G.title, notes: G.notes }, { id: 'own', title: 'Своя', notes: '[C]ля' });
+    app.files.push({ id: 'demo-2', name: 'Greensleeves — табулатура.musicxml', size: 1, blob: new Blob(['x']), kind: 'tab' });
+    // копии, оставленные другой Melete
+    drv.put('Lyrics/Greensleeves — Traditional (2).cho', songText({ title: G.title, artist: 'Traditional', notes: G.notes }));
+    drv.put('Tabs/Greensleeves — табулатура (3).musicxml', 'x');
+    const r = await syncFolder(drv, mem, app.api);
+    const names = Object.keys(drv.fs);
+    expect(names.some((n) => /Greensleeves/.test(n))).toBe(false);
+    expect(names).toContain('Lyrics/Своя.cho');
+    expect(app.songs.length).toBe(2); // копия не стала песней
+    expect(r.cleaned).toBe(2);
+  });
+  it('копия данных без демо', () => {
+    const p = stripDemo({ songs: [{ id: 'demo-1', title: G.title, notes: G.notes }, { id: 'x', title: G.title, notes: G.notes }, { id: 'p', title: G.title, notes: G.notes }, { id: 'own', title: 'Своя', notes: 'ля' }],
+      sessions: [{ songId: 'p' }], events: [{ id: 'demo-e' }, { id: 'e' }], settings: { demo: true } });
+    expect(p.songs.map((s) => s.id + (s.deleted ? '-' : ''))).toEqual(['p-', 'own']); // сыгранная — удалённой, ради статистики
+    expect(p.events.map((e) => e.id)).toEqual(['e']);
+    expect(p.settings.demo).toBe(false);
+  });
+});

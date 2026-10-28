@@ -265,6 +265,8 @@ export function synBody(ctx, inline) {
     ui.esc(nameOf(ctx, s)) + '</span></div>' +
     '<div class="rsec wide"><span class="rt">' + t(slot === 'layer' ? 'sec.layer' : 'sec.sound') + '</span><div class="krow">' + knobsOf(s).map(kn).join('') + '</div></div>' +
     '<div class="rsec wide"><span class="rt">MIX</span><div class="krow">' + MIX_KNOBS.map(kn).join('') + '</div></div></div>' +
+    // полный рояль — пакет (src/core/packs.js): не скачан — строка «Скачать» прямо здесь; пока его нет, звучит облегчённый
+    (!inline && s.kind === 'grand' && ctx.packs && !ctx.packs.has('piano') ? '<div class="group">' + ctx.packs.row('piano') + '</div>' : '') +
     (inline ? '' : '<div class="hdr">' + t('mode') + '</div><div class="group"><div class="cellcol">' +
       ui.seg('amode', [['fast', t('mode.fast')], ['bal', t('mode.bal')], ['smooth', t('mode.smooth')]], mode, t('mode')) + '</div></div><p class="ftr">' + t('mode.hint') + '</p>' +
       '<div class="hdr">' + t('perf') + '</div><div class="group"><div class="cellcol">' + ui.seg('aperf', [['full', t('perf.full')], ['eco', t('perf.eco')]], ctx.audio.mixer.state.perf, t('perf')) + '</div></div><p class="ftr">' + t('perf.hint') + ' ' + t('mix.ftr') +
@@ -288,6 +290,12 @@ export function synBind(ctx, root, inline, { rerender, onClose, onChange = () =>
     root.scrollTop = y;
     startScope(); onChange(); live();
   };
+  if (!inline && ctx.packs) {
+    offs.push(ctx.packs.onChange(() => { if (root.isConnected) re(); }));
+    const pk = (e) => { const b = e.target.closest('[data-pkget], [data-pkcancel]'); if (!b) return; if (b.dataset.pkget) ctx.packs.ask(b.dataset.pkget); else ctx.packs.cancel(b.dataset.pkcancel); };
+    root.addEventListener('click', pk);
+    offs.push(() => root.removeEventListener('click', pk));
+  }
   knobBind(ctx, root, (k) => knobVal(activeOf(ctx), k), (k, v, reset) => {
     const s = activeOf(ctx);
     if (reset) {

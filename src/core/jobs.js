@@ -6,7 +6,7 @@
 // фоновая очередь (autostems.js). Подписчики получают состояние: { kind: 'stems' | 'notes' | 'lyrics' | 'denoise', id, stage, frac, stageAt, mode, auto }.
 // Без DOM: имена дорожек — через t() ядра.
 import { t } from '../i18n/index.js';
-import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported } from '../audio/stems.js';
+import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported, stemsPack } from '../audio/stems.js';
 import { transcribe } from '../audio/transcribe.js';
 import { transcribeYmt, ymtAvailable } from '../audio/ymt.js';
 import { transcribeLyrics, lyricsSupported } from '../audio/lyrics.js';
@@ -140,6 +140,8 @@ export function createJobs(files) {
     busy: () => !!cur,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     supported: () => stemsSupported(),
+    // пакет модели, который нужно скачать для разделения (src/core/packs.js), или null
+    pack: () => stemsPack(),
     // → Promise<{ stems, absent }>; занято — отказ 'busy'
     separate(rec, mode = '4', { onDone = () => {}, auto = false, hq = false } = {}) {
       if (cur) return Promise.reject(new Error('busy'));

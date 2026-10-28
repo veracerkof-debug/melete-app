@@ -7,6 +7,8 @@ import { fromChordPro } from './songimport.js';
 import { saveSong, emptySong } from './library.js';
 import { normKey } from './share.js';
 import { uid } from './time.js';
+import { isDemoFile, isDemoName, isDemoSong, isDemoText } from './demo.js';
+import { CORE_DICTS } from '../i18n/index.js';
 import { log, logErr } from './log.js';
 
 const KEY = 'practice.v1.folder';
@@ -28,6 +30,11 @@ export function initFolder(app) {
     parseText: (name, u8) => { try { return fromChordPro(new TextDecoder().decode(u8).replace(/^﻿/, ''), name); } catch { return null; } },
     backup: () => backupText(app),
     by: () => backupBy(app),
+    // демо-набор в папку не пишется и из неё не берётся; найденные в папке копии демо — удаляются (demo.js)
+    skipFile: (r) => isDemoFile(r, CORE_DICTS),
+    skipName: (n) => isDemoName(n, CORE_DICTS),
+    skipSong: (s) => isDemoSong(s),
+    skipText: (p) => isDemoText(p.title, p.notes),
   };
 
   async function status() {
@@ -44,7 +51,7 @@ export function initFolder(app) {
     try {
       const mem = load(), r = await syncFolder(nativeDriver, mem, api);
       keep(mem); last = Date.now();
-      if (r.wrote || r.read || r.songs || r.texts || r.sorted) log('folder', 'синхронизация: выгружено ' + r.wrote + ', принято файлов ' + r.read + ', песен ' + r.songs + ', текстов ' + r.texts + ', разложено ' + r.sorted);
+      if (r.wrote || r.read || r.songs || r.texts || r.sorted || r.cleaned) log('folder', 'синхронизация: выгружено ' + r.wrote + ', принято файлов ' + r.read + ', песен ' + r.songs + ', текстов ' + r.texts + ', разложено ' + r.sorted + ', убрано демо ' + r.cleaned);
       if ((r.read || r.songs || r.texts) && app.render && !app.openTool) app.render();
       return r;
     } catch (e) { logErr('folder', e); return null; }

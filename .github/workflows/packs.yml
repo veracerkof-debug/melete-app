@@ -1,0 +1,63 @@
+# Пакеты моделей (модульность, шаг 2; DECISIONS 2026-10-28): модели с полем pack из build/models.json не встроены
+# в APK и установщик — приложение скачивает их по кнопке из релиза «packs» (<id>.tar, src/core/packs.js).
+# Здесь пакеты собираются из тех же скачанных моделей (sha256 каждого файла сверяется с build/packs.json) и
+# выкладываются в релиз. Запуск — при изменении описи моделей и вручную. Опись меняется вместе с моделями:
+# node build/packs.mjs index (его же проверяет шаг «Опись не устарела»).
+name: Пакеты моделей
+
+on:
+  push:
+    branches: [main]
+    paths: ['build/models.json', 'build/packs.json', 'build/packs.mjs', '.github/workflows/packs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: packs
+  cancel-in-progress: false
+
+jobs:
+  packs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости
+        run: npm ci
+
+      # те же модели, что и для сборок (кэш по содержимому models.json); пакеты Windows появятся — MODELS_ALL=1 и src-tauri/models
+      - uses: actions/cache@v4
+        with:
+          path: |
+            public/models
+          key: packs-models-${{ hashFiles('build/models.json') }}
+      - name: Модели
+        run: npm run models
+
+      - name: Опись не устарела
+        run: |
+          cp build/packs.json "$RUNNER_TEMP/packs.json"
+          node build/packs.mjs index
+          if ! cmp -s build/packs.json "$RUNNER_TEMP/packs.json"; then
+            echo "::error::build/packs.json не совпадает с моделями — запустить node build/packs.mjs index и закоммитить"; exit 1
+          fi
+
+      - name: Сборка пакетов
+        run: node build/packs.mjs tar packs-out
+
+      - name: Выкладка в релиз packs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view packs >/dev/null 2>&1; then
+            gh release create packs --prerelease --title "Melete — пакеты моделей" --target "$GITHUB_SHA" \
+              --notes "Модели, которые Melete скачивает по кнопке (Профиль → Модули и функции → Пакеты). Каждый файл приложение сверяет по sha256 из своей описи."
+          fi
+          gh release upload packs packs-out/*.tar --clobber

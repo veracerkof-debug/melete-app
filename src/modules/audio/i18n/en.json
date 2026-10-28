@@ -248,5 +248,6 @@
   "rpre.step": "Step {n}",
   "rpre.def": "Reset: 50 · 75 · 90 · 100",
   "shareRec": "Share",
-  "shareFail": "Could not share the recording"
+  "shareFail": "Could not share the recording",
+  "stems.packHint": "Separation needs a model — the “Vocals and instrumental” pack, downloaded once."
 }

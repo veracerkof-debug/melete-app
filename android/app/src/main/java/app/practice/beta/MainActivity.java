@@ -27,6 +27,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PlayerPlugin.class);
         registerPlugin(StemsPlugin.class);
         registerPlugin(UpdatePlugin.class);
+        registerPlugin(BridgePlugin.class);
+        registerPlugin(PacksPlugin.class);
         super.onCreate(savedInstanceState);
         // Масштаб интерфейса (Оформление → Размер): ширина области просмотра из meta viewport
         // и подгонка по ширине экрана (иначе раскладка шире экрана вылезает за край)

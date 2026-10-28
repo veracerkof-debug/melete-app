@@ -44,6 +44,8 @@ export function initPlayer(app) {
 
   P.addListener('control', ({ action, bus, value }) => {
     if (action === 'toggle') pause(!isHeld());
+    else if (action === 'play') pause(false); // главный экран (bridge.js): ▶
+    else if (action === 'pause' || action === 'stop') pause(true); // ❚❚
     else if (action === 'down') nudge(-0.1);
     else if (action === 'up') nudge(0.1);
     else if (action === 'vol' && BUSES.includes(bus)) mixer.set(bus, Math.max(0, Math.min(MIX_MAX, +value)));
@@ -68,5 +70,5 @@ export function initPlayer(app) {
   }
   setInterval(sync, 1000);
   document.addEventListener('visibilitychange', () => sync(true));
-  app.player = { sync, get paused() { return isHeld(); }, pause };
+  app.player = { sync, get paused() { return isHeld(); }, pause, sources: () => sources() };
 }

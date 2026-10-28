@@ -43,8 +43,23 @@
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/x-melete" />
             </intent-filter>
+            <!-- Переходы с главного экрана Ἐλάχιστον: melete://free | session | bible (docs/launcher-bridge.md, BridgePlugin) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="melete" />
+            </intent-filter>
 
         </activity>
+
+        <!-- Мост с главным экраном: запрос состояния и ▶/❚❚ (адресные рассылки; данных наружу не отдаёт) -->
+        <receiver android:name=".BridgeReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="app.melete.bridge.REQUEST" />
+                <action android:name="app.melete.bridge.CONTROL" />
+            </intent-filter>
+        </receiver>
 
         <!-- Иконка приложения на выбор («Оформление», src/ui/appicons.js): у каждой — своя маленькая activity-ярлык
              (IconActivities.java), включена ровно одна; она сразу открывает MainActivity. Не activity-alias: некоторые
@@ -187,6 +202,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 11+: видеть главный экран Ἐλάχιστον, чтобы адресные рассылки моста доходили -->
+    <queries>
+        <package android:name="app.elachiston" />
+        <package android:name="app.elachiston.dev" />
+    </queries>
     <!-- Обновление из GitHub (UpdatePlugin.java): системный установщик со скачанным APK. В сборке для Google Play — убрать -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Микрофон: тюнер, спектр и шумомер. Звук обрабатывается только на устройстве -->

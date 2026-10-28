@@ -8,7 +8,8 @@ import { Capacitor } from '@capacitor/core';
 import { peekContext, masterNode } from '../audio/context.js';
 import { after, clockReady } from '../audio/clock.js';
 import { createStretchPlayer, stretchAvailable } from '../audio/stretchplayer.js';
-import { stemsSupported, stemsNative } from '../audio/stems.js';
+import { stemsNative } from '../audio/stems.js';
+import { hasPack, packUrl } from './packs.js';
 import { canRecord, pickType } from './recorder.js';
 import { isDesktop } from './desktop.js';
 import { log } from './log.js';
@@ -142,25 +143,29 @@ const checks = {
     const low = est && est.quota && est.quota - (est.usage || 0) < 200 * 1048576;
     return { st: low ? 'warn' : 'ok', info: info + (low ? ' — мало места' : '') };
   },
-  // Встроенные модели и банки (APK и Windows): файлы на месте
+  // Встроенные модели и банки (APK и Windows): файлы на месте; пакеты (src/core/packs.js) — скачанные проверяются,
+  // нескачанные — только сведения (их отсутствие — не сбой)
   async models() {
-    if (!stemsSupported()) return { st: 'skip', info: 'веб-версия без моделей' };
-    const base = document.baseURI;
-    const have = async (path) => {
+    if (typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__) return { st: 'skip', info: 'веб-версия без моделей' };
+    const have = async (url) => {
       try {
-        const r = await fetch(new URL(path, base).href, { headers: { Range: 'bytes=0-0' } });
+        const r = await fetch(url, { headers: { Range: 'bytes=0-0' } });
         if (r.body) { try { await r.body.cancel(); } catch { /* */ } }
         return r.ok;
       } catch { return false; }
     };
-    const want = [['дорожки', 'models/demucs/htdemucs_embedded.onnx'], ['тональность', 'models/mir/skey.onnx'], ['доли', 'models/mir/small0.onnx'], ['аккорды', 'models/mir/chordnet.onnx'], ['рояль', 'models/piano/pack.json'], ['ноты', 'bp/model.json']];
-    // Windows: файлы зашиты в программу сжатыми, запрос отдаёт файл целиком — 180 МБ дорожек не укладываются в 9 с
-    // (отчёт 23.10.2026); там модель дорожек читает сам движок, и её отсутствие видно по первому разделению
-    if (isDesktop()) want.shift();
-    const got = await Promise.all(want.map(([, p]) => have(p)));
-    const missing = want.filter((_, i) => !got[i]).map(([n]) => n);
+    const want = [['тональность', 'models/mir/skey.onnx'], ['доли', 'models/mir/small0.onnx'], ['ноты', 'bp/model.json']];
+    // Windows: модель дорожек зашита в программу сжатой, запрос отдаёт файл целиком — 180 МБ не укладываются в 9 с
+    // (отчёт 23.10.2026); её читает сам движок, отсутствие видно по первому разделению
+    if (isDesktop()) want.push(['аккорды', 'models/mir/chordnet.onnx']);
+    const packed = [['рояль', 'models/piano/pack.json', 'piano'], ...(isDesktop() ? [] : [['вокал', 'models/mdx/vocals.onnx', 'vocals']])];
+    const notYet = packed.filter(([, , id]) => !hasPack(id)).map(([n]) => n);
+    const list = [...want.map(([n, p]) => [n, packUrl(p)]), ...packed.filter(([, , id]) => hasPack(id)).map(([n, p]) => [n, packUrl(p)])];
+    const got = await Promise.all(list.map(([, u]) => have(u)));
+    const missing = list.filter((_, i) => !got[i]).map(([n]) => n);
     const eng = stemsNative() ? (isDesktop() ? 'нативный (Windows)' : 'нативный (Android)') : 'веб (WebAssembly)';
-    return missing.length ? { st: missing.length === want.length ? 'fail' : 'warn', info: 'нет: ' + missing.join(', ') + '; движок дорожек ' + eng } : { st: 'ok', info: 'все на месте; движок дорожек ' + eng };
+    const tail = '; движок дорожек ' + eng + (notYet.length ? '; пакеты не скачаны: ' + notYet.join(', ') : '');
+    return missing.length ? { st: missing.length === list.length ? 'fail' : 'warn', info: 'нет: ' + missing.join(', ') + tail } : { st: 'ok', info: 'все на месте' + tail };
   },
   // Экран: размер, масштаб, нет горизонтального переполнения
   async screen() {

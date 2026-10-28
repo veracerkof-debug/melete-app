@@ -97,6 +97,8 @@ export function makeCtx(app, mod) {
     files: app.files,
     // Долгие обработки записей (ядро, jobs.js): дорожки и ноты — ход, отмена, подписка; очередь в фоне — auto
     jobs: app.jobs,
+    // пакеты моделей (src/core/screens/packs.js): строка пакета, скачать с вопросом, подписка на ход
+    packs: app.packs,
     auto: app.auto,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
     midi: {

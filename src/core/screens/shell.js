@@ -1,5 +1,6 @@
 // Каркас приложения: нижние вкладки (порядок и состав настраиваются — «Вкладки» в профиле), экраны, общие действия.
 // Перенесено из legacy/practice.html (view, renderTabs, go, render, глобальные обработчики нажатий).
+import { readingFor } from '../reading.js';
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
 import { confirm, toast, esc } from '../../ui/index.js';
@@ -251,6 +252,17 @@ export function createShell(app, root) {
   root.addEventListener('pointercancel', pend);
   // Вкладка «Инструменты» обрабатывает свои карточки сама
   root.addEventListener('click', (e) => { if (!e.target.closest('[data-open-tool]') || view.tab !== 'tools') act(e); });
+  // Переходы с главного экрана Ἐλάχιστον (bridge.js): занятие — идущее или сразу свободная практика; Библия — на чтении дня
+  app.route = (r) => {
+    if (r === 'free' || r === 'session') { if (app.active) app.session.open(); else app.startSession('free'); return true; }
+    if (r === 'bible' && app.store.state.settings.church) {
+      const rd = readingFor(app.store.state.settings.bible, Date.now());
+      if (rd && rd.keys[0]) { const [code, ch] = rd.keys[0].split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
+      if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render);
+      return true;
+    }
+    return false;
+  };
   root.addEventListener('input', (e) => {
     const k = e.target.dataset && e.target.dataset.input;
     if (!k) return;
