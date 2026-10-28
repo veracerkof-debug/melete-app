@@ -49,6 +49,7 @@ test('удержание — настройки; церковный режим �
   await open(page);
   await hold(page);
   await expect(page.locator('.l-sheet h2')).toHaveText('Главный экран');
+  await expect(page.locator('.l-set-tabs button.on')).toHaveText('Вид'); // четыре страницы; переключатель — вверху
   await page.locator('.l-row', { hasText: 'Церковный режим' }).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-echo')).toBeVisible();
@@ -89,5 +90,52 @@ test('смахнуть вправо — блокнот, влево — коше�
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('iframe.l-money.open:not(.l-notes)')).toHaveCount(1);
   await expect(page.frameLocator('iframe.l-money:not(.l-notes)').locator('.cats.grid .cat').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('панели идут за пальцем: потянуть вверх — все приложения; отпустить рано — вернулись', async ({ page, errors }) => {
+  await open(page);
+  // недалеко — панель возвращается
+  await page.mouse.move(200, 640); await page.mouse.down();
+  for (let y = 632; y >= 560; y -= 8) { await page.mouse.move(200, y); await page.waitForTimeout(40); } // медленно, не взмах
+  await page.waitForTimeout(250);
+  await expect(page.locator('.l-drawer.dragging')).toHaveCount(1);
+  await page.mouse.up();
+  await expect(page.locator('.l-drawer')).not.toHaveClass(/open/);
+  // далеко — доезжает
+  await page.mouse.move(200, 700); await page.mouse.down();
+  await page.mouse.move(200, 600, { steps: 3 }); await page.mouse.move(200, 250, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.l-drawer')).toHaveClass(/open/);
+  await page.waitForTimeout(600); // панель доезжает
+  // потянуть вниз за заголовок — закрывается
+  const grip = await page.locator('.l-d-title').boundingBox();
+  await page.mouse.move(grip.x + 40, grip.y + grip.height / 2); await page.mouse.down();
+  await page.mouse.move(grip.x + 40, grip.y + 80, { steps: 3 }); await page.mouse.move(grip.x + 40, grip.y + 480, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.l-drawer')).not.toHaveClass(/open/);
+  expect(errors).toEqual([]);
+});
+
+test('кошелёк: смахнуть слева направо внутри — закрывается; блокнот — справа налево', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('iframe.l-money.open:not(.l-notes)')).toHaveCount(1);
+  const wallet = page.frameLocator('iframe.l-money:not(.l-notes)');
+  const box = await wallet.locator('.cats.grid').boundingBox();
+  await page.mouse.move(box.x + 40, box.y + 20); await page.mouse.down();
+  await page.mouse.move(box.x + 120, box.y + 22, { steps: 4 }); await page.mouse.move(box.x + 330, box.y + 24, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('iframe.l-money.open:not(.l-notes)')).toHaveCount(0);
+  await page.waitForTimeout(400); // панель уехала
+  await page.mouse.click(200, 420); // касание пустого места — фокус точно у главного экрана (клавиши — ему)
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('iframe.l-notes.open')).toHaveCount(1);
+  const notes = page.frameLocator('iframe.l-notes');
+  const nb = await notes.locator('.list').boundingBox();
+  await page.mouse.move(nb.x + 340, nb.y + 300); await page.mouse.down();
+  await page.mouse.move(nb.x + 260, nb.y + 302, { steps: 4 }); await page.mouse.move(nb.x + 40, nb.y + 304, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('iframe.l-notes.open')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

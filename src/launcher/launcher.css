@@ -321,6 +321,8 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
   transform: translateY(102%); transition: transform 0.45s var(--ease), visibility 0s 0.45s; visibility: hidden;
 }
 .l-drawer.open { transform: none; visibility: visible; transition: transform 0.45s var(--ease); }
+.l-drawer.dragging { visibility: visible; transition: none; }
+.l-drawer.dragging .l-d-app { animation: none; }
 .l-d-head { flex: none; padding-bottom: 10px; }
 .l-d-grip { display: block; width: 100%; height: 26px; position: relative; }
 .l-d-grip::before { content: ''; position: absolute; left: 50%; top: 10px; width: 40px; height: 3px; border-radius: 3px; background: var(--sep); transform: translateX(-50%); }
@@ -536,9 +538,11 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-colophon small { display: block; margin-top: 6px; font-family: var(--font); font-size: 12px; color: var(--l2); }
 
 /* «Деньги» — страница поверх главного экрана (money.js) */
-.l-money{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:60;background:var(--bg);
-  transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility 0s .3s;visibility:hidden}
+.l-money{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:60;background:var(--bg);will-change:transform;
+  transform:translateX(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s;visibility:hidden}
+.l-money.l-notes{transform:translateX(-100%)}
 .l-money.open{transform:none;visibility:visible;transition-delay:0s}
+.l-money.dragging{visibility:visible;transition:none}
 
 /* Melete на главном: идёт занятие, неделя по дням, чтение (home.js: renderTracker) */
 .l-tr-live { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 6px; border-radius: 14px;
@@ -661,11 +665,11 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-bal-c { font-size: 12px; color: var(--l3); }
 .l-home .l-balance { zoom: var(--l-ui, 1); }
 
-/* Разделы настроек — строкой вверху (settings.js); данные и копии */
-.l-set-nav { position: sticky; top: -1px; z-index: 3; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-  margin: -6px -20px 10px; padding: 8px 20px; background: var(--cell, var(--bg)); border-bottom: 1px solid var(--sep); }
-.l-set-nav::-webkit-scrollbar { display: none; }
-.l-set-nav button { flex: none; padding: 7px 12px; border-radius: 999px; font-size: 13px; color: var(--l2); border: 1px solid var(--sep); white-space: nowrap; }
-.l-set-nav button:active { background: var(--fill); }
+/* Настройки — четыре страницы (settings.js: TABS); данные и копии */
+.l-set-tabs { position: sticky; top: -1px; z-index: 3; display: flex; gap: 4px; margin: -6px -20px 14px; padding: 8px 20px 10px;
+  background: var(--cell, var(--bg)); border-bottom: 1px solid var(--sep); }
+.l-set-tabs button { flex: 1; min-height: 40px; padding: 0 6px; border-radius: 12px; font-size: 14px; color: var(--l2); white-space: nowrap; }
+.l-set-tabs button.on { background: var(--ink); color: var(--bg); font-weight: 500; }
+.l-set-tabs button:not(.on):active { background: var(--fill); }
 .l-sec { scroll-margin-top: 56px; }
 .l-copies .l-pick small { flex: none; font-family: var(--l-mono); font-size: 10.5px; color: var(--l2); }

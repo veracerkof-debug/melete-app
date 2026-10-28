@@ -9,6 +9,7 @@ import { folders, folderById, folderName, folderApps, folderIcon, folderKey, add
 import { iconSVG } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { layout } from './layout.js';
+import { panel } from './panels.js';
 
 let drawer, list, search, tabs, titleName;
 let tab = 'all'; // вкладка внизу: 'all' или id папки
@@ -33,10 +34,36 @@ export function mountDrawer(container, { onChange }) {
     // папки — значками справа, низ свободен: список идёт до самого низа
     h('div', { class: 'l-d-body' }, list, tabs = h('div', { class: 'l-d-rail', role: 'tablist', 'aria-orientation': 'vertical' })));
   container.append(drawer);
-  // закрыть: смахнуть вниз, когда список в начале; колесо вверх
-  let y0 = null;
-  drawer.addEventListener('pointerdown', (e) => { y0 = list.scrollTop <= 0 || !list.contains(e.target) ? e.clientY : null; });
-  drawer.addEventListener('pointerup', (e) => { if (y0 != null && e.clientY - y0 > 80) closeDrawer(); y0 = null; });
+  // закрыть: потянуть вниз, когда список в начале (или за заголовок) — панель идёт за пальцем; колесо вверх
+  let st = null;
+  drawer.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input, .l-d-tab')) { st = null; return; }
+    st = { y: e.clientY, x: e.clientX, can: list.scrollTop <= 0 || !list.contains(e.target), drag: false, vel: [] };
+  });
+  drawer.addEventListener('pointermove', (e) => {
+    if (!st) return;
+    const dy = e.clientY - st.y, dx = e.clientX - st.x;
+    if (!st.drag) {
+      if (!st.can || dy < 6 || Math.abs(dx) > dy) { if (Math.hypot(dx, dy) > 6 && !(st.can && dy > 0)) st = null; return; }
+      st.drag = true; drawerPanel.start(false);
+      try { drawer.setPointerCapture(e.pointerId); } catch { /* */ }
+    }
+    st.vel.push({ dy, t: performance.now() }); if (st.vel.length > 6) st.vel.shift();
+    drawerPanel.move(innerHeight - Math.max(0, dy));
+  });
+  const endDrag = (e) => {
+    if (!st) return;
+    if (st.drag) {
+      const dy = Math.max(0, e.clientY - st.y);
+      const a = st.vel[0], b = st.vel[st.vel.length - 1];
+      const v = a && b && b.t > a.t ? (b.dy - a.dy) / (b.t - a.t) : 0;
+      drawerPanel.end(innerHeight - dy, -v, false);
+    }
+    st = null;
+  };
+  drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
+  drawer.addEventListener('pointerup', endDrag);
+  drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
   // смахнуть влево-вправо по списку — соседняя вкладка
   let sx = null, sy = 0;
   list.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
@@ -176,6 +203,11 @@ export function openDrawer(focus = false) {
   if (focus) setTimeout(() => search.focus(), 280);
   loadApps().then(() => { if (open) fill(); }); // поставили или удалили приложение — список свежий
 }
+
+// панель для смахивания с главного экрана (panels.js): снизу, идёт за пальцем
+export const drawerPanel = panel({ el: () => drawer, from: 'bottom', open: () => openDrawer(pendingFocus), close: closeDrawer, isOpen: () => open });
+let pendingFocus = false;
+export const setDrawerFocus = (f) => { pendingFocus = f; };
 
 export function closeDrawer() {
   if (!open) return;

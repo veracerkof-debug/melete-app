@@ -4,13 +4,14 @@
 import { isNative } from './native.js';
 
 const LONG_MS = 450; // = HOLD_MS в ui/hold.js (не импортируется: тянет словари ядра в лёгкую страницу)
-const EDGE = 32;   // px от левого и правого края — «Назад» жестом и боковая панель мультиокна (Honor, MagicOS)
-const TOP = 28;    // сверху — шторка уведомлений
-const BOTTOM = 44; // снизу — полоса жеста «Домой» и недавних: смахивание отсюда не наше (касание и удержание — можно)
-const SWIPE_PX = 48;
+// Зон «для системы» нет: жесты «Назад», «Домой», шторку система забирает сама и до страницы они не доходят;
+// то, что дошло, — наше (раньше касания у краёв и у низа экрана отбрасывались, и смахивание от значков внизу терялось)
+const SWIPE_PX = 32;
 const DOUBLE_MS = 300;
 
-export function attachGestures(el, { onGesture, isBlocked }) {
+// onDragStart(dir) → true, если панель в эту сторону пойдёт за пальцем; onDrag(dir, px), onDragEnd(dir, px, v) → true, если
+// жест исчерпан перетаскиванием (обычное смахивание тогда не срабатывает)
+export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, onDragEnd }) {
   let start = null;
   let longTimer = null;
   let lastTap = null;
@@ -28,9 +29,7 @@ export function attachGestures(el, { onGesture, isBlocked }) {
 
   el.addEventListener('pointerdown', (e) => {
     if (isBlocked() || e.button > 0) return;
-    if (e.pointerType !== 'mouse' && (e.clientX < EDGE || e.clientX > innerWidth - EDGE)) return; // край — «Назад» системы
-    const sys = e.pointerType !== 'mouse' && (e.clientY < TOP || e.clientY > innerHeight - BOTTOM);
-    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), moved: false, long: false, sys };
+    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), moved: false, long: false };
     halo = document.createElement('div');
     halo.className = 'l-halo';
     halo.style.left = e.clientX + 'px';
@@ -47,12 +46,26 @@ export function attachGestures(el, { onGesture, isBlocked }) {
     }, LONG_MS);
   });
 
+  const DIR = (dx, dy) => (Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? 'swipeUp' : 'swipeDown') : (dx < 0 ? 'swipeLeft' : 'swipeRight'));
+  const along = (dir, dx, dy) => (dir === 'swipeUp' ? -dy : dir === 'swipeDown' ? dy : dir === 'swipeLeft' ? -dx : dx);
+
   el.addEventListener('pointermove', (e) => {
     if (!start) return;
-    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) {
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!start.moved && Math.hypot(dx, dy) > 6) {
       start.moved = true;
       clearTimeout(longTimer);
       clearHalo();
+      // панель идёт за пальцем — направление запоминается по первому движению
+      if (!start.long && onDragStart) {
+        start.dir = DIR(dx, dy);
+        if (onDragStart(start.dir)) { start.drag = true; start.vel = []; try { el.setPointerCapture(e.pointerId); } catch { /* */ } }
+      }
+    }
+    if (start.drag) {
+      const px = Math.max(0, along(start.dir, dx, dy));
+      start.vel.push({ px, t: performance.now() }); if (start.vel.length > 6) start.vel.shift();
+      onDrag(start.dir, px);
     }
   });
 
@@ -66,6 +79,15 @@ export function attachGestures(el, { onGesture, isBlocked }) {
     const dy = e.clientY - s.y;
     const dt = performance.now() - s.t;
 
+    if (s.drag) {
+      const px = Math.max(0, along(s.dir, dx, dy));
+      const a = s.vel[0], b = s.vel[s.vel.length - 1];
+      const v = a && b && b.t > a.t ? (b.px - a.px) / (b.t - a.t) : 0;
+      if (s.el) { s.el.dataset.suppress = '1'; setTimeout(() => delete s.el.dataset.suppress, 50); }
+      if (onDragEnd(s.dir, px, v)) return;
+      // панель вернулась — считаем как обычное смахивание, если жест был взмахом
+    }
+
     // подавляем click после свайпа/долгого нажатия
     if (s.el && (s.long || s.moved)) {
       s.el.dataset.suppress = '1';
@@ -73,8 +95,7 @@ export function attachGestures(el, { onGesture, isBlocked }) {
     }
     if (s.long) return;
 
-    if (s.moved && s.sys) return; // начато в зоне жестов системы — уступаем ей
-    if (s.moved && dt < 800) {
+    if (s.moved && dt < 1000) {
       const ax = Math.abs(dx), ay = Math.abs(dy);
       if (Math.max(ax, ay) < SWIPE_PX) return;
       if (ay > ax) onGesture(dy < 0 ? 'swipeUp' : 'swipeDown');
@@ -94,7 +115,7 @@ export function attachGestures(el, { onGesture, isBlocked }) {
   };
 
   el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', () => { clearTimeout(longTimer); clearHalo(); start = null; });
+  el.addEventListener('pointercancel', () => { clearTimeout(longTimer); clearHalo(); if (start?.drag) onDragEnd(start.dir, 0, 0); start = null; });
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // колесо мыши / тачпад: прокрутка вниз = свайп вверх (открыть все приложения)

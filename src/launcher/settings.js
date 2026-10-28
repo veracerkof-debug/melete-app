@@ -16,6 +16,7 @@ import { clockOpts } from './home.js';
 import { ACCENTS } from './look.js';
 import { hueColor, ACCENT_HUE } from '../core/palettes.js';
 import { fontsFor, fontStack, applyLook } from './look.js';
+import { meleteLive } from './melete.js';
 import { layout, setLayout, resetLayout } from './layout.js';
 import { saveFile, pickFile, restore, summary, localCopies } from './backup.js';
 import { meleteBridge, connectMelete, refreshMelete, disconnectMelete } from './melete.js';
@@ -31,9 +32,14 @@ const ownHome = () => (prefs.home = prefs.home || homeItems().map((x) => ({ ...x
 const ownDock = () => (prefs.dock = prefs.dock || dockSlots().map((x) => ({ ...x, action: { ...x.action } })));
 const move = (arr, i, d) => { const j = i + d; if (j >= 0 && j < arr.length) [arr[i], arr[j]] = [arr[j], arr[i]]; };
 
-export function openSettings(onChange, getGesture) {
+// вкладка настроек; секции помечены ею и показываются только на своей (четыре страницы — DECISIONS 2026-10-27)
+const TABS = ['look', 'home', 'gestures', 'data'];
+const S = (tab, ...args) => { const el = section(...args); el.dataset.tab = tab; return el; };
+
+export function openSettings(onChange, getGesture, tab) {
   changed = onChange;
   gestureOf = getGesture;
+  if (TABS.includes(tab)) setPrefs({ setTab: tab });
   const church = isChurch();
   let unbindUpd = null;
   openSheet({
@@ -49,7 +55,7 @@ export function openSettings(onChange, getGesture) {
       const sw = h('div', { class: 'l-swatches', role: 'radiogroup', 'aria-label': t('set.accent') });
       ACCENTS.forEach((a) => sw.append(h('button', { class: `l-swatch ${prefs.accent === a ? 'on' : ''}`, role: 'radio', 'aria-checked': prefs.accent === a ? 'true' : 'false',
         'aria-label': t('accent.' + a), style: { background: hueColor({ palette: 'classic' }, ACCENT_HUE[a]) }, onclick: keep(() => up({ accent: a })) })));
-      body.append(section(t('set.appearance'), church ? 'μορφή' : '',
+      body.append(S('look', t('set.appearance'), church ? 'μορφή' : '',
         h('div', { class: 'l-label' }, t('set.theme')),
         segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'paper', label: t('theme.paper') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
         toggle(t('set.bw'), prefs.bw, (v) => up({ bw: v }), t('set.bwHint')),
@@ -71,7 +77,7 @@ export function openSettings(onChange, getGesture) {
         h('div', { class: 'l-clock-mini clock', 'data-style': c.id, html: renderClock(c.id, now, opts) }),
         h('span', {}, t('clock.' + c.id)), church ? h('small', { lang: 'el' }, c.el) : null)));
       const place = placeOf(prefs);
-      body.append(section(t('set.clock'), church ? 'ὡρολόγιον' : '',
+      body.append(S('look', t('set.clock'), church ? 'ὡρολόγιον' : '',
         clocks,
         h('p', { class: 'l-hint' }, t('clock.' + prefs.clock + '.info'), ' ', infoLink(() => clockEntry(prefs.clock, church))),
         prefs.clock === 'biblical' ? h('div', { class: 'l-row' },
@@ -89,7 +95,7 @@ export function openSettings(onChange, getGesture) {
           cv, h('span', {}, t('wall.' + w.id)), church ? h('small', { lang: 'el' }, w.el) : null));
         requestAnimationFrame(() => drawPreview(cv, w.id, church));
       });
-      body.append(section(t('set.wall'), church ? 'εἰκὼν ζῶσα' : '',
+      body.append(S('look', t('set.wall'), church ? 'εἰκὼν ζῶσα' : '',
         walls,
         prefs.wallpaper !== 'none' ? h('p', { class: 'l-hint' }, t('wall.' + prefs.wallpaper + '.hint'), ' ', infoLink(() => wallEntry(prefs.wallpaper))) : null,
         prefs.wallpaper !== 'none' ? toggle(t('set.wallClock'), prefs.clock === 'none', (v) => up({ clock: v ? 'none' : 'tablet' }), t('set.wallClockHint')) : null,
@@ -101,7 +107,7 @@ export function openSettings(onChange, getGesture) {
         h('span', { class: 'l-orn-ico', html: o.icon ? iconSVG(o.icon) : '' }), h('small', {}, t('orn.' + id)))));
       const markers = [['auto', t('set.marker.auto')], ['greek', 'αʹ βʹ'], ['roman', 'I II'], ['count', t('set.marker.count')], ['none', t('set.none')]]
         .filter(([v]) => church || v !== 'greek').map(([value, label]) => ({ value, label }));
-      body.append(section(t('set.look'), church ? 'μορφή' : '',
+      body.append(S('look', t('set.look'), church ? 'μορφή' : '',
         h('div', { class: 'l-label' }, t('set.align')),
         segmented([{ value: 'left', label: t('set.left') }, { value: 'center', label: t('set.center') }, { value: 'right', label: t('set.right') }], prefs.align, (v) => up({ align: v }), t('set.align')),
         scaleRow(t('set.clockScale'), 'clockScale', 60, 140),
@@ -115,14 +121,14 @@ export function openSettings(onChange, getGesture) {
       ));
 
       // — Раскладка: главный экран и «Все приложения» —
-      body.append(section(t('set.layout'), church ? 'τάξις' : '', layoutEditor(() => changed(), keep)));
+      body.append(S('home', t('set.layout'), church ? 'τάξις' : '', layoutEditor(() => changed(), keep)));
 
       // — Дата и строка —
       const langs = [{ value: '', label: t('set.dateLang.ui') }, { value: 'ru', label: 'Рус' }, { value: 'uz', label: 'Oʻzb' }, { value: 'en', label: 'Eng' }];
       if (church) langs.push({ value: 'el', label: 'Ελλ' });
       const sub = [{ value: 'note', label: t('set.sub.note') }, { value: 'none', label: t('set.none') }];
       if (church) sub.unshift({ value: 'verse', label: t('set.sub.verse') });
-      body.append(section(t('set.date'), church ? 'ἡμέρα' : '',
+      body.append(S('look', t('set.date'), church ? 'ἡμέρα' : '',
         h('div', { class: 'l-label' }, t('set.dateLang')),
         segmented(langs, prefs.dateLang || '', (v) => up({ dateLang: v }), t('set.dateLang')),
         church ? toggle(t('set.greekDay'), prefs.greekDay, (v) => up({ greekDay: v }), 'Κυριακή, Δευτέρα…') : null,
@@ -139,7 +145,7 @@ export function openSettings(onChange, getGesture) {
           h('button', { class: 'l-mini', 'aria-label': t('set.up'), disabled: i === 0, onclick: keep(() => { move(ownHome(), i, -1); save(); changed(); rerender(); }) }, '↑'),
           h('button', { class: 'l-mini', 'aria-label': t('set.down'), disabled: i === all.length - 1, onclick: keep(() => { move(ownHome(), i, 1); save(); changed(); rerender(); }) }, '↓')));
       });
-      body.append(section(t('set.home'), church ? 'οἶκος' : '',
+      body.append(S('home', t('set.home'), church ? 'οἶκος' : '',
         h('p', { class: 'l-hint' }, t('set.homeHint')),
         homeList,
         h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { ownHome().push({ key: a.key, label: '' }); save(); changed(); rerender(); }, { appsOnly: true }) }, t('set.homeAdd')),
@@ -153,7 +159,7 @@ export function openSettings(onChange, getGesture) {
           h('button', { class: 'l-edit-main', onclick: () => pickAction(slot.action, (a) => { ownDock()[i].action = a; save(); changed(); rerender(); }) }, h('span', {}, describeAction(slot.action, appName))),
           h('button', { class: 'l-mini', 'aria-label': t('set.remove'), onclick: keep(() => { ownDock().splice(i, 1); save(); changed(); rerender(); }) }, '×')));
       });
-      body.append(section(t('set.dock'), church ? 'εἰκόνες' : '',
+      body.append(S('home', t('set.dock'), church ? 'εἰκόνες' : '',
         segmented([{ value: 'icons', label: t('set.dock.icons') }, { value: 'line', label: t('set.dock.line') }, { value: 'none', label: t('set.dock.none') }], prefs.dockStyle, (v) => up({ dockStyle: v }), t('set.dock')),
         dockList,
         dockSlots().length < 6 ? h('button', { class: 'l-btn', onclick: () => { ownDock().push({ icon: 'grid', action: { t: 'cmd', id: 'drawer' } }); save(); changed(); rerender(); } }, t('set.dockAdd')) : null,
@@ -165,6 +171,13 @@ export function openSettings(onChange, getGesture) {
       const br = meleteBridge();
       const mel = h('div', {});
       mel.append(h('p', { class: 'l-hint' }, t(isNative() ? 'mel.howFolder' : 'mel.howFile')));
+      // живая связь (docs/launcher-bridge.md): пришло ли состояние от Melete
+      if (isNative()) {
+        const lv = meleteLive();
+        mel.append(h('p', { class: 'l-hint l-mel-live' }, lv
+          ? t('mel.live', { what: lv.session ? t('tr.live') : lv.sounding ? t('tr.playing') : t('mel.quiet'), min: Math.round((Date.now() - lv.at) / 60e3) })
+          : t('mel.liveNone')));
+      }
       if (br?.data) mel.append(h('p', { class: 'l-hint' }, t('mel.state', { src: br.source === 'folder' ? t('mel.folder') : br.fileName || t('mel.file'), when: new Date(br.readAt).toLocaleString() })));
       mel.append(h('div', { class: 'l-btn-row' },
         h('button', { class: 'l-btn', onclick: async () => {
@@ -174,7 +187,7 @@ export function openSettings(onChange, getGesture) {
         } }, br ? t(isNative() ? 'mel.again' : 'mel.againFile') : t(isNative() ? 'mel.pick' : 'mel.pickFile')),
         br && isNative() ? h('button', { class: 'l-btn', onclick: async () => { try { await refreshMelete(true); toast(t('mel.updated')); changed(); rerender(); } catch { toast(t('mel.fail')); } } }, t('mel.refresh')) : null,
         br ? h('button', { class: 'l-btn danger', onclick: () => { disconnectMelete(); changed(); rerender(); } }, t('mel.off')) : null));
-      body.append(section(t(church ? 'set.tracker.church' : 'set.tracker'), church ? 'μελέτη' : '',
+      body.append(S('home', t(church ? 'set.tracker.church' : 'set.tracker'), church ? 'μελέτη' : '',
         h('p', { class: 'l-hint' }, t(church ? 'mel.whatChurch' : 'mel.what')),
         mel,
         br ? toggle(t('set.trackerShow'), prefs.tracker, (v) => up({ tracker: v })) : null,
@@ -186,7 +199,7 @@ export function openSettings(onChange, getGesture) {
         h('span', { class: 'l-glyph', 'aria-hidden': 'true' }, GLYPHS[id]),
         h('button', { class: 'l-edit-main', onclick: () => pickAction(gestureOf(id), (a) => { prefs.gestures[id] = a; save(); rerender(); }) },
           h('span', {}, t('gest.' + id)), h('small', {}, '→ ' + describeAction(gestureOf(id), appName))))));
-      body.append(section(t('set.gestures'), church ? 'κινήσεις' : '', gList, h('p', { class: 'l-hint' }, t('set.gesturesHint'))));
+      body.append(S('gestures', t('set.gestures'), church ? 'κινήσεις' : '', gList, h('p', { class: 'l-hint' }, t('set.gesturesHint'))));
 
       // — Данные: копия кошелька, блокнота и настроек —
       const copies = h('div', { class: 'l-copies' });
@@ -200,27 +213,33 @@ export function openSettings(onChange, getGesture) {
             h('small', {}, t('data.counts', { n: n.notes, r: n.recs })));
         }));
       });
-      body.append(section(t('set.data'), church ? 'θησαυρός' : '',
+      body.append(S('data', t('set.data'), church ? 'θησαυρός' : '',
         h('p', { class: 'l-hint' }, t('data.hint')),
         h('div', { class: 'l-btn-row' },
           h('button', { class: 'l-btn primary', onclick: () => saveFile().then(() => toast(t('data.saved')), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.err')); }) }, t('data.save')),
           h('button', { class: 'l-btn', onclick: () => pickFile().then((c) => askRestore(c, rerender), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.bad')); }) }, t('data.load'))),
         copies));
 
-      // — Обновление —
+      // — Обновление — свой раздел перерисовывается сам по событиям загрузки, остальные настройки не трогаются
       if (updAvailable()) {
-        const u = updState();
-        const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
-          : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
-        body.append(section(t('set.upd'), '',
-          h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
-          segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => up({ updMode: v }), t('set.upd')),
-          toggle(t('upd.mobile'), prefs.updMobile, (v) => up({ updMobile: v })),
-          h('div', { class: 'l-btn-row' },
-            u.st === 'avail' ? h('button', { class: 'l-btn primary', onclick: () => download().then(rerender) }, t('upd.get')) : null,
-            u.st === 'ready' ? h('button', { class: 'l-btn primary', onclick: () => install() }, t('upd.install')) : null,
-            ['avail', 'down', 'ready'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check().then(rerender) }, t('upd.check')))));
-        if (!unbindUpd) unbindUpd = onUpdate(() => rerender());
+        const updSec = () => {
+          const u = updState();
+          const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
+            : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
+          return S('data', t('set.upd'), '',
+            h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
+            segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => { setPrefs({ updMode: v }); changed(); swap(); }, t('set.upd')),
+            toggle(t('upd.mobile'), prefs.updMobile, (v) => { setPrefs({ updMobile: v }); changed(); }),
+            h('div', { class: 'l-btn-row' },
+              u.st === 'avail' ? h('button', { class: 'l-btn primary', onclick: () => download() }, t('upd.get')) : null,
+              u.st === 'ready' ? h('button', { class: 'l-btn primary', onclick: () => install() }, t('upd.install')) : null,
+              ['avail', 'down', 'ready'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check() }, t('upd.check'))));
+        };
+        let updEl = updSec();
+        const swap = () => { if (!updEl.isConnected) return; const n = updSec(); updEl.replaceWith(n); updEl = n; };
+        body.append(updEl);
+        unbindUpd?.();
+        unbindUpd = onUpdate(swap);
       }
 
       // — Главный экран телефона —
@@ -231,7 +250,7 @@ export function openSettings(onChange, getGesture) {
             h('button', { class: 'l-btn', onclick: () => Launcher.openHomeSettings() }, t('set.sys.choose')));
         }).catch(() => {});
       }
-      body.append(section(t('set.sys'), '',
+      body.append(S('data', t('set.sys'), '',
         sys,
         h('div', { class: 'l-btn-row' },
           h('button', { class: 'l-btn danger', onclick: () => { if (confirm(t('set.resetAsk'))) { resetPrefs(); changed(); rerender(); } } }, t('set.reset'))),
@@ -239,10 +258,13 @@ export function openSettings(onChange, getGesture) {
         // лицензии: код — GPL-3.0, шрифты — SIL OFL, карта — общественное достояние (LICENSES.md)
         h('button', { class: 'l-ex-link', onclick: () => openUrl('https://github.com/veracerkof-debug/melete-app/blob/main/LICENSES.md', t('about.lic')) }, h('span', {}, t('about.lic')), h('small', {}, 'github.com'))));
 
-      // разделы — строкой вверху: касание — к разделу (настройки длинные, а искать тумблер — быстро)
-      const secs = [...body.querySelectorAll('section.l-sec')];
-      body.prepend(h('nav', { class: 'l-set-nav', 'aria-label': t('set.sections') }, secs.map((sec) =>
-        h('button', { onclick: () => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, sec.querySelector('h3')?.firstChild?.textContent || ''))));
+      // четыре страницы: показываем только секции текущей вкладки; переключатель — сверху, всегда на виду
+      const tab = TABS.includes(prefs.setTab) ? prefs.setTab : 'look';
+      body.querySelectorAll('section.l-sec').forEach((sec) => { if (sec.dataset.tab !== tab) sec.remove(); });
+      body.prepend(h('nav', { class: 'l-set-tabs', role: 'tablist', 'aria-label': t('set.sections') }, TABS.map((id) =>
+        h('button', { class: id === tab ? 'on' : '', role: 'tab', 'aria-selected': String(id === tab), onclick: () => {
+          setPrefs({ setTab: id }); rerender(); body.parentElement.scrollTop = 0;
+        } }, t('tab.' + id)))));
     },
   });
 }

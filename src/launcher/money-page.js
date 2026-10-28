@@ -415,6 +415,42 @@ window.__moneyBack = () => {
 };
 window.__moneyFresh = () => { S.amt = ''; S.kind = 'e'; closeSheets(); closeOver(); renderEntry(); };
 
+// Смахивание слева направо — назад: закрыть шторку, обзор, а на экране ввода — сам кошелёк (страница идёт за пальцем,
+// родитель двигает iframe: money.js). Не с полей ввода и не с шапки месяца (там свой листатель месяцев).
+(() => {
+  let st = null;
+  const topLevel = () => !app.querySelector('.wrap') && !over.classList.contains('open');
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('input, textarea, .ohead, .keys')) { st = null; return; }
+    st = { x: e.screenX, y: e.screenY, lock: null, vel: [], top: topLevel() };
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (!st) return;
+    const dx = e.screenX - st.x, dy = e.screenY - st.y;
+    if (!st.lock) {
+      if (Math.hypot(dx, dy) < 6) return;
+      st.lock = Math.abs(dx) > Math.abs(dy) && dx > 0 ? 'x' : 'no';
+      if (st.lock === 'no') { st = null; return; }
+    }
+    st.vel.push({ dx, t: performance.now() }); if (st.vel.length > 6) st.vel.shift();
+    if (st.top && parent !== window) parent.postMessage({ moneyDrag: Math.max(0, dx) }, '*');
+  }, true);
+  const end = (e) => {
+    if (!st) return;
+    const s = st; st = null;
+    if (s.lock !== 'x') return;
+    const dx = Math.max(0, e.screenX - s.x);
+    const a = s.vel[0], b = s.vel[s.vel.length - 1];
+    const v = a && b && b.t > a.t ? (b.dx - a.dx) / (b.t - a.t) : 0;
+    if (s.top && parent !== window) { parent.postMessage({ moneyDragEnd: dx, v }, '*'); return; }
+    if (dx > 50 || v > 0.3) window.__moneyBack();
+  };
+  // палец пошёл вбок — браузер не должен начать прокрутку (иначе pointercancel и жест гибнет)
+  document.addEventListener('touchmove', (e) => { if (st?.lock === 'x') e.preventDefault(); }, { passive: false, capture: true });
+  document.addEventListener('pointerup', end, true);
+  document.addEventListener('pointercancel', (e) => { if (st?.top && parent !== window) parent.postMessage({ moneyDragEnd: 0, v: 0 }, '*'); st = null; }, true);
+})();
+
 load();
 renderEntry();
 renderOver();
