@@ -5,6 +5,7 @@
 const OPEN_FRAC = 0.2;    // доля экрана, после которой панель доезжает (автор: жесты чувствительнее)
 const FAST = 0.25;        // px/ms — быстрый взмах доезжает с любого места
 const SNAP_MS = 320;
+import { motion, setCover, dragCover, endDragCover } from './cover.js';
 
 // from — откуда выезжает: 'bottom' | 'right' | 'left'; axis и знак сдвига в закрытом состоянии
 const SIDE = {
@@ -17,13 +18,15 @@ const size = (axis) => (axis === 'x' ? innerWidth : innerHeight);
 const tr = (axis, px) => (axis === 'x' ? `translateX(${px}px)` : `translateY(${px}px)`);
 
 // Панель: el — элемент (появляется лениво: el() может создать его), open/close — обычное открытие и закрытие
-export function panel({ el, from, open, close, isOpen }) {
+export function panel({ el, from, open: open0, close: close0, isOpen }) {
   const { axis, sign } = SIDE[from];
+  const open = () => { open0(); setCover(from, true); };
+  const close = () => { close0(); setCover(from, false); };
   let dragging = false;
   let shownForDrag = false;
   const p = {
     from, axis,
-    isOpen,
+    isOpen, open, close,
     // палец пошёл — панель видна и слушается руки. amount — сколько открыто (px, от 0), opening — открываем или закрываем
     start(opening) {
       const e = el();
@@ -39,7 +42,9 @@ export function panel({ el, from, open, close, isOpen }) {
       if (!e || !dragging) return;
       const full = size(axis);
       const shown = Math.max(0, Math.min(full, openPx));
-      e.style.transform = tr(axis, sign * (full - shown));
+      if (motion() === 'fade') { e.style.transform = `scale(${0.96 + 0.04 * shown / full})`; e.style.opacity = String(shown / full); }
+      else e.style.transform = tr(axis, sign * (full - shown));
+      dragCover(shown / full);
     },
     // отпустили: решить, доезжать или вернуться. openPx — сколько открыто, v — скорость вдоль оси (px/ms, + = открывается)
     end(openPx, v, opening) {
@@ -50,15 +55,16 @@ export function panel({ el, from, open, close, isOpen }) {
       const shouldOpen = v > FAST ? true : v < -FAST ? false : openPx > full * OPEN_FRAC;
       e.classList.remove('dragging');
       e.style.transition = '';
+      endDragCover();
       // инлайновый transform снимаем после перехода, чтобы класс open/закрыто снова управлял положением
       if (shouldOpen) {
         if (!isOpen()) open();
-        requestAnimationFrame(() => { e.style.transform = ''; });
+        requestAnimationFrame(() => { e.style.transform = ''; e.style.opacity = ''; });
       } else if (isOpen() || shownForDrag) {
         // уезжает за край с текущего места; инлайновый сдвиг снимаем после перехода
-        e.style.transform = tr(axis, sign * full);
+        if (motion() === 'fade') { e.style.transform = ''; e.style.opacity = '0'; } else e.style.transform = tr(axis, sign * full);
         if (isOpen()) close();
-        setTimeout(() => { e.style.transform = ''; e.style.visibility = ''; }, SNAP_MS);
+        setTimeout(() => { e.style.transform = ''; e.style.opacity = ''; e.style.visibility = ''; }, SNAP_MS);
       }
       shownForDrag = false;
       return true; // панель тянули — жест исчерпан, обычное смахивание не нужно
@@ -66,9 +72,10 @@ export function panel({ el, from, open, close, isOpen }) {
     cancel() {
       const e = el();
       dragging = false; shownForDrag = false;
+      endDragCover();
       if (!e) return;
       e.classList.remove('dragging');
-      e.style.transition = ''; e.style.transform = ''; e.style.visibility = '';
+      e.style.transition = ''; e.style.transform = ''; e.style.opacity = ''; e.style.visibility = '';
     },
   };
   return p;

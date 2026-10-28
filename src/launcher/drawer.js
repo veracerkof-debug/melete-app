@@ -10,6 +10,7 @@ import { iconSVG } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
+import { setCover } from './cover.js';
 
 let drawer, list, search, tabs, titleName;
 let tab = 'all'; // вкладка внизу: 'all' или id папки
@@ -200,6 +201,7 @@ export function openDrawer(focus = false) {
   list.scrollTop = 0;
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
+  setCover('bottom', true);
   if (focus) setTimeout(() => search.focus(), 280);
   loadApps().then(() => { if (open) fill(); }); // поставили или удалили приложение — список свежий
 }
@@ -215,6 +217,7 @@ export function closeDrawer() {
   search.blur();
   drawer.classList.remove('open');
   drawer.setAttribute('aria-hidden', 'true');
+  setCover('bottom', false);
 }
 
 export function typeIntoSearch(ch) {

@@ -18,6 +18,8 @@ export const FONTS = [
   { id: 'oranienbaum', display: 'L Oranienbaum', text: 'L Literata' },
   { id: 'monomakh', display: 'L Monomakh', text: 'L Monomakh', church: true },
 ];
+// переходы между экранами (cover.js, launcher.css: html[data-motion])
+export const MOTIONS = ['slide', 'depth', 'fade', 'spring'];
 export const fontsFor = (church) => FONTS.filter((f) => church || !f.church);
 const SYS = '-apple-system, system-ui, "Segoe UI", Roboto, sans-serif';
 export const fontStack = (name) => (name ? `"${name}", ${SYS}` : SYS);
@@ -33,6 +35,7 @@ export function applyLook(de = document.documentElement) {
   de.style.setProperty('--l-display', fontStack(f.display));
   if (f.text) de.style.setProperty('--font', fontStack(f.text)); else de.style.removeProperty('--font');
   de.dataset.font = f.id;
+  de.dataset.motion = MOTIONS.includes(prefs.motion) ? prefs.motion : 'slide';
   // размеры: часы отдельно, остальное отдельно (settings.js → «Размер»)
   de.style.setProperty('--l-ck', String((prefs.clockScale || 100) / 100));
   const ui = (prefs.uiScale || (prefs.size === 's' ? 85 : prefs.size === 'l' ? 115 : 100)) / 100;

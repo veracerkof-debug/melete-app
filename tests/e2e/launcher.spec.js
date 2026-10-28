@@ -139,3 +139,20 @@ test('кошелёк: смахнуть слева направо внутри �
   await expect(page.locator('iframe.l-notes.open')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('настройки: смахнуть вбок — соседняя вкладка; потянуть вниз — закрываются', async ({ page, errors }) => {
+  await open(page);
+  await hold(page);
+  await expect(page.locator('.l-set-tabs button.on')).toHaveText('Вид');
+  const body = await page.locator('.l-sheet-body').boundingBox();
+  await page.mouse.move(body.x + 300, body.y + 200); await page.mouse.down();
+  await page.mouse.move(body.x + 220, body.y + 202, { steps: 4 }); await page.mouse.move(body.x + 60, body.y + 204, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator('.l-set-tabs button.on')).toHaveText('Главный');
+  // потянуть вниз с любого места (содержимое в начале) — шторка уходит
+  await page.mouse.move(body.x + 150, body.y + 120); await page.mouse.down();
+  await page.mouse.move(body.x + 150, body.y + 180, { steps: 4 }); await page.mouse.move(body.x + 150, body.y + 520, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.l-sheet-wrap')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
