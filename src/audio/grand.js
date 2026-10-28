@@ -43,11 +43,14 @@ export function checkPack() {
 }
 
 // Пакет скачали или удалили — проверить заново (записи старого набора — из кэша вон)
-onPacks(() => { packWait = null; pack = null; raw.clear(); cache = { c: null, bufs: new Map(), order: [] }; });
+onPacks(() => { packWait = null; pack = null; raw.clear(); caches = new WeakMap(); });
 
 /* ---------- записи ---------- */
 const raw = new Map(); // ключ → обещание ArrayBuffer (сам файл)
-let cache = { c: null, bufs: new Map(), order: [] }; // ключ → AudioBuffer | обещание; order — для вытеснения
+// кэш раскодированных записей — свой у каждого контекста (живой звук и офлайн-сведение не мешают друг другу):
+// ключ → AudioBuffer | обещание; order — для вытеснения; max — свой предел (сведение держит всё, что нужно песне)
+let caches = new WeakMap();
+const cacheOf = (c) => { let k = caches.get(c); if (!k) caches.set(c, (k = { bufs: new Map(), order: [], max: 0 })); return k; };
 const CACHE_MAX = () => (eco() ? 12 : 24);
 
 const fetchRaw = (key, url) => {
@@ -62,16 +65,15 @@ function mono(c, b) {
   return out;
 }
 function load(c, key, url, toMono = false) {
-  if (cache.c !== c) cache = { c, bufs: new Map(), order: [] };
-  const B = cache.bufs;
+  const cache = cacheOf(c), B = cache.bufs;
   if (B.has(key)) return B.get(key);
   const p = fetchRaw(key, url).then((ab) => (ab ? c.decodeAudioData(ab.slice(0)) : null)).then((b) => { const r = toMono ? mono(c, b) : b; B.set(key, r); return r; }).catch(() => { B.delete(key); return null; });
   B.set(key, p); cache.order.push(key);
   // лишнее — вон (самое старое из готовых; файлы остаются скачанными, раскодируются заново при надобности)
-  while (cache.order.length > CACHE_MAX()) { const k = cache.order.shift(); if (k !== key) { raw.delete(k); B.delete(k); } }
+  while (cache.order.length > (cache.max || CACHE_MAX())) { const k = cache.order.shift(); if (k !== key) { if (!cache.max) raw.delete(k); B.delete(k); } }
   return p;
 }
-const ready = (key) => { const b = cache.bufs.get(key); return b && !(b instanceof Promise) && b.duration ? b : null; };
+const ready = (c, key) => { const b = cacheOf(c).bufs.get(key); return b && !(b instanceof Promise) && b.duration ? b : null; };
 
 // Запись для ноты m при силе vel: { buf, root, layer } или null — ещё не готова (загрузка идёт; пока — синтезатор)
 export function grandBuffer(c, m, vel = 0.6) {
@@ -81,18 +83,16 @@ export function grandBuffer(c, m, vel = 0.6) {
     const L = layerOf(vel), name = noteName(r);
     const want = name + 'v' + L;
     if (pack.files.has(want + '.ogg')) load(c, want, urlFull(want), true);
-    if (cache.c !== c) return null;
-    const b0 = ready(want);
+    const b0 = ready(c, want);
     if (b0) return { buf: b0, root: r, layer: L };
     // готовая соседняя: другой слой той же ноты (ближайший), потом соседняя нота того же слоя
     const near = [...layerSet()].sort((a, b) => Math.abs(a - L) - Math.abs(b - L));
-    for (const l of near) { const b = ready(name + 'v' + l); if (b) return { buf: b, root: r, layer: l }; }
-    for (const d of [-3, 3]) { const b = ready(noteName(r + d) + 'v' + L); if (b) return { buf: b, root: r + d, layer: L }; }
+    for (const l of near) { const b = ready(c, name + 'v' + l); if (b) return { buf: b, root: r, layer: l }; }
+    for (const d of [-3, 3]) { const b = ready(c, noteName(r + d) + 'v' + L); if (b) return { buf: b, root: r + d, layer: L }; }
     return null;
   }
   load(c, 'lite' + r, urlLite(r));
-  if (cache.c !== c) return null;
-  for (const d of [0, -3, 3]) { const b = ready('lite' + (r + d)); if (b) return { buf: b, root: r + d, layer: 0 }; }
+  for (const d of [0, -3, 3]) { const b = ready(c, 'lite' + (r + d)); if (b) return { buf: b, root: r + d, layer: 0 }; }
   return null;
 }
 
@@ -102,9 +102,22 @@ export function grandRelease(c, m) {
   const n = Math.max(1, Math.min(88, m - 20)), key = 'rel' + n;
   if (!pack.files.has(key + '.ogg')) return null;
   load(c, key, urlFull(key), true);
-  return ready(key);
+  return ready(c, key);
 }
 
+// Сведение (офлайн-контекст): раскодировать заранее ровно те записи, что понадобятся нотам песни ([{ m, vel }]),
+// и держать их все — тогда в файле звучит тот же рояль, что вживую. → обещание (ждать перед расчётом)
+export async function grandPrepare(c, notes, { release = true } = {}) {
+  if (pack === null) await checkPack();
+  const cache = cacheOf(c), keys = new Map();
+  notes.forEach(({ m, vel }) => {
+    const r = rootOf(m);
+    if (pack && pack.files) { const k = noteName(r) + 'v' + layerOf(vel); if (pack.files.has(k + '.ogg')) keys.set(k, [urlFull(k), true]); if (release) { const n = Math.max(1, Math.min(88, m - 20)); if (pack.files.has('rel' + n + '.ogg')) keys.set('rel' + n, [urlFull('rel' + n), true]); } }
+    else keys.set('lite' + r, [urlLite(r), false]);
+  });
+  cache.max = Math.max(cache.max, keys.size + 8);
+  await Promise.all([...keys].map(([k, [u, mono1]]) => load(c, k, u, mono1)));
+}
 // Заранее: средние октавы (C3–C6) — их играют чаще всего. Без контекста — только скачать файлы
 export function grandPreload(c, lo = 48, hi = 84) {
   const go = () => {

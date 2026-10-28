@@ -10,6 +10,7 @@ import { synWave, noiseBuf } from './waves.js';
 import { airVoice } from './airsound.js';
 import { grandBuffer, grandPreload, grandRelease } from './grand.js';
 import { after, cancel } from './clock.js';
+import * as CLOCK from './clock.js';
 
 // Встроенные пресеты; имена — ключи i18n synth.preset.<id>
 export const PRESETS = {
@@ -102,7 +103,10 @@ export function applyPreset(patch, id) {
 }
 
 // getPatch() → текущий патч; getLayer() → второй слой или null; getA4() → строй; mixer — для шин
-export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = () => 440 }) {
+// context и clock — для сведения «на бумаге» (OfflineAudioContext и его часы); без них — живой звук и clock.js
+export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = () => 440, context = null, clock = null }) {
+  const { after, cancel } = clock || CLOCK; // eslint-disable-line no-shadow
+  const ctxOf = () => context || getContext(mixer.state.mode);
   const voices = new Map();
   let order = [];
   const last = { piano: 0, theory: 0 };
@@ -367,7 +371,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     //        patch — сыграть другим звуком, без слоя, не меняя настройки пианино (тембры тренажёра слуха), vel — сила 0…1,
     //        at — время начала по часам контекста (планировщик студии) }
     on(m, key, opts = {}) {
-      const c = getContext(mixer.state.mode);
+      const c = ctxOf();
       if (!c) return;
       syn.off(key, true);
       const own = !!opts.patch, busName = opts.bus || 'piano';
@@ -408,7 +412,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     // (Hold) аккорде. Тембр, яркость, хорус, сустейн, релиз, громкость и эквалайзер слоя меняются плавно на ходу;
     // другой вид звука — удержанные ноты переигрываются новым звуком; слой добавили — удержанные ноты получают и его
     refresh() {
-      const P = getPatch(), L = getLayer(), c = getContext(mixer.state.mode);
+      const P = getPatch(), L = getLayer(), c = ctxOf();
       if (!c) return;
       mixer.setReverb('piano', P.rev * 0.9);
       if (strips.c === c) { mixStrip(c, 'main', P); mixStrip(c, 'layer', L); }
@@ -453,7 +457,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     },
     get voiceCount() { return voices.size; },
     // Заранее скачать записи рояля (при открытии пианино)
-    preload() { grandPreload(getContext(mixer.state.mode)); },
+    preload() { grandPreload(ctxOf()); },
   };
   return syn;
 }

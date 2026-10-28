@@ -7,9 +7,10 @@
 // Формат — обычный tar (ustar) без сжатия: модели и ogg и так сжаты; порядок и заголовки постоянны.
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, openSync, writeSync, closeSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url)); // не .pathname: на Windows вышло бы /D:/…
 const cfg = JSON.parse(readFileSync(join(root, 'build/models.json'), 'utf8'));
 const OUT = join(root, 'build/packs.json');
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
@@ -80,7 +81,7 @@ function tar(out) {
 }
 
 // запуск из командной строки (при импорте в тестах — только функции)
-if (process.argv[1] && new URL('file://' + process.argv[1]).pathname === new URL(import.meta.url).pathname) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [cmd, arg] = process.argv.slice(2);
   if (cmd === 'index') index();
   else if (cmd === 'tar') tar(arg || join(root, 'packs-out'));

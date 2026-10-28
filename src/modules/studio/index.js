@@ -14,66 +14,39 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, loopOf, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, humanizeNotes, secPerBeat, joinClips, clipAt } from '../../music/project.js';
+import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, humanizeNotes, secPerBeat, joinClips, clipAt, fitPiece, setTake, notesFromTake } from '../../music/project.js';
+import { stretchRender } from '../../audio/stretchrender.js';
+import { addPlayedNote } from '../../music/project.js';
+import { loadGM, gmReady, programName, kitName, FAMILIES, KITS } from '../../audio/gm.js';
 import { createSequencer } from '../../audio/sequencer.js';
-import { createCapture, openInput } from '../../audio/capture.js';
 import { encodeWav, peaks as wavPeaks } from '../../audio/voicefx.js';
 import { mixerHTML, mixerBind } from './mixer.js';
 import { liveHTML, liveBind, OCT_LO, OCT_HI } from './live.js';
-import { engine as audioEngine } from '../../audio/voiceengine.js';
 import { createRoll } from './roll.js';
 import { createPlaylist } from './playlist.js';
 import { chordsHTML, chordsAct, chordHold } from './chords.js';
+import { padHTML, padBind } from './chordpad.js';
 import { stepsHTML, stepsBar, stepsPos, stepsGestures } from './steps.js';
-import { writeMidi, writeMidiTracks, takeDur } from '../../music/midi.js';
+import { writeMidi, writeMidiTracks, takeDur, readMidi } from '../../music/midi.js';
 import { projectXML } from '../../music/musicxml.js';
 import { onHold, holdMenu } from '../../ui/hold.js';
 import { keyLabel } from '../../music/transpose.js';
 import { mName } from '../../music/notes.js';
 
-// значок студии: плейлист — три дорожки с клипами разной длины и бегунок
-import meta, { ICON } from './meta.js';
-const I = {
-  play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" style="fill:currentColor"/></svg>',
-  stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" style="fill:currentColor"/></svg>',
-  rewind: '<svg viewBox="0 0 24 24"><path d="M7 6v12M18 6l-9 6 9 6z" style="fill:currentColor"/></svg>',
-  back: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
-  list: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
-  share: '<svg viewBox="0 0 24 24"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
-  mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
-  vol: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
-  click: '<svg viewBox="0 0 24 24"><path d="M9 4h6l3 16H6zM12 17V8M12 8l5-3"/></svg>',
-  undo: '<svg viewBox="0 0 24 24"><path d="M8 7H4v4"/><path d="M4.5 10.5A8 8 0 1 1 6 17"/></svg>',
-  pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
-  del: '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"/></svg>',
-  copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
-  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-  help: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5V14M12 17h.01"/></svg>',
-  up: '<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>',
-  down: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
-  solo: '<svg viewBox="0 0 24 24"><path d="M7 9h10M7 15h10M9 5l-1 14M16 5l-1 14"/></svg>',
-  cut: '<svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M9.5 15 19 4M14.5 15 5 4"/></svg>',
-  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>',
-  mixer: '<svg viewBox="0 0 24 24"><path d="M6 4v16M12 4v16M18 4v16"/><circle cx="6" cy="14" r="2.5" style="fill:currentColor"/><circle cx="12" cy="8" r="2.5" style="fill:currentColor"/><circle cx="18" cy="16" r="2.5" style="fill:currentColor"/></svg>',
-  file: '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>',
-  rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" style="fill:currentColor"/></svg>',
-  redo: '<svg viewBox="0 0 24 24"><path d="M16 7h4v4"/><path d="M19.5 10.5A8 8 0 1 0 18 17"/></svg>',
-  flag: '<svg viewBox="0 0 24 24"><path d="M6 21V4h11l-2 4 2 4H6"/></svg>',
-  loop: '<svg viewBox="0 0 24 24"><path d="M17 4l3 3-3 3"/><path d="M4 11V9a2 2 0 0 1 2-2h14"/><path d="M7 20l-3-3 3-3"/><path d="M20 13v2a2 2 0 0 1-2 2H4"/></svg>',
-  paste: '<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2M9 12h6M9 16h4"/></svg>',
-  wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2l2-6 3 12 3-9 2 6 2-3h4"/></svg>',
-  mix: '<svg viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><path d="M2.5 13h5M9.5 8h5M16.5 15h5"/></svg>',
-  tune: '<svg viewBox="0 0 24 24"><path d="M4 18h16M4 12h16M4 6h16"/><circle cx="9" cy="6" r="2" style="fill:currentColor"/><circle cx="15" cy="12" r="2" style="fill:currentColor"/><circle cx="7" cy="18" r="2" style="fill:currentColor"/></svg>',
-  mutec: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M6 17 18 7"/></svg>',
-};
+import meta from './meta.js';
+import { I } from './icons.js';
+import { createRecording } from './record.js';
 const UNDO_MAX = 40;
 
-let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null;
+let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null, offPad = null;
 // экран: { view: 'list' | 'song' | 'clip' | 'mix', pid, cid, bar, live (запись живого ввода) }; отмена и повтор: снимки проекта (JSON)
-const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0 }; // auto — { tr, kind }: правка огибающей дорожки
+const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0, sel: [], tool: null }; // auto — { tr, kind }: правка огибающей дорожки; sel — выделенные клипы
 const undo = { pid: null, last: '', stack: [], redo: [] };
 let clipBuf = null; // буфер обмена: слепок клипа (clipCopy)
-let R = null; // идущая запись: { kind: 'track' | 'mix', cap, input, tap, tr, from, lat, p }
+// общее для частей студии (record.js)
+const S = { get ctx() { return ctx; }, get seq() { return seq; }, get pl() { return pl; }, get host() { return host; }, V, proj: () => proj(), save: () => save(), render: () => render(), trName: (tr) => trName(tr), st: () => st(), countIn: () => countIn(), recLat: () => recLat(),
+  progress: (x) => { const el = host && host.querySelector('#stpos'); if (el) el.textContent = x == null ? '1.1' : Math.round(x * 100) + '%'; } }; // ход сведения — на месте такта
+const rec = createRecording(S); // запись в дорожку, сведение, стемы, замер задержки
 const st = () => ctx.store.all();
 const m0 = () => { const v = +st().m0; return v >= OCT_LO && v <= OCT_HI ? v : 48; };
 const countIn = () => (st().countIn == null ? 1 : Math.max(0, Math.min(2, +st().countIn || 0)));
@@ -136,19 +109,20 @@ function transportHTML(p) {
   return '<div class="sttop">' +
     '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + '</div>' +
     '<div class="stgrp mid">' + ui.icb('data-x="rewind"', I.rewind, t('rewind'), 'sm plain') +
-    ui.icb('data-x="rec"', I.rec, t(R ? 'rec.stop' : 'rec.title'), 'sm plain strec' + (R ? ' on' : '')) +
+    ui.icb('data-x="rec"', I.rec, t(rec.busy ? 'rec.stop' : 'rec.title'), 'sm plain strec' + (rec.busy ? ' on' : '')) +
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
-    '<button class="stinfo" data-x="settings" aria-label="' + ui.esc(t('settings')) + '"><b class="num">' + p.bpm + '</b><span>' + ui.esc(keyLabel(p.key) + ' · ' + p.num + '/' + p.den) + '</span><i class="num" id="stpos">1.1</i></button>' +
+    '<button class="stinfo" data-x="settings" aria-label="' + ui.esc(t('settings')) + '"><b class="num">' + p.bpm + '</b><span>' + ui.esc(keyLabel(p.key) + ' · ' + p.num + '/' + p.den) + '</span><i class="num" id="stpos">1.1</i><em class="stld" id="stld" hidden></em></button>' +
     ui.icb('data-x="click"', I.click, t('click'), 'sm plain' + (seq && seq.click ? ' on' : '')) + '</div>' +
     '<div class="stgrp">' + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
 }
 // Шапка редактора клипа: назад, дорожка · такты куска (−/+), сетка (ноты), файл (запись)
 function clipHeadHTML(p, c, tr) {
   const { t, ui } = ctx, d = c.data;
-  const stepper = tr.kind === 'audio' ? '' : '<span class="stepper" role="group" aria-label="' + ui.esc(t('clip.bars')) + '"><button type="button" data-cb="-1" aria-label="' + ui.esc(t('clip.bars') + ' −') + '">−</button><b class="num stv">' + d.bars + '</b><button type="button" data-cb="1" aria-label="' + ui.esc(t('clip.bars') + ' +') + '">+</button></span>';
-  return '<div class="sthead" style="--c:' + tr.color + '">' + ui.icb('data-x="toSong"', I.back, t('toSong'), 'sm plain') + '<i class="sttrdot"></i><button class="grow sttitle" data-x="trackMenu"><b>' + ui.esc(trName(tr)) + '</b><span>' + ui.esc((tr.kind === 'audio' ? fileName(d.fileId) + ' · ' : tr.kind === 'drums' ? '' : instName(tr.inst) + ' · ') + ctx.tn('bars', Math.round(c.len / p.num * 10) / 10)) + '</span></button>' +
+  const stepper = tr.kind === 'audio' || tr.kind === 'chords' ? '' : '<span class="stepper" role="group" aria-label="' + ui.esc(t('clip.bars')) + '"><button type="button" data-cb="-1" aria-label="' + ui.esc(t('clip.bars') + ' −') + '">−</button><b class="num stv">' + d.bars + '</b><button type="button" data-cb="1" aria-label="' + ui.esc(t('clip.bars') + ' +') + '">+</button></span>';
+  return '<div class="sthead" style="--c:' + tr.color + '">' + ui.icb('data-x="toSong"', I.back, t('toSong'), 'sm plain') + '<i class="sttrdot"></i><button class="grow sttitle" data-x="trackMenu"><b>' + ui.esc(trName(tr)) + '</b><span>' + ui.esc((tr.kind === 'audio' ? fileName(d.fileId) + ' · ' : tr.kind === 'drums' ? '' : (tr.inst === 'gm' && gmReady() ? programName(tr.gm || 0) : instName(tr.inst)) + ' · ') + ctx.tn('bars', Math.round(c.len / p.num * 10) / 10)) + '</span></button>' +
     stepper + (tr.kind === 'notes' ? ui.seg('stgrid', [['1', '♩'], ['0.5', '♪'], ['0.25', '♬']], String(grid()), t('grid')) : '') +
-    (tr.kind === 'notes' || tr.kind === 'drums' ? ui.icb('data-x="live"', I.rec, t(V.live ? 'live.off' : 'live.on'), 'sm plain strec' + (V.live ? ' on' : '')) : '') +
+    (tr.kind === 'notes' ? ui.icb('data-x="tool"', I.keys, t('tool.pick'), 'sm plain' + (V.tool ? ' on' : '')) : '') +
+    (tr.kind !== 'audio' ? ui.icb('data-x="live"', I.rec, t(V.live ? 'live.off' : 'live.on'), 'sm plain strec' + (V.live ? ' on' : '')) : '') +
     (tr.kind === 'audio' ? ui.icb('data-x="pickFile"', I.file, t('tr.pickFile'), 'sm plain') : '') + '</div>';
 }
 function view() {
@@ -159,10 +133,12 @@ function view() {
     const body = tr.kind === 'drums' ? stepsHTML(ctx, p, c.data, V.bar, tr.color) : tr.kind === 'chords' ? chordsHTML(ctx, p, tr, c.data) : tr.kind === 'notes' ? '<div class="stroll" id="stroll"></div>' :
       '<div class="staudio"><div class="group"><button class="cell" data-x="pickFile"><span class="grow">' + ctx.ui.esc(fileName(c.data.fileId)) + '<span class="bksub">' + ctx.ui.esc(ctx.t('tr.pickFile')) + '</span></span>' + ctx.ui.icons.chev + '</button>' +
       '<button class="cell" data-x="clipSheet"><span class="grow">' + ctx.ui.esc(ctx.t('clip.gain')) + '<span class="bksub">' + ctx.ui.esc(Math.round((c.gain == null ? 1 : c.gain) * 100) + '% · ' + ctx.t('clip.fades') + ' ' + (c.data.fadeIn || 0) + ' / ' + (c.data.fadeOut || 0)) + '</span></span>' + ctx.ui.icons.chev + '</button></div><p class="ftr">' + ctx.ui.esc(ctx.t('tr.audioHint')) + '</p></div>';
-    return '<div class="stwrap">' + clipHeadHTML(p, c, tr) + body + liveHTML(ctx, tr, m0()) + transportHTML(p) + '</div>';
+    const pad = tr.kind === 'chords' ? padHTML(ctx, p, tr, { bars: c.data.bars, grid: cpGrid(p), rec: V.live && seq && seq.playing }) : '';
+    const strip = tr.kind === 'notes' && V.tool ? '<div class="sttool" id="sttool"></div>' : liveHTML(ctx, tr, m0()); // свой инструмент — вместо клавиш
+    return '<div class="stwrap">' + clipHeadHTML(p, c, tr) + body + strip + pad + transportHTML(p) + '</div>';
   }
-  if (V.view === 'mix') return '<div class="stwrap">' + mixerHTML(ctx, p, trName) + transportHTML(p) + '</div>';
-  return '<div class="stwrap"><div class="stpl" id="stpl"></div>' + transportHTML(p) + '</div>';
+  if (V.view === 'mix') return '<div class="stwrap side">' + mixerHTML(ctx, p, trName) + transportHTML(p) + '</div>';
+  return '<div class="stwrap side"><div class="stpl" id="stpl"><div class="stselbar" id="stsel" hidden></div></div>' + transportHTML(p) + '</div>';
 }
 
 function render() {
@@ -172,14 +148,21 @@ function render() {
   if (offSteps) { offSteps(); offSteps = null; }
   if (offLive) { offLive(); offLive = null; }
   if (offMix) { offMix(); offMix = null; }
+  if (offPad) { offPad(); offPad = null; }
   document.querySelectorAll('.stanchor').forEach((a) => a.remove());
   host.innerHTML = view();
+  toolPlace();
   const p = proj();
-  if (seq && !R) seq.focus = V.view === 'clip' && clip() ? V.cid : null;
+  if (seq && !rec.busy) seq.focus = V.view === 'clip' && clip() ? V.cid : null;
   if (V.view === 'clip' && clip()) {
     offLive = liveBind(host, () => { const c = clip(); return { p, tr: ctrack(), d: c.data, total: dataBeats(p, c.data), grid: ctrack().kind === 'drums' ? 0.25 : grid(), rec: V.live && seq.playing, pos: () => { const b = seq.pos(); const per = dataBeats(p, c.data); return b >= 0 && per ? b % per : -1; } }; },
       { audition: (m, hold) => seq.audition(ctrack(), m, { hold }), release: (k) => seq.release(k), change: () => { save(); if (roll) roll.draw(); const rk = host.querySelector('.rack'); if (rk && ctrack().kind === 'drums') { const b = V.bar; host.querySelector('.rack').outerHTML = stepsHTML(ctx, p, clip().data, b, ctrack().color).replace(/^<div class="rack"/, '<div class="rack"'); if (offSteps) offSteps(); offSteps = stepsGestures(host.querySelector('.rack'), () => clip().data, { change: () => save(), audition: (lane) => seq.audition(ctrack(), lane) }); } },
         toggleOct: (d) => { st().m0 = Math.max(OCT_LO, Math.min(OCT_HI, m0() + 12 * d)); ctx.store.save(); render(); } });
+  }
+  if (V.view === 'clip' && clip() && ctrack().kind === 'chords') {
+    offPad = padBind(host, () => { const c = clip(); return { p, tr: ctrack(), d: c.data, total: dataBeats(p, c.data), grid: cpGrid(p), rec: V.live && seq.playing, pos: () => { const b = seq.pos(), per = dataBeats(p, c.data); return b >= 0 && per ? b % per : -1; } }; },
+      { notesOn: (m) => seq.audition(ctrack(), m, { hold: true }), notesOff: (k) => seq.release(k), change: () => { save(); chordsRefresh(); },
+        recDone: () => { V.live = false; if (V.clickWas != null) { seq.click = V.clickWas; V.clickWas = null; } save(); render(); ctx.ui.toast(ctx.t('cp.done')); } });
   }
   if (V.view === 'mix') offMix = mixerBind(host, p, seq, { vol: (tr, v) => { seq.setTrackVol(tr, v); p.updatedAt = Date.now(); }, pan: (tr, v) => seq.setTrackPan(tr, v), save: () => save(),
     mute: (tr) => { seq.setTrackMute(tr, !tr.mute); save(); render(); }, solo: (tr) => { seq.setTrackSolo(tr, !tr.solo); save(); render(); }, fx: (tr) => trackSheet(tr), sound: (tr) => trackSheet(tr), master: () => { if (ctx.openMixer) ctx.openMixer(); } });
@@ -196,18 +179,20 @@ function render() {
     pl = createPlaylist(ph, () => ({ p: proj(), names: trName, fileName, peaks: filePeaks, auto: V.auto }), {
       autoChange: () => { save(); seq.autoChanged(); },
       autoExit: () => { V.auto = null; render(); },
-      open: (c) => openClip(c),
-      menu: (c, x, y) => clipMenu(anchorAt(x, y), c),
+      open: (c) => { pl.selection = [c.id]; selBar([c.id]); clipEditSheet(c); }, // удержание клипа — его шторка
+      split: (c, beat, g) => { const n = splitClip(proj(), c, beat, g); if (n) { buzz2(); save(); seq.audioChanged(); pl.selection = [c.id, n.id]; selBar(pl.selection); pl.draw(); } },
+      sel: (ids) => selBar(ids),
       track: (tr, x, y) => trackMenu(anchorAt(x, y), tr),
       addTrack: (x, y) => addTrackMenu(anchorAt(x, y)),
       create: (tr, beat) => createClip(tr, beat),
       empty: (tr, beat, x, y) => emptyMenu(anchorAt(x, y), tr, beat),
       ruler: (beat, x, y) => rulerMenu(anchorAt(x, y), beat),
-      region: () => { save(); if (seq.playing && !R) seq.start(pl.cursor); },
-      seek: (beat) => { V.cursor = beat; if (seq.playing && !R) seq.start(beat); },
-      change: () => save(),
+      region: () => { save(); if (seq.playing && !rec.busy) seq.start(pl.cursor); },
+      seek: (beat) => { V.cursor = beat; if (seq.playing && !rec.busy) seq.start(beat); },
+      change: () => { save(); seq.audioChanged(); selBar(pl.selection); },
     });
-    pl.select(V.cid);
+    pl.selection = (V.sel || []).filter((id) => clipById(p, id));
+    selBar(pl.selection);
     pl.cursor = V.cursor || 0; // плейлист создаётся заново при каждой перерисовке — курсор живёт в V (пауза продолжает с места)
   }
   tickPos();
@@ -227,7 +212,73 @@ function tickPos() {
       stepsPos(host, inData >= 0 ? Math.floor(inData * 4) : -1);
     }
   }
+  if (offPad && offPad.tick) offPad.tick();
+  loadDot();
   if (seq.playing) raf = requestAnimationFrame(tickPos);
+}
+// Свой инструмент под редактором нот (пианино, глайдер, терменвокс — ctx.mountTool): играет своим звуком, при ● и
+// проигрывании клипа сыгранное ложится в кусок, как с клавиш студии (начало — к сетке, длина — сколько держали;
+// скольжение — нота, с которой начали). Окно инструмента живёт между перерисовками студии (переносится, не
+// пересоздаётся: камера терменвокса и настройки не сбрасываются); закрывается — выбором «Клавиши студии» или уходом
+const TOOLS = ['piano', 'glider', 'theremin'];
+let toolBox = null; // { id, el, h, off, held }
+function toolPlace() {
+  const ph = host && host.querySelector('#sttool');
+  if (!ph) { toolDrop(); return; }
+  if (toolBox && toolBox.id === V.tool) { ph.appendChild(toolBox.el); return; }
+  toolDrop();
+  const el = document.createElement('div');
+  el.className = 'sttoolin';
+  ph.appendChild(el);
+  const h = ctx.mountTool(V.tool, el, 'half');
+  if (!h) { V.tool = null; el.remove(); setTimeout(render, 0); return; }
+  toolBox = { id: V.tool, el, h, held: new Map(), off: ctx.onPlay(toolPlay) };
+}
+function toolDrop() {
+  if (!toolBox) return;
+  const b = toolBox; toolBox = null;
+  try { b.off(); } catch { /* */ }
+  try { b.h.unmount(); } catch (e) { ctx.logErr(e); }
+  b.el.remove();
+}
+function toolPlay(id, e) {
+  const b = toolBox, c = clip(), tr = ctrack(), p = proj();
+  if (!b || id !== b.id || !c || !tr || tr.kind !== 'notes' || V.view !== 'clip') return;
+  const total = dataBeats(p, c.data), pos = () => { const x = seq.playing ? seq.pos() : -1; return x >= 0 && total ? x % total : -1; };
+  if (e.k === 'on' && e.m != null) b.held.set(e.id, { m: Math.round(e.m), v: e.v == null ? 0.8 : e.v, t0: pos() });
+  else if (e.k === 'off') {
+    const h = b.held.get(e.id); b.held.delete(e.id);
+    if (!h || !V.live || h.t0 < 0) return;
+    const now = pos(); if (now < 0) return;
+    let dur = now - h.t0; if (dur < 0) dur += total; // через границу круга
+    addPlayedNote(c.data, total, h.t0, Math.max(grid(), dur), h.m, h.v, grid());
+    save(); if (roll) roll.draw();
+  }
+}
+function toolMenu(anchor) {
+  const { t } = ctx, items = TOOLS.filter((id) => ctx.hasTool(id)).map((id) => { const x = ctx.midi.tool(id); return { icon: x.icon, label: x.name, run: () => { V.tool = id; render(); } }; });
+  holdMenu(anchor, [{ icon: I.keys, label: t('tool.keys'), run: () => { V.tool = null; render(); } }, ...items], t('tool.pick'));
+}
+// Нагрузка звука — точка на темпе, только когда высокая (жёлтая — от 70 %, красная — от 90 %): подсказка снять
+// эффекты или дорожки, пока не затрещало. Раз в полсекунды, пока играет; на паузе не видна
+let ldAt = 0;
+function loadDot() {
+  const el = host && host.querySelector('#stld'), now = performance.now();
+  if (!el || (now - ldAt < 500 && seq.playing)) return;
+  ldAt = now;
+  const m = seq.playing && ctx.audio && ctx.audio.load, lvl = m && m.ready ? m.level : 'ok';
+  el.hidden = lvl === 'ok';
+  if (lvl !== 'ok') { el.dataset.lvl = lvl; el.title = ctx.t('load', { p: Math.round(m.value * 100) }); }
+}
+// Сетка аккордовой панели (долей): доля, половина такта, такт
+const cpGrid = (p) => { const g = +st().cpGrid; return [1, 2, p.num].includes(g) ? g : 1; };
+// Такты аккордов над панелью — перерисовать на месте (панель и её касания не трогаются)
+function chordsRefresh() {
+  const el = host && host.querySelector('.scwrap'), p = proj(), c = clip(), tr = ctrack();
+  if (!el || !c || !tr) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = chordsHTML(ctx, p, tr, c.data);
+  const sc = el.querySelector('.scbars'), nw = tmp.querySelector('.scbars');
+  if (sc && nw) { const y = sc.scrollTop; sc.replaceWith(nw); nw.scrollTop = y; }
 }
 
 /* ---------- настройки проекта, меню клипа и дорожки ---------- */
@@ -245,14 +296,15 @@ function settingsSheet() {
     '<div class="hdr">' + ui.esc(t('key')) + '</div><div class="hscroll" style="padding:0 4px">' + NAMES.map((n, pc) => '<button class="pill sm" data-key="' + pc + '" aria-pressed="' + (pc === p.key.pc) + '">' + n + '</button>').join('') + '</div>' +
     '<div class="group" style="margin-top:8px"><div class="cellcol">' + ui.seg('stmin', [['0', t('maj')], ['1', t('min')]], p.key.minor ? '1' : '0', t('key')) + '</div></div>' +
     '<div class="hdr">' + ui.esc(t('rec.title')) + '</div><div class="group">' + rowSeg(t('rec.countIn'), ui.seg('stcnt', [['0', '0'], ['1', '1'], ['2', '2']], String(countIn()), t('rec.countIn'))) +
-    row(t('rec.lat'), step('lat', Math.round(recLat() * 1000) + ' ms', t('rec.lat'))) + '</div><p class="ftr">' + ui.esc(t('rec.latHint')) + '</p>' +
+    row(t('rec.lat'), step('lat', Math.round(recLat() * 1000) + ' ms', t('rec.lat'))) + '<button class="cell act" data-latm>' + ui.esc(t('rec.measure')) + '</button></div><p class="ftr">' + ui.esc(t('rec.latHint')) + ' ' + ui.esc(t('rec.measureHint')) + '</p>' +
     '<div class="group" style="margin-top:16px"><button class="cell" data-x2="export"><span class="grow">' + ui.esc(t('export')) + '</span>' + ui.icons.chev + '</button><button class="cell danger center" data-delproj>' + ui.esc(t('delete')) + '</button></div>';
   ui.sheet(body, (el, sh) => {
     el.addEventListener('input', (e) => { if (e.target.matches('[data-name]')) { p.name = e.target.value; save(); } else if (e.target.matches('[data-swing]')) { p.swing = +e.target.value; p.updatedAt = Date.now(); } });
     el.addEventListener('change', (e) => { if (e.target.matches('[data-swing]')) { save(); sh.update(); } });
     el.addEventListener('click', (e) => {
       let b;
-      if ((b = e.target.closest('[data-st="lat"]'))) { st().recLat = Math.max(0, Math.min(500, Math.round(recLat() * 1000) + 5 * +b.dataset.d)); ctx.store.save(); sh.update(); }
+      if ((b = e.target.closest('[data-latm]'))) { b.disabled = true; b.textContent = t('rec.measuring'); rec.measure().then((ms) => { if (ms == null) ctx.ui.toast(t('rec.measureFail')); else { st().recLat = Math.min(500, ms); ctx.store.save(); ctx.ui.toast(t('rec.measured', { ms })); } sh.update(); }); }
+      else if ((b = e.target.closest('[data-st="lat"]'))) { st().recLat = Math.max(0, Math.min(500, Math.round(recLat() * 1000) + 5 * +b.dataset.d)); ctx.store.save(); sh.update(); }
       else if ((b = e.target.closest('[data-st]'))) { p.bpm = Math.max(20, Math.min(300, p.bpm + +b.dataset.d * (e.shiftKey ? 10 : 1))); save(); sh.update(); }
       else if ((b = e.target.closest('[data-seg="stcnt"] [data-v]'))) { st().countIn = +b.dataset.v; ctx.store.save(); sh.update(); }
       else if ((b = e.target.closest('[data-seg="stnum"] [data-v]'))) { p.num = +b.dataset.v; p.den = p.num === 6 ? 8 : 4; normalizeProject(p); save(); sh.update(); }
@@ -285,6 +337,7 @@ function emptyMenu(anchor, tr, beat) {
   const { t } = ctx, p = proj();
   holdMenu(anchor, [
     { icon: I.plus, label: t('clip.new'), run: () => createClip(tr, beat) },
+    ...(tr.kind === 'notes' ? [{ icon: I.file, label: t('take.from'), run: () => takePicker(tr, beat) }] : []),
     ...(clipBuf && clipBuf.kind === tr.kind ? [{ icon: I.paste, label: t('clip.paste'), run: () => { if (pasteClip(p, clipBuf, tr, beat, 1)) { save(); render(); } else ctx.ui.toast(t('clip.max')); } }] : []),
   ], trName(tr) + ' · ' + (Math.floor(beat / p.num) + 1));
 }
@@ -336,8 +389,10 @@ function trackSheet(tr) {
   ui.sheet(() => ui.snav(trName(tr)) +
     '<div class="group"><label class="cell"><span class="grow">' + ui.esc(t('vol')) + '</span><b class="num" style="min-width:4ch;text-align:right">' + Math.round(tr.vol * 100) + '%</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="0" max="1.5" step="0.01" value="' + tr.vol + '" data-vol aria-label="' + ui.esc(t('vol')) + '"></div>' +
     '<label class="cell"><span class="grow">' + ui.esc(t('mix.pan')) + '</span><b class="num" style="min-width:4ch;text-align:right" data-panv>' + panLabel(tr.pan) + '</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="-1" max="1" step="0.02" value="' + (tr.pan || 0) + '" data-pan aria-label="' + ui.esc(t('mix.pan')) + '"></div></div>' +
+    (tr.kind === 'drums' ? '<div class="hdr">' + ui.esc(t('gm.kit')) + '</div><div class="group"><div class="cellcol">' + ui.seg('stgmkit', [['', t('gm.synth')], ...KITS.map((k) => [String(k), gmReady() ? kitName(k) : String(k)])], tr.gmKit == null ? '' : String(tr.gmKit), t('gm.kit')) + '</div></div>' : '') +
     (tr.kind === 'drums' ? '<div class="hdr">' + ui.esc(t('tr.kit')) + '</div><div class="group">' + DRUMS.map((l) => '<button class="cell" data-kit="' + l + '"><span class="grow">' + ui.esc(t('drum.' + l)) + '<span class="bksub">' + ui.esc(tr.kit && tr.kit[l] ? fileName(tr.kit[l]) : t('tr.kitSynth')) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div><p class="ftr">' + ui.esc(t('tr.kitHint')) + '</p>' : '') +
     (tr.kind === 'drums' || tr.kind === 'audio' ? '' : '<div class="hdr">' + ui.esc(t('tr.inst')) + '</div><div class="group">' + INSTRUMENTS.map((id) => '<button class="cell" data-inst="' + id + '"><span class="grow">' + ui.esc(instName(id)) + '</span>' + (tr.inst === id ? ui.icons.check : '') + '</button>').join('') + '</div>' +
+      (tr.inst === 'gm' ? '<div class="hdr">' + ui.esc(t('inst.gm')) + '</div><div class="group"><button class="cell" data-gmpick><span class="grow">' + ui.esc(gmReady() ? programName(tr.gm || 0) : t('gm.loading')) + '<span class="bksub">' + ui.esc(t('gm.fam.' + FAMILIES[Math.floor((tr.gm || 0) / 8)]) + ' · ' + ((tr.gm || 0) + 1)) + '</span></span>' + ui.icons.chev + '</button></div><p class="ftr">' + ui.esc(t('gm.hint')) + '</p>' : '') +
       (tr.inst === 'sample' ? '<div class="hdr">' + ui.esc(t('inst.sample')) + '</div><div class="group"><button class="cell" data-sfile><span class="grow">' + ui.esc(fileName(tr.sample && tr.sample.fileId)) + '<span class="bksub">' + ui.esc(t('tr.pickFile')) + '</span></span>' + ui.icons.chev + '</button>' +
         '<div class="cell"><span class="grow">' + ui.esc(t('tr.root')) + '</span><span class="stepper"><button type="button" data-root="-1" aria-label="' + ui.esc(t('tr.root') + ' −') + '">−</button><b class="num stv">' + mName((tr.sample && tr.sample.root) || 60) + '</b><button type="button" data-root="1" aria-label="' + ui.esc(t('tr.root') + ' +') + '">+</button></span></div></div><p class="ftr">' + ui.esc(t('tr.rootHint')) + '</p>' : '') +
       '<div class="hdr">' + ui.esc(t('tr.oct')) + '</div><div class="group"><div class="cellcol">' + ui.seg('stoct', [['-1', '−1'], ['0', '0'], ['1', '+1']], String(tr.oct || 0), t('tr.oct')) + '</div></div>') +
@@ -352,8 +407,10 @@ function trackSheet(tr) {
     el.addEventListener('change', (e) => { if (e.target.matches('[data-vol],[data-pan]')) save(); });
     el.addEventListener('click', (e) => {
       let b;
-      if ((b = e.target.closest('[data-inst]'))) { tr.inst = b.dataset.inst; if (tr.inst === 'sample') { tr.sample = tr.sample || { fileId: null, root: 60 }; if (!tr.sample.fileId) { sh.close(); setTimeout(() => samplePicker(tr), 200); return; } } seq.audition(tr, 60); }
+      if ((b = e.target.closest('[data-inst]'))) { tr.inst = b.dataset.inst; if (tr.inst === 'gm') { if (tr.gm == null) tr.gm = 0; loadGM().then(() => sh.update()).catch(() => ctx.ui.toast(t('err.fail'))); } if (tr.inst === 'sample') { tr.sample = tr.sample || { fileId: null, root: 60 }; if (!tr.sample.fileId) { sh.close(); setTimeout(() => samplePicker(tr), 200); return; } } seq.audition(tr, 60); }
       else if ((b = e.target.closest('[data-sfile]'))) { sh.close(); setTimeout(() => samplePicker(tr), 200); return; }
+      else if ((b = e.target.closest('[data-gmpick]'))) { sh.close(); setTimeout(() => gmPicker(tr), 200); return; }
+      else if ((b = e.target.closest('[data-seg="stgmkit"] [data-v]'))) { if (b.dataset.v === '') delete tr.gmKit; else tr.gmKit = +b.dataset.v; seq.audition(tr, 'kick'); setTimeout(() => seq.audition(tr, 'snare'), 220); }
       else if ((b = e.target.closest('[data-kit]'))) { const lane = b.dataset.kit; sh.close(); setTimeout(() => samplePicker(tr, { title: t('drum.' + lane), cur: tr.kit && tr.kit[lane], none: true, set: (id) => { tr.kit = tr.kit || {}; if (id) tr.kit[lane] = id; else delete tr.kit[lane]; if (!Object.keys(tr.kit).length) delete tr.kit; seq.audition(tr, lane); } }), 200); return; }
       else if ((b = e.target.closest('[data-root]'))) { tr.sample.root = Math.max(24, Math.min(96, tr.sample.root + +b.dataset.root)); seq.audition(tr, tr.sample.root); }
       else if ((b = e.target.closest('[data-seg="stoct"] [data-v]'))) tr.oct = +b.dataset.v;
@@ -385,6 +442,118 @@ function addTrackMenu(anchor) {
   holdMenu(anchor, ['drums', 'notes', 'chords', 'audio'].map((k) => ({ icon: I.plus, label: t('tr.' + k), run: () => { const tr = newTrack(k, p.tracks.length); p.tracks.push(tr); save(); render(); } })), t('tr.add'));
 }
 
+/* ---------- выделение и шторка клипа (переделка 28.10.2026) ---------- */
+
+const buzz2 = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* */ } };
+// Полоса над выделенными клипами (низ плейлиста, не перекрывает транспорт): править (один), разрезать по курсору,
+// повторить следом, по кругу/сплошной, выключить, копировать, убрать, снять выделение
+function selBar(ids) {
+  V.sel = ids || [];
+  const el = host && host.querySelector('#stsel'), p = proj();
+  if (!el || !p) return;
+  const cs = V.sel.map((id) => clipById(p, id)).filter(Boolean);
+  if (!cs.length) { el.hidden = true; el.innerHTML = ''; return; }
+  const { t, ui } = ctx, one = cs.length === 1, pieces = cs.filter((c) => trackOf(p, c).kind !== 'audio'), loopOn = cs.every((c) => c.loop);
+  el.hidden = false;
+  el.innerHTML = '<span class="stseln num">' + cs.length + '</span>' +
+    (one ? ui.icb('data-sb="edit"', I.pen, t('clip.edit'), 'sm plain') : '') +
+    ui.icb('data-sb="split"', I.cut, t('clip.split'), 'sm plain') +
+    ui.icb('data-sb="dup"', I.copy, t('clip.dup'), 'sm plain') +
+    ui.icb('data-sb="loop"', I.loop, t(loopOn ? 'clip.toOnce' : 'clip.toLoop'), 'sm plain' + (loopOn ? ' on' : '')) +
+    ui.icb('data-sb="mute"', I.mutec, t(cs.every((c) => c.mute) ? 'clip.unmute' : 'clip.mute'), 'sm plain') +
+    (one ? ui.icb('data-sb="copy"', I.paste, t('clip.copy'), 'sm plain') : '') +
+    ui.icb('data-sb="del"', I.del, t('clip.delete'), 'sm plain danger') +
+    ui.icb('data-sb="none"', '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('sel.clear'), 'sm plain');
+  void pieces;
+}
+function selAct(k) {
+  const p = proj(), { t } = ctx, cs = (V.sel || []).map((id) => clipById(p, id)).filter(Boolean);
+  if (!cs.length) return;
+  const done = (ids = V.sel) => { save(); seq.audioChanged(); if (pl) { pl.selection = ids; pl.draw(); } selBar(ids); };
+  if (k === 'edit') { clipEditSheet(cs[0]); return; }
+  if (k === 'none') { done([]); return; }
+  if (k === 'split') { // по курсору (линия на линейке); не попал ни в один — подсказка про двойное касание
+    const cur = pl ? pl.cursor : 0, made = cs.filter((c) => cur > c.at && cur < c.at + c.len).map((c) => splitClip(p, c, cur, 0)).filter(Boolean);
+    if (!made.length) { ctx.ui.toast(t('sel.splitHint')); return; }
+    done([...V.sel, ...made.map((c) => c.id)]); return;
+  }
+  if (k === 'dup') { const made = cs.slice().sort((a, b) => a.at - b.at).map((c) => dupClip(p, c)).filter(Boolean); if (made.length < cs.length) ctx.ui.toast(t('clip.max')); done(made.map((c) => c.id)); return; }
+  if (k === 'loop') { const on = !cs.every((c) => c.loop); cs.forEach((c) => { c.loop = on; fitPiece(p, trackOf(p, c), c); }); ctx.ui.toast(t(on ? 'clip.loopOn' : 'clip.onceOn')); done(); return; }
+  if (k === 'mute') { const m = !cs.every((c) => c.mute); cs.forEach((c) => { c.mute = m; }); done(); return; }
+  if (k === 'copy') { clipBuf = clipCopy(p, cs[0]); ctx.ui.toast(t('clip.copied')); return; }
+  if (k === 'del') { cs.forEach((c) => { removeClip(p, c); if (V.cid === c.id) V.cid = null; }); done([]); return; }
+}
+// Шторка клипа (удержание клипа): править; по кругу или сплошной; тональность и скорость (запись — новым файлом рядом,
+// исходник не трогается); громкость и затухания; ещё — копировать, повторить, квантовать, склеить, обработка, убрать
+function clipEditSheet(c) {
+  const { t, ui } = ctx, p = proj(), tr = trackOf(p, c), audio = tr.kind === 'audio', drums = tr.kind === 'drums';
+  let semi = audio ? 0 : c.semi || 0, rate = audio ? 1 : c.rate || 1;
+  const rates = [[0.5, '½'], [0.75, '¾'], [1, '1'], [1.25, '1¼'], [1.5, '1½'], [2, '2']];
+  const stepper = (k, v, lab) => '<span class="stepper"><button type="button" data-cs="' + k + '" data-d="-1" aria-label="' + ui.esc(lab + ' −') + '">−</button><b class="num stv">' + v + '</b><button type="button" data-cs="' + k + '" data-d="1" aria-label="' + ui.esc(lab + ' +') + '">+</button></span>';
+  const semiTxt = (v) => (v > 0 ? '+' : '') + v;
+  const takeIx = () => c.data.take || 0; // какой дубль звучит
+  const fileBpm = () => { const r = audio && ctx.files.get(c.data.fileId); return r && r.ana && r.ana.bpm > 20 ? r.ana.bpm : 0; }; // темп записи — из разбора (плеер медиатеки)
+  const body = () => ui.snav(trName(tr) + ' · ' + (Math.floor(c.at / p.num) + 1) + '.' + (Math.floor(c.at % p.num) + 1)) +
+    '<div class="group"><button class="cell act center b" data-ce="edit">' + ui.esc(t(audio ? 'tr.pickFile' : 'clip.edit')) + '</button></div>' +
+    (audio && c.data.takes ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + ui.esc(t('clip.take')) + '</span>' + stepper('take', (takeIx() + 1) + ' / ' + c.data.takes.length, t('clip.take')) + '</div></div><p class="ftr">' + ui.esc(t('clip.takesHint')) + '</p>' : '') +
+    '<div class="group" style="margin-top:12px"><div class="cellcol">' + ui.seg('celoop', [['1', t('clip.loop')], ['0', t(audio ? 'clip.audioOnce' : 'clip.once')]], c.loop ? '1' : '0', t('clip.mode')) + '</div></div>' +
+    '<p class="ftr">' + ui.esc(t(audio ? 'clip.audioLoopHint' : 'clip.loopHint')) + '</p>' +
+    (drums ? '' : '<div class="group"><div class="cell"><span class="grow">' + ui.esc(t('clip.semi')) + '</span>' + stepper('semi', semiTxt(semi), t('clip.semi')) + '</div>') +
+    (drums ? '<div class="group">' : '') +
+    '<div class="cellcol"><span>' + ui.esc(t('clip.rate')) + '</span>' + ui.seg('cerate', rates.map(([v, l]) => [String(v), l]), String(rate), t('clip.rate')) + '</div>' +
+    (audio ? '<button class="cell act center" data-ce="apply"' + (semi === 0 && rate === 1 ? ' disabled' : '') + '>' + ui.esc(t('clip.apply')) + '</button>' : '') +
+    (audio && fileBpm() && Math.abs(fileBpm() - p.bpm) >= 0.5 ? '<button class="cell act center" data-ce="fit">' + ui.esc(t('clip.fitTempo', { a: Math.round(fileBpm()), b: p.bpm })) + '</button>' : '') + '</div>' +
+    '<p class="ftr">' + ui.esc(t(audio ? 'clip.stretchAudioHint' : 'clip.stretchHint')) + '</p>' +
+    '<div class="group"><label class="cell"><span class="grow">' + ui.esc(t('clip.gain')) + '</span><b class="num" data-cgv style="min-width:4ch;text-align:right">' + Math.round((c.gain == null ? 1 : c.gain) * 100) + '%</b></label><div class="cell"><input type="range" class="strange" style="accent-color:' + tr.color + '" min="0" max="2" step="0.01" value="' + (c.gain == null ? 1 : c.gain) + '" data-cg aria-label="' + ui.esc(t('vol')) + '"></div>' +
+    (audio ? '<div class="cell"><span class="grow">' + ui.esc(t('clip.fadeIn')) + '</span>' + stepper('fadeIn', c.data.fadeIn || 0, t('clip.fadeIn')) + '</div><div class="cell"><span class="grow">' + ui.esc(t('clip.fadeOut')) + '</span>' + stepper('fadeOut', c.data.fadeOut || 0, t('clip.fadeOut')) + '</div>' : '') + '</div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell" data-ce="more"><span class="grow">' + ui.esc(t('clip.more')) + '</span>' + ui.icons.chev + '</button></div>';
+  ui.sheet(body, (el, sh) => {
+    el.addEventListener('input', (e) => { if (e.target.matches('[data-cg]')) { c.gain = +e.target.value; p.updatedAt = Date.now(); el.querySelector('[data-cgv]').textContent = Math.round(c.gain * 100) + '%'; } });
+    el.addEventListener('change', (e) => { if (e.target.matches('[data-cg]')) { save(); seq.audioChanged(); } });
+    el.addEventListener('click', async (e) => {
+      let b;
+      if ((b = e.target.closest('[data-ce="edit"]'))) { sh.close(); if (audio) filePicker(c); else openClip(c); }
+      else if ((b = e.target.closest('[data-ce="more"]'))) { sh.close(); setTimeout(() => clipMenu(host.querySelector('#stsel') || host, c), 220); }
+      else if ((b = e.target.closest('[data-seg="celoop"] [data-v]'))) { c.loop = b.dataset.v === '1'; fitPiece(p, tr, c); save(); seq.audioChanged(); sh.update(); if (pl) pl.draw(); selBar(V.sel); }
+      else if ((b = e.target.closest('[data-cs]'))) {
+        const k = b.dataset.cs, d = +b.dataset.d;
+        if (k === 'take') { setTake(c, takeIx() + d); save(); seq.audioChanged(); sh.update(); if (pl) pl.draw(); return; } // дубль — по кругу
+        if (k === 'semi') { semi = Math.max(-12, Math.min(12, semi + d)); if (!audio) { c.semi = semi; save(); } }
+        else { c.data[k] = Math.max(0, Math.min(c.len, (c.data[k] || 0) + d * 0.5)); save(); seq.audioChanged(); }
+        sh.update(); if (pl) pl.draw();
+      } else if ((b = e.target.closest('[data-seg="cerate"] [data-v]'))) { rate = +b.dataset.v; if (!audio) { c.rate = rate; fitPiece(p, tr, c); save(); } sh.update(); if (pl) pl.draw(); }
+      else if ((b = e.target.closest('[data-ce="apply"]'))) { b.disabled = true; await stretchClip(c, rate, semi); sh.close(); }
+      else if ((b = e.target.closest('[data-ce="fit"]'))) { b.disabled = true; await stretchClip(c, p.bpm / fileBpm(), semi); sh.close(); } // под темп проекта: скорость = темп проекта / темп записи
+    });
+  }, { onClose: () => { if (pl) pl.draw(); } });
+}
+// Разбор записи после растяжения: времена — короче в rate раз, темп — выше, тональность — на semi
+function anaScaled(a, rate, semi) {
+  const T = (x) => Math.round((x / rate) * 1000) / 1000;
+  return { ...a, bpm: a.bpm ? Math.round(a.bpm * rate * 10) / 10 : a.bpm, pc: a.pc != null ? (((a.pc + semi) % 12) + 12) % 12 : a.pc,
+    beats: Array.isArray(a.beats) ? a.beats.map(T) : a.beats, downbeats: Array.isArray(a.downbeats) ? a.downbeats.map(T) : a.downbeats,
+    chords: Array.isArray(a.chords) && !semi ? a.chords.map((ch) => ({ ...ch, t: T(ch.t), d: T(ch.d) })) : undefined }; // аккорды при сдвиге высоты — заново разбором
+}
+// Запись клипа → новая скорость и/или тональность: новый файл в медиатеке рядом с исходным, клип — на него;
+// длина клипа — под новую скорость (место в файле тоже)
+async function stretchClip(c, rate, semi) {
+  const { t } = ctx, p = proj(), r = ctx.files.get(c.data.fileId);
+  if (!r || !r.blob) return;
+  ctx.ui.toast(t('clip.processing'));
+  try {
+    const ac = seq.context || ctx.audio.tap().ctx, src = await ac.decodeAudioData(await r.blob.arrayBuffer());
+    const out = await stretchRender(src, { rate, semi });
+    const ch = [out.getChannelData(0), out.getChannelData(1)], wav = encodeWav(ch, out.sampleRate), pk = wavPeaks(ch, 600), mx = Math.max(1e-6, ...pk);
+    const tag = [rate !== 1 ? '×' + rate : '', semi ? (semi > 0 ? '+' : '') + semi : ''].filter(Boolean).join(' ');
+    const file = { id: 'sp' + Date.now().toString(36), name: r.name.replace(/\.[a-z0-9]+$/i, '') + ' — ' + tag + '.wav', size: wav.length, type: 'audio/wav', kind: 'audio', songs: r.songs || [], created: Date.now(),
+      blob: new Blob([wav], { type: 'audio/wav' }), dur: out.duration, peaks: Array.from(pk, (v) => Math.round((v / mx) * 100) / 100), from: r.id, ...(r.ana ? { ana: anaScaled(r.ana, rate, semi) } : {}) };
+    await ctx.files.add(file);
+    c.data.fileId = file.id; c.data.off = (c.data.off || 0) / rate; c.len = Math.max(1 / 960, c.len / rate);
+    save(); seq.audioChanged(); render();
+    ctx.ui.toast(t('clip.stretched'));
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(t('err.fail')); }
+}
+
 /* ---------- действия ---------- */
 
 // Новый клип на дорожке в такте: кусок в 1 такт на 1 такт; запись — выбор файла; дальше — редактор
@@ -395,6 +564,23 @@ function createClip(tr, beat) {
   if (tr.kind === 'audio') { V.cid = c.id; render(); filePicker(c); } else openClip(c);
 }
 function openClip(c) { V.cid = c.id; V.view = 'clip'; V.bar = 0; render(); }
+// Инструмент General MIDI дорожки: 16 семейств по 8 программ (названия — из банка SONiVOX); касание — звук сразу,
+// шторка остаётся открытой (подобрать на слух), «Готово» — обратно к дорожке
+function gmPicker(tr) {
+  const { t, ui } = ctx;
+  let fam = Math.floor((tr.gm || 0) / 8);
+  const body = () => ui.snav(t('inst.gm')) + (gmReady() ? '<div class="hscroll" style="padding:0 4px">' + FAMILIES.map((f, i) => '<button class="pill sm" data-gmf="' + i + '" aria-pressed="' + (i === fam) + '">' + ui.esc(t('gm.fam.' + f)) + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:8px">' + Array.from({ length: 8 }, (_, k) => fam * 8 + k).map((pr) => '<button class="cell" data-gmp="' + pr + '"><span class="grow">' + ui.esc(programName(pr)) + '<span class="bksub">' + (pr + 1) + '</span></span>' + (tr.gm === pr ? ui.icons.check : '') + '</button>').join('') + '</div>'
+    : '<p class="ftr">' + ui.esc(t('gm.loading')) + '</p>') + '<p class="ftr">' + ui.esc(t('gm.hint')) + '</p>';
+  ui.sheet(body, (el, sh) => {
+    if (!gmReady()) loadGM().then(() => sh.update()).catch(() => ui.toast(t('err.fail')));
+    el.addEventListener('click', (e) => {
+      let b;
+      if ((b = e.target.closest('[data-gmf]'))) { fam = +b.dataset.gmf; sh.update(); }
+      else if ((b = e.target.closest('[data-gmp]'))) { tr.inst = 'gm'; tr.gm = +b.dataset.gmp; save(); seq.audition(tr, 60 + 12 * (tr.oct || 0)); sh.update(); }
+    });
+  }, { onClose: () => { render(); setTimeout(() => trackSheet(tr), 200); } });
+}
 // Запись для сэмплера дорожки (или ряда ударных — opts.set): любая запись медиатеки; после выбора — снова шторка дорожки
 function samplePicker(tr, opts = null) {
   const { t, ui } = ctx, L = ctx.files.list('audio').filter((r) => !r.stem).sort((a, b) => (b.created || 0) - (a.created || 0)); // дорожки разделения — не отдельные записи
@@ -405,6 +591,27 @@ function samplePicker(tr, opts = null) {
     (L.length ? '' : '<p class="ftr">' + ui.esc(t('tr.noAudio')) + '</p>') + '<p class="ftr">' + ui.esc(t(opts ? 'tr.kitHint' : 'tr.sampleHint')) + '</p>',
   (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-file]'); if (!b) return; const id = b.dataset.file || null; if (opts) opts.set(id); else { tr.sample.fileId = id; seq.audition(tr, tr.sample.root); } picked = true; save(); sh.close(); }),
   { onClose: () => { render(); if (picked) setTimeout(() => trackSheet(tr), 200); } });
+}
+// Партия из записи игры: MIDI из медиатеки (пианино, глайдер, терменвокс, MIDI-клавиатура; записи — «●» в инструменте)
+// → клип нот с доли beat; звук — дорожки. Темп — проекта: сыгранное ложится как играли, выровнять — «Квантовать»
+function takePicker(tr, beat) {
+  const { t, ui } = ctx, p = proj(), L = ctx.files.list('midi').sort((a, b) => (b.created || 0) - (a.created || 0));
+  const sub = (r) => [ctx.midi && ctx.midi.tool ? (ctx.midi.tool(r.tool) || {}).name : '', r.dur ? Math.round(r.dur) + ' s' : ''].filter(Boolean).join(' · ');
+  ui.sheet(() => ui.snav(t('take.from')) + (L.length ? '<div class="group">' + L.map((r) => '<button class="cell" data-take="' + r.id + '"><span class="grow">' + ui.esc(r.name.replace(/\.midi?$/i, '')) + '<span class="bksub">' + ui.esc(sub(r)) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>'
+    : '<p class="ftr">' + ui.esc(t('take.none')) + '</p>') + '<p class="ftr">' + ui.esc(t('take.hint')) + '</p>',
+  (el, sh) => el.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-take]'); if (!b) return;
+    const r = ctx.files.get(b.dataset.take);
+    let ev = r && r.take && r.take.ev;
+    try { if (!ev && r && r.blob) ev = readMidi(new Uint8Array(await r.blob.arrayBuffer())).ev; } catch { ev = null; }
+    const d = ev && notesFromTake(p, ev);
+    if (!d) { ui.toast(t('take.empty')); return; }
+    const c = addClip(p, tr, beat, d.bars * p.num, normalizeData(p, tr, d));
+    if (!c) { ui.toast(t('clip.max')); return; }
+    sh.close(); save(); seq.audioChanged(); render();
+    if (pl) { pl.selection = [c.id]; selBar([c.id]); }
+    ui.toast(t('take.done', { n: d.notes.length }));
+  }));
 }
 // Запись для клипа: аудио из медиатеки (сведение лупера — первым); длина клипа — по записи
 function filePicker(c) {
@@ -441,121 +648,9 @@ async function processClip(c, what) {
 // Экспорт песни целиком: для DAW, .mid в медиатеку, MusicXML в «Табы»
 function exportMenu(anchor) {
   const { t } = ctx;
-  holdMenu(anchor, [{ icon: I.wave, label: t('mixdown'), run: () => startRec({ kind: 'mix' }) }, { icon: I.wave, label: t('stems'), run: startStems }, { icon: I.share, label: t('exportDaw'), run: exportDaw }, { icon: I.share, label: t('exportMidi'), run: exportMidi }, { icon: I.share, label: t('exportXml'), run: exportXml }], t('export'));
+  holdMenu(anchor, [{ icon: I.wave, label: t('mixdown'), run: () => rec.mixdown() }, { icon: I.wave, label: t('stems'), run: rec.stems }, { icon: I.share, label: t('exportDaw'), run: exportDaw }, { icon: I.share, label: t('exportMidi'), run: exportMidi }, { icon: I.share, label: t('exportXml'), run: exportXml }], t('export'));
 }
 
-/* ---------- запись в дорожку и сведение ---------- */
-
-// Стемы: каждая дорожка с клипами — отдельный WAV (соло по очереди, проход за проходом; ■ — прервать)
-function startStems() {
-  const { t } = ctx, p = proj();
-  if (R || !p) return;
-  const list = p.tracks.filter((tr) => !tr.mute && p.clips.some((c) => c.tr === tr.id && !c.mute));
-  if (!list.length) { ctx.ui.toast(t('err.empty')); return; }
-  const solo = p.tracks.map((tr) => [tr.id, tr.solo]);
-  const next = (i) => {
-    if (i >= list.length) { solo.forEach(([id, v]) => { const tr = p.tracks.find((x) => x.id === id); if (tr) tr.solo = v; }); p.updatedAt = Date.now(); render(); ctx.ui.toast(t('stemsDone', { n: list.length })); return; }
-    p.tracks.forEach((tr) => { tr.solo = tr === list[i]; });
-    p.updatedAt = Date.now();
-    ctx.ui.toast(t('stemsStep', { i: i + 1, n: list.length, name: trName(list[i]) }));
-    startRec({ kind: 'mix', stem: { name: trName(list[i]), next: () => next(i + 1), restore: () => { solo.forEach(([id, v]) => { const tr = p.tracks.find((x) => x.id === id); if (tr) tr.solo = v; }); p.updatedAt = Date.now(); } } });
-  };
-  next(0);
-}
-// Лист записи: куда (дорожка записи или новая), откуда (вход или звук приложения), мониторинг; отсчёт и поправка — в настройках
-function recordSheet() {
-  const { t, ui } = ctx, p = proj(), auds = p.tracks.filter((tr) => tr.kind === 'audio'), o = st().rec || (st().rec = { src: 'in', mon: false });
-  let trId = auds.length ? auds[auds.length - 1].id : 'new', inputs = null;
-  audioEngine().devices().then((d) => { inputs = d.inputs || []; if (!inputs.some((x) => x.id === o.in)) o.in = null; const sh = document.querySelector('.sheet'); if (sh && sh.__update) sh.__update(); }).catch(() => { inputs = []; });
-  ui.sheet(() => ui.snav(t('rec.title')) +
-    '<div class="hdr">' + ui.esc(t('rec.to')) + '</div><div class="group">' + auds.map((tr) => '<button class="cell" data-rt="' + tr.id + '"><span class="grow">' + ui.esc(trName(tr)) + '</span>' + (trId === tr.id ? ui.icons.check : '') + '</button>').join('') +
-    '<button class="cell" data-rt="new"><span class="grow">' + ui.esc(t('rec.newTrack')) + '</span>' + (trId === 'new' ? ui.icons.check : '') + '</button></div>' +
-    '<div class="hdr">' + ui.esc(t('rec.src')) + '</div><div class="group"><div class="cellcol">' + ui.seg('rsrc', [['in', t('rec.in')], ['app', t('rec.app')]], o.src, t('rec.src')) + '</div>' +
-    (o.src === 'in' ? '<label class="cell"><span class="grow">' + ui.esc(t('rec.mon')) + '<span class="bksub">' + ui.esc(t('rec.monHint')) + '</span></span>' + ui.sw('rmon', o.mon, t('rec.mon')) + '</label>' : '') + '</div>' +
-    (o.src === 'in' && inputs && inputs.length > 1 ? '<div class="hdr">' + ui.esc(t('rec.input')) + '</div><div class="group">' + inputs.map((d) => '<button class="cell" data-rin="' + ui.esc(d.id) + '"><span class="grow">' + ui.esc(d.name) + '</span>' + ((o.in || inputs[0].id) === d.id ? ui.icons.check : '') + '</button>').join('') + '</div>' : '') +
-    '<p class="ftr">' + ui.esc(t('rec.hint', { n: countIn() })) + '</p>' +
-    '<div class="group" style="margin-top:14px"><button class="cell act center b" data-go>' + ui.esc(t('rec.go')) + '</button></div>',
-  (el, sh) => {
-    el.__update = () => sh.update();
-    el.addEventListener('click', (e) => {
-      let b;
-      if ((b = e.target.closest('[data-rt]'))) { trId = b.dataset.rt; sh.update(); }
-      else if ((b = e.target.closest('[data-rin]'))) { o.in = b.dataset.rin; ctx.store.save(); sh.update(); }
-      else if ((b = e.target.closest('[data-seg="rsrc"] [data-v]'))) { o.src = b.dataset.v; ctx.store.save(); sh.update(); }
-      else if (e.target.closest('[data-go]')) { sh.close(); setTimeout(() => startRec({ kind: 'track', trId, src: o.src, mon: o.mon }), 150); }
-    });
-    el.addEventListener('change', (e) => { if (e.target.matches('[data-sw="rmon"]')) { o.mon = e.target.checked; ctx.store.save(); } });
-  });
-}
-// Начать: вход или отвод приложения → захват по часам контекста; проигрывание с курсора (петля — ровно её отрезок,
-// один проход); сведение — вся песня одним проходом, без отсчёта
-async function startRec({ kind, trId = null, src = 'app', mon = false, stem = null }) {
-  const { t } = ctx, p = proj();
-  if (R || !p) return;
-  if (!ctx.audio.unlock()) { ctx.ui.toast(t('err.sound')); return; }
-  if (kind === 'mix' && isEmptyProject(p)) { ctx.ui.toast(t('err.empty')); return; }
-  const tap = ctx.audio.tap();
-  if (!tap) { ctx.ui.toast(t('err.sound')); return; }
-  const c = tap.ctx, rec = { kind, p, src, cap: null, input: null, off: null, tr: null, lat: 0, stem };
-  try {
-    if (kind === 'track' && src === 'in') {
-      rec.input = await openInput({ in: (st().rec && st().rec.in) || null });
-      const node = c.createMediaStreamSource(rec.input.stream);
-      rec.cap = createCapture(c, node, { channels: rec.input.channels, onFull: () => stopRec() });
-      if (mon) { const g = c.createGain(); g.gain.value = 0.9; node.connect(g).connect(ctx.audio.mixer.bus('media')); rec.monNode = g; }
-      rec.lat = recLat();
-    } else {
-      const node = c.createGain();
-      rec.off = tap.into(node);
-      rec.cap = createCapture(c, node, { channels: 2, onFull: () => stopRec() });
-    }
-  } catch (e) { ctx.ui.toast(t(e && e.reason === 'denied' ? 'rec.denied' : 'rec.noMic')); cleanupRec(rec); return; }
-  if (kind === 'track') {
-    rec.tr = trId !== 'new' && p.tracks.find((x) => x.id === trId) || null;
-    if (!rec.tr) { rec.tr = newTrack('audio', p.tracks.length); p.tracks.push(rec.tr); save(); }
-  }
-  const spb = secPerBeat(p), loop = loopOf(p), once = kind === 'mix' || !!p.region, from = kind === 'mix' ? 0 : (p.region ? loop.a : (pl ? pl.cursor : 0));
-  V.view = 'song'; V.cid = null;
-  R = rec;
-  seq.focus = null;
-  seq.start(from, { countIn: kind === 'mix' ? 0 : countIn(), once, whole: kind === 'mix', onEnd: () => stopRec() });
-  rec.from = from;
-  rec.cap.start(seq.t0 + from * spb);
-  render();
-}
-function cleanupRec(rec) {
-  if (rec.cap) rec.cap.dispose();
-  if (rec.off) rec.off();
-  if (rec.monNode) { try { rec.monNode.disconnect(); } catch { /* */ } }
-  if (rec.input) rec.input.close();
-}
-// Стоп: буфер → WAV в медиатеку (с волной); запись в дорожку — клип с доли старта (поправка задержки — off клипа)
-async function stopRec() {
-  const rec = R; if (!rec) return;
-  R = null;
-  const data = rec.cap.stop();
-  seq.stop();
-  cleanupRec(rec);
-  render();
-  const { t } = ctx, p = rec.p;
-  if (rec.stem && rec.stopped) { rec.stem.restore(); render(); return; } // стемы прерваны (■)
-  if (!data || data.ch[0].length < data.sr * 0.3) { ctx.ui.toast(t('rec.short')); if (rec.stem) rec.stem.next(); return; }
-  let ch = data.ch;
-  if (rec.kind === 'track' && ch.length === 2) { let same = true; for (let i = 0; i < ch[0].length; i += 997) if (ch[0][i] !== ch[1][i]) { same = false; break; } if (same) ch = [ch[0]]; } // моно-вход — одна дорожка
-  const dur = ch[0].length / data.sr, wav = encodeWav(ch, data.sr), pk = wavPeaks(ch, 600), mx = Math.max(1e-6, ...pk);
-  const d = new Date(), pad = (n) => String(n).padStart(2, '0'), name = (p.name || t('untitled')) + (rec.stem ? ' — ' + rec.stem.name : rec.kind === 'mix' ? ' — ' + t('mixdownName') : ' — ' + t('rec.takeName')) + ' ' + pad(d.getHours()) + '.' + pad(d.getMinutes()) + '.wav';
-  const file = { id: 'sr' + Date.now().toString(36), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: p.songId ? [p.songId] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur, peaks: Array.from(pk, (v) => Math.round((v / mx) * 100) / 100) };
-  try { await ctx.files.add(file); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('err.fail')); if (rec.stem) rec.stem.restore(); return; }
-  if (rec.stem) { rec.stem.next(); return; }
-  if (rec.kind === 'mix') { ctx.ui.toast(t('mixdownDone')); holdMenu(host.querySelector('.stinfo') || host, [{ icon: I.share, label: t('share'), run: () => ctx.midi.share(file) }], name); return; }
-  // клип: от доли старта, длиной по записи (целыми долями, петля — не длиннее её); первые lat секунд файла — пропуск
-  const spb = secPerBeat(p), beats = Math.max(1, Math.round((dur - rec.lat) / spb)), loop = loopOf(p);
-  const len = p.region && rec.from === loop.a ? Math.min(beats, loop.b - loop.a) : beats;
-  const cl = addClip(p, rec.tr, rec.from, len, { fileId: file.id, off: rec.lat });
-  if (!cl) { ctx.ui.toast(t('clip.max')); return; }
-  save(); render();
-  ctx.ui.toast(t('rec.done'));
-}
 async function exportDaw() {
   const { t } = ctx, p = proj();
   if (isEmptyProject(p)) { ctx.ui.toast(t('err.empty')); return; }
@@ -588,26 +683,37 @@ function act(x, el) {
   const p = proj();
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
-    case 'back': if (R) stopRec(); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
+    case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
     case 'toSong': V.view = 'song'; V.auto = null; render(); break;
     case 'play': { // пауза: стоп запоминает место, следующий старт — оттуда (в начало — кнопкой перемотки)
-      if (R) { R.stopped = true; stopRec(); break; }
+      if (rec.busy) { rec.stop(true); break; }
       if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); return; }
       if (seq.playing) { const b = seq.pos(); if (b >= 0) { if (V.view === 'song') { V.cursor = b; if (pl) pl.cursor = b; } else V.clipPos = b; } seq.stop(); }
       else seq.start(V.view === 'song' ? (pl ? pl.cursor : V.cursor || 0) : V.clipPos || 0);
       render(); break;
     }
-    case 'rewind': if (R) break; V.clipPos = 0; V.cursor = 0; if (seq.playing) seq.start(0); else if (pl) { pl.cursor = 0; } tickPos(); break;
+    case 'rewind': if (rec.busy) break; V.clipPos = 0; V.cursor = 0; if (seq.playing) seq.start(0); else if (pl) { pl.cursor = 0; } tickPos(); break;
     case 'click': seq.click = !seq.click; render(); break;
     case 'undo': undoStep(); break;
     case 'redo': undoStep(true); break;
-    case 'rec': if (R) { R.stopped = true; stopRec(); } else recordSheet(); break;
-    case 'live': V.live = !V.live; if (V.live && !seq.playing) { if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); V.live = false; return; } seq.start(0, { countIn: countIn() }); } render(); break;
+    case 'rec': if (rec.busy) rec.stop(true); else rec.sheet(); break;
+    case 'live': {
+      V.live = !V.live;
+      const chords = ctrack() && ctrack().kind === 'chords';
+      if (V.live && (chords || !seq.playing)) { // аккорды: всегда с начала куска, клик и отсчёт такта (раз-два-три-четыре)
+        if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); V.live = false; return; }
+        if (chords) { V.clickWas = seq.click; seq.click = true; }
+        seq.start(0, { countIn: chords ? Math.max(1, countIn()) : countIn() });
+      }
+      if (!V.live && V.clickWas != null) { seq.click = V.clickWas; V.clickWas = null; }
+      render(); break;
+    }
     case 'clipSheet': { const c = clip(); if (c) clipSheet(c); break; }
     case 'settings': settingsSheet(); break;
     case 'mixer': V.view = V.view === 'mix' ? 'song' : 'mix'; V.auto = null; render(); break;
     case 'help': if (ctx.help) ctx.help(); break;
     case 'trackMenu': trackMenu(el, ctrack()); break;
+    case 'tool': toolMenu(el); break;
     case 'pickFile': { const c = clip(); if (c) filePicker(c); break; }
   }
 }
@@ -615,6 +721,7 @@ function onClick(e) {
   const p = proj(), g = (s) => e.target.closest(s);
   let b;
   if ((b = g('[data-x]'))) { act(b.dataset.x, b); return; }
+  if ((b = g('[data-sb]'))) { selAct(b.dataset.sb); return; }
   if ((b = g('[data-open]'))) { V.pid = b.dataset.open; V.view = 'song'; V.cid = null; V.bar = 0; render(); return; }
   if (!p) return;
   if ((b = g('[data-rkbar]'))) { V.bar = +b.dataset.rkbar; stepsBar(host, V.bar); return; }
@@ -626,6 +733,12 @@ function onClick(e) {
     V.bar = Math.min(V.bar, c.data.bars - 1); save(); render(); return;
   }
   if ((b = g('[data-seg="stgrid"] [data-v]'))) { st().grid = +b.dataset.v; ctx.store.save(); render(); return; }
+  if ((b = g('[data-seg="cpgrid"] [data-v]'))) { st().cpGrid = +b.dataset.v; ctx.store.save(); render(); return; }
+  if ((b = g('[data-seg="cpbars"] [data-v]'))) { // длина куска аккордов: 4–32 такта, клип — той же длины
+    const c = clip(); if (!c) return;
+    const n = +b.dataset.v; c.data.bars = n; c.data = normalizeData(p, ctrack(), c.data); c.len = n * p.num;
+    save(); render(); return;
+  }
   const c = clip(), tr = ctrack();
   if (c && tr && tr.kind === 'chords' && chordsAct(ctx, p, tr, c.data, e, () => { save(); render(); })) return;
 }
@@ -654,13 +767,15 @@ export default {
   midiStop() { if (offLive && offLive.midi) offLive.midi({ k: 'off', id: '*' }); },
   unmount() {
     cancelAnimationFrame(raf);
-    if (R) stopRec();
+    if (rec.busy) rec.stop(true);
     if (seq) seq.stop();
     if (roll) { roll.destroy(); roll = null; }
     if (pl) { pl.destroy(); pl = null; }
     if (offSteps) { offSteps(); offSteps = null; }
     if (offLive) { offLive(); offLive = null; }
     if (offMix) { offMix(); offMix = null; }
+    if (offPad) { offPad(); offPad = null; }
+    toolDrop();
     offs.splice(0).forEach((f) => f());
     document.querySelectorAll('.stanchor').forEach((a) => a.remove());
     host = null;

@@ -1,34 +1,42 @@
 // Плейлист на холсте — по форме FL Studio Mobile: сверху линейка тактов, слева колонка дорожек (цветной значок
 // по роду: ударные, клавиши, аккорды, запись), дальше сетка таймлайна и клипы — цветные блоки с рисунком
-// содержимого (удары, ноты, названия аккордов, волна записи). Кусок клипа повторяется — границы повторов видны.
-// Жесты: касание клипа — редактор; вести клип — перенос (и на другую дорожку того же рода); вести за правый край —
-// длина (кусок повторяется дальше); за левый край — обрезка начала; удержать клип — меню; вести по пустому —
-// прокрутка; двойное касание пустого места — новый клип на этой дорожке в этом такте; удержать пустое — тоже;
-// касание линейки — играть отсюда; вести по линейке — петля (отрезок по кругу), вести край петли — изменить,
-// удержать линейку — меню (маркер, снять петлю); щипок — масштаб. Касание значка дорожки — её меню, «+» внизу — новая дорожка.
+// содержимого (удары, ноты, названия аккордов, волна записи). Клип по кругу — границы повторов видны.
+// Жесты (переделка 28.10.2026, по просьбе автора): касание клипа — выделить (выделено несколько — касание добавляет
+// или убирает); удержать клип — его шторка (править, тональность, скорость, по кругу); двойное касание клипа —
+// разрезать в этом месте; вести клип — перенос (выделенные — все вместе; на другую дорожку того же рода); вести за
+// правый край — длина (запись — открывается дальше записанное, по кругу — повтор, сплошной — пустое место), за левый —
+// начало (так же назад); касание пустого места — «+» в этом такте, касание «+» — новая партия и сразу её редактор;
+// удержать пустое и вести — рамка выделения (без движения — меню: вставить); вести по пустому — прокрутка;
+// щипок — масштаб (до миллисекунд; сетка мельчает с приближением, на самом крупном — без сетки);
+// касание линейки — играть отсюда; вести по линейке — петля, вести край петли — изменить, удержать линейку — меню
+// (маркер, снять петлю). Касание значка дорожки — её меню, «+» внизу — новая дорожка.
 // Без зависимости от модуля: получает проект и обратные вызовы.
-import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, DRUMS } from '../../music/project.js';
+import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, piecePasses, DRUMS, TQ } from '../../music/project.js';
 import { pinch } from '../../ui/gestures.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
-const HEAD = 56, RULER = 30, ROW = 64, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8;
+const HEAD = 56, RULER = 30, ROW = 64, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8, ZMIN = 6, ZMAX = 2400;
 
 // Автоматизация (get().auto = { tr, kind }): поверх ряда дорожки — огибающая; касание — точка, вести — сдвинуть,
 // удержать — убрать; значок этой дорожки — выйти.
 // host — элемент под холст; get() → { p, names(tr) → имя, fileName(id), peaks(id) → Float32Array|null, auto };
-// on: { open(clip), menu(clip, x, y), track(tr, x, y), addTrack(x, y), create(tr, beat), empty(tr, beat, x, y) — удержание пустого
-//       места (новый клип, вставить), seek(beat), ruler(beat, x, y) — удержание линейки, region() — петля изменена, change(),
+// on: { open(clip) — удержание клипа, split(clip, beat) — двойное касание, sel(ids) — выделение изменилось, track(tr, x, y),
+//       addTrack(x, y), create(tr, beat) — касание «+», empty(tr, beat, x, y) — удержание пустого без движения (вставить),
+//       seek(beat), ruler(beat, x, y) — удержание линейки, region() — петля изменена, change(),
 //       autoChange() — точки автоматизации изменились, autoExit() — выйти из автоматизации }
 export function createPlaylist(host, get, on) {
   const cv = document.createElement('canvas'), g = cv.getContext('2d');
   cv.className = 'plcv';
   host.appendChild(cv);
-  const V = { pxb: 0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sel: null, cursor: 0 };
-  let W = 0, H = 0, raf = 0, drag = null, holdT = 0, css = null, lastTap = { t: 0, tr: null, beat: -1 };
+  // sels — выделенные клипы; plus — «+» на пустом месте { tr, bar }; band — рамка выделения (экранные точки)
+  const V = { pxb: 0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sels: new Set(), plus: null, band: null, cursor: 0 };
+  let W = 0, H = 0, raf = 0, drag = null, holdT = 0, css = null, lastTap = { t: 0, id: null };
+  const setSel = (ids) => { V.sels = new Set(ids); on.sel && on.sel([...V.sels]); };
   const colors = () => css || (css = (() => { const s = getComputedStyle(host); const v = (k) => s.getPropertyValue(k).trim(); return { ink: v('--ink'), l2: v('--l2'), sep: v('--sep'), fill: v('--fill'), fill2: v('--fill2') || v('--fill'), cell: v('--cell'), tint: v('--tint'), bg: v('--bg'), red: v('--red') || '#D2463F' }; })());
   const P = () => get().p;
   const bars = () => Math.max(MIN_BARS, songBars(P()) + 2);
-  const snap = () => (V.pxb >= 22 ? 1 : P().num); // крупно — по доле, мелко — по такту
+  // сетка по масштабу: мелко — такт, крупнее — доля, ¼, 1/16; совсем крупно — без сетки (до 1/960 доли — миллисекунды)
+  const snap = () => (V.pxb < 22 ? P().num : V.pxb < 70 ? 1 : V.pxb < 200 ? 0.25 : V.pxb < 700 ? 1 / 16 : 0);
   const xOf = (b) => HEAD + b * V.pxb - V.x, bOf = (x) => (x - HEAD + V.x) / V.pxb;
   const yOf = (i) => RULER + i * ROW - V.y, rowOf = (y) => Math.floor((y - RULER + V.y) / ROW);
   const clampView = () => {
@@ -94,12 +102,13 @@ export function createPlaylist(host, get, on) {
       const ghost = drag && drag.c === c && drag.moved;
       g.globalAlpha = dim ? 0.35 : ghost ? 0.75 : 1;
       g.fillStyle = tr.color; rr(x, y, Math.max(4, w), h, 7); g.fill();
-      if (V.sel === c.id) { g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke(); }
+      if (V.sels.has(c.id)) { g.lineWidth = 3; g.strokeStyle = C.ink; g.stroke(); g.lineWidth = 1.2; g.strokeStyle = '#fff'; rr(x + 2.5, y + 2.5, Math.max(2, w - 5), h - 5, 5); g.stroke(); }
       g.save(); rr(x + 1, y + 1, Math.max(2, w - 2), h - 2, 6); g.clip();
-      // повторы куска — тонкие линии
-      const per = dataBeats(p, c.data);
-      if (per && per < c.len) { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1; for (let o = per; o < c.len - 1e-6; o += per) { const xx = xOf(c.at + o); g.beginPath(); g.moveTo(xx, y); g.lineTo(xx, y + h); g.stroke(); } }
-      preview(c, tr, x, y, w, h, per, fileName, peaks);
+      // проходы куска: по кругу — тонкие линии на границах повторов; сплошной — без линий
+      const pp = tr.kind === 'audio' ? null : piecePasses(p, c);
+      if (pp && c.loop) { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1; pp.offs.forEach((o) => { if (o <= 1e-6 || o >= c.len - 1e-6) return; const xx = xOf(c.at + o); g.beginPath(); g.moveTo(xx, y); g.lineTo(xx, y + h); g.stroke(); }); }
+      preview(c, tr, x, y, w, h, pp, fileName, peaks);
+      if (c.loop && tr.kind !== 'drums' && w > 30) { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '700 11px system-ui'; g.fillText('⟳', x + w - 14, y + h - 6); }
       if (c.mute) { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; for (let xx = x - h; xx < x + w; xx += 10) { g.beginPath(); g.moveTo(xx, y + h); g.lineTo(xx + h, y); g.stroke(); } }
       // подпись
       g.fillStyle = '#fff'; g.font = '600 12px system-ui'; g.textBaseline = 'top';
@@ -123,6 +132,25 @@ export function createPlaylist(host, get, on) {
       g.lineTo(W, yv(autoAt(pts, b1, def))); g.stroke();
       pts.forEach((q) => { const xx = xOf(q.t); if (xx < HEAD - 8 || xx > W + 8) return; g.fillStyle = C.bg; g.beginPath(); g.arc(xx, yv(q.v), 7, 0, Math.PI * 2); g.fill(); g.fillStyle = C.tint; g.beginPath(); g.arc(xx, yv(q.v), 5, 0, Math.PI * 2); g.fill(); });
       g.restore();
+    }
+    // «+» на пустом месте — касание создаёт партию; рамка выделения
+    if (V.plus) {
+      const i = p.tracks.findIndex((t) => t.id === V.plus.tr);
+      if (i >= 0) {
+        const x = xOf(V.plus.bar), y = yOf(i) + GAP, w = n * V.pxb, h = ROW - GAP * 2, tr = p.tracks[i];
+        g.save(); g.beginPath(); g.rect(HEAD, RULER, W - HEAD, H - RULER); g.clip();
+        g.globalAlpha = 0.18; g.fillStyle = tr.color; rr(x, y, w, h, 7); g.fill(); g.globalAlpha = 1;
+        g.strokeStyle = tr.color; g.lineWidth = 2; g.setLineDash([5, 4]); rr(x, y, w, h, 7); g.stroke(); g.setLineDash([]);
+        const cx = x + Math.min(w, 120) / 2, cy = y + h / 2;
+        g.fillStyle = tr.color; g.beginPath(); g.arc(cx, cy, 15, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(cx - 7, cy); g.lineTo(cx + 7, cy); g.moveTo(cx, cy - 7); g.lineTo(cx, cy + 7); g.stroke();
+        g.restore();
+      }
+    }
+    if (V.band) {
+      const { x0, y0, x1, y1 } = V.band;
+      g.fillStyle = C.tint; g.globalAlpha = 0.12; g.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); g.globalAlpha = 1;
+      g.strokeStyle = C.tint; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); g.setLineDash([]);
     }
     // ход и курсор
     const px = xOf(V.pos >= 0 ? V.pos : V.cursor);
@@ -173,25 +201,33 @@ export function createPlaylist(host, get, on) {
     if (tr.kind === 'audio') return String(fileName(c.data.fileId) || '').slice(0, max);
     return names(tr).slice(0, max);
   }
-  // Рисунок содержимого внутри клипа
-  function preview(c, tr, x, y, w, h, per, fileName, peaks) {
+  // Рисунок содержимого внутри клипа: проходы куска (pp: по кругу или один, со скоростью); запись — один раз (по кругу — повтор)
+  function preview(c, tr, x, y, w, h, pp, fileName, peaks) {
     const top = y + 20, ph = h - 24;
     if (ph < 8) return;
     g.fillStyle = 'rgba(255,255,255,.85)';
+    const each = (list, fn) => pp.offs.forEach((o) => list.forEach((ev) => { const t = o + ev.t * pp.k, d = (ev.d || 0.25) * pp.k; if (t + d <= 0 || t >= c.len) return; fn(ev, Math.max(0, t), Math.min(c.len, t + d) - Math.max(0, t)); }));
     if (tr.kind === 'drums') {
-      const lanes = DRUMS.length, lh = ph / lanes;
-      for (let o = 0; o < c.len - 1e-6; o += per) DRUMS.forEach((lane, li) => (c.data.steps[lane] || []).forEach((i) => { const b = o + i * 0.25; if (b >= c.len) return; const xx = xOf(c.at + b); g.fillRect(xx, top + li * lh + 1, Math.max(2, Math.min(V.pxb * 0.25 - 1, 6)), Math.max(2, lh - 2)); }));
+      const lanes = DRUMS.length, lh = ph / lanes, evs = [];
+      DRUMS.forEach((lane, li) => (c.data.steps[lane] || []).forEach((i) => evs.push({ t: i * 0.25, d: 0.25, li })));
+      each(evs, (ev, t) => { g.fillRect(xOf(c.at + t), top + ev.li * lh + 1, Math.max(2, Math.min(V.pxb * 0.25 * pp.k - 1, 6)), Math.max(2, lh - 2)); });
     } else if (tr.kind === 'notes') {
       const ns = c.data.notes; if (!ns.length) return;
       const lo = Math.min(...ns.map((n) => n.m)), hi = Math.max(...ns.map((n) => n.m)), span = Math.max(12, hi - lo + 1);
-      for (let o = 0; o < c.len - 1e-6; o += per) ns.forEach((nt) => { if (o + nt.t >= c.len) return; const xx = xOf(c.at + o + nt.t), ww = Math.min(nt.d, c.len - o - nt.t) * V.pxb; g.fillRect(xx, top + (1 - (nt.m - lo + 0.5) / span) * ph, Math.max(2, ww - 1), Math.max(2, ph / span)); });
+      each(ns, (nt, t, d) => { g.fillRect(xOf(c.at + t), top + (1 - (nt.m - lo + 0.5) / span) * ph, Math.max(2, d * V.pxb - 1), Math.max(2, ph / span)); });
     } else if (tr.kind === 'chords') {
-      for (let o = 0; o < c.len - 1e-6; o += per) c.data.chords.forEach((ch) => { if (o + ch.t >= c.len) return; const xx = xOf(c.at + o + ch.t), ww = Math.min(ch.d, c.len - o - ch.t) * V.pxb; g.globalAlpha *= 0.35; g.fillRect(xx + 1, top, Math.max(2, ww - 2), ph); g.globalAlpha /= 0.35; });
+      each(c.data.chords, (ch, t, d) => { g.globalAlpha *= 0.35; g.fillRect(xOf(c.at + t) + 1, top, Math.max(2, d * V.pxb - 2), ph); g.globalAlpha /= 0.35; });
     } else {
       const pk = peaks(c.data.fileId), mid = top + ph / 2;
       if (!pk) { g.fillRect(x + 4, mid - 1, Math.max(2, w - 8), 2); return; }
-      const spb = 60 / P().bpm, n = pk.length, x0 = Math.max(HEAD, x), x1 = Math.min(W, x + w);
-      for (let xx = x0; xx < x1; xx += 2) { const sec = (c.data.off || 0) + bOf(xx) * spb - c.at * spb, k = Math.floor((sec / Math.max(0.01, pk.dur || 1)) * n) % n; const v = pk[(k + n) % n] || 0; g.fillRect(xx, mid - v * ph / 2, 1.5, Math.max(1, v * ph)); }
+      const spb = 60 / P().bpm, n = pk.length, dur = Math.max(0.01, pk.dur || 1), off = c.data.off || 0, x0 = Math.max(HEAD, x), x1 = Math.min(W, x + w);
+      for (let xx = x0; xx < x1; xx += 2) {
+        let sec = off + (bOf(xx) - c.at) * spb;
+        if (c.loop) sec = off + ((sec - off) % Math.max(0.01, dur - off));
+        else if (sec >= dur) break; // дальше записи — пусто
+        const v = pk[Math.max(0, Math.min(n - 1, Math.floor((sec / dur) * n)))] || 0;
+        g.fillRect(xx, mid - v * ph / 2, 1.5, Math.max(1, v * ph));
+      }
     }
   }
 
@@ -232,42 +268,56 @@ export function createPlaylist(host, get, on) {
       draw();
       return;
     }
-    const h = hit(q), now = performance.now();
-    drag = { id: e.pointerId, x0: q.x, y0: q.y, vx: V.x, vy: V.y, moved: false, h };
+    const h = hit(q);
+    drag = { id: e.pointerId, x0: q.x, y0: q.y, vx: V.x, vy: V.y, moved: false, h, cx: e.clientX, cy: e.clientY };
     if (h && h.c) {
-      V.sel = h.c.id; drag.c = h.c; drag.at0 = h.c.at; drag.len0 = h.c.len; drag.tr0 = h.c.tr;
-      holdT = setTimeout(() => { if (drag && !drag.moved) { buzz(); const c = drag.c; drag = null; on.menu(c, e.clientX, e.clientY); } }, HOLD_MS);
+      drag.c = h.c;
+      // вести выделенный клип — едут все выделенные (каждый со своей дорожкой и местом)
+      const group = V.sels.has(h.c.id) && V.sels.size > 1 ? P().clips.filter((x) => V.sels.has(x.id)) : [h.c];
+      drag.group = group.map((x) => ({ c: x, at0: x.at, tr0: x.tr, row0: P().tracks.findIndex((t) => t.id === x.tr) }));
+      drag.at0 = h.c.at; drag.len0 = h.c.len;
+      holdT = setTimeout(() => { if (drag && !drag.moved && drag.c) { buzz(); const c = drag.c; drag = null; on.open(c); draw(); } }, HOLD_MS);
     } else if (h) {
-      const bar = Math.floor(h.b / P().num) * P().num;
-      if (lastTap.tr === h.tr.id && lastTap.beat === bar && now - lastTap.t < 350) { lastTap = { t: 0 }; drag = null; on.create(h.tr, bar); return; } // двойное касание — новый клип
-      lastTap = { t: now, tr: h.tr.id, beat: bar };
-      holdT = setTimeout(() => { if (drag && !drag.moved) { buzz(); drag = null; on.empty(h.tr, bar, e.clientX, e.clientY); } }, HOLD_MS);
+      // удержать пустое — рамка выделения (вести) или меню (без движения)
+      holdT = setTimeout(() => { if (drag && !drag.moved) { buzz(); drag.band = true; V.band = { x0: q.x, y0: q.y, x1: q.x, y1: q.y }; V.plus = null; draw(); } }, HOLD_MS);
     }
     draw();
   });
+  // Клипы внутри рамки (экранные точки) → id
+  const inBand = (B) => {
+    const p = P(), xa = Math.min(B.x0, B.x1), xb = Math.max(B.x0, B.x1), ya = Math.min(B.y0, B.y1), yb = Math.max(B.y0, B.y1);
+    return p.clips.filter((c) => { const i = p.tracks.findIndex((t) => t.id === c.tr), x0 = xOf(c.at), x1 = xOf(c.at + c.len), y0 = yOf(i), y1 = y0 + ROW; return i >= 0 && x1 > xa && x0 < xb && y1 > ya && y0 < yb; }).map((c) => c.id);
+  };
   cv.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     const q = pt(e), dx = q.x - drag.x0, dy = q.y - drag.y0, p = P();
+    if (drag.band) { // рамка: тянется за пальцем, выделение — сразу видно
+      if (Math.hypot(dx, dy) > 6) drag.moved = true;
+      V.band.x1 = q.x; V.band.y1 = q.y; V.sels = new Set(inBand(V.band)); draw(); return;
+    }
     if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; clearTimeout(holdT); }
     if (!drag.moved) return;
     if (drag.ruler) { setRegion(p, drag.b0, bOf(q.x), snap()); draw(); return; }
     if (drag.auto) { // точка: новое место по сетке и значение; занятая доля — обходится
       const A = get().auto, atr = p.tracks.find((t) => t.id === A.tr), qq = drag.q;
       if (!atr || !qq) return;
-      const T = Math.max(0, Math.round(bOf(q.x) / snap()) * snap()), busy = (atr.auto[A.kind] || []).some((z) => z !== qq && Math.abs(z.t - T) < 1e-6);
+      const g0 = snap() || 1 / TQ, T = Math.max(0, Math.round(bOf(q.x) / g0) * g0), busy = (atr.auto[A.kind] || []).some((z) => z !== qq && Math.abs(z.t - T) < 1e-6);
       if (!busy) qq.t = T;
       qq.v = Math.round(drag.vOf(q.y) * 100) / 100;
       atr.auto[A.kind].sort((a, b2) => a.t - b2.t);
       draw(); return;
     }
     const c = drag.c;
-    if (!c) { V.x = drag.vx - dx; V.y = drag.vy - dy; draw(); return; }
+    if (!c) { V.x = drag.vx - dx; V.y = drag.vy - dy; V.plus = null; draw(); return; }
     const grid = snap(), h = drag.h;
     if (h.edge === 'r') resizeClip(p, c, drag.len0 + dx / V.pxb, grid);
     else if (h.edge === 'l') { c.at = drag.at0; c.len = drag.len0; trimClipStart(p, c, drag.at0 + dx / V.pxb, grid); }
     else {
-      const i = Math.max(0, Math.min(p.tracks.length - 1, rowOf(q.y))), to = p.tracks[i];
-      moveClip(p, c, drag.at0 + dx / V.pxb, to && to.kind === trackOf(p, c).kind ? to.id : c.tr, grid);
+      // перенос: сдвиг по сетке от начала ведомого клипа, остальные — на тот же сдвиг; ряд — на ту же разницу (род тот же)
+      const lead = drag.group.find((x) => x.c === c), dRow = Math.max(0, Math.min(p.tracks.length - 1, rowOf(q.y))) - lead.row0;
+      const at = grid > 0 ? Math.max(0, Math.round((drag.at0 + dx / V.pxb) / grid) * grid) : Math.max(0, drag.at0 + dx / V.pxb);
+      const shift = Math.max(-Math.min(...drag.group.map((x) => x.at0)), at - drag.at0);
+      drag.group.forEach((x) => { const to = p.tracks[x.row0 + dRow], kind = trackOf(p, x.c).kind; moveClip(p, x.c, x.at0 + shift, to && to.kind === kind ? to.id : x.tr0, 0); });
     }
     draw();
   });
@@ -275,18 +325,43 @@ export function createPlaylist(host, get, on) {
     if (!drag || e.pointerId !== drag.id) return;
     clearTimeout(holdT);
     const d = drag; drag = null;
+    if (d.band) { // рамка: выделить; без движения — меню пустого места (вставить, новая партия)
+      V.band = null;
+      if (d.moved) setSel(inBand({ x0: d.x0, y0: d.y0, x1: pt(e).x, y1: pt(e).y }));
+      else if (d.h) { setSel([]); on.empty(d.h.tr, Math.floor(d.h.b / P().num) * P().num, d.cx, d.cy); }
+      draw(); return;
+    }
     if (d.auto) { on.autoChange(); }
     else if (d.ruler) {
       if (d.moved) on.region();
       else { V.cursor = Math.max(0, Math.floor(bOf(d.x0) / P().num) * P().num); on.seek(V.cursor); }
-    } else if (d.c) { if (d.moved) { p0fix(); on.change(); } else on.open(d.c); }
+    } else if (d.c) {
+      if (d.moved) { p0fix(); on.change(); }
+      else {
+        const now = performance.now();
+        if (lastTap.id === d.c.id && now - lastTap.t < 350) { lastTap = { t: 0, id: null }; on.split(d.c, bOf(d.x0), snap()); } // двойное касание — разрезать здесь
+        else {
+          lastTap = { t: now, id: d.c.id };
+          // выделено несколько — касание добавляет или убирает; иначе — только этот (повторное касание — снять)
+          if (V.sels.size > 1) { const s2 = new Set(V.sels); if (s2.has(d.c.id)) s2.delete(d.c.id); else s2.add(d.c.id); setSel([...s2]); }
+          else setSel(V.sels.has(d.c.id) ? [] : [d.c.id]);
+          V.plus = null;
+        }
+      }
+    } else if (d.h && !d.moved) { // пустое место: «+» в этом такте; касание «+» — новая партия
+      const bar = Math.floor(d.h.b / P().num) * P().num;
+      if (V.plus && V.plus.tr === d.h.tr.id && V.plus.bar === bar) { V.plus = null; on.create(d.h.tr, bar); }
+      else { V.plus = { tr: d.h.tr.id, bar }; if (V.sels.size) setSel([]); }
+    } else if (!d.h && !d.moved && V.sels.size) setSel([]);
     draw();
   };
   const p0fix = () => { P().clips.sort((a, b) => a.at - b.at); };
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
-  const offPinch = pinch(cv, { min: 6, max: 96, get: () => V.pxb, set: (v) => { const mid = bOf(HEAD + (W - HEAD) / 2); V.pxb = v; V.x = mid * v - (W - HEAD) / 2; draw(); } });
-  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { V.pxb = Math.max(6, Math.min(96, V.pxb - e.deltaY / 10)); } else { V.x += e.deltaX; V.y += e.deltaY; } draw(); }, { passive: false });
+  // масштаб — вокруг середины кадра; на самом крупном шаг сетки — без сетки (миллисекунды)
+  const zoomTo = (v, mid = bOf(HEAD + (W - HEAD) / 2)) => { V.pxb = Math.max(ZMIN, Math.min(ZMAX, v)); V.x = mid * V.pxb - (W - HEAD) / 2; draw(); };
+  const offPinch = pinch(cv, { min: ZMIN, max: ZMAX, get: () => V.pxb, set: (v) => zoomTo(v) });
+  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) zoomTo(V.pxb * Math.exp(-e.deltaY / 300)); else { V.x += e.deltaX; V.y += e.deltaY; draw(); } }, { passive: false });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   const ro = new ResizeObserver(size);
   ro.observe(host);
@@ -300,7 +375,13 @@ export function createPlaylist(host, get, on) {
     follow(b) { const x = b * V.pxb; if (x < V.x || x > V.x + W - HEAD - 20) { V.x = Math.max(0, x - 40); draw(); } },
     get cursor() { return V.cursor; },
     set cursor(b) { V.cursor = Math.max(0, b); draw(); },
-    select(id) { V.sel = id; draw(); },
+    select(id) { V.sels = new Set(id ? [id] : []); draw(); },
+    // выделенные клипы (id); задать — без обратного вызова
+    get selection() { return [...V.sels].filter((id) => P().clips.some((c) => c.id === id)); },
+    set selection(ids) { V.sels = new Set(ids || []); draw(); },
+    clearPlus() { V.plus = null; draw(); },
+    get zoom() { return V.pxb; },
+    zoomBy(f) { zoomTo(V.pxb * f); },
     destroy() { ro.disconnect(); offPinch(); clearTimeout(holdT); cancelAnimationFrame(raf); cv.remove(); },
   };
 }

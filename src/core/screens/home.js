@@ -10,11 +10,11 @@ import { gemSec } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
-import { isOn, makeTab, TABS_MAX } from '../settings.js';
+import { isOn, makeTab, TABS_MAX, editTabs } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { topbar, weekdays, relDay, PLAY, IC, tabIds } from './common.js';
+import { topbar, weekdays, relDay, PLAY, IC, tabIds, TAB_MODULES } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
@@ -236,7 +236,10 @@ export function toolHoldMenu(app, btn, rerender, open) {
     items.push({ icon: HI.minus, label: t('tools.hide'), danger: true, run: () => { T.off.add(id); setToolsTab(st, T); app.store.settingsChanged(); rerender(); toast(t('tools.hiddenToast')); } });
   }
   // любой инструмент — вкладкой внизу (обратно — удержание вкладки → «В инструменты»)
-  items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => { const r = makeTab(app.store, id, tabIds(st)); if (r === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); } } });
+  items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => {
+    const r = TAB_MODULES[id] ? (editTabs(app.store, tabIds(st), id, 'on') ? 'ok' : 'max') : makeTab(app.store, id, tabIds(st)); // «Студия», «Библия» — обратно на своё место внизу
+    if (r === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); }
+  } });
   items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
   holdMenu(btn, items, moduleName(m));
 }

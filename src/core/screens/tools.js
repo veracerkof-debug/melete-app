@@ -6,7 +6,7 @@ import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur, heavyStub } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
-import { IC } from './common.js';
+import { IC, tabModsInTools } from './common.js';
 import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
@@ -17,7 +17,8 @@ export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, ro
 // Порядок и убранные во вкладке (settings.toolsTab: { order, off }): удержание карточки — меню (левее, правее, убрать);
 // убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки
 export function toolsTab(st) {
-  const all = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id), tt = st.toolsTab || {}; // ставшие вкладками — не здесь
+  const extra = tabModsInTools(st); // «Студия», «Библия», убранные с нижней панели, — здесь
+  const all = modules.filter((m) => (!m.tab || extra.includes(m.id)) && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id), tt = st.toolsTab || {}; // ставшие вкладками — не здесь
   const order = (tt.order || []).filter((id) => all.includes(id));
   all.forEach((id) => { if (!order.includes(id)) order.push(id); });
   const off = new Set((tt.off || []).filter((id) => all.includes(id)));
