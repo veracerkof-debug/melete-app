@@ -1,0 +1,12 @@
+# Graphify (граф кода для Claude): что не разбирать — данные, прототип, чужие библиотеки, сборки
+legacy/
+public/
+vendor/
+android/app/src/main/assets/
+android/build/
+launcher/android/app/src/main/assets/
+src-tauri/target/
+src-tauri/gen/
+showcase/
+tests/fixtures/
+*.json

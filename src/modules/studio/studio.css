@@ -23,6 +23,19 @@
 .stinfo b{grid-row:1/3;font-size:22px;line-height:1;letter-spacing:-.02em}
 .stinfo span{font-size:10px;opacity:.75;white-space:nowrap;align-self:end}
 .stinfo i{font-style:normal;font-size:11px;font-weight:700;opacity:.9;align-self:start}
+.stinfo{position:relative}
+.stld{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#E0A030}
+.stld[data-lvl="high"]{background:#D9534F}
+/* телефон боком: плейлист и микшер — во всю высоту, транспорт — колонкой справа */
+@media (orientation: landscape) and (max-height: 520px) {
+  .stwrap.side{flex-direction:row}
+  .stwrap.side .sttop{flex-direction:column;justify-content:space-between;padding:0 0 0 2px}
+  .stwrap.side .stgrp{flex-direction:column}
+  .stwrap.side .stinfo{min-width:0;width:48px;height:auto;display:flex;flex-direction:column;align-items:center;padding:4px 2px}
+  .stwrap.side .stinfo b{font-size:17px}
+  .stwrap.side .stinfo span{display:none}
+  .stwrap.side .stplay{width:42px;height:42px}
+}
 /* редактор клипа */
 .sthead{display:flex;align-items:center;gap:8px;flex:none;min-height:44px}
 .sttrdot{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none}
@@ -115,3 +128,36 @@
 .smi{width:26px;height:26px;border-radius:7px;background:var(--cell);color:var(--l2);font-weight:800;font-size:12px}
 .smi.on{background:#B96E65;color:#fff}
 .smi.s.on{background:#C9A227;color:#fff}
+/* полоса над выделенными клипами (переделка 28.10.2026): низ плейлиста, по центру, не мешает рисунку */
+.stselbar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px 6px;border-radius:16px;background:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.18),0 0 0 1px var(--sep);max-width:calc(100% - 16px);overflow-x:auto;z-index:2}
+.stselbar[hidden]{display:none}
+.stselbar .ic.sm{width:40px;height:40px;min-width:40px;padding:0;flex:none;background:none;color:var(--ink)}
+.stselbar .ic.on{color:var(--tint)}
+.stselbar .ic.danger{color:var(--red)}
+.stselbar .ic svg{width:20px;height:20px}
+.stseln{min-width:24px;height:24px;border-radius:12px;background:var(--tint);color:var(--on-tint,#fff);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin:0 4px}
+/* аккордовая панель (chordpad.js): плитки тональности 3×3, полоса — такты куска и сетка */
+.cpwrap{flex:none;display:flex;flex-direction:column;gap:6px;padding:2px 0}
+.cpbar{display:flex;gap:8px;align-items:center}
+.cpbar .seg{flex:1;min-width:0}
+.cpgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;touch-action:none;user-select:none;-webkit-user-select:none}
+.cptile{min-height:58px;border-radius:14px;border:0;background:color-mix(in srgb,var(--c) 16%,var(--cell));color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:transform .08s ease,background .12s ease;touch-action:none}
+.cptile small{font-size:11px;color:var(--l2);font-weight:600;letter-spacing:.02em}
+.cptile b{font-size:20px;font-weight:700}
+.cptile.on{background:var(--c);color:#fff}
+.cptile.on small{color:rgba(255,255,255,.8)}
+.cptile.down{transform:scale(.96)}
+.cptile.rest b{color:var(--l2)}
+.cphint{margin:0 6px;font-size:12px;color:var(--l2);text-align:center}
+.cpwrap.rec .cphint{color:#D9534F}
+@container (max-height:560px){.cptile{min-height:44px}.cptile b{font-size:17px}.cphint{display:none}}
+/* свой инструмент под редактором нот (пианино, глайдер, терменвокс) — окно модуля размера half */
+.sttool{flex:0 0 46%;min-height:200px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell)}
+.sttoolin{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0}
+/* узкий телефон: транспорт в одну строку без обрезки — шестерёнка прячется (настройки открывает и плашка темпа), значки меньше */
+@container (max-width: 480px) {
+  .stwrap .sttop .ic.sm{width:32px;height:32px;min-width:32px}
+  .sttop .stgrp > [data-x="settings"]{display:none}
+  .sttop .stinfo{min-width:62px;padding:2px 6px}
+  .sttop .stplay{width:42px;height:42px}
+}

@@ -1,8 +1,13 @@
 // Студия: проект песни по образцу FL Studio Mobile — плейлист: дорожки (инструменты) и клипы на таймлайне.
 // Чистые функции, без звука и DOM.
 // Дорожка: { id, kind: 'notes' | 'chords' | 'drums' | 'audio', name, color, inst, vol, pan (−1…1), mute, solo, oct, mode, arp, fx }.
-// Клип: { id, tr, at, len, data, gain (0…2), mute } — на дорожке tr с доли at длиной len долей; содержимое data — по роду дорожки,
-// это короткий кусок на data.bars тактов, который повторяется по кругу на всю длину клипа (растянул — звучит дальше):
+// Клип: { id, tr, at, len, data, gain (0…2), mute, loop, start, semi, rate } — на дорожке tr с доли at длиной len долей;
+// содержимое data — по роду дорожки, кусок на data.bars тактов. loop — кусок повторяется по кругу на всю длину клипа
+// (ритм: растянул — звучит дальше), иначе клип «сплошной» — кусок растёт вместе с клипом, дальше написанного — тишина
+// (соло-партия). start — с какой доли куска начинается клип (разрезали или обрезали начало — ничего не стёрто: потянул
+// край обратно — вернулось); semi — сдвиг высоты (полутоны), rate — скорость куска (2 — вдвое быстрее). Запись играет
+// один раз с секунды data.off (удлинил — открылось то, что было записано дальше); loop у записи — по кругу, как раньше.
+// Содержимое куска:
 //   ноты    { bars, notes: [{ t, d, m, v }] }   — t и d в долях от начала куска, m — высота MIDI;
 //   аккорды { bars, chords: [{ t, d, pc, type }] } — разворачиваются в ноты по режиму дорожки (hold | rhythm | arp);
 //   ударные { bars, steps: { kick: [i…], snare: [i…] … } } — номера шестнадцатых, где есть удар;
@@ -16,7 +21,9 @@ import { uid } from '../core/time.js';
 import { CHORDS, keyInfo } from './theory.js';
 import { MAJ_NAMES, MIN_NAMES } from './notes.js';
 
-export const INSTRUMENTS = ['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'fmep', 'abass', 'bell', 'sine', 'sample'];
+export const INSTRUMENTS = ['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'fmep', 'abass', 'bell', 'sine', 'gm', 'sample'];
+// Звук 'gm' — инструмент General MIDI из банка SONiVOX (src/audio/gm.js): tr.gm — программа 0…127. Ударные: tr.gmKit —
+// набор ударных банка (0 Standard, 8 Room, 32 Jazz, 40 Brush) вместо синтеза; свои записи рядов (kit) — главнее
 // Ударные со своими записями: tr.kit = { kick: fileId, … } — ряд звучит записью из медиатеки (как есть) вместо синтеза.
 // Сэмплер: звук дорожки 'sample' — запись из медиатеки (tr.sample = { fileId, root }) по нотам: высота — скорость
 // воспроизведения относительно ноты root (C4 = 60), длина — пока держится нота или пока не кончится запись
@@ -29,6 +36,12 @@ export const DRUMS = ['kick', 'snare', 'hat', 'ohat', 'clap'];
 export const DRUM_MIDI = { kick: 36, snare: 38, hat: 42, ohat: 46, clap: 39 }; // General MIDI, канал ударных
 export const STEP = 0.25; // шаг ударных — шестнадцатая (четверть доли)
 export const BARS_MAX = 64, SONG_BARS_MAX = 512, CLIPS_MAX = 256, NOTE_LO = 24, NOTE_HI = 96;
+// Точность времени клипа: 1/960 доли (как PPQ в MIDI) — при 60 уд./мин ≈ 1 мс; сдвиг записи — до миллисекунд
+export const TQ = 960;
+const tq = (x) => Math.round((+x || 0) * TQ) / TQ;
+export const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+// По умолчанию: ударные — по кругу, остальное — сплошное (соло, аккорды по песне); запись — один раз
+export const loopDefault = (kind) => kind === 'drums';
 
 export function newTrack(kind = 'notes', i = 0, patch = {}) {
   const base = { id: 'tr' + uid(), kind: KINDS.includes(kind) ? kind : 'notes', name: '', color: COLORS[i % COLORS.length],
@@ -41,7 +54,9 @@ export const newData = (kind, bars = 1) => (kind === 'audio' ? { fileId: null, o
 // Клип на дорожке tr с доли at длиной len долей (по умолчанию — длина куска)
 export function newClip(p, tr, at, len = 0, data = null) {
   const d = data || newData(tr.kind, 1);
-  return { id: 'cl' + uid(), tr: tr.id, at: Math.max(0, at), len: len > 0 ? len : dataBeats(p, d), data: d, gain: 1, mute: false };
+  const c = { id: 'cl' + uid(), tr: tr.id, at: Math.max(0, at), len: len > 0 ? len : dataBeats(p, d), data: d, gain: 1, mute: false, loop: loopDefault(tr.kind), start: 0, semi: 0, rate: 1 };
+  fitPiece(p, tr, c);
+  return c;
 }
 export function newProject(patch = {}) {
   const p = { id: 'pj' + uid(), name: '', bpm: 90, num: 4, den: 4, key: { pc: 0, minor: false }, swing: 0, songId: null, region: null, marks: [],
@@ -79,6 +94,8 @@ export function normalizeProject(p) {
     if (!INSTRUMENTS.includes(t.inst)) t.inst = 'piano';
     if (t.kind === 'drums' && t.kit && typeof t.kit === 'object') { const kit = {}; DRUMS.forEach((l) => { if (typeof t.kit[l] === 'string' && t.kit[l]) kit[l] = t.kit[l]; }); t.kit = Object.keys(kit).length ? kit : undefined; }
     if (t.kit === undefined || t.kind !== 'drums') delete t.kit;
+    if (t.gm != null) { t.gm = Math.max(0, Math.min(127, Math.round(+t.gm || 0))); } else if (t.inst === 'gm') t.gm = 0;
+    if (t.kind === 'drums' && t.gmKit != null && Number.isFinite(+t.gmKit)) t.gmKit = Math.max(0, Math.min(127, Math.round(+t.gmKit))); else delete t.gmKit;
     t.auto = normalizeAuto(t.auto, SONG_BARS_MAX * p.num);
     if (!t.auto) delete t.auto;
     t.sample = t.inst === 'sample' ? { fileId: (t.sample && t.sample.fileId) || null, root: Math.max(24, Math.min(96, Math.round(+(t.sample && t.sample.root) || 60))) } : undefined;
@@ -91,10 +108,17 @@ export function normalizeProject(p) {
   if (!Array.isArray(p.clips)) migrate(p);
   p.clips = (p.clips || []).filter((c) => c && c.id && p.tracks.some((t) => t.id === c.tr)).slice(0, CLIPS_MAX).map((c) => {
     const tr = trackOf(p, c);
-    c.at = Math.max(0, Math.min(SONG_BARS_MAX * p.num, Math.round((+c.at || 0) * 64) / 64));
+    c.at = Math.max(0, Math.min(SONG_BARS_MAX * p.num, tq(c.at)));
     c.data = normalizeData(p, tr, c.data);
-    c.len = Math.max(STEP, Math.min(SONG_BARS_MAX * p.num - c.at, Math.round((+c.len || dataBeats(p, c.data) || p.num) * 64) / 64));
+    c.len = Math.max(1 / TQ, Math.min(SONG_BARS_MAX * p.num - c.at, tq(+c.len || dataBeats(p, c.data) || p.num)));
     c.gain = c.gain == null ? 1 : Math.max(0, Math.min(2, +c.gain || 0)); c.mute = !!c.mute;
+    // прежние клипы (до 28.10.2026) — кусок по кругу, как и звучали; записи — один раз
+    c.loop = c.loop == null ? tr.kind !== 'audio' : !!c.loop;
+    c.start = tq(c.start); c.semi = Math.max(-24, Math.min(24, Math.round(+c.semi || 0)));
+    c.rate = Math.max(0.25, Math.min(4, +c.rate || 1));
+    if (tr.kind === 'audio' || tr.kind === 'drums') c.semi = 0;
+    if (tr.kind === 'audio') c.rate = 1;
+    fitPiece(p, tr, c);
     return c;
   }).sort((a, b) => a.at - b.at);
   const maxB = SONG_BARS_MAX * p.num, snapQ = (x) => Math.max(0, Math.min(maxB, Math.round((+x || 0) * 64) / 64));
@@ -107,7 +131,12 @@ export function normalizeProject(p) {
 // Содержимое клипа — в порядок: границы куска, числа, порядок нот
 export function normalizeData(p, tr, d) {
   const o = { ...newData(tr.kind, 1), ...(d && typeof d === 'object' ? d : {}) };
-  if (tr.kind === 'audio') { o.fileId = o.fileId || null; o.off = Math.max(0, +o.off || 0); o.fadeIn = Math.max(0, Math.min(64, +o.fadeIn || 0)); o.fadeOut = Math.max(0, Math.min(64, +o.fadeOut || 0)); delete o.bars; return o; }
+  if (tr.kind === 'audio') {
+    o.fileId = o.fileId || null; o.off = Math.max(0, +o.off || 0); o.fadeIn = Math.max(0, Math.min(64, +o.fadeIn || 0)); o.fadeOut = Math.max(0, Math.min(64, +o.fadeOut || 0)); delete o.bars;
+    // дубли на петле: места кругов в одном файле (с) и какой звучит (take); обрезка и разрез сдвигают off, смена дубля — на разницу мест
+    if (Array.isArray(o.takes) && o.takes.length > 1) { o.takes = o.takes.map((x) => Math.max(0, +x || 0)).slice(0, TAKES_MAX); o.take = Math.max(0, Math.min(o.takes.length - 1, Math.round(+o.take || 0))); } else { delete o.takes; delete o.take; }
+    return o;
+  }
   o.bars = Math.max(1, Math.min(BARS_MAX, Math.round(+o.bars || 1)));
   const total = o.bars * p.num, steps = total / STEP;
   if (tr.kind === 'chords') { o.chords = (o.chords || []).filter((c) => c && c.d > 0 && c.t >= 0 && c.t < total).map((c) => ({ ...c, d: Math.min(c.d, total - c.t) })).sort((a, b) => a.t - b.t); delete o.notes; delete o.steps; }
@@ -131,7 +160,7 @@ function migrate(p) {
       const d = { bars, ...cell }, prev = p.clips.filter((c) => c.tr === tr.id).at(-1);
       // одинаковый кусок подряд — один клип подлиннее (как растянутый), иначе новый
       if (prev && prev.at + prev.len === off && JSON.stringify(prev.data) === JSON.stringify(d)) prev.len += len;
-      else p.clips.push(newClip(p, tr, off, len, d));
+      else p.clips.push({ ...newClip(p, tr, off, len, d), loop: true }); // паттерны звучали по кругу
     });
     off += len;
   });
@@ -188,26 +217,33 @@ export function joinClips(p, a, b) {
   const bars = Math.ceil((x.len + y.len) / p.num - 1e-6);
   if (bars > BARS_MAX) return null;
   const d = newData(tr.kind, bars), shift = (c, off) => {
-    if (tr.kind === 'drums') { const per = dataBeats(p, c.data), steps = c.len / STEP; DRUMS.forEach((l) => (c.data.steps[l] || []).forEach((i) => { for (let o = 0; o < c.len - 1e-6; o += per) { const k = Math.round((o + i * STEP) / STEP); if (k < steps) setStep(d, l, Math.round(off / STEP) + k, true); } })); }
+    if (tr.kind === 'drums') clipNotes(p, tr, c).forEach((n) => setStep(d, n.drum, Math.round((n.t - c.at + off) / STEP), true));
     else if (tr.kind === 'chords') clipNotesRaw(p, c).forEach((q) => d.chords.push({ ...q, t: q.t + off }));
     else clipNotes(p, tr, c).forEach((n) => d.notes.push({ t: n.t - c.at + off, d: n.d, m: n.m - 12 * (tr.oct || 0), v: n.v }));
   };
   shift(x, 0); shift(y, x.len);
   if (tr.kind === 'chords') d.chords.sort((q, r) => q.t - r.t);
   x.data = normalizeData(p, tr, d); x.len = x.len + y.len;
+  x.start = 0; x.semi = 0; x.rate = 1; x.loop = false; // склеенный — одна сплошная партия как звучала
   removeClip(p, y);
   return x;
 }
 // Аккорды клипа по всей его длине (кусок повторяется), от начала клипа
 function clipNotesRaw(p, c) {
-  const per = dataBeats(p, c.data), out = [];
-  for (let off = 0; off < c.len - 1e-6; off += per) c.data.chords.forEach((q) => { if (q.t + off < c.len) out.push({ ...q, t: q.t + off, d: Math.min(q.d, c.len - off - q.t) }); });
+  const { offs, k } = piecePasses(p, c), out = [], semi = c.semi || 0;
+  offs.forEach((off) => c.data.chords.forEach((q) => {
+    let t = off + q.t * k, d = q.d * k;
+    if (t + d <= 1e-9 || t >= c.len - 1e-9) return;
+    if (t < 0) { d += t; t = 0; }
+    out.push({ ...q, pc: (((q.pc + semi) % 12) + 12) % 12, t, d: Math.min(d, c.len - t) });
+  }));
   return out;
 }
 
 /* ---------- клипы на таймлайне ---------- */
 
-export const snapBeat = (b, grid = 1) => Math.max(0, Math.round(b / grid) * grid);
+// По сетке; grid 0 — без сетки (точность TQ — до миллисекунд)
+export const snapBeat = (b, grid = 1) => Math.max(0, grid > 0 ? tq(Math.round(b / grid) * grid) : tq(b));
 export function addClip(p, tr, at, len, data) {
   if (p.clips.length >= CLIPS_MAX) return null;
   const c = newClip(p, tr, snapBeat(at), len, data);
@@ -228,11 +264,19 @@ export function moveClip(p, c, at, trId = c.tr, grid = 1) {
   c.at = Math.min(SONG_BARS_MAX * p.num - c.len, snapBeat(at, grid));
 }
 // Длина за правый край: по сетке, не меньше шага
-export function resizeClip(p, c, len, grid = 1) { c.len = Math.max(grid, Math.min(SONG_BARS_MAX * p.num - c.at, Math.round(len / grid) * grid)); }
+export function resizeClip(p, c, len, grid = 1) {
+  const g = grid > 0 ? grid : 1 / TQ;
+  c.len = Math.max(g, Math.min(SONG_BARS_MAX * p.num - c.at, grid > 0 ? tq(Math.round(len / grid) * grid) : tq(len)));
+  fitPiece(p, trackOf(p, c), c);
+}
 // Левый край: начало двигается, конец стоит; у записи сдвигается и место в файле (обрезка начала)
+// Влево за начало: запись — до начала файла, кусок — открывается раньше написанное (по кругу — повтор, сплошной — пусто)
 export function trimClipStart(p, c, at, grid = 1) {
-  const end = c.at + c.len, nat = Math.max(0, Math.min(end - grid, snapBeat(at, grid)));
-  if (c.data && c.data.fileId !== undefined) c.data.off = Math.max(0, (c.data.off || 0) + (nat - c.at) * secPerBeat(p));
+  const g = grid > 0 ? grid : 1 / TQ, end = c.at + c.len, audio = c.data && c.data.fileId !== undefined;
+  let nat = Math.max(0, Math.min(end - g, snapBeat(at, grid)));
+  if (audio) nat = Math.max(nat, tq(c.at - (c.data.off || 0) / secPerBeat(p))); // раньше начала файла — нечего открыть
+  if (audio) c.data.off = Math.max(0, (c.data.off || 0) + (nat - c.at) * secPerBeat(p));
+  else c.start = tq((c.start || 0) + (nat - c.at) * (c.rate || 1));
   c.at = nat; c.len = end - nat;
 }
 // Копия клипа на дорожку tr (того же рода) с доли at — вставка из буфера
@@ -240,12 +284,14 @@ export function pasteClip(p, src, tr, at, grid = 1) {
   if (p.clips.length >= CLIPS_MAX || !src || tr.kind !== src.kind) return null;
   const c = newClip(p, tr, snapBeat(at, grid), src.len, JSON.parse(JSON.stringify(src.data)));
   c.gain = src.gain == null ? 1 : src.gain; c.mute = false;
+  if (src.loop != null) c.loop = !!src.loop;
+  c.start = src.start || 0; c.semi = src.semi || 0; c.rate = src.rate || 1;
   c.at = Math.min(SONG_BARS_MAX * p.num - c.len, c.at);
   p.clips.push(c); p.clips.sort((a, b) => a.at - b.at);
   return c;
 }
 // Слепок клипа для буфера обмена (род дорожки — чтобы вставлять только на такую же)
-export const clipCopy = (p, c) => ({ kind: trackOf(p, c).kind, len: c.len, gain: c.gain, data: JSON.parse(JSON.stringify(c.data)) });
+export const clipCopy = (p, c) => ({ kind: trackOf(p, c).kind, len: c.len, gain: c.gain, loop: c.loop, start: c.start || 0, semi: c.semi || 0, rate: c.rate || 1, data: JSON.parse(JSON.stringify(c.data)) });
 // Петля: отрезок [a, b) в долях (по сетке), не короче шага; a ≥ b или не числа — снять
 export function setRegion(p, a, b, grid = 1) {
   const A = snapBeat(Math.min(a, b), grid), B = snapBeat(Math.max(a, b), grid);
@@ -266,12 +312,63 @@ export const removeMark = (p, m) => { p.marks = (p.marks || []).filter((x) => x 
 export const markAt = (p, t, tol = 0.5) => (p.marks || []).find((m) => Math.abs(m.t - t) <= tol) || null;
 // Клип на дорожке в доле t (или null)
 export const clipAt = (p, tr, t) => clipsOf(p, tr).find((c) => t >= c.at && t < c.at + c.len) || null;
+// Запись поверх (punch-in): на дорожке tr отрезок [a, b) освобождается — клипы режутся по краям, середина убирается
+// (разрезанное не стирается: край тянется обратно), и туда ложится новый клип. → клип или null (нет места)
+export function punchClip(p, tr, a, b, data) {
+  if (b - a < 1 / TQ) return null;
+  clipsOf(p, tr).slice().forEach((c) => {
+    if (c.at + c.len <= a || c.at >= b) return;
+    if (c.at < a) { const r = splitClip(p, c, a, 0); if (r && r.at + r.len > b) splitClip(p, r, b, 0); if (r) removeClip(p, r); return; }
+    if (c.at + c.len > b) splitClip(p, c, b, 0);
+    removeClip(p, c);
+  });
+  const c = addClip(p, tr, a, b - a, data);
+  if (c) c.len = tq(b - a);
+  return c;
+}
+// Дубли записи на петле: запись идёт кругами, файл один; круг k начинается с lat + k·loopSec (с). Только полные круги;
+// ни одного полного — один дубль с начала (сколько успели). → места в файле (с)
+export const TAKES_MAX = 32;
+export function takesOf(dur, lat, loopSec) {
+  const out = [];
+  if (loopSec > 0) for (let k = 0; out.length < TAKES_MAX && lat + (k + 1) * loopSec <= dur + 0.03; k++) out.push(Math.round((lat + k * loopSec) * 1e4) / 1e4);
+  return out.length ? out : [lat];
+}
+// Запись игры (MIDI из пианино, глайдера, терменвокса; события midi.js, время в с) → кусок нот клипа: начало —
+// с первой ноты, доли по темпу проекта, высота — ближайший полутон (скольжение глайдера — нота, с которой начали),
+// длина — до отпускания; кусок — целыми тактами, не длиннее BARS_MAX. → { bars, notes } или null (нот нет)
+export function notesFromTake(p, ev) {
+  const spb = secPerBeat(p), open = new Map(), raw = [];
+  (ev || []).slice().sort((a, b) => a.t - b.t).forEach((e) => {
+    if (e.k === 'on' && e.m != null) { if (open.has(e.id)) raw.push({ ...open.get(e.id), t1: e.t }); open.set(e.id, { t0: e.t, m: Math.round(e.m), v: e.v == null ? 0.8 : e.v }); }
+    else if (e.k === 'off' && open.has(e.id)) { raw.push({ ...open.get(e.id), t1: e.t }); open.delete(e.id); }
+  });
+  const end = (ev || []).reduce((m, e) => Math.max(m, e.t), 0);
+  open.forEach((n) => raw.push({ ...n, t1: Math.max(end, n.t0 + 0.1) }));
+  const ok = raw.filter((n) => n.m >= 0 && n.m <= 127);
+  if (!ok.length) return null;
+  const t0 = Math.min(...ok.map((n) => n.t0)), total = BARS_MAX * p.num;
+  const notes = ok.map((n) => ({ t: tq((n.t0 - t0) / spb), d: Math.max(1 / 16, tq((n.t1 - n.t0) / spb)), m: n.m, v: Math.round(Math.max(0.05, Math.min(1, n.v)) * 100) / 100 }))
+    .filter((n) => n.t < total).map((n) => ({ ...n, d: Math.min(n.d, total - n.t) })).sort((a, b) => a.t - b.t || a.m - b.m);
+  const last = notes.reduce((m, n) => Math.max(m, n.t + n.d), 0);
+  return { bars: Math.max(1, Math.min(BARS_MAX, Math.ceil(last / p.num - 1e-6))), notes };
+}
+// Другой дубль клипа-записи: место в файле — на разницу мест кругов (обрезка и разрез сохраняются)
+export function setTake(c, j) {
+  const T = c.data && c.data.takes;
+  if (!T || T.length < 2) return false;
+  const n = T.length, k = ((Math.round(j) % n) + n) % n, cur = Math.max(0, Math.min(n - 1, c.data.take || 0));
+  c.data.off = Math.max(0, (c.data.off || 0) + T[k] - T[cur]);
+  c.data.take = k;
+  return true;
+}
 // Разрезать клип в доле t на два
 export function splitClip(p, c, t, grid = 1) {
   const cut = snapBeat(t, grid);
   if (cut <= c.at || cut >= c.at + c.len || p.clips.length >= CLIPS_MAX) return null;
   const n = { ...c, id: 'cl' + uid(), at: cut, len: c.at + c.len - cut, data: JSON.parse(JSON.stringify(c.data)) };
   if (n.data.fileId !== undefined) n.data.off = (c.data.off || 0) + (cut - c.at) * secPerBeat(p);
+  else n.start = tq((c.start || 0) + (cut - c.at) * (c.rate || 1)); // вторая часть — с того же места куска, ничего не стёрто
   c.len = cut - c.at;
   p.clips.push(n); p.clips.sort((a, b) => a.at - b.at);
   return n;
@@ -396,12 +493,34 @@ export function dataNotes(p, tr, d) {
   const ns = tr.kind === 'chords' ? expandChords(d, tr, p) : tr.kind === 'drums' ? drumNotes(d) : d.notes.map((n) => ({ ...n, m: n.m + 12 * (tr.oct || 0) }));
   return ns.filter((n) => n.t < total).map((n) => (n.t + n.d > total ? { ...n, d: total - n.t } : n));
 }
-// Ноты клипа в долях песни: кусок повторяется на всю длину клипа, за концом клипа — срезается
+// Проходы куска по клипу: где (в долях от начала клипа, с учётом скорости) начинается каждое повторение куска.
+// По кругу — от начала клипа до конца с шагом куска (первый может начинаться раньше клипа — start внутри куска);
+// сплошной — один проход (start < 0 — перед куском тишина). → { offs: [доли клипа], k: множитель времени (1/rate), per }
+export function piecePasses(p, c) {
+  const per = dataBeats(p, c.data), k = 1 / (c.rate || 1), st = c.start || 0;
+  if (!per) return { offs: [], k, per };
+  if (!c.loop) return { offs: [-st * k], k, per };
+  const offs = [];
+  for (let o = -(((st % per) + per) % per) * k; o < c.len - 1e-9; o += per * k) offs.push(o);
+  return { offs, k, per };
+}
+// Ноты клипа в долях песни: проходы куска (по кругу или один), сдвиг высоты; за краями клипа — срезается
 export function clipNotes(p, tr, c) {
-  const one = dataNotes(p, tr, c.data), per = dataBeats(p, c.data), out = [];
-  if (!one.length || !per) return out;
-  for (let off = 0; off < c.len - 1e-6; off += per) one.forEach((n) => { if (n.t + off < c.len) out.push({ ...n, t: n.t + off + c.at, d: Math.min(n.d, c.len - off - n.t) }); });
+  const one = dataNotes(p, tr, c.data), { offs, k } = piecePasses(p, c), out = [], semi = tr.kind === 'drums' ? 0 : c.semi || 0;
+  if (!one.length) return out;
+  offs.forEach((off) => one.forEach((n) => {
+    let t = off + n.t * k, d = n.d * k;
+    if (t + d <= 1e-9 || t >= c.len - 1e-9) return;
+    if (t < 0) { d += t; t = 0; } // началась до клипа — звучит с его начала
+    out.push({ ...n, m: n.m + semi, t: t + c.at, d: Math.min(d, c.len - t) });
+  }));
   return out;
+}
+// Сплошной клип: кусок не короче клипа (растянул — появилось пустое место), до BARS_MAX тактов
+export function fitPiece(p, tr, c) {
+  if (!tr || tr.kind === 'audio' || c.loop || !c.data) return;
+  const need = Math.ceil(((c.start || 0) + c.len * (c.rate || 1)) / p.num - 1e-6);
+  if (need > (c.data.bars || 1)) c.data.bars = Math.min(BARS_MAX, need);
 }
 // Все ноты для звука: вся песня или один клип (onlyClip — от его начала, время с нуля); у каждой ноты — её дорожка (tr)
 export function songNotes(p, onlyClip = null) {
@@ -421,7 +540,7 @@ export function projectEvents(p, onlyClip = null) {
 /* ---------- обмен со студиями (DAW): дорожки проекта и проект из чужой песни ---------- */
 
 // Инструмент General MIDI для звука дорожки (в чужой студии зазвучит похоже)
-export const GM_PROGRAM = { piano: 0, wfelt: 0, wkpad: 4, wair: 89, wlight: 88, wwarm: 89, wchoir: 52, wflute: 73, organ: 19, fmep: 5, abass: 33, bell: 14, sine: 80, sample: 0 };
+export const GM_PROGRAM = { piano: 0, wfelt: 0, wkpad: 4, wair: 89, wlight: 88, wwarm: 89, wchoir: 52, wflute: 73, organ: 19, fmep: 5, abass: 33, bell: 14, sine: 80, gm: 0, sample: 0 };
 // Звук дорожки по инструменту General MIDI (чужая песня → наш звук)
 export function instOfProgram(pr) {
   if (pr == null) return 'piano';
@@ -454,7 +573,7 @@ export function laneOf(m, name = '') {
 export function projectTracks(p, { swing = true } = {}) {
   const all = songNotes(p), sw = (t) => (swing && Math.abs(t % 1 - 0.5) < 1e-6 ? p.swing / 3 : 0);
   return p.tracks.filter((tr) => tr.kind !== 'audio').map((tr, i) => ({
-    name: tr.name || tr.kind + ' ' + (i + 1), drums: tr.kind === 'drums', inst: tr.inst, program: tr.kind === 'drums' ? null : GM_PROGRAM[tr.inst] ?? 0,
+    name: tr.name || tr.kind + ' ' + (i + 1), drums: tr.kind === 'drums', inst: tr.inst, program: tr.kind === 'drums' ? null : tr.inst === 'gm' ? tr.gm || 0 : GM_PROGRAM[tr.inst] ?? 0,
     notes: all.filter((n) => n.tr === tr).map((n) => ({ t: n.t + sw(n.t), d: n.d, m: n.m, v: Math.min(1, n.v * tr.vol * (n.gain || 1)) })),
   }));
 }
@@ -480,7 +599,7 @@ export function projectFromSong(song) {
   if (song.key) p.key = { pc: ((song.key.pc % 12) + 12) % 12, minor: !!song.key.minor };
   p.tracks = [];
   const src = (song.tracks || []).filter((t) => t.notes && t.notes.length);
-  src.forEach((t, i) => p.tracks.push(newTrack(t.drums ? 'drums' : 'notes', i, { name: String(t.name || '').slice(0, 30), inst: t.drums ? 'piano' : instOfProgram(t.program), ...(t.drums || t.program == null ? {} : { gm: t.program }) })));
+  src.forEach((t, i) => p.tracks.push(newTrack(t.drums ? 'drums' : 'notes', i, { name: String(t.name || '').slice(0, 30), inst: t.drums || t.program == null ? 'piano' : 'gm', ...(t.drums ? { gmKit: 0 } : t.program == null ? {} : { gm: t.program }) }))); // звуки — General MIDI, как в файле
   const chunk = BARS_MAX * p.num;
   src.forEach((t, i) => {
     const tr = p.tracks[i], end = Math.max(1, ...t.notes.map((n) => n.t + n.d)), count = Math.ceil(end / chunk - 1e-6);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote, setAutoPoint, removeAutoPoint, autoAt, joinClips, projectFromStems } from '../src/music/project.js';
+import { newProject, newTrack, newData, newClip, normalizeProject, toggleNote, moveNote, resizeNote, setChord, chordAt, expandChords, diatonicChords, chordName, projectEvents, dataBeats, songBeats, songBars, songNotes, clipNotes, countOf, toggleStep, stepOn, drumNotes, addClip, dupClip, moveClip, resizeClip, trimClipStart, splitClip, removeClip, clipAt, clipsOf, isEmptyProject, CLIPS_MAX, setRegion, loopOf, setMark, removeMark, markAt, clipCopy, pasteClip, quantizeNotes, addPlayedNote, setAutoPoint, removeAutoPoint, autoAt, joinClips, projectFromStems, setStep } from '../src/music/project.js';
 
 describe('студия: проект', () => {
   it('новый проект: дорожки, клипов нет, песня — 4 такта', () => {
@@ -49,6 +49,7 @@ describe('студия: проект', () => {
   });
   it('клипы: кусок повторяется на длину клипа, песня — до конца последнего клипа целыми тактами', () => {
     const p = newProject(), tr = p.tracks[2], c = addClip(p, tr, 4, 12, newData('notes', 1));
+    c.loop = true; c.data.bars = 1; // по кругу (ритм)
     toggleNote(c.data, 0, 60, 1);
     expect([c.at, c.len]).toEqual([4, 12]);
     expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([4, 8, 12]);
@@ -205,5 +206,70 @@ describe('квантизация с силой, живость', () => {
     const same = newData('notes', 1); same.notes = [{ t: 0.5, d: 1, m: 60, v: 0.8 }];
     humanizeNotes(same, 4, { time: 0, vel: 0 }, rnd);
     expect(same.notes[0]).toEqual({ t: 0.5, d: 1, m: 60, v: 0.8 });
+  });
+});
+
+describe('студия: клипы по кругу и сплошные, разрезать и вернуть, точность (переделка 28.10.2026)', () => {
+  const mk = (kind = 'notes') => { const p = newProject(), tr = p.tracks.find((t) => t.kind === kind); return { p, tr }; };
+  it('по умолчанию: ударные — по кругу, ноты и аккорды — сплошные', () => {
+    const { p } = mk();
+    const [dr, ch, nt] = p.tracks;
+    expect(addClip(p, dr, 0, 4, newData('drums', 1)).loop).toBe(true);
+    expect(addClip(p, ch, 0, 4, newData('chords', 1)).loop).toBe(false);
+    expect(addClip(p, nt, 0, 4, newData('notes', 1)).loop).toBe(false);
+  });
+  it('сплошной: растянул — кусок вырос, дальше написанного тишина; по кругу — повторяется', () => {
+    const { p, tr } = mk(), c = addClip(p, tr, 0, 4, newData('notes', 1));
+    toggleNote(c.data, 0, 60, 1);
+    resizeClip(p, c, 12, 1);
+    expect(c.data.bars).toBe(3);
+    expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([0]);
+    c.loop = true; c.data.bars = 1;
+    expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([0, 4, 8]);
+  });
+  it('разрезать и потянуть край обратно — ничего не стёрто (сплошной и по кругу)', () => {
+    const { p, tr } = mk(), c = addClip(p, tr, 0, 8, newData('notes', 2));
+    toggleNote(c.data, 1, 60, 1); toggleNote(c.data, 5, 62, 1);
+    const b = splitClip(p, c, 4, 1);
+    expect(clipNotes(p, tr, c).map((n) => [n.t, n.m])).toEqual([[1, 60]]);
+    expect(clipNotes(p, tr, b).map((n) => [n.t, n.m])).toEqual([[5, 62]]); // вторая часть — с того же места куска
+    resizeClip(p, c, 8, 1); // первую — обратно до конца: вторая нота вернулась
+    expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([1, 5]);
+    trimClipStart(p, b, 0, 1); // вторую — влево: открылась и первая
+    expect(clipNotes(p, tr, b).map((n) => n.t)).toEqual([1, 5]);
+  });
+  it('сплошной влево за начало — пусто перед партией; по кругу — повтор', () => {
+    const { p, tr } = mk(), c = addClip(p, tr, 8, 4, newData('notes', 1));
+    toggleNote(c.data, 0, 60, 1);
+    trimClipStart(p, c, 4, 1);
+    expect([c.at, c.len, c.start]).toEqual([4, 8, -4]);
+    expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([8]);
+    c.loop = true;
+    expect(clipNotes(p, tr, c).map((n) => n.t)).toEqual([4, 8]);
+  });
+  it('запись: влево — не раньше начала файла; разрезанная вторая часть — с нужной секунды', () => {
+    const { p } = mk(), tr = newTrack('audio', 3); p.tracks.push(tr);
+    const c = addClip(p, tr, 4, 8, { fileId: 'f1', off: 1 }); // 90 уд./мин: доля 2/3 с — 1 с = 1,5 доли
+    trimClipStart(p, c, 0, 0);
+    expect(c.at).toBeCloseTo(2.5, 3); expect(c.data.off).toBeCloseTo(0, 6);
+    const b = splitClip(p, c, 6.5, 0);
+    expect(b.data.off).toBeCloseTo(4 * (60 / 90), 6);
+    expect(c.loop).toBe(false);
+  });
+  it('тональность и скорость куска; у ударных высота не меняется', () => {
+    const { p, tr } = mk(), c = addClip(p, tr, 0, 8, newData('notes', 1));
+    toggleNote(c.data, 2, 60, 1);
+    c.semi = 3; c.rate = 2; c.loop = true; c.data.bars = 1;
+    expect(clipNotes(p, tr, c).map((n) => [n.t, n.m, n.d])).toEqual([[1, 63, 0.5], [3, 63, 0.5], [5, 63, 0.5], [7, 63, 0.5]]);
+    const dr = p.tracks[0], d = addClip(p, dr, 0, 4, newData('drums', 1)); setStep(d.data, 'kick', 0, true); d.semi = 5;
+    normalizeProject(p);
+    expect(clipNotes(p, dr, d)[0].m).toBe(36);
+  });
+  it('точность до миллисекунд: без сетки клип ставится с шагом 1/960 доли; прежние клипы — по кругу', () => {
+    const { p, tr } = mk(), c = addClip(p, tr, 0, 4, newData('notes', 1));
+    moveClip(p, c, 1.0013, tr.id, 0);
+    expect(c.at).toBeCloseTo(Math.round(1.0013 * 960) / 960, 9);
+    const old = JSON.parse(JSON.stringify(p)); old.clips.forEach((x) => { delete x.loop; delete x.start; });
+    expect(normalizeProject(old).clips.every((x) => x.loop)).toBe(true);
   });
 });

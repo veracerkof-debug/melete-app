@@ -33,7 +33,7 @@ describe('обмен со студиями', () => {
       { name: 'Drums', drums: true, notes: [{ t: 0, d: 0.25, m: 36, v: 0.9 }, { t: 1, d: 0.25, m: 38, v: 0.9 }, { t: 1.5, d: 0.25, m: 46, v: 0.9 }] },
     ] };
     const p = projectFromSong(song);
-    expect([p.bpm, p.name, p.tracks.map((t) => [t.kind, t.inst]), p.clips.length]).toEqual([90, 'X', [['notes', 'wair'], ['drums', 'piano']], 2]);
+    expect([p.bpm, p.name, p.tracks.map((t) => [t.kind, t.inst]), p.clips.length]).toEqual([90, 'X', [['notes', 'gm'], ['drums', 'piano']], 2]);
     const keys = clipsOf(p, p.tracks[0]), dr = clipsOf(p, p.tracks[1]);
     expect(keys.map((c) => [c.at, c.len, c.data.bars])).toEqual([[0, 132, 33]]); // 33 такта одним клипом
     expect(keys[0].data.notes).toEqual([{ t: 0, d: 2, m: 60, v: 0.8 }, { t: 127, d: 2, m: 64, v: 0.8 }]);

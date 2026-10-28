@@ -1,8 +1,8 @@
 {
   "_": "Тяжёлые модели для APK и Windows (DECISIONS: размер и тяжёлые модули). В репозиторий не кладутся: скачиваются перед сборкой (build/fetch-models.mjs) и проверяются по sha256; в веб-сборку не идут. Поле platform: \"windows\" — только для Windows-сборки (src-tauri/models/, ресурсы установщика; скачивается на Windows или с MODELS_ALL=1)",
   "packs": {
-    "_": "Пакеты (DECISIONS 2026-10-28, модульность шаг 2): модели с полем pack не встраиваются в сборку перечисленных систем, а скачиваются по кнопке из релиза packs (build/packs.mjs, build/packs.json, src/core/packs.js)",
-    "piano": ["android", "windows"],
+    "_": "Пакеты (DECISIONS 2026-10-28, модульность шаг 2): модели с полем pack не встраиваются в сборку перечисленных систем, а скачиваются по кнопке из релиза packs (build/packs.mjs, build/packs.json, src/core/packs.js). Windows — всё встроено (решение автора 28.10: «не телефон, память до трёх гигов нормально»)",
+    "piano": ["android"],
     "vocals": ["android"]
   },
   "models": [

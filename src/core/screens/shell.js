@@ -6,7 +6,7 @@ import { t } from '../../i18n/index.js';
 import { confirm, toast, esc } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { addDemo, removeDemo } from '../demo.js';
-import { TAB_ICONS, tabIds, tabModuleOf, tabIcon } from './common.js';
+import { TAB_ICONS, tabIds, tabModuleOf, tabIcon, TAB_MODULES } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, editTabs, orderTabs, unmakeTab } from '../settings.js';
@@ -51,6 +51,8 @@ export function createShell(app, root) {
   function tabHoldMenu(b) {
     const st = app.store.state.settings, id = b.dataset.tab, items = [];
     if ((st.tabMods || []).includes(id)) items.push({ icon: TAB_ICONS.tools, label: t('tabs.toTools'), run: () => { unmakeTab(app.store, id); if (view.tab === id) view.tab = tabsNow()[0]; render(); toast(t('tabs.toToolsDone')); } });
+    // «Студия», «Библия» — тоже в инструменты: карточкой во вкладке «Инструменты», открывается на весь экран
+    else if (TAB_MODULES[id] && tabsNow().length > 1) items.push({ icon: TAB_ICONS.tools, label: t('tabs.toTools'), run: () => { editTabs(app.store, tabIds(st), id, 'off'); if (view.tab === id) view.tab = tabsNow()[0]; render(); toast(t('tabs.toToolsDone')); } });
     else if (tabsNow().length > 1) items.push({ icon: TAB_ICONS.tools, label: t('tabs.remove'), danger: true, run: () => { editTabs(app.store, tabIds(st), id, 'off'); if (view.tab === id) view.tab = tabsNow()[0]; render(); } });
     items.push({ icon: TAB_ICONS.tabs || TAB_ICONS.tools, label: t('tabs.title'), run: () => panel.open('tabs') });
     holdMenu(b, items, tabName(id));

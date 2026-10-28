@@ -18,7 +18,7 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
 import { isBackup } from '../store.js';
@@ -31,7 +31,7 @@ import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { packsHTML, bindPacks } from './packs.js';
 import { moduleName } from '../modules.js';
-import { AVATAR, CHEV, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
+import { AVATAR, CHEV, IC, tabIds, TAB_ICONS, TAB_MODULES, tabIcon, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
 import { bgAvailable, bgStatus, bgRows, bindBg } from '../background.js';
 import { guardAvailable } from '../guard.js';
@@ -507,14 +507,26 @@ function featHTML(app) {
 
 function tabsHTML(app) {
   const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
-  const row = (k, on, i) => '<div class="cell"' + (on ? ' data-tab-row="' + k + '"' : '') + '><span class="ticon" style="--tc:var(--tint)">' + TAB_ICONS[k] + '</span><span class="grow">' + t('nav.' + k) + '</span>' +
-    (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: t('nav.' + k) })) + '">' + IC.up + '</button>' : '') +
-      (vis.length > 1 ? '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: t('nav.' + k) })) + '" style="color:var(--red)">' + IC.minus + '</button>' : '')
-      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: t('nav.' + k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
+  const nameOf = (k) => (TAB_ICONS[k] && !TAB_MODULES[k] ? t('nav.' + k) : moduleById(k) ? moduleName(moduleById(k)) : t('nav.' + k));
+  const mod = (k) => (st.tabMods || []).includes(k); // инструмент, ставший вкладкой
+  const tool = (k) => mod(k) || !!TAB_MODULES[k]; // убрать — значит в «Инструменты», а не спрятать
+  const color = (k) => (TAB_ICONS[k] && !TAB_MODULES[k] ? 'var(--tint)' : (moduleById(k) || {}).color || 'var(--tint)');
+  const row = (k, on, i) => '<div class="cell"' + (on ? ' data-tab-row="' + k + '"' : '') + '><span class="ticon" style="--tc:' + color(k) + '">' + tabIcon(k) + '</span><span class="grow">' + esc(nameOf(k)) +
+    (on && tool(k) ? '<span class="st l2" style="display:block;font-size:13px">' + t('tabs.fromTools') + '</span>' : '') + '</span>' +
+    (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: nameOf(k) })) + '">' + IC.up + '</button>' : '') +
+      (vis.length > 1 ? (mod(k) ? '<button class="ic sm plain" data-tabun="' + k + '" aria-label="' + esc(t('tabs.toTools') + ': ' + nameOf(k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
+        : '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: nameOf(k) })) + '" style="color:var(--red)">' + IC.minus + '</button>') : '')
+      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: nameOf(k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
+  // любой включённый инструмент — вниз одним касанием (решение автора 28.10.2026)
+  const cand = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id) && !mod(m.id) && !CHURCH_MODULES.includes(m.id));
+  const candRow = (m) => '<div class="cell"><span class="ticon" style="--tc:' + (m.color || 'var(--tint)') + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
+    '<button class="ic sm plain" data-tabmk="' + m.id + '" aria-label="' + esc(t('hold.makeTab') + ': ' + moduleName(m)) + '" style="color:#5F8568"' + (vis.length >= TABS_MAX ? ' disabled' : '') + '>' + IC.plus + '</button></div>';
   return '<div class="large">' + t('tabs.title') + '</div>' +
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
-    '<p class="ftr">' + t('tabs.hint') + '</p>' + dockHTML(st);
+    '<p class="ftr">' + t('tabs.hint') + '</p>' +
+    (cand.length ? '<div class="hdr">' + t('tabs.addTool') + '</div><div class="group">' + cand.map(candRow).join('') + '</div><p class="ftr">' + t('tabs.addToolHint', { max: TABS_MAX }) + '</p>' : '') +
+    dockHTML(st);
 }
 
 // Порядок значков нижней панели занятия по умолчанию (у песни может быть свой — удержание значка на панели)
@@ -629,6 +641,8 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-dockup]'))) { const st = app.store.state.settings, l = dockGroups(st), i = l.indexOf(b.dataset.dockup); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; st.dockOrder = l; app.store.settingsChanged(); render(); } return; }
       if (g('[data-dockreset]')) { delete app.store.state.settings.dockOrder; app.store.settingsChanged(); render(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
+      if ((b = g('[data-tabmk]'))) { if (makeTab(app.store, b.dataset.tabmk, tabIds(app.store.state.settings)) === 'max') toast(t('tabs.max', { max: TABS_MAX })); render(); onChange(); return; }
+      if ((b = g('[data-tabun]'))) { if (unmakeTab(app.store, b.dataset.tabun)) { render(); onChange(); } return; }
       if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }

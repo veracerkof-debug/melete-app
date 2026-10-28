@@ -102,7 +102,7 @@ export function makeCtx(app, mod) {
     auto: app.auto,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
     midi: {
-      ev: (e) => app.rec && app.rec.midiEv(mod.id, e),
+      ev: (e) => { if (app.rec) app.rec.midiEv(mod.id, e); if (app.playTaps) app.playTaps.forEach((fn) => { try { fn(mod.id, e); } catch (err) { logErr('mod', err); } }); },
       // запись MIDI (медиатека): открыть её инструмент и проиграть в нём
       play(rec) {
         if (!app.midi || !rec) return;
@@ -168,6 +168,10 @@ export function makeCtx(app, mod) {
     desk: () => isDesk(),
     keyLabel: (m) => (isDesk() && app.midi ? keyLabel(m, app.midi.qwerty.base) : ''),
     hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
+    // Другой инструмент внутри своего окна (студия: пианино, глайдер, терменвокс под плейлистом) → { resize, unmount } или null
+    mountTool: (id, el, size = 'half') => { const m = moduleById(id); return m && isOn(app.store.state.settings, id) ? mountModule(app, m, el, size) : null; },
+    // Игра любого инструмента (события midi.ev: on / mv / off / ped): fn(id, e); → отписка
+    onPlay: (fn) => { (app.playTaps || (app.playTaps = new Set())).add(fn); return () => app.playTaps.delete(fn); },
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)

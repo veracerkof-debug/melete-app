@@ -40,7 +40,7 @@ describe('mdx: БПФ и спектр', () => {
     expect(worst).toBeLessThan(1e-6);
     const v = r.vocals.left.subarray(44100, n - 44100), want = L.subarray(44100, n - 44100).map((x) => x * MDX.comp);
     expect(snr(v, want)).toBeGreaterThan(40); // громкий вход (пик 0,95) приведён к 0,9 и обратно
-  });
+  }, 20000); // тяжёлый счёт: при параллельных тестах на 4 ядрах не укладывается в 5 с
 });
 
 describe('аккорды: сглаживание Витерби', () => {

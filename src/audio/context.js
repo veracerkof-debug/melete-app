@@ -21,15 +21,7 @@ export function getContext(mode = 'bal') {
     // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть
     // скрытое усиление (makeup): чем ниже порог, тем сильнее он поднимает всё и упирается в 0 dBFS — отсюда искажения
     // на большой громкости. Порог выше, а после него — запас (trim), чтобы выход не клиппило
-    comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -10; comp.knee.value = 10; comp.ratio.value = 3;
-    comp.attack.value = 0.004; comp.release.value = 0.25;
-    trim = ctx.createGain();
-    trim.gain.value = 0.8;
-    comp.connect(trim).connect(ctx.destination);
-    master = ctx.createGain();
-    master.gain.value = 0.9;
-    master.connect(comp);
+    ({ comp, trim, master } = masterChain(ctx));
     loadReverbWorklet(ctx); // лёгкая реверберация (spaces.js) — модуль грузится сразу
     try { spaces.hall = makeSpace(ctx, 'hall', comp); reverb = spaces.hall.input; } catch { reverb = null; }
   }
@@ -83,6 +75,20 @@ export function sendToReverb(node, level, via = null) {
   return s;
 }
 
+// Общий выход: громкость 0,9 → компрессор (ловит пики) → запас 0,8 → выход. Тот же — у сведения «на бумаге»
+// (src/audio/render.js), чтобы в файле звучало как вживую
+export function masterChain(c) {
+  const comp = c.createDynamicsCompressor();
+  comp.threshold.value = -10; comp.knee.value = 10; comp.ratio.value = 3;
+  comp.attack.value = 0.004; comp.release.value = 0.25;
+  const trim = c.createGain();
+  trim.gain.value = 0.8;
+  comp.connect(trim).connect(c.destination);
+  const master = c.createGain();
+  master.gain.value = 0.9;
+  master.connect(comp);
+  return { comp, trim, master };
+}
 // Пространства реверберации — общие на всё приложение (описания и движки — spaces.js), создаются при первом посыле
 // (лишних не держим): комната, зал (та же общая реверберация), пластина, собор (для пэдов и поклонения). Все идут
 // в общий компрессор
@@ -101,9 +107,10 @@ export function rebuildSpaces() { Object.values(spaces).forEach((s) => s && s.re
 export const spaceInput = (type) => spaceNode(type);
 // Посыл узла в пространство (уровень 0…1); возвращает узел посыла или null; via — см. sendToReverb
 export function sendToSpace(node, type, level, via = null) {
+  if (!via && node.context !== ctx) return null; // чужой контекст (сведение) — только через свой узел via
   const sp = via || spaceNode(type);
   if (!sp) return null;
-  const s = ctx.createGain();
+  const s = sp.context.createGain();
   s.gain.value = level;
   node.connect(s).connect(sp);
   return s;
