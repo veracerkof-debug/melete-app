@@ -50,7 +50,9 @@ export function createRecording(S) {
     if (typeof OfflineAudioContext === 'undefined') return null;
     const { ctx } = S, q = normalizeProject(JSON.parse(JSON.stringify(p)));
     if (solo) q.tracks.forEach((tr) => { tr.solo = tr.id === solo; });
+    const t0 = performance.now();
     const buf = await renderProject(q, { live: ctx.audio.mixer, getFile: (id) => ctx.files.get(id), a4: ctx.audio.mf ? ctx.audio.mf(69) : 440, onProgress });
+    if (ctx.diag) { ctx.diag.time('render', performance.now() - t0); ctx.diag.gauge('render.x', (performance.now() - t0) / 1000 / Math.max(0.1, buf.duration)); } // сведение: во сколько раз быстрее реального времени
     return [buf.getChannelData(0), buf.getChannelData(1)].map((x) => new Float32Array(x));
   }
   // Сведение песни: на бумаге; не вышло — вживую одним проходом

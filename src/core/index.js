@@ -36,6 +36,7 @@ import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
 import { initBridge } from './bridge.js';
 import { startLog, log } from './log.js';
+import { startDiag, provide as dProvide, count as dCount, gauge as dGauge, time as dTime, event as dEvent } from './diag.js';
 import { createBible } from './reading.js';
 import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
@@ -66,6 +67,7 @@ import { initWhatsNew } from './screens/whatsnew.js';
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
   startLog(APP_VERSION + ' · ' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/[\d.]+/g) || []).join(' · '));
+  startDiag(); // диагностика (diag.js): приложение само считает, как работает — экран «Диагностика»
   // Часы устройства: пока сбиты, новые записи о занятиях не подтверждаются
   let clock = null;
   // коды и проверка создателем убраны: если проверка шла — настоящие данные возвращаются из копии (до чтения данных)
@@ -163,7 +165,15 @@ export function boot(root) {
     return true;
   }
 
-  audio.onLoadLog = (m) => log('audio', m, 'w');
+  audio.onLoadLog = (m) => { log('audio', m, 'w'); if (/ужатие \d/.test(m) && /меньше/.test(m)) dCount('audio.squeeze'); };
+  // нагрузка звука — в диагностику: средняя, секунды выше 70 и 90 %, доля пропусков; перегрузка — событие с обстановкой
+  audio.onLoadSample = (st, m) => {
+    dGauge('audio.load', m.load);
+    if (m.load >= 0.7) dCount('audio.s70');
+    if (m.load >= 0.9) dCount('audio.s90');
+    if (m.underrun != null) dGauge('audio.underrun', m.underrun);
+    if (st.over === 2) dEvent('overload', { load: Math.round(m.load * 100) });
+  };
   const app = {
     store, device, audio, modules, pomodoro, stopwatch, sounding: soundingAudio, soundingAudio, files, confirmUpload,
     shared: createShared(),
@@ -315,6 +325,13 @@ export function boot(root) {
   crashOffer(app);
   // касание названия раздела — его стих (в обоих видах)
   bindVerses(app);
+  // диагностика: обстановка для событий (что открыто, как звучит), запуск — сколько длился, нагрузка — замеряется,
+  // как только есть звук (измеритель создаётся по первому обращению)
+  dProvide('audio', () => audio.state());
+  dProvide('open', () => [...(app.openNow || [])].join(','));
+  dProvide('screen', () => document.visibilityState + ' ' + innerWidth + '×' + innerHeight);
+  requestAnimationFrame(() => dTime('app.start', performance.now()));
+  setInterval(() => { if (document.visibilityState === 'visible' && audio.state()) void audio.load; }, 10000);
   return app;
 }
 

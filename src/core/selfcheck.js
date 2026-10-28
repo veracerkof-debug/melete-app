@@ -13,9 +13,10 @@ import { hasPack, packUrl } from './packs.js';
 import { canRecord, pickType } from './recorder.js';
 import { isDesktop } from './desktop.js';
 import { log } from './log.js';
+import { setLast } from './diag.js';
 
 // Порядок — как на экране. st: 'ok' | 'warn' | 'fail' | 'skip'
-export const CHECKS = ['sound', 'clock', 'load', 'player', 'mic', 'rec', 'files', 'storage', 'models', 'screen', 'env'];
+export const CHECKS = ['sound', 'clock', 'load', 'bench', 'player', 'mic', 'rec', 'files', 'storage', 'models', 'screen', 'env'];
 
 export const STEP_MS = 9000; // одна проверка — не дольше
 const ms = (s) => Math.round((s || 0) * 1000) + ' мс';
@@ -69,6 +70,24 @@ const checks = {
     await sleep(600);
     const v = Math.round(m.value * 100), pk = Math.round(m.peak * 100);
     return { st: v >= 90 ? 'fail' : v >= 70 ? 'warn' : 'ok', info: v + ' %, пик ' + pk + ' %' };
+  },
+  // Запас звука: обычная сцена (клавиши, воздушный пэд с реверберацией, ударные) считается офлайн тем же кодом,
+  // что звучит вживую (render.js); во сколько раз быстрее реального времени. Меньше 1 — вживую не успеет, меньше 2,5 — мало запаса
+  async bench(app) {
+    if (typeof OfflineAudioContext === 'undefined') return { st: 'skip', info: 'нет офлайн-расчёта' };
+    const [{ renderProject }, P] = await Promise.all([import('../audio/render.js'), import('../music/project.js')]);
+    const p = P.newProject({ name: 'bench', bpm: 120 });
+    p.tracks = [P.newTrack('notes', 0, { inst: 'fmep' }), P.newTrack('chords', 1, { inst: 'wair' }), P.newTrack('drums', 2)];
+    p.clips = [];
+    const n = P.newData('notes', 2); for (let i = 0; i < 16; i++) n.notes.push({ t: i / 2, d: 0.5, m: 60 + (i * 5) % 12, v: 0.8 });
+    const ch = P.newData('chords', 2); P.setChord(ch, 0, 8, 0, 'maj');
+    const dr = P.newData('drums', 2); dr.steps = { kick: [0, 8, 16, 24], snare: [4, 12, 20, 28], hat: Array.from({ length: 16 }, (_, i) => i * 2) };
+    p.clips.push(P.newClip(p, p.tracks[0], 0, 8, n), P.newClip(p, p.tracks[1], 0, 8, ch), P.newClip(p, p.tracks[2], 0, 8, dr));
+    const buf = await renderProject(P.normalizeProject(p), { live: app.audio.mixer, tail: 1 }), ms = buf.renderMs || 1;
+    const x = buf.duration / (ms / 1000), verb = (app.audio.state() || {}).verb || '?';
+    setLast('bench', { x: Math.round(x * 10) / 10, verb });
+    const info = 'сцена ' + buf.duration.toFixed(1) + ' с за ' + Math.round(ms) + ' мс — в ' + x.toFixed(1) + ' раза быстрее реального времени, реверберация ' + verb;
+    return { st: x < 1 ? 'fail' : x < 2.5 ? 'warn' : 'ok', info }; // медленнее реального — вживую не успеет; меньше 2,5 — мало запаса
   },
   // Движок плеера медиатеки (Signalsmith в AudioWorklet): молчит ли на этом устройстве
   async player() {
@@ -203,6 +222,7 @@ export async function runChecks(app, onStep = () => {}) {
     onStep(id, r);
   }
   log('check', 'самопроверка: ' + summary(out));
+  setLast('check', out.map((r) => ({ id: r.id, st: r.st, info: String(r.info || '').slice(0, 160) }))); // диагностика: последний итог
   return out;
 }
 

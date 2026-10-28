@@ -3,7 +3,12 @@
 // Пишутся только технические события и ошибки — без названий песен и файлов, текстов, имени, кадров и звука.
 // Журнал сохраняется сразу (localStorage — синхронно), поэтому переживает вылет приложения.
 
+import { count as dCount } from './diag.js';
+
 export const LOG_KEY = 'practice.v1.log';
+// Важное (предупреждения и ошибки) — отдельно и дольше: 7 дней, не больше IMP_CHARS (в отчёт — «Важное за неделю»)
+export const IMP_KEY = 'practice.v1.log7';
+export const IMP_MS = 7 * 864e5, IMP_CHARS = 60_000;
 const RUN_KEY = 'practice.v1.run';
 export const KEEP_MS = 3 * 3600e3;
 export const MAX_CHARS = 200_000;
@@ -35,9 +40,16 @@ function flush() {
   try { store()?.setItem(LOG_KEY, JSON.stringify(lines)); } catch { /* места нет — останется в памяти */ }
 }
 
+let imp = null;
+const impLoad = () => { if (imp) return imp; try { imp = JSON.parse(store()?.getItem(IMP_KEY) || '[]'); } catch { imp = []; } if (!Array.isArray(imp)) imp = []; return imp; };
+const impSave = () => { imp = trim(impLoad(), Date.now(), IMP_MS, IMP_CHARS); try { store()?.setItem(IMP_KEY, JSON.stringify(imp)); } catch { /* */ } };
+export const important = () => impLoad().slice();
+
 // Запись: cat — раздел (app, nav, mod, pdf, cam…), msg — текст; lvl: i — событие, w — предупреждение, e — ошибка
 export function log(cat, msg, lvl = 'i') {
-  load().push([Date.now(), lvl, String(cat).slice(0, 12), String(msg).slice(0, LINE_MAX)]);
+  const line = [Date.now(), lvl, String(cat).slice(0, 12), String(msg).slice(0, LINE_MAX)];
+  load().push(line);
+  if (lvl !== 'i') { impLoad().push(line); impSave(); dCount('log.' + lvl + '.' + line[2]); } // счёт по разделам — диагностика
   if (lvl === 'e') flush(); // ошибка — сразу на диск: следом может случиться вылет
   else if (!timer) timer = setTimeout(flush, 1000);
 }
@@ -53,7 +65,7 @@ export function errText(e) {
 export const logErr = (cat, e) => log(cat, errText(e), 'e');
 
 export function entries() { return load().slice(); }
-export function clearLog() { lines = []; flush(); }
+export function clearLog() { lines = []; flush(); imp = []; impSave(); }
 
 // Текст журнала: «14:02:11 [pdf] сообщение»
 const pad = (n) => String(n).padStart(2, '0');
@@ -83,7 +95,7 @@ export function startLog(info = '') {
     log('js', errText(e.error || { name: 'Error', message: e.message + ' ' + String(e.filename || '').replace(/^[a-z]+:\/\/[^/]+/, '') + ':' + e.lineno }), 'e');
   }, true);
   addEventListener('unhandledrejection', (e) => log('js', 'promise ' + errText(e.reason), 'e'));
-  if (crashed) log('app', 'прошлый запуск закрылся неожиданно', 'w');
+  if (crashed) { log('app', 'прошлый запуск закрылся неожиданно', 'w'); dCount('app.crash'); }
   log('app', 'запуск ' + info);
 }
 export const crashedLast = () => !!crashed;

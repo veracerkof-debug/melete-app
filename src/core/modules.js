@@ -9,6 +9,7 @@ import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
 import { log, logErr } from './log.js';
+import { count as dCount, time as dTime, gauge as dGauge, event as dEvent } from './diag.js';
 import { epigraphHTML } from './screens/verses.js';
 import { gemSec } from './profile.js';
 import { createFxPanel } from '../ui/fxpanel.js';
@@ -93,6 +94,8 @@ export function makeCtx(app, mod) {
     // Технический журнал (src/core/log.js): только события и ошибки, без названий и личных данных
     log: (msg, lvl) => log(mod.id, msg, lvl),
     logErr: (e) => logErr(mod.id, e),
+    // диагностика (diag.js): модуль сообщает свои замеры — сколько раз, сколько длилось, величина, важный случай
+    diag: { count: (k, n) => dCount(mod.id + '.' + k, n), time: (k, ms) => dTime(mod.id + '.' + k, ms), gauge: (k, v) => dGauge(mod.id + '.' + k, v), event: (k, d) => dEvent(mod.id + '.' + k, d) },
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
     // Долгие обработки записей (ядро, jobs.js): дорожки и ноты — ход, отмена, подписка; очередь в фоне — auto
@@ -220,6 +223,8 @@ function heavyHTML(ctx, mod) {
 // где есть ещё полоска перетаскивания и переключатель «метроном / тюнер».
 export function mountModule(app, mod, host, size = 'full', frame = host) {
   const ctx = makeCtx(app, mod);
+  dCount('mod.open.' + mod.id);
+  (app.openNow || (app.openNow = new Map())).set(mod.id, (app.openNow.get(mod.id) || 0) + 1); // что открыто — для обстановки событий диагностики
   log('mod', 'открыт ' + mod.id + ' (' + size + ')');
   frame.classList.add('pane', size);
   frame.dataset.tool = mod.id;
@@ -252,6 +257,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
       host.replaceChildren();
       start();
       log('mod', mod.id + ' загружен за ' + Math.round(performance.now() - t0) + ' мс');
+      dTime('mod.load', performance.now() - t0);
       dispatchEvent(new Event('melete:modloaded')); // окна, которые смотрят на поля модуля (поворот), — пересчитать
     }).catch((e) => {
       logErr('mod', e);
@@ -268,6 +274,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     },
     unmount() {
       closed = true;
+      { const n = (app.openNow && app.openNow.get(mod.id)) || 0; if (n > 1) app.openNow.set(mod.id, n - 1); else if (app.openNow) app.openNow.delete(mod.id); }
       log('mod', 'закрыт ' + mod.id);
       if (live) {
         live.midiOff(); // воспроизведение останавливается, пока инструмент ещё на месте

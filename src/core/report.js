@@ -2,7 +2,10 @@
 // Собирается и отправляется только по нажатию: системное меню «Поделиться» — человек сам выбирает Telegram,
 // почту или другое приложение и получателя. Без названий песен и файлов, текстов, имени и скрытых настроек.
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { logText, entries, stamp } from './log.js';
+import { logText, entries, stamp, important } from './log.js';
+import { state as dState, flushDiag } from './diag.js';
+import { diagnose, weekly, machine } from './diagnose.js';
+import { t } from '../i18n/index.js';
 
 // Почта разработчика — подставляется получателем, если для отправки выбрана почта
 export const REPORT_EMAIL = '4hun4hunkim@gmail.com';
@@ -44,7 +47,17 @@ export async function reportText(app, what = '', withLog = true) {
   let crash = '';
   if (Report) { try { crash = ((await Report.lastCrash()) || {}).text || ''; } catch { /* старая сборка без метода */ } }
   if (crash) body.push('— Последнее падение приложения —', crash.trim(), '');
-  const tail = withLog ? ['— Журнал (' + (log.length ? stamp(log[0][0]) + '–' + stamp(log.at(-1)[0]) : 'пусто') + ', записей: ' + log.length + ') —', logText(log)] : ['— Журнал не приложен —'];
+  // диагностика (diag.js, diagnose.js): находки, неделя и сводка для разработчика — чтобы не расспрашивать
+  try {
+    flushDiag();
+    const S = dState(), env = { audio: app.audio && app.audio.state ? app.audio.state() : null, open: [...(app.openNow || new Map()).keys()] };
+    const found = diagnose(S, env), w = weekly(S);
+    body.push('— Диагностика за 7 дней (дней с данными: ' + w.days + ') —');
+    body.push(found.length ? found.map((f) => (f.sev === 'bad' ? '✗ ' : f.sev === 'warn' ? '! ' : 'i ') + t('diag.f.' + f.id, f.vars) + ' — ' + t('diag.h.' + (f.hint || f.id), f.vars)).join('\n') : 'находок нет');
+    body.push('', 'Сводка для разработчика:', JSON.stringify(machine(S, env)), '');
+  } catch (e) { body.push('— Диагностика недоступна: ' + (e && e.message) + ' —', ''); }
+  const imp = important(), day = (x) => new Date(x).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ' ';
+  const tail = withLog ? ['— Журнал (' + (log.length ? stamp(log[0][0]) + '–' + stamp(log.at(-1)[0]) : 'пусто') + ', записей: ' + log.length + ') —', logText(log), '', '— Важное за 7 дней (предупреждения и ошибки: ' + imp.length + ') —', imp.map((l) => day(l[0]) + logText([l])).join('\n')] : ['— Журнал не приложен —'];
   return [...head, ...body, ...tail].join('\n');
 }
 

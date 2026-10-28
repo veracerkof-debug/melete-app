@@ -748,7 +748,7 @@ export default {
   status(c) { const n = (c.projects ? c.projects.list() : []).length; return c.tn('projects', n); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
-    if (!seq) seq = createSequencer({ mixer: c.audio.mixer, synth: c.audio.synth, getProject: proj, getFile: (id) => c.files.get(id) });
+    if (!seq) seq = createSequencer({ mixer: c.audio.mixer, synth: c.audio.synth, getProject: proj, getFile: (id) => c.files.get(id), onLate: (s) => { if (c.diag) { c.diag.count('late'); c.diag.gauge('lateMs', s * 1000); } } });
     (c.projects.list() || []).forEach(normalizeProject);
     if (V.pid && !proj()) { V.view = 'list'; V.pid = null; }
     if (V.view === 'clip' && !clip()) V.view = 'song';

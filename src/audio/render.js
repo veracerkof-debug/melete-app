@@ -100,7 +100,8 @@ export async function renderProject(p, { live = null, getFile = () => null, a4 =
       c.resume();
     });
   }
-  const buf = await c.startRendering();
+  const tr0 = performance.now(), buf = await c.startRendering();
+  buf.renderMs = performance.now() - tr0; // сам расчёт, без загрузки движков и подготовки (замер запаса звука)
   try { seq.dispose(); } catch { /* */ }
   if (aborted) throw Object.assign(new Error('aborted'), { aborted: true });
   if (clock.errs.length) throw clock.errs[0];

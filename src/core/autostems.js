@@ -12,6 +12,7 @@
 // считается — результаты придут с синхронизацией; на компьютере запись телефона делится в режиме, который просил
 // телефон (rec.want: { stems, hq }), если своё разделение не выключено. Ход виден в плеере
 // и в уведомлении (background.js). Очередь переживает закрытие окон, но не приложения: после запуска встанет снова.
+import { time as dTime, gauge as dGauge } from './diag.js';
 import { hasStems } from './jobs.js';
 import { isDesktop } from './desktop.js';
 import { log } from './log.js';
@@ -66,6 +67,7 @@ export function createAutoStems(app) {
   // огибающая (songanalyze.js). rec.ana: { pc, minor, cents, bpm, bpb, beats, downbeats, chords, v, at }
   let ana = null; // идущий разбор — чтобы прервать, когда зазвучало
   async function analyze(r) {
+    const t0 = Date.now();
     try {
       const { mirSupported, analyzeMir } = await import('../audio/mir.js');
       if (mirSupported()) {
@@ -83,6 +85,7 @@ export function createAutoStems(app) {
       r.anaTried = true; log('auto', 'разбор записи не удался: ' + (e && e.message), 'w');
     }
     ana = null;
+    if (r.ana && r.dur > 1) { dTime('ana', Date.now() - t0); dGauge('ana.x', (Date.now() - t0) / 1000 / r.dur); } // разбор: сколько и во сколько раз дольше записи
     await files.save(r);
   }
   async function tick() {

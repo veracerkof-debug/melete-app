@@ -109,8 +109,11 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     get load() { const c = peekContext(); if (!c) return null; if (!loadMeter) { loadMeter = createLoadMeter(c, (m) => audio.onLoadLog && audio.onLoadLog(m), diag, () => {
       // голоса уже ужаты, а поток не успевает: свёртка — самое дорогое из постоянного; лёгкая — в десятки раз дешевле
       if (mixer.verb === 'conv') { mixer.setVerb('light'); if (audio.onLoadLog) audio.onLoadLog('перегрузка — реверберация переключена на лёгкую'); }
-    }); loadMeter.start(); } return loadMeter; },
+    }, (st, m) => audio.onLoadSample && audio.onLoadSample(st, m)); loadMeter.start(); } return loadMeter; },
     onLoadLog: null, // ядро подставляет запись в журнал
+    onLoadSample: null, // и счёт нагрузки для диагностики (src/core/diag.js)
+    // обстановка звука для диагностики: что звучит и как настроено (без названий)
+    state() { const c = peekContext(); return c ? { sr: c.sampleRate, base: Math.round((c.baseLatency || 0) * 1000), out: Math.round((c.outputLatency || 0) * 1000), st: c.state, mode: device.mix.mode, perf: device.mix.perf, engine: device.mix.engine, verb: device.mix.verb, voices: synth.voiceCount, pads: !!drone.on, metro: !!metro.running } : null; },
     mixer, synth, drone, metro,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя
     release: () => { if (isHeld()) hold(false); }, // «играть» в приложении снимает паузу из шторки (player.js)
