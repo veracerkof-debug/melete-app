@@ -1,14 +1,13 @@
-// Раскладка (DECISIONS 2026-10-26): порядок, видимость и размер каждого блока главного экрана, место значков
+// Раскладка (DECISIONS 2026-10-26, 2026-10-28): порядок, видимость и размер каждого блока главного экрана, место значков
 // (внизу, вверху, слева, справа) и вид «Всех приложений» (место папок и поиска, размер названий).
-// По умолчанию — как было: prefs.layout пуст, пока раскладку не меняли.
+// По умолчанию (prefs.layout пуст): сверху — время, дата, Melete и баланс; приложения и значки — внизу, под большой палец.
 import { prefs, save } from './data.js';
 
-export const BLOCKS = ['status', 'clock', 'date', 'balance', 'subline', 'apps', 'space', 'tracker', 'player', 'dock'];
+export const BLOCKS = ['clock', 'date', 'tracker', 'balance', 'space', 'apps', 'dock']; // своя строка состояния — всегда сверху (настройка «Вид»)
 const DEFAULT = {
   order: BLOCKS,
   hide: {},          // id → true
   scale: {},         // id → % (60–160), умножается на общий размер часов или остального
-  dock: 'bottom',    // bottom | top | left | right
   rail: 'right',     // папки во «Всех приложениях»: right | left | bottom | top
   search: 'top',     // поиск во «Всех приложениях»: top | bottom
   drawerScale: 100,  // названия во «Всех приложениях», %
@@ -25,9 +24,7 @@ export function layout() {
 // порядок для показа: значки сбоку — вне колонки (вверху и внизу — это место в порядке, settings.js)
 export function homeOrder() {
   const l = layout();
-  let o = l.order.filter((id) => !l.hide[id]);
-  if (l.dock === 'left' || l.dock === 'right') o = o.filter((id) => id !== 'dock');
-  return o;
+  return l.order.filter((id) => !l.hide[id]);
 }
 
 export function setLayout(patch) {

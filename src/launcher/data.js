@@ -3,48 +3,34 @@
 const KEY = 'elachiston.prefs';
 
 export const DEFAULTS = {
-  // оформление: тема — как в Melete (светлая, тёмная, «Бумага», OLED, системная), чёрно-белый вид, акцент, язык
-  theme: 'system',      // system | light | dark | paper | oled
-  style: 'clean',       // вид главного: clean — «Чистый» (умолчание), rich — «Подробный» (STYLES ниже)
-  font: 'onest',        // look.js: FONTS
-  motion: 'slide',      // переходы: slide | depth | fade | spring (look.js: MOTIONS)
-  bw: false,            // чёрно-белый вид (без цвета)
-  accent: 'orange',     // оттенок палитры Melete
+  // Минимальный главный экран (DECISIONS 2026-10-28): часы, дата, Melete, чтение, баланс, до 7 приложений и ряд значков.
+  // Украшений и чисто декоративных настроек нет; крест — единственное украшение, только в церковном режиме.
+  theme: 'system',      // system | light | dark | oled
   lang: '',             // '' — язык системы; ru | uz | en
-  church: false,        // церковный режим: стихи, библейские часы, греческие слова и символы (решение автора: по умолчанию выкл)
+  church: false,        // церковный режим: крест и чтение Библии (решение автора: по умолчанию выкл)
+  cross: 'latin',       // крест (церковный режим): latin | greek | orthodox | circle | none (cross.js)
+  crossAt: 'center',    // где: center — крупно посередине, на пустом месте (вместо обоев) | top — вверху | date — у даты |
+                        // bottom — над значками | back — большой и тихий за часами
   updMode: 'auto',      // обновление из GitHub: auto | button
   updMobile: false,     // скачивать обновление и по мобильной сети
   // главный экран
-  clock: 'tablet',      // см. clocks.js
   hour12: false,
-  hourLine: true,       // строка под часами: литургический час (церковный режим)
-  dateLang: '',         // '' — язык интерфейса; ru | en | uz | el
-  greekDay: true,       // греческое название дня (церковный режим)
-  status: false,        // своя строка «сеть и батарея» (системная и так видна над экраном)
-  subline: 'verse',     // verse (церковный режим) | note | none
-  note: '',
-  align: 'left',        // left | center | right — одна ось для всего экрана
-  size: 'm',            // s | m | l — прежний размер названий (больше не настраивается: см. uiScale)
+  status: true,         // своя строка «сеть и батарея» (системная строка состояния скрыта)
+  align: 'right',       // left | center | right — одна ось; справа — под большой палец правой руки
   setTab: 'look',       // вкладка настроек: look | home | gestures | data
-  layout: null,         // layout.js: порядок, видимость, размер блоков, место значков и папок
+  layout: null,         // layout.js: порядок, видимость и размер блоков, место папок и поиска во «Всех приложениях»
   clockScale: 100,      // размер часов, % (60–140)
-  uiScale: 100,         // размер остального на главном: дата, названия, Melete, плеер, значки, % (60–130)
-  marker: 'none',       // auto — αʹ в церковном режиме, иначе нет | greek | roman | count | none
-  ornament: 'none',     // фоновый символ (церковный режим)
-  wallpaper: 'none',    // живые обои: none | hands | planet | sun
-  intro: true,
-  dock: null,           // null — по умолчанию из ролей приложений (apps.js)
-  dockStyle: 'icons',   // icons | line | none
-  player: true,
-  tracker: true,        // чтение и практика из Melete (когда мост подключён)
-  trackerMode: 'line',  // line — одна тихая строка, full — плашка, неделя по дням, чтение
-  place: null,          // { lat, lon } — восход и закат
-  home: null,           // null — по умолчанию; [{ key, label }]
+  uiScale: 100,         // размер остального на главном, % (60–130)
+  dock: null,           // ряд значков внизу; null — по умолчанию из ролей приложений (apps.js)
+  tracker: true,        // практика и чтение из Melete (когда мост подключён)
+  home: null,           // список на главном (до 7, HOME_MAX); null — по умолчанию; [{ key, label }]
   gestures: {},         // id жеста → действие; пустые — по умолчанию
   usage: {},            // ключ приложения → сколько раз открывали с главного экрана
-  verseOffset: 0,
+  hidden: [],           // скрытые приложения (ключи): их нет нигде — ни во «Всех», ни в поиске, ни на главном, ни в папках
   web: null,            // веб-версия: свои ссылки вместо приложений [{ id, name, url }]
 };
+export const HOME_MAX = 7; // приложений и папок на главном — строго не больше (решение автора)
+
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -55,16 +41,18 @@ export function writeJSON(key, v) {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* память недоступна — до перезапуска */ }
 }
 
-// Стили главного экрана: набор настроек, который ставится одним выбором; дальше каждую можно менять отдельно
-export const STYLES = {
-  clean: { status: false, marker: 'none', align: 'left', trackerMode: 'line' },
-  rich: { status: true, marker: 'auto', align: 'right', trackerMode: 'full' },
-};
-
 const saved = readJSON(KEY);
 export const prefs = Object.assign(clone(DEFAULTS), saved || {});
-// настройки, сохранённые до появления стилей (DECISIONS 2026-10-28), — один раз переводятся на «Чистый»
-if (saved && !('style' in saved)) { Object.assign(prefs, STYLES.clean, { style: 'clean' }); writeJSON(KEY, prefs); }
+// Переход на минимальный экран (v2): убранные настройки удаляются, раскладка — новая по умолчанию (приложения справа
+// внизу), «Бумага» — светлая; приложения, значки, жесты, язык, церковный режим и обновление остаются
+if (saved && saved.v !== 2) {
+  Object.keys(prefs).forEach((k) => { if (!(k in DEFAULTS)) delete prefs[k]; });
+  if (prefs.theme === 'paper') prefs.theme = 'light';
+  Object.assign(prefs, { align: 'right', status: true, layout: null, setTab: 'look' });
+  if (Array.isArray(prefs.home)) prefs.home = prefs.home.slice(0, HOME_MAX);
+}
+prefs.v = 2;
+if (saved && saved.v !== 2) writeJSON(KEY, prefs);
 const subs = new Set();
 
 export function save() {
@@ -74,7 +62,7 @@ export function save() {
 export const setPrefs = (patch) => { Object.assign(prefs, patch); save(); };
 export const onPrefs = (fn) => subs.add(fn);
 export function resetPrefs() {
-  const keep = { lang: prefs.lang, church: prefs.church, theme: prefs.theme }; // язык и вид — не сбрасываются вместе с экраном
+  const keep = { lang: prefs.lang, church: prefs.church, theme: prefs.theme, v: 2 }; // язык и вид — не сбрасываются вместе с экраном
   Object.keys(prefs).forEach((k) => delete prefs[k]);
   Object.assign(prefs, clone(DEFAULTS), keep);
   save();

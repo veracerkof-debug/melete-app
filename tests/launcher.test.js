@@ -1,5 +1,5 @@
 // Ἐλάχιστον — отдельное приложение главного экрана (src/launcher, launcher/): строки на трёх языках, мост с Melete
-// и трекер считают как ядро Melete, солнце, числа, христианское — только в церковном режиме, стихи со ссылками, обновление.
+// и трекер считают как ядро Melete, минимальный экран (не больше 7, крест — только в церковном режиме), обновление.
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -12,25 +12,17 @@ describe('главный экран: строки', () => {
   it('каждая строка есть по-русски, по-узбекски и по-английски', async () => {
     const { STRINGS } = await import('../src/launcher/i18n.js');
     const { ICONS } = await import('../src/launcher/icons.js');
-    const { CLOCKS } = await import('../src/launcher/clocks.js');
     const { COMMANDS } = await import('../src/launcher/actions.js');
     const { GESTURES } = await import('../src/launcher/gestures.js');
-    const { WALLPAPERS } = await import('../src/launcher/wallpapers.js');
-    const { ORNAMENTS } = await import('../src/launcher/icons.js');
-    const { CANONICAL } = await import('../src/launcher/numerals.js');
+    const { CROSS_IDS, CROSS_PLACES } = await import('../src/launcher/cross.js');
     const src = readdirSync('src/launcher').filter((f) => f.endsWith('.js')).map((f) => readFileSync('src/launcher/' + f, 'utf8')).join('\n');
     const keys = new Set([...src.matchAll(/(?<![\w.])t\('([a-zA-Z0-9_.]+)'/g)].map((m) => m[1]).filter((k) => !k.endsWith('.')));
-    CLOCKS.forEach((c) => { keys.add('clock.' + c.id); keys.add('clock.' + c.id + '.info'); });
     COMMANDS.forEach((c) => keys.add('cmd.' + c.id));
     GESTURES.forEach((g) => keys.add('gest.' + g));
-    WALLPAPERS.forEach((w) => { keys.add('wall.' + w.id); if (w.id !== 'none') keys.add('wall.' + w.id + '.hint'); });
-    Object.keys(ORNAMENTS).forEach((o) => keys.add('orn.' + o));
-    CANONICAL.forEach((c) => keys.add('canon.' + c.id));
+    [...CROSS_IDS, 'none'].forEach((c) => keys.add('cross.' + c));
+    CROSS_PLACES.forEach((c) => keys.add('crossAt.' + c));
     ICONS.forEach((i) => keys.add('icon.' + i.id));
-    for (let i = 1; i <= 12; i++) keys.add('bib.hour.' + i);
-    for (let i = 0; i < 7; i++) { keys.add('bib.day.' + i); keys.add('ex.gday.' + i); }
-    ['morning', 'heat', 'decline', 'cool', 'w1', 'w2', 'w3'].forEach((k) => { keys.add('bib.' + k); keys.add('bib.note.' + k); });
-    ['ex.bib.approx', 'ex.bib.exact', 'set.introHintChurch', 'set.tracker.church', 'set.sys.isDefault', 'set.sys.notDefault'].forEach((k) => keys.add(k));
+    ['set.tracker.church', 'mel.whatChurch', 'set.sys.isDefault', 'set.sys.notDefault'].forEach((k) => keys.add(k));
     for (const l of ['ru', 'uz', 'en']) expect([...keys].filter((k) => STRINGS[l][k] == null), l).toEqual([]);
   });
   it('тексты без обращения на «ты» и «вы»', async () => {
@@ -93,46 +85,61 @@ describe('главный экран: обновление', () => {
   });
 });
 
-describe('главный экран: время', () => {
-  it('восход и закат в Москве 25 октября 2026 (UTC)', async () => {
-    const { sunTimes } = await import('../src/launcher/sun.js');
-    const r = sunTimes(new Date(2026, 9, 25, 12), 55.75, 37.62);
-    const utcMin = (d) => d.getUTCHours() * 60 + d.getUTCMinutes();
-    expect(Math.abs(utcMin(r.rise) - (4 * 60 + 18))).toBeLessThanOrEqual(6); // 07:18 мск
-    expect(Math.abs(utcMin(r.set) - (14 * 60 + 8))).toBeLessThanOrEqual(6);  // 17:08 мск
-  });
-  it('греческие и римские числа, время словами', async () => {
-    const { greekNumeral, romanNumeral, numberWords } = await import('../src/launcher/numerals.js');
-    expect(greekNumeral(18)).toBe('ιηʹ');
-    expect(greekNumeral(0)).toBe('ō');
-    expect(romanNumeral(47)).toBe('XLVII');
-    expect(numberWords(21, 'ru')).toBe('двадцать один');
-    expect(numberWords(42, 'ru', true)).toBe('сорок две');
-    expect(numberWords(5, 'en', true)).toBe('oh five');
-    expect(numberWords(40, 'uz')).toBe('qirq');
-  });
-});
-
-describe('главный экран: церковный режим', () => {
-  it('без него — нет библейских часов, символов и команд', async () => {
-    const { clocksFor } = await import('../src/launcher/clocks.js');
+describe('главный экран: минимальный', () => {
+  it('без церковного режима — нет христианских значков; убранных команд больше нет', async () => {
     const { iconsFor } = await import('../src/launcher/icons.js');
-    const { commandsFor } = await import('../src/launcher/actions.js');
-    expect(clocksFor({ church: false, lang: 'ru' }).map((c) => c.id)).not.toContain('biblical');
-    expect(clocksFor({ church: true, lang: 'ru' }).map((c) => c.id)).toContain('biblical');
-    expect(clocksFor({ church: false, lang: 'en' }).map((c) => c.id)).not.toContain('letters');
+    const { COMMANDS } = await import('../src/launcher/actions.js');
     expect(iconsFor(false).map((i) => i.id)).not.toContain('chirho');
     expect(iconsFor(true).map((i) => i.id)).toContain('chirho');
-    expect(commandsFor(false).map((c) => c.id)).not.toContain('verseNext');
+    expect(COMMANDS.map((c) => c.id)).not.toContain('rest');
+    expect(COMMANDS.map((c) => c.id)).not.toContain('verseNext');
   });
-  it('у каждого стиха дня — греческий текст, переводы и ссылка на главу', async () => {
-    const { VERSE_IDS, verseByKey } = await import('../src/core/verses.js');
-    const { azbykaUrl } = await import('../src/launcher/scripture.js');
-    VERSE_IDS.forEach((k) => {
-      const v = verseByKey(k);
-      expect(v.gr && v.ru && v.en && v.uz, k).toBeTruthy();
-      expect(azbykaUrl(v.ref), k).toMatch(/^https:\/\/azbyka\.ru\/biblia\/\?\w+\.\d+:\d+$/);
-    });
+  it('каждый крест — свой рисунок; на главном не больше семи приложений', async () => {
+    const { CROSS_IDS, crossSVG } = await import('../src/launcher/cross.js');
+    expect(CROSS_IDS).toEqual(['latin', 'greek', 'orthodox', 'circle']);
+    expect(new Set(CROSS_IDS.map((id) => crossSVG(id))).size).toBe(CROSS_IDS.length);
+    const data = await import('../src/launcher/data.js');
+    expect(data.HOME_MAX).toBe(7);
+    data.prefs.home = Array.from({ length: 10 }, (_, i) => ({ key: 'a' + i, label: '' }));
+    const { homeItems } = await import('../src/launcher/apps.js');
+    expect(homeItems()).toHaveLength(7);
+    data.prefs.home = null;
+  });
+  it('скрытое приложение пропадает отовсюду: все приложения, главный, значки, папки; вернуть — снова видно', async () => {
+    vi.resetModules();
+    const data = await import('../src/launcher/data.js');
+    const apps = await import('../src/launcher/apps.js');
+    await apps.loadApps(); // браузер: ссылки вместо приложений
+    const key = 'web.music';
+    data.prefs.home = [{ key, label: '' }, { key: 'web.maps', label: '' }];
+    data.prefs.dock = [{ icon: 'music', action: { t: 'app', key } }];
+    expect(apps.allApps().some((a) => a.key === key)).toBe(true);
+    apps.setHidden(key, true);
+    expect(apps.allApps().some((a) => a.key === key)).toBe(false);
+    expect(apps.hiddenApps().map((a) => a.key)).toEqual([key]);
+    expect(apps.homeItems().map((x) => x.key)).toEqual(['web.maps']);
+    expect(apps.dockSlots()).toHaveLength(0);
+    const { folderApps } = await import('../src/launcher/folders.js');
+    expect(folderApps({ apps: [key, 'web.maps'] }).map((a) => a.key)).toEqual(['web.maps']);
+    apps.setHidden(key, false);
+    expect(apps.allApps().some((a) => a.key === key)).toBe(true);
+    data.prefs.hidden = []; data.prefs.home = null; data.prefs.dock = null;
+  });
+  it('старые настройки переходят на минимальный экран: украшения убраны, приложения и жесты на месте', async () => {
+    const old = { theme: 'paper', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', style: 'rich', font: 'literata', church: true,
+      home: Array.from({ length: 9 }, (_, i) => ({ key: 'k' + i, label: '' })), gestures: { swipeUp: { t: 'cmd', id: 'drawer' } } };
+    localStorage.setItem('elachiston.prefs', JSON.stringify(old));
+    vi.resetModules();
+    const { prefs } = await import('../src/launcher/data.js');
+    expect(prefs.v).toBe(2);
+    expect(prefs.theme).toBe('light');
+    expect(prefs.align).toBe('right');
+    ['clock', 'wallpaper', 'ornament', 'style', 'font'].forEach((k) => expect(prefs[k], k).toBeUndefined());
+    expect(prefs.church).toBe(true);
+    expect(prefs.home).toHaveLength(7);
+    expect(prefs.gestures.swipeUp.id).toBe('drawer');
+    localStorage.removeItem('elachiston.prefs');
+    vi.resetModules();
   });
 });
 

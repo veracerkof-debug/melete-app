@@ -69,6 +69,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- своя строка состояния: Wi-Fi или мобильная сеть (обычное разрешение, без запроса) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Обновление из GitHub (UpdatePlugin.java): системный установщик со скачанным APK -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 </manifest>

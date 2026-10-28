@@ -1,7 +1,7 @@
 // Папки: в «Всех приложениях» — вкладки внизу, на главном экране — строка-название (ключ «f:<id>»), касание — шторка
 // с приложениями папки. Пока папки не меняли — примеры по ролям системы (Android) или по ссылкам (браузер).
 import { prefs, save } from './data.js';
-import { allApps, appOf, rolesOf } from './apps.js';
+import { allApps, appOf, rolesOf, isHidden } from './apps.js';
 import { isNative } from './native.js';
 import { t } from './i18n.js';
 
@@ -30,7 +30,7 @@ export const folders = () => prefs.folders || examples();
 export const folderById = (id) => folders().find((f) => f.id === id) || null;
 export const folderName = (f) => f.name || t('fold.' + f.id);
 export const folderIcon = (f) => f.icon || 'star';
-export const folderApps = (f) => f.apps.map(appOf).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
+export const folderApps = (f) => f.apps.filter((k) => !isHidden(k)).map(appOf).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
 export const foldersOfApp = (key) => folders().filter((f) => f.apps.includes(key));
 
 // изменили — папки хранятся свои (с названиями примеров, чтобы язык не менял имя, данное человеком)

@@ -11,7 +11,7 @@ const DOUBLE_MS = 300;
 
 // onDragStart(dir) → true, если панель в эту сторону пойдёт за пальцем; onDrag(dir, px), onDragEnd(dir, px, v) → true, если
 // жест исчерпан перетаскиванием (обычное смахивание тогда не срабатывает)
-export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, onDragEnd }) {
+export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, onDragEnd, onBlockHold }) {
   let start = null;
   let longTimer = null;
   let lastTap = null;
@@ -29,7 +29,9 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
 
   el.addEventListener('pointerdown', (e) => {
     if (isBlocked() || e.button > 0) return;
-    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), moved: false, long: false };
+    // блок главного (часы, дата, Melete, баланс, приложения, значки): удержание — правка на месте (arrange.js); пустое место — как жест
+    const blk = e.target.closest('[data-blk]')?.dataset.blk;
+    start = { x: e.clientX, y: e.clientY, t: performance.now(), el: target(e), blk: blk !== 'space' ? blk : null, moved: false, long: false };
     halo = document.createElement('div');
     halo.className = 'l-halo';
     halo.style.left = e.clientX + 'px';
@@ -42,6 +44,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
       navigator.vibrate?.(12);
       clearHalo();
       if (start.el?.longPress) start.el.longPress();
+      else if (start.blk && onBlockHold) onBlockHold(start.blk);
       else onGesture('longPress');
     }, LONG_MS);
   });
@@ -129,7 +132,6 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
 
 // Жесты главного экрана: строка gest.<id>
 export const GESTURES = ['swipeUp', 'swipeDown', 'swipeLeft', 'swipeRight', 'doubleTap', 'longPress', 'clockTap', 'dateTap'];
-export const GLYPHS = { swipeUp: '↑', swipeDown: '↓', swipeLeft: '←', swipeRight: '→', doubleTap: '··', longPress: '◯', clockTap: '◷', dateTap: '▦' };
 
 // Что делает жест, если человек его не менял
 export function defaultGesture(id, { church, roles = {} }) {
@@ -139,7 +141,6 @@ export function defaultGesture(id, { church, roles = {} }) {
     case 'swipeDown': return cmd('search');
     case 'swipeLeft': return cmd('money');
     case 'swipeRight': return cmd('notes');
-    case 'doubleTap': return cmd('rest');
     case 'longPress': return cmd('settings');
     case 'clockTap': return isNative() ? cmd('alarms') : cmd('none');
     case 'dateTap': return roles.calendar ? { t: 'app', key: roles.calendar } : cmd('none');

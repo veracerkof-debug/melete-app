@@ -291,6 +291,71 @@ public class LauncherPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         try { if (stateRx != null) getContext().unregisterReceiver(stateRx); } catch (Exception ignored) { }
+        try { if (batRx != null) getContext().unregisterReceiver(batRx); } catch (Exception ignored) { }
+        try { if (netCb != null) cm().unregisterNetworkCallback(netCb); } catch (Exception ignored) { }
+    }
+
+    // — Своя строка состояния (системная скрыта): заряд и сеть из системы, WebView их не знает —
+    private android.content.BroadcastReceiver batRx;
+    private android.net.ConnectivityManager.NetworkCallback netCb;
+    private Intent lastBattery;
+    private android.net.ConnectivityManager cm() { return (android.net.ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE); }
+
+    private JSObject statusNow() {
+        JSObject o = new JSObject();
+        Intent b = lastBattery != null ? lastBattery : getContext().registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (b != null) {
+            int level = b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1), scale = b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+            int st = b.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            if (level >= 0 && scale > 0) o.put("battery", Math.round(level * 100f / scale));
+            o.put("charging", st == android.os.BatteryManager.BATTERY_STATUS_CHARGING || st == android.os.BatteryManager.BATTERY_STATUS_FULL);
+        }
+        String net = "none"; int bars = -1;
+        try {
+            android.net.ConnectivityManager c = cm();
+            android.net.NetworkCapabilities nc = c.getNetworkCapabilities(c.getActiveNetwork());
+            if (nc != null && nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                if (nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                    net = "wifi";
+                    if (android.os.Build.VERSION.SDK_INT >= 29) {
+                        int rssi = nc.getSignalStrength();
+                        if (rssi != Integer.MIN_VALUE) bars = rssi >= -55 ? 4 : rssi >= -66 ? 3 : rssi >= -77 ? 2 : rssi >= -88 ? 1 : 0;
+                    }
+                } else if (nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) net = "cell";
+                else net = "other";
+            }
+        } catch (Exception ignored) { }
+        // мобильная связь: уровень сигнала (без разрешений, Android 9+), даже когда интернет идёт по Wi-Fi
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                android.telephony.TelephonyManager tm = (android.telephony.TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
+                android.telephony.SignalStrength ss = tm != null ? tm.getSignalStrength() : null;
+                if (ss != null) o.put("cell", ss.getLevel());
+            }
+        } catch (Exception ignored) { }
+        o.put("net", net);
+        if (bars >= 0) o.put("wifi", bars);
+        return o;
+    }
+
+    @PluginMethod
+    public void status(PluginCall call) {
+        if (batRx == null) {
+            batRx = new android.content.BroadcastReceiver() {
+                @Override public void onReceive(Context c, Intent i) { lastBattery = i; notifyListeners("status", statusNow()); }
+            };
+            android.content.IntentFilter f = new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            if (android.os.Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(batRx, f, Context.RECEIVER_NOT_EXPORTED);
+            else getContext().registerReceiver(batRx, f);
+            try {
+                netCb = new android.net.ConnectivityManager.NetworkCallback() {
+                    @Override public void onCapabilitiesChanged(android.net.Network n, android.net.NetworkCapabilities nc) { notifyListeners("status", statusNow()); }
+                    @Override public void onLost(android.net.Network n) { notifyListeners("status", statusNow()); }
+                };
+                cm().registerDefaultNetworkCallback(netCb);
+            } catch (Exception ignored) { netCb = null; }
+        }
+        call.resolve(statusNow());
     }
 
     @PluginMethod

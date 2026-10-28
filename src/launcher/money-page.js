@@ -8,9 +8,54 @@ const EXP = [['food','Еда','#4FB286'],['groc','Продукты','#8AB34F'],[
   ['care','Уход за собой','#E09AB8'],['pet','Питомец','#B88A5A'],['study','Учёба','#6A9F8A'],['save','Накопления','#4C8C9C'],['other','Другое','#999']];
 const INC = [['salary','Зарплата','#C99A3C'],['gig','Концерты','#7C8BD9'],['side','Подработка','#4FB286'],['gifti','Подарок','#E07B4F'],
   ['refund','Возврат','#5E9BD6'],['otheri','Другое','#999']];
-const CATS = {}; [...EXP.map(c => [...c, 'e']), ...INC.map(c => [...c, 'i'])].forEach(([id, n, c, k]) => CATS[id] = { id, n, c, k });
+const CATS = {}; [...EXP.map(c => [...c, 'e']), ...INC.map(c => [...c, 'i'])].forEach(([id, n, c, k]) => CATS[id] = { id, n, c, k, i: id });
 const HUES = ['#4FB286','#C98B7C','#A882D0','#5E9BD6','#D2A541','#E07B4F','#6CB7C9','#D96C7E','#7C8BD9','#8AB34F'];
-function addCustom(c) { CATS[c.id] = { id: c.id, n: c.n, c: c.c, k: c.k }; }
+function addCustom(c) { CATS[c.id] = { id: c.id, n: c.n, c: c.c, k: c.k, i: c.i || 'dots' }; }
+// Значки категорий — свои тонкие линии (24×24, цвет — currentColor). У встроенной категории значок по её id,
+// у своей — выбранный при создании (поле i).
+const C = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+const ICON = {
+  food: '<path d="M7 3v18M4.5 3v4.5a2.5 2.5 0 0 0 5 0V3M17 21V3c-2 1.4-3 4-3 7v3h3"/>',
+  groc: '<path d="M5 8h14l-1.1 11.1a2 2 0 0 1-2 1.9H8.1a2 2 0 0 1-2-1.9L5 8zM9 8V6.5a3 3 0 0 1 6 0V8"/>',
+  trans: '<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5V17H4V6.5A2.5 2.5 0 0 1 6.5 4zM4 11.5h16M7 17v2.5M17 17v2.5"/>' + C(8, 14.3, .6) + C(16, 14.3, .6),
+  util: '<path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v1.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.5 18.5h3"/>',
+  cig: '<path d="M3 14.5h13v3H3zM12 14.5v3M18.5 14.5v3M21 14.5v3M18.5 11.5c0-1.6-2-1.8-2-3.4s2-1.8 2-3.6M21 11.5c0-1.6-1.4-1.8-1.4-3.4"/>',
+  tithe: C(12, 12, 9) + '<path d="M9 15l6-6"/>' + C(9.4, 9.4, .9) + C(14.6, 14.6, .9),
+  give: '<path d="M3 13h3.5l3 2h3.2a1.5 1.5 0 0 1 0 3H9.5M6.5 19.5H3M12.7 18l5-1.6a1.6 1.6 0 0 1 1.3 2.8l-4.3 2.3H9.2l-2.7-1.5M15.5 10.6S12 8.5 12 6a2 2 0 0 1 3.5-1.3A2 2 0 0 1 19 6c0 2.5-3.5 4.6-3.5 4.6z"/>',
+  gift: '<path d="M4.5 11h15v9.5h-15zM3.5 7.5h17V11h-17zM12 7.5v13M12 7.5C10.8 4.6 7 4 7 6s3.3 1.5 5 1.5zM12 7.5c1.2-2.9 5-3.5 5-1.5s-3.3 1.5-5 1.5z"/>',
+  cloth: '<path d="M9 3.5L4 6l1.8 4.2 2.2-1V20.5h8V9.2l2.2 1L20 6l-5-2.5a3 3 0 0 1-6 0z"/>',
+  health: '<path d="M3 12h4l2.2-5.5 4.2 11 2.4-5.5H21"/>',
+  music: '<path d="M9 18V5.5l11-2v12.5"/>' + C(6, 18, 3) + C(17, 16, 3),
+  fun: '<path d="M3.5 7h17v3a2 2 0 0 0 0 4v3h-17v-3a2 2 0 0 0 0-4zM14.5 7v1.6M14.5 11.2v1.6M14.5 15.4V17"/>',
+  tech: '<rect x="4.5" y="5" width="15" height="10.5" rx="1.5"/><path d="M2.5 19h19"/>',
+  online: '<path d="M3 4h2.2l2.3 11h10.3L20 7.5H6"/>' + C(9, 19.3, 1.3) + C(16.5, 19.3, 1.3),
+  home: '<path d="M5.5 11V8.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5V11M3 18v-4.5a2 2 0 0 1 4 0V15h10v-1.5a2 2 0 0 1 4 0V18zM5 18v2M19 18v2"/>',
+  care: '<path d="M12 3.5c3 4 6 7 6 10.5a6 6 0 0 1-12 0c0-3.5 3-6.5 6-10.5zM9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
+  pet: C(6.5, 10.5, 1.6) + C(10, 6.5, 1.6) + C(14, 6.5, 1.6) + C(17.5, 10.5, 1.6) + '<path d="M8.3 17.3c0-2.4 1.7-4.6 3.7-4.6s3.7 2.2 3.7 4.6c0 1.5-1.6 2.2-3.7 2.2s-3.7-.7-3.7-2.2z"/>',
+  study: '<path d="M2.5 9L12 4.5 21.5 9 12 13.5zM6.5 11v5c3 2.2 8 2.2 11 0v-5M21.5 9v5"/>',
+  save: '<path d="M5 7c0-1.1 3.1-2 7-2s7 .9 7 2-3.1 2-7 2-7-.9-7-2zM5 7v5c0 1.1 3.1 2 7 2s7-.9 7-2V7M5 12v5c0 1.1 3.1 2 7 2s7-.9 7-2v-5"/>',
+  salary: '<rect x="2.5" y="6.5" width="19" height="11" rx="1.5"/>' + C(12, 12, 2.6) + '<path d="M6 10v4M18 10v4"/>',
+  gig: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/>',
+  side: '<rect x="3.5" y="7.5" width="17" height="12" rx="1.5"/><path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5M3.5 13h17"/>',
+  refund: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v3.5H8"/>',
+  coffee: '<path d="M5 9.5h11V14a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M9 3.5c-.8 1 .8 2 0 3M12.5 3.5c-.8 1 .8 2 0 3"/>',
+  car: '<path d="M4 16.5V12l2-5h12l2 5v4.5zM4 12h16M6.5 16.5V19M17.5 16.5V19"/>' + C(7.7, 14.2, .6) + C(16.3, 14.2, .6),
+  fuel: '<path d="M5 21V5.5A2.5 2.5 0 0 1 7.5 3h5A2.5 2.5 0 0 1 15 5.5V21M3 21h14M5 10h10M15 8.5l3 3v5.5a1.5 1.5 0 0 0 3 0V9l-2.5-2.5"/>',
+  book: '<path d="M5 19V5.5A2.5 2.5 0 0 1 7.5 3H19v13.5H7.5A2.5 2.5 0 0 0 5 19a2.5 2.5 0 0 0 2.5 2.5H19v-5"/>',
+  sport: '<path d="M6.5 7.5v9M3.5 10v4M17.5 7.5v9M20.5 10v4M6.5 12h11"/>',
+  film: '<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M8 4.5v15M16 4.5v15M3.5 9H8M3.5 15H8M16 9h4.5M16 15h4.5"/>',
+  kid: C(12, 7.5, 3.5) + '<path d="M5.5 21a6.5 6.5 0 0 1 13 0"/>' + C(10.7, 7.3, .4) + C(13.3, 7.3, .4),
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  dots: C(6, 12, 1.2) + C(12, 12, 1.2) + C(18, 12, 1.2),
+};
+ICON.gifti = ICON.gift; ICON.other = ICON.otheri = ICON.dots;
+// какие значки можно взять своей категории
+const PICK = ['coffee', 'car', 'fuel', 'food', 'groc', 'home', 'phone', 'tech', 'book', 'study', 'sport', 'film', 'music', 'gig',
+  'gift', 'give', 'health', 'care', 'pet', 'kid', 'cloth', 'trans', 'util', 'online', 'save', 'salary', 'side', 'refund', 'dots'];
+const icoOf = (id) => CATS[id]?.i || id;
+const ico = (name, cls = 'ic') => h('span', { class: cls, 'aria-hidden': 'true',
+  html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICON[name] || ICON.dots}</svg>` });
 const MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 const MON_S = ['янв.','февр.','март','апр.','май','июнь','июль','авг.','сент.','окт.','нояб.','дек.'];
 const WD = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
@@ -109,10 +154,10 @@ function renderEntry() {
       h('button', { class: S.kind === 'e' ? 'on' : '', onclick: () => setKind('e') }, 'Расход'),
       h('button', { class: S.kind === 'i' ? 'on' : '', onclick: () => setKind('i') }, 'Доход')),
     h('div', { class: 'quick' }, quickPairs(S.kind).map((p) =>
-      h('button', { onclick: () => add(p.c, p.a) }, CATS[p.c].n, h('span', { class: 'num' }, fmt(p.a))))),
+      h('button', { onclick: () => add(p.c, p.a), style: { '--c': CATS[p.c].c } }, ico(icoOf(p.c)), CATS[p.c].n, h('span', { class: 'num' }, fmt(p.a))))),
     h('div', { class: 'cats grid' },
       sortedCats(S.kind).map((id) => catBtn(id)),
-      h('button', { class: 'cat more', onclick: newCat }, '+ Своя')));
+      h('button', { class: 'cat more', onclick: newCat }, ico('plus'), 'Своя')));
 }
 
 // категория выбрана — снизу клавиатура для суммы
@@ -130,7 +175,7 @@ function keypad(c) {
   draw();
   const w = sheet(null, [
     h('div', { class: 'padhead', style: { '--c': CATS[c].c } },
-      h('span', { class: 'padcat' }, CATS[c].n),
+      h('span', { class: 'padcat' }, ico(icoOf(c), 'badge'), CATS[c].n),
       h('button', { class: 'link', onclick: () => { w.remove(); S.pad = null; detailSheet(c); } }, 'Заметка, дата')),
     amt,
     h('div', { class: 'keys num' },
@@ -143,7 +188,7 @@ function keypad(c) {
 
 function catBtn(id, cls = 'cat', after) {
   const c = CATS[id];
-  const b = h('button', { class: cls, style: { '--c': c.c } }, c.n);
+  const b = h('button', { class: cls, style: { '--c': c.c } }, ico(c.i), h('span', { class: 'cn' }, c.n));
   holdable(b, () => { after && after(); detailSheet(id); }, () => { after && after(); keypad(id); });
   return b;
 }
@@ -183,13 +228,19 @@ function closeSheets() { app.querySelectorAll('.wrap').forEach((w) => w.remove()
 
 function newCat() {
   const inp = h('input', { type: 'text', placeholder: S.kind === 'e' ? 'Например: Кофе' : 'Например: Уроки', maxlength: 24 });
+  const hue = HUES[(db.custom || []).length % HUES.length];
+  let pick = 'dots';
+  const icons = h('div', { class: 'icpick', role: 'radiogroup', 'aria-label': 'Значок', style: { '--c': hue } });
+  const drawIcons = () => icons.replaceChildren(...PICK.map((name, n) => h('button', { class: name === pick ? 'on' : '', role: 'radio', 'aria-checked': String(name === pick),
+    'aria-label': `Значок ${n + 1}`, onclick: () => { pick = name; drawIcons(); } }, ico(name))));
+  drawIcons();
   const done = () => {
     const n = inp.value.trim(); if (!n) return inp.focus();
-    const c = { id: 'u' + uid(), n, k: S.kind, c: HUES[(db.custom || []).length % HUES.length] };
+    const c = { id: 'u' + uid(), n, k: S.kind, c: hue, i: pick };
     db.custom = [...(db.custom || []), c]; addCustom(c); save(); w.remove(); renderEntry(); keypad(c.id);
   };
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(); });
-  const w = sheet(S.kind === 'e' ? 'Своя категория расхода' : 'Своя категория дохода', [h('label', { class: 'f' }, h('span', {}, 'Название'), inp),
+  const w = sheet(S.kind === 'e' ? 'Своя категория расхода' : 'Своя категория дохода', [h('label', { class: 'f' }, h('span', {}, 'Название'), inp), h('div', { class: 'f' }, h('span', {}, 'Значок'), icons),
     h('div', { class: 'btns' }, h('button', { class: 'btn main', onclick: done }, 'Добавить'))]);
   setTimeout(() => inp.focus(), 250);
 }
@@ -210,7 +261,7 @@ function detailSheet(c, rec) {
   const seg = h('div', { class: 'seg', style: { marginBottom: '12px' } });
   const draw = () => {
     seg.replaceChildren(...[['e', 'Расход'], ['i', 'Доход']].map(([k, n]) => h('button', { class: kind === k ? 'on' : '', onclick: () => { kind = k; if (CATS[cat].k !== k) cat = sortedCats(k)[0]; draw(); } }, n)));
-    grid.replaceChildren(...Object.values(CATS).filter((x) => x.k === kind).map(({ id }) => h('button', { class: 'cat' + (id === cat ? ' on' : ''), style: { '--c': CATS[id].c }, onclick: () => { cat = id; draw(); } }, CATS[id].n)));
+    grid.replaceChildren(...Object.values(CATS).filter((x) => x.k === kind).map(({ id }) => h('button', { class: 'cat' + (id === cat ? ' on' : ''), style: { '--c': CATS[id].c }, onclick: () => { cat = id; draw(); } }, ico(CATS[id].i), h('span', { class: 'cn' }, CATS[id].n))));
   };
   draw();
   const done = () => {
@@ -291,7 +342,7 @@ function renderOver() {
 function row(r) {
   const c = CATS[r.c] || CATS.other;
   const d = new Date(r.t);
-  const el = h('div', { class: 'row', style: { '--c': c.c } }, h('i', { class: 'dot' }),
+  const el = h('div', { class: 'row', style: { '--c': c.c } }, ico(c.i, 'badge'),
     h('div', { class: 'nm' }, c.n, h('small', {}, [String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), r.n].filter(Boolean).join(' · '))),
     h('div', { class: 'sum num ' + (r.k === 'i' ? 'pos' : '') }, signed(r)));
   const wrap = h('div', { class: 'rowwrap' }, el);
@@ -364,7 +415,7 @@ function stats(tab, kind = 'e') {
       h('button', { class: kind === 'e' ? 'on' : '', onclick: () => stats('cats', 'e') }, 'Расходы'),
       h('button', { class: kind === 'i' ? 'on' : '', onclick: () => stats('cats', 'i') }, 'Доходы')),
       list.length ? list.map(([c, s]) => h('div', { class: 'cb num', style: { '--c': CATS[c].c } },
-        h('div', { class: 't' }, h('span', {}, CATS[c].n), h('span', {}, `${fmt(s)} · ${Math.round(s / total * 100)} %`)),
+        h('div', { class: 't' }, h('span', {}, ico(icoOf(c)), CATS[c].n), h('span', {}, `${fmt(s)} · ${Math.round(s / total * 100)} %`)),
         h('div', { class: 'bar' }, h('i', { style: { width: (s / list[0][1] * 100) + '%' } }))))
         : h('div', { class: 'empty-m' }, 'Нет записей'),
       h('div', { class: 'hint num' }, `${mname}: всего ${fmt(total)}`)];

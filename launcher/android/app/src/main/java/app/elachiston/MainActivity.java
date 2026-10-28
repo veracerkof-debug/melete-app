@@ -6,6 +6,7 @@ import android.os.Bundle;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
@@ -25,10 +26,16 @@ public class MainActivity extends BridgeActivity {
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
         if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
         final float density = getResources().getDisplayMetrics().density;
+        // Системная строка состояния скрыта (решение автора): у главного экрана своя — сеть и заряд (home.js).
+        // Смахнуть сверху — системная появляется на время, второе смахивание — шторка уведомлений
+        hideStatusBar();
         ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
             androidx.core.graphics.Insets s = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            // сверху — место скрытой строки (там своя строка и вырез камеры), а не ноль
+            int top = Math.max(s.top, Math.max(insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top,
+                insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top));
             String js = String.format(java.util.Locale.US, "window.__insets && window.__insets(%.1f,%.1f,%.1f,%.1f)",
-                s.top / density, s.right / density, s.bottom / density, s.left / density);
+                top / density, s.right / density, s.bottom / density, s.left / density);
             if (getBridge() != null) getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(js, null));
             return insets;
         });
@@ -39,6 +46,19 @@ public class MainActivity extends BridgeActivity {
                 if (getBridge() != null) getBridge().getWebView().evaluateJavascript("window.__launcherBack && window.__launcherBack()", null);
             }
         });
+    }
+
+    private void hideStatusBar() {
+        WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        c.hide(WindowInsetsCompat.Type.statusBars());
+    }
+
+    // система может вернуть строку (после другого приложения, шторки, поворота) — снова прячем
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideStatusBar();
     }
 
     // Жест «Домой», когда главный экран уже на виду, — ничего не делает (решение автора): не перезапускает страницу,

@@ -10,15 +10,15 @@ export function pickIcon(current, onPick) {
   const church = isChurch();
   let q = '';
   openSheet({
-    title: t('pick.icon'), kicker: church ? 'εἰκών' : '', full: true,
+    title: t('pick.icon'), full: true,
     render(body, close) {
       const grid = h('div', { class: 'l-icon-grid' });
       const fill = () => {
         grid.replaceChildren();
         const ql = q.trim().toLowerCase();
-        iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.el, i.id].some((s) => s.toLowerCase().includes(ql)))
+        iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.id].some((s) => s.toLowerCase().includes(ql)))
           .forEach((i) => grid.append(h('button', { class: `l-icon-cell ${i.id === current ? 'on' : ''}`, 'aria-label': t('icon.' + i.id), onclick: () => { onPick(i.id); close(); } },
-            h('span', { html: iconSVG(i.id) }), church ? h('b', { lang: 'el' }, i.el) : null, h('small', {}, t('icon.' + i.id)))));
+            h('span', { html: iconSVG(i.id) }), h('small', {}, t('icon.' + i.id)))));
       };
       body.append(h('input', { class: 'l-search', type: 'search', placeholder: t('pick.iconSearch'), 'aria-label': t('pick.iconSearch'), oninput: (e) => { q = e.target.value; fill(); } }), grid);
       fill();
@@ -32,7 +32,7 @@ export function pickAction(current, onPick, { appsOnly = false } = {}) {
   let url = current?.t === 'url' ? current.url : '';
   let name = current?.t === 'url' ? current.name || '' : '';
   openSheet({
-    title: appsOnly ? t('pick.app') : t('pick.action'), kicker: church ? 'πρᾶξις' : '', full: true,
+    title: appsOnly ? t('pick.app') : t('pick.action'), full: true,
     render(body, close, rerender) {
       if (!appsOnly) {
         body.append(segmented([

@@ -7,8 +7,6 @@ import { t } from './i18n.js';
 export const COMMANDS = [
   { id: 'drawer' }, { id: 'search' }, { id: 'settings' },
   { id: 'melete' }, { id: 'money' }, { id: 'notes' },
-  { id: 'verseNext', church: true }, { id: 'verseOpen', church: true },
-  { id: 'clock' }, { id: 'rest' },
   { id: 'alarms', native: true }, { id: 'camera', native: true }, { id: 'dial', native: true }, { id: 'sysSettings', native: true },
   { id: 'none' },
 ];
@@ -42,6 +40,7 @@ export async function runAction(a, apps) {
   if (!a) return;
   if (a.t === 'cmd') {
     if (handlers[a.id]) return handlers[a.id]();
+    if (!COMMANDS.some((c) => c.id === a.id && c.native)) return; // убранная команда (тихий экран, стих…) — ничего
     if (isNative()) return Launcher.open({ what: a.id === 'sysSettings' ? 'settings' : a.id }).catch(() => notify(t('act.noApp')));
     return;
   }

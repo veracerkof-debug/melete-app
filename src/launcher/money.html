@@ -32,11 +32,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ebar{background:linear-gradient(var(--fill2),var(--fill2)) center/100% 4px no-repeat}
 .ebar i.over{background:var(--red)}
 .kindseg{align-self:center;margin:6px 0 10px}
-.cats.grid{flex:1;overflow-y:auto;align-content:start;margin:0 -16px;padding:2px 16px 16px;grid-auto-rows:64px}
-.cats.grid .cat{height:auto;font-size:14px;padding:0 10px 0 12px;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+.cats.grid{flex:1;overflow-y:auto;align-content:start;margin:0 -16px;padding:2px 16px 16px;grid-auto-rows:76px}
+.cats.grid .cat{height:auto;font-size:13.5px;padding:8px 6px;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
 .padhead{display:flex;justify-content:space-between;align-items:center;margin:2px 0 4px}
-.padcat{font-size:18px;font-weight:600;padding-left:12px;position:relative}
-.padcat::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:4px;border-radius:2px;background:var(--c)}
+.padcat{font-size:18px;font-weight:600;display:inline-flex;align-items:center;gap:10px}
 .sheet .amt{text-align:center;margin:14px 0 18px}
 .btn.save{width:100%;margin-top:8px;height:54px;font-size:17px}
 .amount{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:120px;gap:10px}
@@ -51,11 +50,27 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .quick{display:flex;gap:8px;overflow-x:auto;min-height:40px;margin:4px -16px 8px;padding:0 16px;scrollbar-width:none}
 .quick::-webkit-scrollbar{display:none}
 .quick button{flex:none;border:1px solid var(--sep);border-radius:20px;padding:0 14px;height:38px;font-size:14px;white-space:nowrap}
-.quick button span{color:var(--l2);margin-left:6px}
+.quick button span.num{color:var(--l2)}
 .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .cat{height:52px;border-radius:14px;background:var(--cell);font-size:15px;position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center;padding:0 8px;text-align:center;line-height:1.1;user-select:none;-webkit-user-select:none}
-.cat::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--c);opacity:.55}
+.cat{flex-direction:column;gap:5px}
+.cat .ic{width:24px;height:24px;color:var(--c);flex:none}
+.cat .cn{max-width:100%}
+.cat.more .ic{color:var(--l3)}
+/* значок: тонкая линия цветом категории; кружок-подложка — в строках записей и над клавиатурой */
+.ic,.badge{display:inline-grid;place-items:center}
+.ic svg,.badge svg{width:100%;height:100%;display:block}
+.badge{width:34px;height:34px;border-radius:50%;flex:none;padding:7px;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.quick button{display:inline-flex;align-items:center;gap:6px}
+.quick button .ic{width:17px;height:17px;color:var(--c)}
+.cb .t span:first-child{display:inline-flex;align-items:center;gap:8px}
+.cb .t .ic{width:18px;height:18px;color:var(--c)}
+.icpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;max-height:190px;overflow-y:auto}
+.icpick button{height:44px;border-radius:12px;display:grid;place-items:center;color:var(--l2)}
+.icpick button .ic{width:24px;height:24px}
+.icpick button.on{background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);outline:1.5px solid var(--c)}
+html[data-style="rich"] .cat .ic{width:26px;height:26px}
 .cat.more{background:var(--fill);color:var(--l2)}
 .cat:active{transform:scale(.97)}
 .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -83,8 +98,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .day{display:flex;justify-content:space-between;padding:16px 16px 6px;font-size:13px;color:var(--l2);position:sticky;top:0;background:var(--bg);z-index:1}
 .rowwrap{position:relative;overflow:hidden;background:var(--red)}
 .rowwrap::after{content:"Удалить";position:absolute;right:18px;top:50%;transform:translateY(-50%);color:#fff;font-size:14px}
-.row{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:0 16px;min-height:54px;background:var(--bg);touch-action:pan-y;user-select:none;-webkit-user-select:none}
-.row .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.row{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:0 16px;min-height:58px;background:var(--bg);touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.row .badge{width:36px;height:36px}
 .row .nm{flex:1;min-width:0}
 .row .nm small{display:block;color:var(--l3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .sum{font-size:16px}
@@ -101,10 +116,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .sheet h2{font-size:18px;margin:4px 0 14px;font-weight:600}
 @keyframes up{from{transform:translateY(100%)}}@keyframes fade{from{opacity:0}}
 .allcats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.allcats .cat{background:var(--fill)}
+.allcats .cat{background:var(--fill);height:70px;font-size:13.5px;padding:6px}
 .allcats .cat.on{outline:2px solid var(--tint)}
 .f{display:block;margin-bottom:12px}
-.f span{display:block;font-size:12px;color:var(--l2);margin-bottom:4px}
+.f>span{display:block;font-size:12px;color:var(--l2);margin-bottom:4px}
 .f input{width:100%;font:inherit;font-size:17px;padding:12px;border-radius:12px;border:1px solid var(--sep);background:var(--bg);color:var(--ink)}
 .btns{display:flex;gap:8px;margin-top:6px}
 .btn{flex:1;height:48px;border-radius:14px;background:var(--fill);font-size:16px}
