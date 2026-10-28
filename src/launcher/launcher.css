@@ -9,6 +9,8 @@
 @font-face { font-family: "Launcher Serif"; font-display: swap; src: url('../../node_modules/@fontsource/gfs-didot/files/gfs-didot-greek-ext-400-normal.woff2') format('woff2'); unicode-range: U+1F00-1FFF; }
 
 :root {
+  /* отступы системы: строка состояния сверху, полоса жестов снизу, вырез; Android — из MainActivity (window.__insets) */
+  --l-sat: env(safe-area-inset-top, 0px); --l-sab: env(safe-area-inset-bottom, 0px); --l-sal: env(safe-area-inset-left, 0px); --l-sar: env(safe-area-inset-right, 0px);
   --l-display: 'Onest Variable', var(--font);
   --l-serif: 'Launcher Serif', 'Melete Greek', Georgia, serif;
   --l-mono: ui-monospace, 'SF Mono', 'Roboto Mono', monospace;
@@ -33,7 +35,7 @@ body {
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
 [hidden] { display: none !important; }
-#l { position: relative; height: 100dvh; max-width: 480px; margin: 0 auto; overflow: hidden; }
+#l { position: relative; height: 100dvh; overflow: hidden; } /* во всю ширину: колонка главного сама по центру (.l-home), панели — край в край */
 @media (min-width: 700px) {
   html { background: var(--fill); }
   #l { box-shadow: 0 0 0 1px var(--sep); }
@@ -55,13 +57,15 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-home {
   position: absolute; inset: 0; z-index: 1;
   display: flex; flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 36px) 24px calc(env(safe-area-inset-bottom) + 20px);
+  padding: calc(var(--l-sat) + 36px * var(--l-auto, 1)) max(24px, var(--l-sar), calc((100% - 640px) / 2)) calc(var(--l-sab) + 20px * var(--l-auto, 1)) max(24px, var(--l-sal), calc((100% - 640px) / 2));
   touch-action: none;
   user-select: none; -webkit-user-select: none;
   transition: opacity 0.8s var(--ease), filter 0.8s var(--ease);
 }
 .l-home.pre { opacity: 0; filter: blur(6px); }
-.l-home > * { position: relative; z-index: 1; }
+.l-home > * { position: relative; z-index: 1; min-height: 0; flex-shrink: 0; }
+.l-home .l-apps { flex: 0 1 auto; min-height: 0; overflow: hidden; } /* тесно — список ужимается, остальное на месте */
+.l-home .l-spacer { flex: 1 1 0; min-height: 0; }
 
 .l-ornament {
   position: absolute !important; z-index: 0 !important;
@@ -317,7 +321,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-drawer {
   position: absolute; inset: 0; z-index: 20; background: var(--bg);
   display: flex; flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 8px) 24px calc(env(safe-area-inset-bottom) + 8px);
+  padding: calc(var(--l-sat) + 8px) max(24px, var(--l-sar), calc((100% - 640px) / 2)) calc(var(--l-sab) + 8px) max(24px, var(--l-sal), calc((100% - 640px) / 2));
   transform: translateY(102%); transition: transform 0.45s var(--ease), visibility 0s 0.45s; visibility: hidden;
 }
 .l-drawer.open { transform: none; visibility: visible; transition: transform 0.45s var(--ease); }
@@ -348,12 +352,12 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.28); opacity: 0; transition: opacity 0.3s; }
 .l-sheet-wrap.open .l-scrim { opacity: 1; }
 .l-sheet {
-  position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%;
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%; max-width: 640px; margin: 0 auto;
   display: flex; flex-direction: column;
   background: var(--cell); color: var(--ink); border-radius: 26px 26px 0 0;
   box-shadow: 0 -1px 0 var(--sep), 0 -20px 60px rgba(0,0,0,.12);
   transform: translateY(100%); transition: transform 0.38s var(--ease);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--l-sab);
 }
 .full { height: 92%; max-height: 92%; }
 .l-sheet-wrap.open .l-sheet { transform: none; }
@@ -465,7 +469,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-rest-time { font-family: 'Onest Variable'; font-weight: 300; font-size: 54px; letter-spacing: 0.04em; }
 .l-rest-el { font-family: 'Launcher Serif'; font-size: 24px; margin: 18px 0 0; }
 .l-rest-tr { font-size: 13px; color: #8d877a; margin: 0; }
-.l-rest small { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 28px); font-family: var(--l-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #5b574f; }
+.l-rest small { position: absolute; bottom: calc(var(--l-sab) + 28px); font-family: var(--l-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #5b574f; }
 
 /* ——— Вступление ——— */
 .l-intro {
@@ -483,7 +487,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* ——— Тост ——— */
 .l-toast {
-  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 108px); z-index: 70;
+  position: fixed; left: 50%; bottom: calc(var(--l-sab) + 108px); z-index: 70;
   transform: translate(-50%, 10px); opacity: 0; pointer-events: none;
   background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px;
   font-family: var(--l-mono); font-size: 11px; letter-spacing: 0.1em; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
@@ -493,7 +497,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* — Небольшие экраны — */
 @media (max-height: 720px) {
-  .l-home { padding-top: calc(env(safe-area-inset-top) + 18px); }
+  .l-home { padding-top: calc(var(--l-sat) + 18px); }
   .l-status { margin-bottom: 14px; }
   .ck-tablet { font-size: 76px; }
   .ck-codex-main { font-size: 84px; }
@@ -533,7 +537,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 4px; }
 .l-swatch { width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--sep); }
 .l-swatch.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
-.l-upd { position: absolute; left: 24px; right: 24px; bottom: calc(env(safe-area-inset-bottom) + 76px); z-index: 15; padding: 12px 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; animation: rise 0.5s var(--ease) both; }
+.l-upd { position: absolute; left: max(24px, calc((100% - 640px) / 2)); right: max(24px, calc((100% - 640px) / 2)); bottom: calc(var(--l-sab) + 76px); z-index: 15; padding: 12px 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; animation: rise 0.5s var(--ease) both; }
 .l-colophon { margin: 24px 0 0; text-align: center; font-family: var(--l-serif); font-size: 26px; }
 .l-colophon small { display: block; margin-top: 6px; font-family: var(--font); font-size: 12px; color: var(--l2); }
 
@@ -566,9 +570,9 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 /* Папки: значки справа во «Всех приложениях», список — до самого низа (drawer.js, folders.js) */
 .l-drawer { padding-bottom: 0; }
 .l-d-body { flex: 1; min-height: 0; display: flex; gap: 8px; margin-right: -14px; }
-.l-d-body .l-d-list { padding-bottom: calc(env(safe-area-inset-bottom) + 28px); }
+.l-d-body .l-d-list { padding-bottom: calc(var(--l-sab) + 28px); }
 .l-d-rail { flex: none; width: 46px; display: flex; flex-direction: column; justify-content: center; gap: 6px; overflow-y: auto; scrollbar-width: none;
-  padding: 8px 0 calc(env(safe-area-inset-bottom) + 8px); }
+  padding: 8px 0 calc(var(--l-sab) + 8px); }
 .l-d-rail::-webkit-scrollbar { display: none; }
 .l-d-tab { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: var(--l2); }
 .l-d-tab svg { width: 22px; height: 22px; }
@@ -592,7 +596,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* Замок кошелька (lock.js) */
 .l-lock { position: fixed; inset: 0; z-index: 80; background: var(--bg); display: flex; flex-direction: column; align-items: center;
-  justify-content: space-between; padding: calc(env(safe-area-inset-top) + 12vh) 32px calc(env(safe-area-inset-bottom) + 20px); animation: rise .25s var(--ease) both; }
+  justify-content: space-between; padding: calc(var(--l-sat) + 12vh) 32px calc(var(--l-sab) + 20px); animation: rise .25s var(--ease) both; }
 .l-lock-top { display: flex; flex-direction: column; align-items: center; gap: 22px; }
 .l-lock-title { font-family: var(--l-display); font-size: 20px; font-weight: 500; text-align: center; }
 .l-lock-dots { display: flex; gap: 16px; min-height: 14px; }
@@ -613,6 +617,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* Размеры: часы и остальное отдельно (look.js: --l-ck, --l-ui; zoom меняет и место, которое элемент занимает) */
 .l-home .clock-wrap { zoom: var(--l-ck, 1); }
+.l-home .clock { max-width: 100%; white-space: nowrap; } /* часы не переносятся: не влезли — ужимаются (home.js: fitClock) */
 .l-home .l-status, .l-home .l-date, .l-home .l-subline, .l-home .l-apps, .l-home .l-tracker, .l-home .l-player,
 .l-drawer .l-d-list { zoom: var(--l-dui, 1); }
 .l-home .l-dock-btn svg { transform: scale(calc(var(--l-ui, 1) * var(--l-blk, 1))); } /* значок меньше, место касания — прежнее (≥ 40 px) */
@@ -632,9 +637,9 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-drawer.rail-bottom .l-d-body, .l-drawer.rail-top .l-d-body { flex-direction: column; margin: 0; }
 .l-drawer.rail-top .l-d-body { flex-direction: column-reverse; }
 .l-drawer.rail-bottom .l-d-rail, .l-drawer.rail-top .l-d-rail { width: auto; flex-direction: row; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 6px 0; }
-.l-drawer.rail-bottom .l-d-rail { padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
+.l-drawer.rail-bottom .l-d-rail { padding-bottom: calc(var(--l-sab) + 8px); }
 .l-drawer.rail-bottom .l-d-body .l-d-list { padding-bottom: 12px; }
-.l-drawer.search-bottom > .l-search { flex: none; margin: 6px 0 calc(env(safe-area-inset-bottom) + 10px); }
+.l-drawer.search-bottom > .l-search { flex: none; margin: 6px 0 calc(var(--l-sab) + 10px); }
 .l-drawer.search-bottom .l-d-body .l-d-list { padding-bottom: 12px; }
 
 /* редактор раскладки (settings.js) */
@@ -723,3 +728,10 @@ html[data-motion="spring"] .l-money.dragging, html[data-motion="spring"] .l-draw
 @keyframes l-tab-left { from { opacity: 0; transform: translateX(28px); } }
 @keyframes l-tab-right { from { opacity: 0; transform: translateX(-28px); } }
 .v-src { display: block; margin-top: 10px; font-size: 11px; color: var(--l3); line-height: 1.4; }
+/* тесный экран: список приложений обрезан целыми строками (home.js: fitApps) */
+.l-apps.clipped { mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }
+/* планшет и альбомная: шторки и панели не шире колонки, по центру; клавиатура кода — тоже */
+@media (min-width: 700px) {
+  .l-sheet { border-radius: 26px 26px 0 0; }
+  .l-lock-keys { grid-template-columns: repeat(3, 84px); }
+}

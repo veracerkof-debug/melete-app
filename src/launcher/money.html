@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Деньги — черновик</title>
 <style>
-:root{--bg:#F3F2EE;--cell:#FFFFFF;--ink:#161514;--l2:rgba(22,21,20,.62);--l3:rgba(22,21,20,.38);--sep:rgba(22,21,20,.10);
+:root{--l-sat:env(safe-area-inset-top,0px);--l-sab:env(safe-area-inset-bottom,0px);--bg:#F3F2EE;--cell:#FFFFFF;--ink:#161514;--l2:rgba(22,21,20,.62);--l3:rgba(22,21,20,.38);--sep:rgba(22,21,20,.10);
   --fill:rgba(22,21,20,.06);--fill2:rgba(22,21,20,.11);--tint:#E07A2E;--on-tint:#fff;--red:#C8483F;--green:#3C8F55;
   --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#121110;--cell:#1C1B19;--ink:#F3F2EE;--l2:rgba(243,242,238,.62);
@@ -14,13 +14,13 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);overscroll-behavior:none}
 body{display:flex;justify-content:center}
-#app{width:100%;max-width:460px;height:100dvh;position:relative;overflow:hidden}
+#app{width:100%;max-width:460px;height:calc(100dvh / var(--l-auto,1));position:relative;overflow:hidden;zoom:var(--l-auto,1)}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 .num{font-variant-numeric:tabular-nums}
 .neg{color:var(--red)}.pos{color:var(--green)}
 
 /* ── ввод ── */
-.entry{position:absolute;inset:0;display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom))}
+.entry{position:absolute;inset:0;display:flex;flex-direction:column;padding:max(14px,var(--l-sat, 0px)) 16px max(14px,var(--l-sab, 0px))}
 .top{display:flex;justify-content:space-between;align-items:center;min-height:40px;color:var(--l2);font-size:14px}
 .top button{padding:10px 0;min-height:40px}
 .top b{color:var(--ink);font-weight:600}
@@ -67,7 +67,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .over{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateY(100%);
   transition:transform .32s cubic-bezier(.2,.8,.2,1);z-index:5}
 .over.open{transform:none}
-.ohead{padding:max(10px,env(safe-area-inset-top)) 16px 12px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ohead{padding:max(10px,var(--l-sat, 0px)) 16px 12px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .mrow{display:flex;align-items:center;justify-content:space-between}
 .mrow h1{font-size:22px;font-weight:600;margin:0}
 .mrow button{width:44px;height:44px;font-size:22px;color:var(--l2);border-radius:12px}
@@ -89,14 +89,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .row .nm small{display:block;color:var(--l3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .sum{font-size:16px}
 .empty-m{text-align:center;color:var(--l3);padding:60px 20px;font-size:15px}
-.fab{position:absolute;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);width:64px;height:64px;border-radius:50%;
+.fab{position:absolute;left:50%;bottom:max(20px,var(--l-sab, 0px));transform:translateX(-50%);width:64px;height:64px;border-radius:50%;
   background:var(--tint);color:var(--on-tint);font-size:34px;font-weight:300;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:3}
 
 /* ── шторка ── */
 .wrap{position:absolute;inset:0;z-index:20;display:flex;align-items:flex-end}
 .wrap .bg{position:absolute;inset:0;background:rgba(0,0,0,.35);animation:fade .2s}
 .sheet{position:relative;width:100%;max-height:88%;overflow-y:auto;background:var(--cell);border-radius:18px 18px 0 0;
-  padding:8px 16px max(20px,env(safe-area-inset-bottom));animation:up .25s cubic-bezier(.2,.8,.2,1)}
+  padding:8px 16px max(20px,var(--l-sab, 0px));animation:up .25s cubic-bezier(.2,.8,.2,1)}
 .sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--fill2);margin:0 auto 10px}
 .sheet h2{font-size:18px;margin:4px 0 14px;font-weight:600}
 @keyframes up{from{transform:translateY(100%)}}@keyframes fade{from{opacity:0}}
@@ -127,7 +127,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .cal .d.has{cursor:pointer}
 .cal .d.today{outline:1.5px solid var(--tint)}
 .cal .d span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.toast{position:absolute;left:12px;right:12px;bottom:max(16px,env(safe-area-inset-bottom));z-index:30;background:var(--ink);color:var(--bg);
+.toast{position:absolute;left:12px;right:12px;bottom:max(16px,var(--l-sab, 0px));z-index:30;background:var(--ink);color:var(--bg);
   border-radius:14px;padding:0 6px 0 16px;min-height:52px;display:flex;align-items:center;justify-content:space-between;animation:up .22s}
 .toast button{color:var(--tint);padding:14px 12px;font-weight:600;filter:brightness(1.15)}
 .hint{font-size:12px;color:var(--l3);text-align:center;margin-top:16px;line-height:1.5}

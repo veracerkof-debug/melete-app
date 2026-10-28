@@ -5,7 +5,7 @@ import './launcher.css';
 import { prefs, setPrefs, isChurch } from './data.js';
 import { initI18n, t, getLang } from './i18n.js';
 import { applyLook } from './look.js';
-import { mountHome, renderHome, renderSubline, renderPlayer, currentVerse, clockOpts, refreshTracker, refreshBalance } from './home.js';
+import { mountHome, renderHome, renderSubline, renderPlayer, currentVerse, clockOpts, refreshTracker, refreshBalance, fitApps } from './home.js';
 import { attachGestures, defaultGesture } from './gestures.js';
 import { mountDrawer, openDrawer, closeDrawer, drawerOpen, typeIntoSearch, openFolder, drawerPanel, setDrawerFocus } from './drawer.js';
 import { openSettings, editHomeItem, editDockSlot } from './settings.js';
@@ -27,6 +27,22 @@ import { h, toast, openSheet, sheetOpen, closeTopSheet } from './ui.js';
 const root = document.getElementById('l');
 root.tabIndex = -1; // сюда возвращается фокус из кошелька и блокнота (клавиатура компьютера снова у главного экрана)
 root.style.outline = 'none';
+// отступы системы с Android (MainActivity): в CSS главного экрана и во все страницы-панели (кошелёк, блокнот)
+const INSETS = { t: 0, r: 0, b: 0, l: 0 };
+function applyInsets(doc) {
+  const st = doc?.documentElement?.style; if (!st) return;
+  st.setProperty('--l-sat', INSETS.t + 'px'); st.setProperty('--l-sar', INSETS.r + 'px'); st.setProperty('--l-sab', INSETS.b + 'px'); st.setProperty('--l-sal', INSETS.l + 'px');
+  st.setProperty('--l-auto', getComputedStyle(document.documentElement).getPropertyValue('--l-auto') || '1');
+}
+window.__insets = (t, r, b, l) => {
+  Object.assign(INSETS, { t: +t || 0, r: +r || 0, b: +b || 0, l: +l || 0 });
+  applyInsets(document);
+  applyLook(); // авто-размер зависит от места без отступов
+  applyInsets(document);
+  document.querySelectorAll('iframe.l-money').forEach((f) => { try { applyInsets(f.contentDocument); } catch { /* */ } });
+  requestAnimationFrame(fitApps); // отступы изменили место — список приложений пересчитать
+};
+window.__applyInsets = applyInsets;
 window.__homeFocus = () => { try { root.focus({ preventScroll: true }); } catch { /* */ } };
 const home = h('main', { class: 'l-home' });
 root.append(home);
@@ -204,4 +220,4 @@ if (prefs.intro && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
   setTimeout(() => intro.remove(), church ? 2100 : 1300);
 }
 
-addEventListener('resize', (() => { let r; return () => { clearTimeout(r); r = setTimeout(renderHome, 150); }; })());
+addEventListener('resize', (() => { let r; return () => { clearTimeout(r); r = setTimeout(() => { applyLook(); document.querySelectorAll('iframe.l-money').forEach((f) => { try { applyInsets(f.contentDocument); } catch { /* */ } }); renderHome(); }, 150); }; })());

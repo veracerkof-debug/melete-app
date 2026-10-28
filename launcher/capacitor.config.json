@@ -3,6 +3,7 @@
   "appName": "Elachiston",
   "webDir": "dist",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "disable"
   }
 }

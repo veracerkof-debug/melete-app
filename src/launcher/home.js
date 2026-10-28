@@ -71,6 +71,7 @@ function updateClock(now, force = false) {
   el.style.height = slot ? `${slot}px` : '';
   el.parentElement.classList.toggle('empty', prefs.clock === 'none' && !slot);
   afterClockRender(el);
+  fitClock(el);
   lastSig = sig; lastTime = tm; lastClock = prefs.clock;
   renderDate(now);
   const day = now.toDateString();
@@ -162,6 +163,31 @@ export function refreshBalance() {
   el.replaceWith(fresh);
 }
 
+// тесный экран: список приложений не режется посередине строки — лишние строки прячутся целиком
+// (они остаются во «Всех приложениях»; больше места — уменьшить размеры или скрыть блоки в «Раскладке»)
+// часы шире колонки (крупный шрифт, узкий экран) — ужать ровно настолько, чтобы влезли
+function fitClock(el) {
+  el.style.zoom = '';
+  const have = el.parentElement?.clientWidth || 0, need = el.scrollWidth;
+  if (have && need > have + 1) el.style.zoom = String(Math.floor(have / need * 98) / 100);
+}
+
+export function fitApps() {
+  const list = root?.querySelector('.l-apps');
+  if (!list) return;
+  const rows = [...list.querySelectorAll('.l-app')];
+  rows.forEach((r) => { r.hidden = false; });
+  // сколько места у списка вместе с пустым местом под ним (в px экрана — zoom уже учтён); строки — только целиком
+  const spacer = root.querySelector('.l-spacer');
+  const rect = list.getBoundingClientRect();
+  const avail = rect.height + (spacer ? spacer.getBoundingClientRect().height : 0) + 0.5;
+  let shown = 0;
+  for (const r of rows) { if (r.getBoundingClientRect().bottom - rect.top > avail) break; shown++; }
+  rows.forEach((r, i) => { r.hidden = i >= shown; });
+  list.classList.toggle('clipped', shown < rows.length);
+}
+addEventListener('resize', () => fitApps());
+
 // перерисовать блок Melete на месте (размер блока из раскладки сохраняется)
 export function refreshTracker() {
   const tr = root?.querySelector('.l-tracker');
@@ -228,6 +254,7 @@ export function renderHome() {
   ].filter(Boolean));
   lastSig = null;
   renderStatus();
+  requestAnimationFrame(fitApps);
   updateClock(new Date(), true);
   renderSubline();
   renderPlayer();

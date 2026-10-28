@@ -2,6 +2,7 @@
 // акцент — оттенок классической палитры Melete; чёрно-белый вид — свои токены (launcher.css, data-bw).
 import { accentVars } from '../core/palettes.js';
 import { prefs } from './data.js';
+import { isNative, Launcher } from './native.js';
 
 const THEMES = ['light', 'dark', 'paper', 'oled'];
 export const ACCENTS = ['orange', 'red', 'pink', 'purple', 'indigo', 'blue', 'teal', 'green', 'graphite'];
@@ -18,6 +19,18 @@ export const FONTS = [
   { id: 'oranienbaum', display: 'L Oranienbaum', text: 'L Literata' },
   { id: 'monomakh', display: 'L Monomakh', text: 'L Monomakh', church: true },
 ];
+// Авто-размер по экрану: расчёт на телефон 390×820 (с учётом отступов системы); узкий или низкий экран — меньше,
+// планшет — больше, но не сверх меры. Ползунки в настройках — поверх этого, относительно «как на телефоне»
+export function autoScale() {
+  const de = document.documentElement;
+  const ins = (n) => parseFloat(getComputedStyle(de).getPropertyValue(n)) || 0;
+  const w = innerWidth - ins('--l-sal') - ins('--l-sar');
+  const h = innerHeight - ins('--l-sat') - ins('--l-sab');
+  if (!w || !h) return 1;
+  const s = Math.min(w / 390, h / 820);
+  return Math.round(Math.max(0.78, Math.min(1.45, s)) * 100) / 100;
+}
+
 // переходы между экранами (cover.js, launcher.css: html[data-motion])
 export const MOTIONS = ['slide', 'depth', 'fade', 'spring'];
 export const fontsFor = (church) => FONTS.filter((f) => church || !f.church);
@@ -36,11 +49,20 @@ export function applyLook(de = document.documentElement) {
   if (f.text) de.style.setProperty('--font', fontStack(f.text)); else de.style.removeProperty('--font');
   de.dataset.font = f.id;
   de.dataset.motion = MOTIONS.includes(prefs.motion) ? prefs.motion : 'slide';
-  // размеры: часы отдельно, остальное отдельно (settings.js → «Размер»)
-  de.style.setProperty('--l-ck', String((prefs.clockScale || 100) / 100));
+  // размеры: сначала авто по экрану (autoScale), поверх — ползунки «часы» и «остальное» (settings.js → «Вид»)
+  const auto = autoScale();
+  de.style.setProperty('--l-auto', String(auto));
+  de.style.setProperty('--l-ck', String(auto * ((prefs.clockScale || 100) / 100)));
   const ui = (prefs.uiScale || (prefs.size === 's' ? 85 : prefs.size === 'l' ? 115 : 100)) / 100;
-  de.style.setProperty('--l-dui', String(ui * ((prefs.layout?.drawerScale || 100) / 100)));
-  de.style.setProperty('--l-ui', String((prefs.uiScale || (prefs.size === 's' ? 85 : prefs.size === 'l' ? 115 : 100)) / 100));
+  de.style.setProperty('--l-dui', String(auto * ui * ((prefs.layout?.drawerScale || 100) / 100)));
+  de.style.setProperty('--l-ui', String(auto * ui));
+  // значки строки состояния Android: тёмные на светлом фоне, светлые на тёмном
+  if (isNative()) {
+    const bg = getComputedStyle(de).getPropertyValue('--bg').trim();
+    const m = bg.match(/^#([0-9a-f]{6})$/i);
+    const lum = m ? (0.299 * parseInt(m[1].slice(0, 2), 16) + 0.587 * parseInt(m[1].slice(2, 4), 16) + 0.114 * parseInt(m[1].slice(4, 6), 16)) / 255 : 1;
+    Launcher.setBars({ lightBg: lum > 0.5 }).catch(() => {});
+  }
   // цвет полосы состояния — по фону
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', getComputedStyle(de).getPropertyValue('--bg').trim() || '#F3F2EE');
