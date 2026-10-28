@@ -414,6 +414,7 @@ export default {
   status: (c) => c.t(S.phase === 'rec' ? 'st.rec' : S.take && !S.take.saved ? 'st.take' : 'st.idle'),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    S.mode = c.store.get('vmode', S.mode);
     const E = engine();
     offs = [E.on('level', onLevel), E.on('pos', onPos), E.on('end', onEnd), E.on('devices', loadDevices)];
     onClick = (e) => {
@@ -422,7 +423,7 @@ export default {
       const sg = e.target.closest('[data-seg] [data-v]');
       if (sg) {
         const k = sg.closest('[data-seg]').dataset.seg;
-        if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; render(); }
+        if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; ctx.store.set('vmode', S.mode); render(); } // как слушать — помнится
         return;
       }
       const ep = e.target.closest('[data-eqp]');

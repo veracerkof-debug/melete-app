@@ -112,7 +112,9 @@ export function createPlaylist(host, get, on) {
       if (c.mute) { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; for (let xx = x - h; xx < x + w; xx += 10) { g.beginPath(); g.moveTo(xx, y + h); g.lineTo(xx + h, y); g.stroke(); } }
       // подпись
       g.fillStyle = '#fff'; g.font = '600 12px system-ui'; g.textBaseline = 'top';
-      if (w > 36) g.fillText(label(c, tr, names, fileName, w), x + 7, y + 5);
+      // подпись держится у левого края видимой части клипа (клип уехал влево — название видно) и режется по ширине
+      const lx = Math.max(x, HEAD) + 7, room = x + w - lx - (c.loop && tr.kind !== 'drums' ? 18 : 6);
+      if (room > 14) g.fillText(fit(label(c, tr, names, fileName), room), lx, y + 5);
       g.textBaseline = 'alphabetic';
       g.restore();
       g.globalAlpha = 1;
@@ -195,11 +197,17 @@ export function createPlaylist(host, get, on) {
     if (cy < H + 20) { rr(6, yAdd + GAP, HEAD - 12, ROW - GAP * 2, 10); g.setLineDash([4, 4]); g.stroke(); g.setLineDash([]); g.beginPath(); g.moveTo(cx - 8, cy); g.lineTo(cx + 8, cy); g.moveTo(cx, cy - 8); g.lineTo(cx, cy + 8); g.stroke(); }
     g.fillStyle = C.bg; g.fillRect(0, 0, HEAD, RULER);
   }
-  function label(c, tr, names, fileName, w) {
-    const max = Math.max(2, Math.floor(w / 7));
-    if (tr.kind === 'chords' && c.data.chords.length) return c.data.chords.map((ch) => chordName(ch.pc, ch.type, P().key.minor)).join(' ').slice(0, max);
-    if (tr.kind === 'audio') return String(fileName(c.data.fileId) || '').slice(0, max);
-    return names(tr).slice(0, max);
+  function label(c, tr, names, fileName) {
+    if (tr.kind === 'chords' && c.data.chords.length) return c.data.chords.map((ch) => chordName(ch.pc, ch.type, P().key.minor)).join(' ');
+    if (tr.kind === 'audio') return String(fileName(c.data.fileId) || '');
+    return names(tr);
+  }
+  // Строка по ширине (px) текущим шрифтом: не влезла — обрезка с «…»
+  function fit(s, room) {
+    if (g.measureText(s).width <= room) return s;
+    let a = 0, b = s.length;
+    while (a < b) { const m = (a + b + 1) >> 1; if (g.measureText(s.slice(0, m) + '…').width <= room) a = m; else b = m - 1; }
+    return a ? s.slice(0, a).trimEnd() + '…' : '';
   }
   // Рисунок содержимого внутри клипа: проходы куска (pp: по кругу или один, со скоростью); запись — один раз (по кругу — повтор)
   function preview(c, tr, x, y, w, h, pp, fileName, peaks) {

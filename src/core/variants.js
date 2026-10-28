@@ -11,6 +11,8 @@ const KEY = 'melete.variants';
 export const VARIANTS = [
   // ревербы Airwindows (wl/airwin.worklet.js) вместо своих пространств — эксперимент 24.10.2026
   { id: 'verb', options: ['melete', 'galactic', 'verbity'], pre: 'melete', apply: (app, v) => app.audio.mixer.setVerbAlgo(v) },
+  // подписи под значками вкладок (обзор дизайна 28.10.2026): без подписей — как было; с подписями — понятнее новому
+  { id: 'tabs', options: ['icons', 'labels'], pre: 'icons', apply: (app, v) => document.documentElement.classList.toggle('tablabels', v === 'labels') },
 ];
 
 const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };

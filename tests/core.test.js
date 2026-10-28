@@ -259,6 +259,24 @@ describe('настройки устройства', () => {
     const again = loadDevice(st);
     expect([again.timer, again.metro]).toEqual([{ work: 30, style: 'flip' }, { adj: 'arrows' }]);
   });
+  it('страховочная запись не затирает записанное другим; после загрузки резервной копии запись выключена', async () => {
+    const { loadDevice, saveDevice, lockDevice, LS_T } = await import('../src/core/device.js');
+    const st = memStorage({ [LS_T]: JSON.stringify({ timer: { work: 25 } }) });
+    const d = loadDevice(st);
+    d.timer = { work: 30 };
+    saveDevice(d, st, { soft: true }); // никто не трогал — страховка пишет
+    expect(JSON.parse(st.getItem(LS_T)).timer.work).toBe(30);
+    st.setItem(LS_T, JSON.stringify({ timer: { work: 50 } })); // записал кто-то другой (резервная копия, вторая вкладка)
+    d.timer = { work: 15 };
+    saveDevice(d, st, { soft: true }); // страховка — не поверх чужого
+    expect(JSON.parse(st.getItem(LS_T)).timer.work).toBe(50);
+    lockDevice();
+    saveDevice(d, st); // идёт перезапуск после копии — не пишется вовсе
+    expect(JSON.parse(st.getItem(LS_T)).timer.work).toBe(50);
+    lockDevice(false);
+    saveDevice(d, st); // обычное сохранение после правки
+    expect(JSON.parse(st.getItem(LS_T)).timer.work).toBe(15);
+  });
 });
 
 describe('настройки', () => {

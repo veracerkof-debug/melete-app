@@ -55,8 +55,8 @@
 /* шаговый секвенсор ударных */
 .rack{flex:1;min-height:0;overflow:auto;scrollbar-width:none;border-radius:14px;background:var(--cell);padding:8px}
 .rkbars{display:flex;gap:4px;padding:0 0 8px 92px;overflow:auto;scrollbar-width:none}
-.rkbar{flex:none;min-width:36px;min-height:30px;border-radius:8px;background:var(--fill);font-size:12px;font-weight:700;color:var(--l2)}
-.rkbar.on{background:var(--ink);color:var(--bg)}
+.rkbars .rkbar{flex:none;min-width:36px;min-height:30px;border-radius:8px;background:var(--fill);font-size:12px;font-weight:700;color:var(--l2)}
+.rkbars .rkbar.on{background:var(--ink);color:var(--bg)}
 .rkrows{display:flex;flex-direction:column;gap:4px}
 .rkrow{display:flex;align-items:stretch;gap:4px;height:46px}
 .rkname{width:88px;flex:none;border-radius:9px;background:color-mix(in srgb,var(--c) 18%,var(--fill));text-align:left;padding:0 8px;overflow:hidden}
@@ -161,3 +161,8 @@
   .sttop .stinfo{min-width:62px;padding:2px 6px}
   .sttop .stplay{width:42px;height:42px}
 }
+
+/* Пусто: заголовок и одна строка, дальше — залитая кнопка «Новый проект» */
+.stempty{display:flex;flex-direction:column;gap:4px;padding:28px 8px 6px;text-align:center}
+.stempty b{font-size:19px;font-weight:700}
+.stempty .l2{font-size:14px}

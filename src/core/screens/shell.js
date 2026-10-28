@@ -6,10 +6,11 @@ import { t } from '../../i18n/index.js';
 import { confirm, toast, esc } from '../../ui/index.js';
 import { deleteSong } from '../library.js';
 import { addDemo, removeDemo } from '../demo.js';
-import { TAB_ICONS, tabIds, tabModuleOf, tabIcon, TAB_MODULES } from './common.js';
+import { TAB_ICONS, tabIds, tabModuleOf, tabIcon, isPage } from './common.js';
 import { moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
-import { visibleTabs, editTabs, orderTabs, unmakeTab } from '../settings.js';
+import { visibleTabs, orderTabs } from '../settings.js';
+import { createArrange } from './arrange.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
@@ -35,7 +36,8 @@ const SM = {
 };
 
 export function createShell(app, root) {
-  const tabsNow = () => visibleTabs(app.store.state.settings, tabIds(app.store.state.settings));
+  // «Минимал»: страниц две — главная и «Песни»; остальное — значками на главной (решение автора 28.10.2026)
+  const tabsNow = () => (app.store.state.settings.uiStyle === 'mono' ? ['home', 'library'] : visibleTabs(app.store.state.settings, tabIds(app.store.state.settings)));
   const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
@@ -46,22 +48,10 @@ export function createShell(app, root) {
     // вкладок может быть много (до 10): узкие — полоса прокручивается пальцем
     tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',minmax(52px,1fr))';
     // вкладки — только значки (решение автора): название — в подсказке и для чтения с экрана
-    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + esc(tabName(k)) + '" title="' + esc(tabName(k)) + '">' + tabIcon(k) + '<span class="tl" aria-hidden="true">' + esc(tabName(k)) + '</span></button>').join('');
+    tabs.innerHTML = list.map((k) => '<button class="tab" data-tab="' + k + '"' + (view.tab === k ? ' aria-current="page"' : '') + ' aria-label="' + esc(tabName(k)) + '" title="' + esc(tabName(k)) + '">' + tabIcon(k) + '<span class="tl" aria-hidden="true">' + esc(tabName(k)) + '</span>' + arrange.tabBadge(k) + '</button>').join('');
   };
-  // Удержание вкладки — меню: модуль-вкладку вернуть в инструменты, обычную убрать; ведение — порядок
-  function tabHoldMenu(b) {
-    const st = app.store.state.settings, id = b.dataset.tab, items = [];
-    if ((st.tabMods || []).includes(id)) items.push({ icon: TAB_ICONS.tools, label: t('tabs.toTools'), run: () => { unmakeTab(app.store, id); if (view.tab === id) view.tab = tabsNow()[0]; render(); toast(t('tabs.toToolsDone')); } });
-    // «Студия», «Библия» — тоже в инструменты: карточкой во вкладке «Инструменты», открывается на весь экран
-    else if (TAB_MODULES[id] && tabsNow().length > 1) items.push({ icon: TAB_ICONS.tools, label: t('tabs.toTools'), run: () => { editTabs(app.store, tabIds(st), id, 'off'); if (view.tab === id) view.tab = tabsNow()[0]; render(); toast(t('tabs.toToolsDone')); } });
-    else if (tabsNow().length > 1) items.push({ icon: TAB_ICONS.tools, label: t('tabs.remove'), danger: true, run: () => { editTabs(app.store, tabIds(st), id, 'off'); if (view.tab === id) view.tab = tabsNow()[0]; render(); } });
-    items.push({ icon: TAB_ICONS.tabs || TAB_ICONS.tools, label: t('tabs.title'), run: () => panel.open('tabs') });
-    holdMenu(b, items, tabName(id));
-  }
-  dragSort(tabs, '.tab', 'data-tab', {
-    onStill: tabHoldMenu,
-    onDrop: (ids) => { orderTabs(app.store, tabIds(app.store.state.settings), ids); render(); },
-  });
+  // Правка вкладок и «Инструментов»: удержание — режим правки, перенос жестом (arrange.js)
+  const arrange = createArrange(app, { root, bar: tabs, main, render: () => render(), cardMenu: (b) => toolHoldMenu(app, b, render, (id) => openToolView(app, id, render)) });
 
   // Вкладки-модули («Библия» в церковном режиме, «Студия»): модуль на всё окно над вкладками; остаётся открытым,
   // пока выбрана вкладка
@@ -86,6 +76,9 @@ export function createShell(app, root) {
     if (root.classList.contains('starting')) return;
     leagueCheck(app);
     renderTabs();
+    // режим правки: «Готово» и подсказка над вкладками
+    let ab = root.querySelector('.arrbar');
+    if (arrange.on() && !ab) { root.insertAdjacentHTML('beforeend', arrange.barHTML()); } else if (!arrange.on() && ab) ab.remove();
     // на компьютере полоса — слева во всю высоту: снизу её нет (ui/desk.js)
     document.documentElement.style.setProperty('--tabh', (document.documentElement.classList.contains('desk') ? 0 : tabs.parentElement.offsetHeight) + 'px');
     const tm = tabModuleOf(app.store.state.settings, view.tab);
@@ -190,6 +183,7 @@ export function createShell(app, root) {
     else if (d.fg !== undefined) { view.genre = view.genre === d.fg ? '' : d.fg; render(); }
     else if (d.ft !== undefined) { view.tag = view.tag === d.ft ? '' : d.ft; render(); }
     else if (d.fclear !== undefined) { view.genre = ''; view.tag = ''; render(); }
+    else if (d.openTool && isPage(d.openTool)) go(d.openTool); // «Календарь», «Песни» значком — своя страница
     else if (d.openTool) openToolView(app, d.openTool, render);
     else if (d.act === 'free') app.startSession('free');
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
@@ -208,10 +202,12 @@ export function createShell(app, root) {
   // Инструменты (быстрый доступ на главной, вкладка «Инструменты») и блоки главной переставляются, как значки на
   // главном экране телефона: удержать — поднять, перенести, отпустить. Удержание без движения — меню
   dragSort(root, '[data-open-tool]', 'data-open-tool', {
+    skip: (e) => !!e.target.closest('.tgrid'), // вкладка «Инструменты» — режим правки (arrange.js)
     onStill: (b) => toolHoldMenu(app, b, render, (id) => openToolView(app, id, render)),
     onDrop: (ids, el) => {
       const st = app.store.state.settings;
-      if (el.closest('.tgrid')) { const T = toolsTab(st); T.order = [...ids, ...T.order.filter((x) => !ids.includes(x))]; setToolsTab(st, T); }
+      if (el.closest('.mall')) st.monoGrid = ids; // «Минимал»: все значки на главной
+      else if (el.closest('.tgrid')) { const T = toolsTab(st); T.order = [...ids, ...T.order.filter((x) => !ids.includes(x))]; setToolsTab(st, T); }
       else { const full = (st.quick || QUICK_DEF).slice(); st.quick = [...ids, ...full.filter((x) => !ids.includes(x))]; }
       app.store.settingsChanged(); render();
     },

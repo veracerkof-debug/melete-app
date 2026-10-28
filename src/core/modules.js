@@ -282,6 +282,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
         if (live.guarded) guardClose();
       }
       host.replaceChildren();
+      try { (app.saveDeviceSoft || app.saveDevice)(); } catch { /* */ } // настройки инструмента — на диск при закрытии
     },
   };
 }

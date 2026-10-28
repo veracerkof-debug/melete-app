@@ -5,7 +5,7 @@ import { esc } from './index.js';
 import './hold.css';
 
 export const HOLD_MS = 450;
-const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
+export const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
 // root — где слушать, sel — какие элементы; cb(el, e) — сработало удержание
 export function onHold(root, sel, cb, ms = HOLD_MS) {

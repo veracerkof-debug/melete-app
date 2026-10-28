@@ -150,6 +150,11 @@ export function boot(root) {
     else if (counts && active.awaySince) { audio.metro.flush(); awayEnd(active); saveActive(active); }
   };
   document.addEventListener('visibilitychange', () => awayCheck());
+  // Всё, что меняли в инструментах (пресеты, звуки, ручки), — на диск при уходе в фон и закрытии, даже если модуль
+  // правил настройки напрямую и сам не сохранил (решение автора 28.10.2026: вернулся через неделю — всё как было)
+  const persistAll = () => { try { audio.metro.flush(); } catch { /* */ } saveDevice(device, undefined, { soft: true }); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') persistAll(); });
+  addEventListener('pagehide', persistAll);
   setInterval(awayCheck, 15000);
   // после перезагрузки: «вдали», начатое при закрытии страницы, заканчивается сразу
   setTimeout(awayCheck, 0);
@@ -179,6 +184,7 @@ export function boot(root) {
     shared: createShared(),
     rec: null, // запись в инструментах (recorder.js) — ниже, когда app уже есть
     saveDevice: () => saveDevice(device),
+    saveDeviceSoft: () => saveDevice(device, undefined, { soft: true }), // страховка: внешнюю запись не затирает
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
