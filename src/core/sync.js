@@ -15,6 +15,8 @@
 // результаты приходят при следующей синхронизации. Компьютера нет дольше суток — телефон считает сам.
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { pickParts, applyParts } from './backupparts.js';
+import { stripDemo, isDemoFile } from './demo.js';
+import { CORE_DICTS } from '../i18n/index.js';
 import { log } from './log.js';
 
 export const PORT = 53319;
@@ -115,9 +117,9 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
-    if (p) app.store.replaceState(applyParts(app.store.state, p, SYNC_PARTS));
+    if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), SYNC_PARTS));
     peer.at = Date.now();
-    return { status: 200, json: { data: pickParts(app.store.state, SYNC_PARTS), files: manifestOf(allFiles(F)), work: ctx.work ? ctx.work() : null } };
+    return { status: 200, json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), files: manifestOf(allFiles(F)), work: ctx.work ? ctx.work() : null } };
   }
   if (req.path === '/melete/v1/setmeta') {
     const m = (req.json && req.json.meta) || {}, r = F && F.get(m.id);
@@ -160,7 +162,8 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   }
   return { status: 404, json: {} };
 }
-const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.list(k)) : []);
+// демо-набор между устройствами не ходит (demo.js)
+const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.list(k)).filter((r) => !isDemoFile(r, CORE_DICTS)) : []);
 
 // Компьютер: сервер в Rust ↔ этот обработчик. → { start, stop, state, forget(key), subscribe }
 export function createSyncServer(app, { isDesktop }) {
@@ -261,10 +264,10 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => { throw e.reason ? e : fail(e); });
   const before = { songs: app.store.songs().length, sessions: app.store.allSessions().length };
   onStep({ stage: 'data' });
-  const r = await call('POST', '/melete/v1/sync', { json: { data: pickParts(app.store.state, SYNC_PARTS), auto }, timeout: 120000 });
-  app.store.replaceState(applyParts(app.store.state, r.data, SYNC_PARTS));
+  const r = await call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
+  app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS));
   pc.work = r.work || null; m.pc = { ...pc }; writeLS(m); // что компьютер считает сам — для «Считать на компьютере»
-  const mine = manifestOf(allFiles(F)), plan = planFiles(mine, r.files || [], pc.ids || []);
+  const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || []);
   const out = { songs: app.store.songs().length - before.songs, sessions: app.store.allSessions().length - before.sessions, up: 0, down: 0, removed: 0, meta: 0 };
   // удаления в обе стороны
   for (const id of plan.delMine) { if (F.get(id)) { await F.remove(id); out.removed++; } }

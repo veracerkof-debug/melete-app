@@ -102,10 +102,13 @@ export async function writeAll(drv, path, data, mime) {
 // mem — что помним о папке (settings.folder): files { recId: путь }, texts { songId: { path, hash, mtime } }, seen { путь: размер }
 // api — то, что синхронизация делает в приложении:
 //   files() → записи файлов (с blob), addFile(rec), songs() → песни, addSong({ title, artist, key, bpm, notes }) → id,
-//   setNotes(id, notes), parseText(name, u8) → { title, artist, key, bpm, notes } | null, backup() → строка JSON
-// → { wrote, read, songs, texts }
+//   setNotes(id, notes), parseText(name, u8) → { title, artist, key, bpm, notes } | null, backup() → строка JSON;
+//   необязательно — что в папку не пишется и из неё не берётся (демо-набор, demo.js): skipFile(rec), skipName(имя),
+//   skipSong(песня), skipText(разобранный текст); такие файлы, найденные в папке, удаляются из неё
+// → { wrote, read, songs, texts, cleaned }
 export async function syncFolder(drv, mem, api, now = Date.now()) {
-  const out = { wrote: 0, read: 0, songs: 0, texts: 0, sorted: 0 };
+  const out = { wrote: 0, read: 0, songs: 0, texts: 0, sorted: 0, cleaned: 0 };
+  const no = (fn, x) => !!(api[fn] && api[fn](x));
   mem.files ??= {}; mem.texts ??= {}; mem.seen ??= {};
   for (const d of Object.values(DIRS)) await drv.mkdirs(d);
   const ls = {};
@@ -122,7 +125,7 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   }
 
   // 2. Файлы приложения → папка (один раз на файл; удалённый человеком из папки не возвращается)
-  const recs = api.files().filter((r) => r.blob && dirOfRec(r));
+  const recs = api.files().filter((r) => r.blob && dirOfRec(r) && !no('skipFile', r));
   const known = new Set(recs.flatMap((r) => [r.name + '|' + (r.size || r.blob.size), fileNameOf(r) + '|' + (r.size || r.blob.size)]));
   for (const r of recs) {
     if (mem.files[r.id]) continue;
@@ -137,7 +140,9 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   for (const d of ['', DIRS.media, DIRS.tabs, DIRS.pdf]) {
     for (const f of ls[d] || []) {
       const kind = kindOfName(f.name), path = (d ? d + '/' : '') + f.name;
-      if (!kind || kind === 'lyrics' || mapped.has(path) || (d && mem.seen[path] === f.size)) continue;
+      if (!kind || kind === 'lyrics' || mapped.has(path)) continue;
+      if (no('skipName', f.name)) { try { await drv.remove(path); out.cleaned++; } catch { /* уже нет */ } delete mem.seen[path]; continue; }
+      if (d && mem.seen[path] === f.size) continue;
       const rec = known.has(f.name + '|' + f.size) ? null : { name: f.name, size: f.size, type: mimeOf(f.name), kind: kind === 'media' ? 'audio' : 'tab', ...(kind === 'pdf' ? { fmt: 'pdf' } : kind === 'tabs' ? { fmt: 'score' } : {}), songs: [], created: now };
       let u8 = null;
       if (rec || !d) u8 = await readAll(drv, path, f.size);
@@ -157,9 +162,10 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   }
 
   // 4. Тексты песен ⇄ Lyrics/ (время правки файла — всегда по часам папки: после записи перечитывается)
-  const songs = api.songs(), byPath = {}, wroteText = new Set();
+  const songs = api.songs(), byPath = {}, wroteText = new Set(), live = new Set(songs.map((s) => s.id));
   Object.entries(mem.texts).forEach(([id, x]) => { byPath[x.path] = id; });
   for (const s of songs) {
+    if (no('skipSong', s)) { const m = mem.texts[s.id]; if (m) { try { await drv.remove(m.path); out.cleaned++; } catch { /* уже нет */ } delete byPath[m.path]; delete mem.texts[s.id]; } continue; }
     if (!String(s.notes || '').trim()) continue;
     const m = mem.texts[s.id], text = songText(s), h = hash(text);
     const f = m && at(m.path);
@@ -184,9 +190,13 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   for (const d of [DIRS.lyrics, '']) {
     for (const f of ls[d] || []) {
       const path = (d ? d + '/' : '') + f.name;
-      if (kindOfName(f.name) !== 'lyrics' || byPath[path] || (d === '' && /^readme/i.test(f.name))) continue;
+      if (kindOfName(f.name) !== 'lyrics' || (d === '' && /^readme/i.test(f.name))) continue;
+      const owner = byPath[path];
+      if (owner && (!api.skipText || live.has(owner))) continue;
       const u8 = await readAll(drv, path, f.size), p = api.parseText(f.name, u8);
+      if (owner) { if (p && no('skipText', p)) { try { await drv.remove(path); out.cleaned++; } catch { /* уже нет */ } delete mem.texts[owner]; } continue; } // песни уже нет: копия демо — убрать
       if (!p || !(p.title || p.notes)) continue;
+      if (no('skipText', p)) { try { await drv.remove(path); out.cleaned++; } catch { /* уже нет */ } continue; } // копия демо-песни
       const id = api.addSong(p);
       let dest = path;
       if (!d) { const name = freeName(f.name, taken(DIRS.lyrics)); dest = DIRS.lyrics + '/' + name; await writeAll(drv, dest, u8, 'text/plain'); (ls[DIRS.lyrics] ||= []).push({ name, size: f.size, mtime: now }); await drv.remove(path); out.sorted++; }

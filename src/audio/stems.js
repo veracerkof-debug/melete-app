@@ -13,6 +13,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { peaks } from './voicefx.js';
 import { isDesktop } from '../core/desktop.js';
+import { hasPack, isPacked } from '../core/packs.js';
 
 let Native = Capacitor.isNativePlatform() ? registerPlugin('Stems') : null;
 if (!Native && isDesktop()) import('./stemsdesktop.js').then((m) => { Native = m.desktopStems; }).catch(() => {});
@@ -20,8 +21,11 @@ if (!Native && isDesktop()) import('./stemsdesktop.js').then((m) => { Native = m
 // поэтому различать только по платформе
 const onDesktop = () => !Capacitor.isNativePlatform() && isDesktop();
 export const stemsNative = () => !!Native || isDesktop();
-// В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся
-export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__);
+// В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся.
+// APK (и Windows) — модель в пакете (src/core/packs.js): пока не скачан, разделения нет, stemsPack() — какой скачать
+const packId = () => (isDesktop() ? 'stems' : 'vocals');
+export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__) && hasPack(packId());
+export const stemsPack = () => (!(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__) && isPacked(packId()) && !hasPack(packId()) ? packId() : null);
 
 const SR = 44100;
 // Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,

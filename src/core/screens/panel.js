@@ -29,6 +29,7 @@ import { setsOf, QSETS, qsetsFor } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
 import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
+import { packsHTML, bindPacks } from './packs.js';
 import { moduleName } from '../modules.js';
 import { AVATAR, CHEV, IC, tabIds, TAB_ICONS, weekdays, mBadge } from './common.js';
 import { TOS_VER, TOS_HTML, PRIV_HTML, OFL_TEXT } from '../legal.js';
@@ -476,6 +477,8 @@ function featHTML(app) {
     // определитель аккордов и гамм в «Теории»: в «Минимале» включён по умолчанию, в обычном виде — здесь
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
       t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
+    // пакеты моделей (полный рояль, вокал телефона): скачать один раз, удалить (src/core/packs.js)
+    packsHTML() +
     // работа в фоне (Android): разрешения — батарея, уведомления, настройки приложения
     (bgAvailable() ? '<div class="hdr">' + t('bg.feat') + '</div><div data-bgbox><p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(null) + '</div>' : '') +
     // управление звуком вне приложения: шторка, плавающая кнопка, всплывающее окно (Android, src/core/player.js)
@@ -600,7 +603,10 @@ export function createPanel(app, onChange) {
     }
   };
   const changed = () => { app.store.settingsChanged(); render(); onChange(); };
+  let offPacks = null;
   function bind() {
+    if (offPacks) offPacks();
+    offPacks = bindPacks(layer);
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
     if (app.folder) app.folder.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });

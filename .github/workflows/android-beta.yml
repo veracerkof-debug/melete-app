@@ -21,6 +21,8 @@ concurrency:
 env:
   MELETE_CHANNEL: ${{ github.ref_name == 'pre' && 'pre' || 'dev' }}
   BUILD_NUMBER: ${{ github.run_number }}
+  # пакеты моделей (build/packs.json: полный рояль, вокал) в APK не встраиваются — скачиваются по кнопке из релиза packs
+  MELETE_TARGET: android
 
 jobs:
   apk:

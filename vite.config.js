@@ -46,7 +46,7 @@ function showcase(mode) {
 // такие модули (heavy: true) показывают заглушку, сами они есть в APK и Windows (DECISIONS: размер и тяжёлые модули)
 // ONNX Runtime Web (разделение на дорожки): файлы WebAssembly пакета кладутся в сборку по пути ort/…; в режиме
 // разработки отдаются из node_modules. В веб-сборке не нужны (модуль там — заглушка)
-const ORT = 'node_modules/onnxruntime-web/dist', ORT_FILES = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.jsep.wasm', 'ort-wasm-simd-threaded.jsep.mjs'];
+const ORT = 'node_modules/onnxruntime-web/dist', ORT_FILES = ['ort-wasm-simd-threaded.jsep.wasm', 'ort-wasm-simd-threaded.jsep.mjs']; // основная сборка ORT берёт только jsep (простой .wasm не грузится — минус 14 МБ)
 function ortAssets(mode) {
   return {
     name: 'ort-assets',
@@ -68,6 +68,21 @@ function ortAssets(mode) {
     },
   };
 }
+// Пакеты (build/packs.json, модульность шаг 2): сборка для системы MELETE_TARGET (android | windows — GitHub Actions)
+// не несёт модели своих пакетов: они скачиваются по кнопке (src/core/packs.js). У себя (без MELETE_TARGET) — всё встроено
+const PACKED = (() => {
+  const t = process.env.MELETE_TARGET;
+  if (!t || !existsSync('build/packs.json')) return [];
+  return JSON.parse(readFileSync('build/packs.json', 'utf8')).list.filter((p) => p.on.includes(t));
+})();
+const packsOut = () => {
+  let out = 'dist';
+  return !PACKED.length ? null : {
+    name: 'packs-out',
+    configResolved(c) { out = c.build.outDir; },
+    closeBundle() { PACKED.forEach((p) => p.dirs.forEach((d) => rmSync(join(out, d), { recursive: true, force: true }))); },
+  };
+};
 // Веб-версия без тяжёлого: рабочий поток разделения на дорожки подменяется пустышкой (ONNX Runtime и demucs.js в сборку
 // не попадают), модель из public/models/ после сборки удаляется (public/ копируется целиком)
 const lightWeb = (mode) => {
@@ -87,9 +102,11 @@ export default defineConfig(({ mode }) => ({
   // версия — в отчёт о проблеме (src/core/report.js)
   define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version),
     // канал и номер сборки — от GitHub Actions (src/core/update.js): dev — каждая отправка в main, pre — тестерам; у себя — dev, 0
-    __CHANNEL__: JSON.stringify(process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev'), __BUILD__: JSON.stringify(+process.env.BUILD_NUMBER || 0) },
+    __CHANNEL__: JSON.stringify(process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev'), __BUILD__: JSON.stringify(+process.env.BUILD_NUMBER || 0),
+    // пакеты, которых нет в этой сборке (скачиваются по кнопке)
+    __PACKED__: JSON.stringify(PACKED.map((p) => p.id)) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode)],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode), packsOut()],
   // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web'] },
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает

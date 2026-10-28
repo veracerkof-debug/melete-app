@@ -110,8 +110,7 @@ export function onboarding(app, done = () => {}) {
     applyLevelDefaults(app.device, app.store.state.settings.profile);
     app.saveDevice();
     layer.remove();
-    // демо-набор — сразу (песни, табы, ноты, записи, события); убрать — «Данные и копии»
-    import('../demo.js').then((m) => m.addDemo(app, t)).then(() => app.render && app.render()).catch(() => {});
+    // демо-набор сам не добавляется (решение автора 27.10.2026): включить — «Данные и копии» или кнопка в пустых песнях
     done();
     setTimeout(() => askName(app), 700);
   };

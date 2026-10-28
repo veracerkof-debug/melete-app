@@ -252,7 +252,7 @@ function stemsViewHTML(t) {
   const { ui } = ctx, tr = ctx.t, set = stemsFor(t);
   if (!set.length) {
     const j = ctx.jobs && ctx.jobs.current && ctx.jobs.current.id === t.id && ctx.jobs.current.kind === 'stems' ? ctx.jobs.current : null;
-    return '<div class="pview pempty"><span>' + ui.esc(j ? tr('job.' + j.stage) + (j.frac ? ' · ' + Math.round(j.frac * 100) + ' %' : '') : tr(ctx.auto && ctx.auto.waitsPc && ctx.auto.waitsPc(t) ? 'pv.pcWait' : ctx.jobs && ctx.jobs.supported() ? 'pv.noStems' : 'stems.web')) + '</span>' + (ctx.jobs && ctx.jobs.supported() && !j ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('stems.go', { t: fmtT(estimateSec(t.dur || 60, (ctx.auto && ctx.auto.mode()) || '4', !!(ctx.auto && ctx.auto.hq()))) })) + '</button>' : '') + '</div>';
+    return '<div class="pview pempty"><span>' + ui.esc(j ? tr('job.' + j.stage) + (j.frac ? ' · ' + Math.round(j.frac * 100) + ' %' : '') : tr(ctx.auto && ctx.auto.waitsPc && ctx.auto.waitsPc(t) ? 'pv.pcWait' : ctx.jobs && ctx.jobs.supported() ? 'pv.noStems' : ctx.jobs && ctx.jobs.pack && ctx.jobs.pack() ? 'stems.packHint' : 'stems.web')) + '</span>' + (ctx.jobs && ctx.jobs.supported() && !j ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('stems.go', { t: fmtT(estimateSec(t.dur || 60, (ctx.auto && ctx.auto.mode()) || '4', !!(ctx.auto && ctx.auto.hq()))) })) + '</button>' : ctx.jobs && ctx.jobs.pack && ctx.jobs.pack() ? '<button class="btn sm" data-x="astems">' + ui.esc(tr('pack.get')) + '</button>' : '') + '</div>';
   }
   return '<div class="pview pstems">' + stemRowsHTML(t, set) + '<div class="row pstbtns"><button class="btn sm" data-x="astems">' + ui.esc(tr('stems.btn')) + '</button>' + (mixActive(t) ? '<button class="btn sm" data-x="asreset">' + ui.esc(tr('stems.reset')) + '</button>' : '') + '</div></div>';
 }
@@ -392,6 +392,7 @@ function stemsSheet() {
       h += stemRowsHTML(tr, set) +
         '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>' : '');
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
+    else if (jobs.pack && jobs.pack() && ctx.packs) h += ctx.packs.row(jobs.pack()); // модель — в пакете, ещё не скачана
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
     // «ночное» качество — один переключатель с настройкой «Дорожки автоматически»: в фоне пересчитает и готовые наборы
     if (can && !(j && j.kind === 'stems')) {
@@ -402,7 +403,7 @@ function stemsSheet() {
     }
     h += '</div>';
     if (set.length && absent.length) h += '<p class="ftr">' + ui.esc(t('stems.absent', { list: absent.map((p) => t('part.' + p)).join(', ') })) + '</p>';
-    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : 'stems.webHint')) + '</p>';
+    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : jobs.pack && jobs.pack() ? 'stems.packHint' : 'stems.webHint')) + '</p>';
     // ноты
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
@@ -442,9 +443,12 @@ function stemsSheet() {
   ui.sheet(body, (el, sh) => {
     sh.el = el;
     un = jobs.subscribe(() => { if (el.isConnected) sh.update(); });
+    const unp = ctx.packs ? ctx.packs.onChange(() => { if (el.isConnected) sh.update(); else unp(); }) : null;
     tick = setInterval(() => { if (job() && el.isConnected) sh.update(); }, 1000);
     el.addEventListener('input', (e) => { const i = e.target.closest('[data-sg]'); if (!i) return; mixSet(tr, i.dataset.sg, +i.value / 100); mixApply(tr); refreshStemRows(el, tr); });
     el.addEventListener('click', async (e) => {
+      const pk = e.target.closest('[data-pkget], [data-pkcancel]');
+      if (pk && ctx.packs) { if (pk.dataset.pkget) ctx.packs.ask(pk.dataset.pkget); else ctx.packs.cancel(pk.dataset.pkcancel); return; }
       const b = e.target.closest('[data-smute], [data-sreset], [data-sstudio], [data-sgo], [data-shq], [data-sjcancel], [data-njcancel], [data-ngo], [data-nlisten], [data-ntabs], [data-nstudio], [data-nbends], [data-lgo], [data-lsong], [data-llrc], [data-ljcancel], [data-dgo], [data-dplay], [data-djcancel], [data-seg="dnlvl"] [data-v], [data-seg="smode"] [data-v], [data-seg="sver"] [data-v], [data-seg="nsens"] [data-v]');
       if (!b) return;
       const d = b.dataset;

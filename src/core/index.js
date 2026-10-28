@@ -2,7 +2,7 @@
 import { initTama } from '../ui/tama.js';
 import { webIcon, iconOf, setAppIcon, ICON_BY_MASCOT } from './appicon.js';
 import { Capacitor } from '@capacitor/core';
-import { t, initI18n, getLang } from '../i18n/index.js';
+import { t, initI18n, getLang, CORE_DICTS } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
@@ -12,7 +12,7 @@ import { ensureLib } from './library.js';
 import { applyTheme, tabsMigrate, calmMigrate, mascotOf } from './settings.js';
 import { registerTools } from './palettes.js';
 import { dropTestMode } from './cleanup.js';
-import { removeDemoFiles } from './demo.js';
+import { removeDemoFiles, cleanDemoCopies } from './demo.js';
 import { createShell } from './screens/shell.js';
 import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
@@ -34,6 +34,7 @@ import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
+import { initBridge } from './bridge.js';
 import { startLog, log } from './log.js';
 import { createBible } from './reading.js';
 import { APP_VERSION } from './report.js';
@@ -42,6 +43,8 @@ import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
 import { createRecorder } from './recorder.js';
 import { createJobs } from './jobs.js';
+import { packsReady } from './packs.js';
+import { packsApi } from './screens/packs.js';
 import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
@@ -171,6 +174,7 @@ export function boot(root) {
   };
   app.rec = createRecorder(app);
   app.jobs = createJobs(files); // долгие обработки записей: дорожки, ноты (jobs.js)
+  app.packs = packsApi; packsReady(); // пакеты моделей: что скачано (packs.js)
   app.auto = createAutoStems(app); // дорожки и тональность с темпом — сами, в тишине (autostems.js)
   app.midi = midiRef = createMidi(app);
   app.midi.input.resume();
@@ -239,6 +243,7 @@ export function boot(root) {
   initBackground(app);
   app.auto.start();
   initPlayer(app); // шторка, плавающая кнопка, всплывающее окно (Android)
+  initBridge(app); // мост с главным экраном Ἐλάχιστον (Android): состояние, переходы, ▶/❚❚
   // веб-версия: один раз — что это знакомство, а полная версия — приложение для Android
   // (после регистрации: на стартовом экране не мешает выбору языка)
   const webHello = () => {
@@ -254,6 +259,8 @@ export function boot(root) {
   initScreenOn(app); // экран не гаснет, пока приложение открыто
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
   if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});
+  // копии демо, вернувшиеся из папки или с другого устройства, — убрать (и из папки)
+  app.files.ready.then(() => cleanDemoCopies(app, CORE_DICTS)).then((n) => { if (n) { log('demo', 'убраны копии демо: ' + n); if (app.render) app.render(); } }).catch(() => {});
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);

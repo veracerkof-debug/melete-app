@@ -6,6 +6,8 @@
 import { PARTS, pickParts, applyParts, partsOf, mergeTools } from './backupparts.js';
 import { fileSongs } from './files.js';
 import { LS_T } from './device.js';
+import { stripDemo, isDemoFile } from './demo.js';
+import { CORE_DICTS } from '../i18n/index.js';
 
 export const backupBy = (app) => ((app.store.state.settings.profile || {}).name || '').trim();
 export const backupInfo = (app, at = Date.now()) => ({ by: backupBy(app), at, app: 'Melete' });
@@ -34,10 +36,10 @@ const fromB64 = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (l
 
 // Текст копии из выбранных частей; files — с файлами песен
 export async function backupData(app, parts = PARTS, { files = false } = {}) {
-  const p = pickParts(app.store.state, parts, { tools: parts.includes('settings') ? readTools() : null });
+  const p = pickParts(stripDemo(app.store.state), parts, { tools: parts.includes('settings') ? readTools() : null }); // без демо
   if (files && parts.includes('songs')) {
     p.files = [];
-    for (const r of songFiles(app)) {
+    for (const r of songFiles(app).filter((x) => !isDemoFile(x, CORE_DICTS))) {
       const meta = { ...r };
       delete meta.blob; delete meta._busy;
       p.files.push({ ...meta, data: await toB64(r.blob) });
@@ -48,12 +50,13 @@ export async function backupData(app, parts = PARTS, { files = false } = {}) {
 
 // Загрузить выбранные части копии p. → { sessions: новых занятий, files: добавлено файлов, tools: настройки инструментов изменились }
 export async function restoreParts(app, p, parts) {
+  p = stripDemo(p); // демо из копий не возвращается
   const before = app.store.allSessions().length, use = parts.filter((k) => partsOf(p).includes(k));
   app.store.replaceState(applyParts(app.store.state, p, use));
   let files = 0, tools = false;
   if (use.includes('songs') && Array.isArray(p.files) && app.files) {
     for (const f of p.files) {
-      if (!f || !f.id || !f.data || app.files.get(f.id)) continue;
+      if (!f || !f.id || !f.data || app.files.get(f.id) || isDemoFile(f, CORE_DICTS)) continue;
       const { data, ...meta } = f;
       await app.files.add({ ...meta, blob: new Blob([fromB64(data)], { type: f.type || '' }) });
       files++;

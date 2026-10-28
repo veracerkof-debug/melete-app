@@ -1,5 +1,6 @@
 // Хранение состояния: песни, сессии, события календаря, настройки. Local-first, формат совместим с прототипом (version: 1).
 import { seal, splitVerified, profileSeal } from './integrity.js';
+import { stripDemo } from './demo.js';
 export const LS = 'practice.v1';
 
 export const METRO_DEF = {
@@ -140,7 +141,7 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
     importBackup(p) {
       if (!isBackup(p)) throw new Error('not a backup');
       const before = store.allSessions().length;
-      state = normalize(merge(state, p));
+      state = normalize(merge(state, stripDemo(p))); // демо из копий не возвращается
       store.save();
       return store.allSessions().length - before;
     },
@@ -150,7 +151,8 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
       store.save();
     },
     // info — подпись копии (кто, когда, откуда): { by, at, app }; при загрузке не мешает (слияние берёт только данные)
-    exportBackup: (info) => JSON.stringify(info ? { backupInfo: info, ...state } : state, null, 1),
+    // демо в копию не попадает (demo.js: stripDemo)
+    exportBackup: (info) => JSON.stringify(info ? { backupInfo: info, ...stripDemo(state) } : stripDemo(state), null, 1),
 
     // Удалить все данные, сохранив тему
     reset() {

@@ -88,6 +88,7 @@ export function createUpdater(app) {
     set({ st: 'down', f: 0, wait: false });
     try {
       if (platform === 'android') {
+        log('upd', 'скачивание: ' + (mobile ? 'любая сеть (своё)' : 'только Wi-Fi (системный загрузчик)'));
         const { id } = await Native.download({ url: s.info.url, wifi: !mobile });
         dlId = id;
         clearInterval(poll);
@@ -95,7 +96,7 @@ export function createUpdater(app) {
           let r; try { r = await Native.status({ id }); } catch (e) { clearInterval(poll); logErr('upd', e); set({ st: 'avail' }); return; }
           if (r.status === 'done') { clearInterval(poll); log('upd', 'скачано: сборка ' + s.info.build); set({ st: 'ready', f: 1 }); }
           else if (r.status === 'fail') { clearInterval(poll); log('upd', 'скачивание не удалось: ' + (r.reason || ''), 'w'); set({ st: 'err' }); }
-          else set({ f: r.total ? r.got / r.total : 0, wait: r.status === 'wait' });
+          else set({ f: r.total > 0 ? r.got / r.total : 0, wait: r.status === 'wait' });
         }, 1000);
       } else {
         const { invoke } = await import('@tauri-apps/api/core'), { listen } = await import('@tauri-apps/api/event');

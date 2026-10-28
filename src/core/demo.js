@@ -102,6 +102,41 @@ const PIECES = [
   { file: 'carcassi-etude-op60-3.pdf', key: 'carcassi' },
 ];
 
+/* ---------- распознать демо в данных ---------- */
+// Демо — по id (приставка demo-) и по содержимому: копия демо-песни, вернувшаяся из папки Melete (текст .cho) или с
+// другого устройства, получает обычный id — её узнаём по названию и тексту (пробелы не в счёт). Демо-файлы — по имени
+// на любом из языков (табулатура, ноты, пьесы, записи). Демо не пишется в папку, не попадает в копии и синхронизацию
+// (решение автора 27.10.2026): при двух Melete (DEV и обычный) на одной папке копии множились сотнями
+const norm = (x) => String(x || '').replace(/\s+/g, ' ').trim();
+const DEMO_BY_TITLE = new Map(DEMO_SONGS.map((s) => [norm(s.title).toLowerCase(), norm(s.notes)]));
+export const isDemoText = (title, notes) => DEMO_BY_TITLE.get(norm(title).toLowerCase()) === norm(notes) && !!norm(notes);
+export const isDemoSong = (s) => !!s && (isDemo(s.id) || isDemoText(s.title, s.notes));
+let NAMES = null;
+// Имена демо-файлов на трёх языках (без расширения, в нижнем регистре); dicts — словари ядра { ru, uz, en }
+export function demoFileNames(dicts) {
+  if (NAMES) return NAMES;
+  const out = new Set();
+  Object.values(dicts || {}).forEach((d) => {
+    const t = (k) => d[k] || '';
+    DEMO_SONGS.forEach((s) => ['demo.file.tab', 'demo.file.score', 'demo.track.full', 'demo.track.minus'].forEach((k) => t(k) && out.add((s.title + ' — ' + t(k)).toLowerCase())));
+    PIECES.forEach((p) => t('demo.piece.' + p.key) && out.add(t('demo.piece.' + p.key).toLowerCase()));
+  });
+  return (NAMES = out);
+}
+// Имя файла (с расширением, с «(2)» от повторов) — демо?
+export const isDemoName = (name, dicts) => demoFileNames(dicts).has(String(name || '').replace(/\.[a-z0-9]+$/i, '').replace(/ \(\d+\)$/, '').toLowerCase());
+export const isDemoFile = (r, dicts) => !!r && (isDemo(r.id) || isDemoName(r.name, dicts));
+
+// Копия данных без демо: песни набора и их копии (сыгранные остаются удалёнными — время занятий в статистике
+// с названием), события набора; признак «демо включено» — выкл. Для копий, папки и синхронизации
+export function stripDemo(p) {
+  if (!p || typeof p !== 'object') return p;
+  const played = new Set((p.sessions || []).map((x) => x.songId).filter(Boolean));
+  const songs = Array.isArray(p.songs) ? p.songs.filter((s) => !isDemoSong(s) || played.has(s.id)).map((s) => (isDemoSong(s) ? { ...s, deleted: true } : s)) : p.songs;
+  const events = Array.isArray(p.events) ? p.events.filter((e) => !isDemo(e.id)) : p.events;
+  return { ...p, songs, events, ...(p.settings ? { settings: { ...p.settings, demo: false } } : {}) };
+}
+
 /* ---------- календарь ---------- */
 
 // События вокруг сегодняшнего дня: урок и репетиция каждую неделю, запись, концерт, срок и цель по песням
@@ -170,6 +205,24 @@ export async function removeDemoFiles(app) {
   ['tab', 'audio'].forEach((k) => app.files.list(k).forEach((r) => { if (isDemo(r.id)) ids.push(r.id); }));
   for (const id of ids) await app.files.remove(id);
   if (app.folder && app.folder.drop) await app.folder.drop({ files: ids });
+}
+
+// Копии демо, пришедшие из папки или с другого устройства (обычный id, текст и название демо-песни; файлы с демо-именем):
+// убрать из приложения и из папки. Набор с приставкой demo- (включённый человеком) не трогается. → сколько убрано
+export async function cleanDemoCopies(app, dicts) {
+  const store = app.store, st = store.state, played = new Set((st.sessions || []).map((x) => x.songId).filter(Boolean));
+  const copies = st.songs.filter((s) => !isDemo(s.id) && !s.deleted && isDemoText(s.title, s.notes));
+  if (copies.length) {
+    const ids = new Set(copies.map((s) => s.id));
+    st.songs = st.songs.filter((s) => !ids.has(s.id) || played.has(s.id));
+    st.songs.forEach((s) => { if (ids.has(s.id)) s.deleted = true; }); // сыгранные — удалёнными: время занятий остаётся
+    store.save();
+    if (store.settingsChanged) store.settingsChanged();
+  }
+  const files = app.files ? ['tab', 'audio'].flatMap((k) => app.files.list(k)).filter((r) => !isDemo(r.id) && isDemoName(r.name, dicts)).map((r) => r.id) : [];
+  for (const id of files) { try { await app.files.remove(id); } catch { /* уже нет */ } }
+  if ((copies.length || files.length) && app.folder && app.folder.drop) await app.folder.drop({ files, songs: copies.map((s) => s.id) });
+  return copies.length + files.length;
 }
 
 // Остались ли следы демо-набора: песни (и удалённые, но не стёртые), события, файлы

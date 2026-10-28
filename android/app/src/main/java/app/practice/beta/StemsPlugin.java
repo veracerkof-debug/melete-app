@@ -18,7 +18,7 @@ import java.io.OutputStream;
 // а здесь считают все ядра — в разы быстрее. Протокол: begin() → push({ ch, b64 }) кусками float32 LE обоих
 // каналов → run() (ход — событие progress { f }) → { files: { drums, bass, other, vocals } } — файлы float32 LE
 // с чередованием L R в кэше, JS читает их по Capacitor.convertFileSrc и кладёт в медиатеку; clean() — убрать.
-// Модель из assets (public/models/…) один раз копируется в files/models: ONNX Runtime читает файл по пути.
+// Модель — из пакета (files/packs, PacksPlugin) или из assets (копируется в files/models): ONNX Runtime читает файл по пути.
 // На время счёта — частичный wake lock: экран можно гасить, приложение не закрывать.
 @CapacitorPlugin(name = "Stems")
 public class StemsPlugin extends Plugin {
@@ -129,11 +129,14 @@ public class StemsPlugin extends Plugin {
         f.delete();
     }
 
-    // Модель — файл в files/models (из assets один раз; размер сверяется, чтобы обновление приложения подменило файл)
+    // Модель — из скачанного пакета (PacksPlugin: вокал телефона — пакет vocals); иначе из assets (сборка с моделью):
+    // файл в files/models (один раз; размер сверяется, чтобы обновление приложения подменило файл). Нет нигде — "nopack"
     private static File modelFile(Context ctx, String rel) throws Exception {
+        File packed = PacksPlugin.file(ctx, MODEL2.equals(rel) ? "vocals" : "stems", rel);
+        if (packed != null) return packed;
         File dst = new File(ctx.getFilesDir(), rel);
         long size;
-        try (InputStream in = ctx.getAssets().open("public/" + rel)) { size = in.available(); }
+        try (InputStream in = ctx.getAssets().open("public/" + rel)) { size = in.available(); } catch (java.io.IOException e) { throw new Exception("nopack"); }
         if (dst.isFile() && dst.length() > 0 && (size <= 0 || dst.length() == size)) return dst;
         File parent = dst.getParentFile();
         if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new Exception("mkdir");
