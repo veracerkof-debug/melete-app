@@ -100,8 +100,8 @@ function listHTML() {
   const { t, ui } = ctx, L = ctx.projects.list().sort((a, b) => b.updatedAt - a.updatedAt);
   return '<div class="stlist"><div class="sthdr"><h2>' + ui.esc(t('name')) + '</h2>' + ui.icb('data-x="help"', I.help, t('help.open'), 'sm') + '</div>' +
     (L.length ? '<div class="group">' + L.map((p) => '<button class="cell stproj" data-open="' + p.id + '"><span class="grow"><b>' + ui.esc(p.name || t('untitled')) + '</b><span class="bksub">' +
-      ui.esc(p.bpm + ' bpm · ' + keyLabel(p.key) + ' · ' + ctx.tn('tracks', p.tracks.length) + ' · ' + ctx.tn('bars', songBars(p))) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>' : '<p class="ftr">' + ui.esc(t('empty')) + '</p>') +
-    '<div class="group" style="margin-top:14px"><button class="cell act center b" data-x="new">' + ui.esc(t('new')) + '</button></div></div>';
+      ui.esc(p.bpm + ' bpm · ' + keyLabel(p.key) + ' · ' + ctx.tn('tracks', p.tracks.length) + ' · ' + ctx.tn('bars', songBars(p))) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>' : '<div class="stempty"><b>' + ui.esc(t('empty')) + '</b><span class="l2">' + ui.esc(t('emptySub')) + '</span></div>') +
+    '<button class="btn fill block" style="margin-top:14px" data-x="new">' + ui.esc(t('new')) + '</button></div>'; // главное действие экрана — залитая кнопка
 }
 // Полоса транспорта внизу (как в FL Studio Mobile): проекты, микшер, настройки | в начало, играть, темп, клик | отмена, помощь
 function transportHTML(p) {

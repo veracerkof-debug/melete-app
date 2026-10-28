@@ -1,6 +1,8 @@
 /* Общие элементы: группы, ячейки, кнопки, переключатели, шторки, сообщения. Перенесено из legacy/practice.html. */
 .hdr{font-size:13px;color:var(--l2);margin:26px 16px 7px}
 .ftr{font-size:13px;color:var(--l2);margin:7px 16px 0;line-height:1.4}
+.ftr.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;cursor:pointer}
+.ftr.clamp.open{display:block;-webkit-line-clamp:unset;line-clamp:none}
 .l2{color:var(--l2)}
 .group{background:var(--cell);border-radius:12px;overflow:hidden}
 .cell{display:flex;align-items:center;gap:12px;min-height:46px;padding:10px 16px;position:relative;width:100%;text-align:left}

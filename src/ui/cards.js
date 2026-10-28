@@ -7,12 +7,14 @@ export const FLAME = '<svg viewBox="0 0 24 24" class="flame" aria-hidden="true">
 // Цвета кругов: первый — акцент, дальше — каждый следующий круг перевыполнения
 const LAPC = ['var(--tint)', '#A95E72', '#866B9D', '#646493', '#567198', '#4A8681', '#5F8568'];
 
-// p — доля цели (1 = 100 %, 1.5 = перевыполнено на 50 %); label — подпись для чтения с экрана
-export function goalRing(p, big, label) {
+// p — доля цели (1 = 100 %, 1.5 = перевыполнено на 50 %); label — подпись для чтения с экрана;
+// left — { cap, v }: до цели внутри кольца вместо процента (главная: минуты недели уже рядом, процент их повторял бы)
+export function goalRing(p, big, label, left) {
   const r = 42, c = 2 * Math.PI * r, pct = Math.round(p * 100), lap = Math.floor(Math.max(0, p)), frac = p - lap, col = (k) => LAPC[Math.min(k, LAPC.length - 1)];
   let s = '<svg class="gring' + (big ? ' big' : '') + '" viewBox="0 0 96 96" role="img" aria-label="' + (label || pct + '%') + '"><circle cx="48" cy="48" r="' + r + '" stroke="var(--fill)"/>';
   if (lap >= 1) s += '<circle cx="48" cy="48" r="' + r + '" stroke="' + col(lap - 1) + '"/>';
   if (frac > 0.001) s += '<circle cx="48" cy="48" r="' + r + '" class="' + (lap >= 1 ? 'rover' : '') + '" stroke="' + col(lap) + '" stroke-dasharray="' + c * frac + ' ' + c + '" transform="rotate(-90 48 48)"/>';
+  if (left && p < 1) return s + '<text x="48" y="41" text-anchor="middle" class="rcap">' + left.cap + '</text><text x="48" y="61" text-anchor="middle" class="rpct">' + left.v + '</text></svg>';
   s += '<text x="48" y="' + (p > 1 ? 46 : 52) + '" text-anchor="middle" class="rpct">' + pct + '%</text>' +
     (p > 1 ? '<text x="48" y="62" text-anchor="middle" class="rover2" style="fill:' + col(lap >= 1 && frac > 0.001 ? lap : lap - 1) + '">' +
       (lap >= 2 ? '×' + (Math.round(p * 10) / 10).toString().replace('.', ',') : '+' + (pct - 100) + '%') + '</text>' : '');

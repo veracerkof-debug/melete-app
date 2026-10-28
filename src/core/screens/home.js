@@ -166,6 +166,12 @@ function homeMonoHTML(app) {
   return '<div class="mono-home">' + topbar(logoHTML()) + blocks(st, P) + '</div>';
 }
 
+// До цели — коротко, чтобы влезло в кольцо: «5 ч», «40 мин», «4:30»
+function shortDur(sec) {
+  const m = Math.max(0, Math.ceil(sec / 60)), h = Math.floor(m / 60), r = m % 60;
+  return h && r ? h + ':' + String(r).padStart(2, '0') : h ? t('time.h', { n: h }) : t('time.m', { n: r });
+}
+
 export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
@@ -173,7 +179,7 @@ export function homeHTML(app) {
   // «Только инструменты»: без недели, цели и лиги — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   P.voice = quoteHTML(app, false);
-  if (!plain) P.week = '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) })) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
+  if (!plain) P.week = '<div class="hcard"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) }), { cap: t('home.left'), v: shortDur(goal - w.total) }) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
     streakPill(app) + '</div></div>' +
     '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
@@ -191,8 +197,8 @@ export function homeHTML(app) {
   P.events = nextEventsHTML(app);
   const songs = app.store.songs(), L = ensureLib(app.store.state, t);
   const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
-  P.songs = '<div class="hhdr"><span>' + t('home.continue') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>' +
-    (!rec.length ? '<div class="group"><button class="cell act" data-act="addSong">' + t('home.firstSong') + '</button></div>'
+  P.songs = '<div class="hhdr"><span>' + t(rec.length ? 'home.continue' : 'songs.title') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>' +
+    (!rec.length ? '<button class="hfirst" data-act="addSong"><span class="hfic" aria-hidden="true">' + IC.plus + '</span><span class="grow"><b>' + t('home.firstSong') + '</b><span class="l2">' + t('home.firstSongSub') + '</span></span></button>'
     : '<div class="slist">' + rec.map(({ s, st: ss }) => {
       const g = genreOf(L, s.genre);
       const sub = s.currentBpm && s.targetBpm ? s.currentBpm + ' → ' + s.targetBpm + ' bpm' : plain ? s.artist || '' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
@@ -348,7 +354,7 @@ function gemRow(app) {
   if (!isOn(st, 'mastery')) return '';
   const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs), name = t('gem.' + g.gem.id);
   return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemCanvas(g.gem.id, g.frac, 52) +
-    '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + fmtDur(total) + (g.next ? ' · ' + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
+    '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + (total >= 60 ? fmtDur(total) : '') + (g.next ? (total >= 60 ? ' · ' : '') + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
     (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
 }
 

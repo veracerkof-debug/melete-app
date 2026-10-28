@@ -61,6 +61,19 @@ export function leave(el, ms = 240) {
   setTimeout(() => el.remove(), reduced() ? 0 : ms);
 }
 
+// Пояснения в шторках — две строки, касание раскрывает целиком (обзор дизайна 28.10.2026: подробности — по запросу).
+// Только простой текст: пояснение со ссылкой или кнопкой внутри остаётся как есть
+function clampHints(root, opened) {
+  root.querySelectorAll('.ftr').forEach((h) => {
+    if (h.textContent.length < 90 || h.querySelector('a,button,input,select')) return;
+    h.classList.add('clamp');
+    if (h.scrollHeight <= h.clientHeight + 2) { h.classList.remove('clamp'); return; }
+    const on = opened.has(h.textContent);
+    h.classList.toggle('open', on);
+    h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', String(on));
+  });
+}
+
 export function sheet(render, init, { onClose } = {}) {
   if (!layer) {
     layer = document.createElement('div');
@@ -73,12 +86,13 @@ export function sheet(render, init, { onClose } = {}) {
   setTimeout(() => scrim.classList.remove('opening'), 650);
   scrim.style.zIndex = 45 + stack.length;
   scrim.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"></div>';
-  const el = scrim.firstChild;
+  const el = scrim.firstChild, opened = new Set(); // раскрытые пояснения (по тексту) — держатся при обновлениях шторки
   const api = {
     el,
     update() {
       const y = el.scrollTop;
       el.innerHTML = '<div class="grab"></div>' + withText(render); // настройки — с текстом и в «Минимале» без текста
+      clampHints(el, opened);
       el.scrollTop = y;
     },
     close() {
@@ -90,8 +104,15 @@ export function sheet(render, init, { onClose } = {}) {
       if (onClose) onClose();
     },
   };
-  const onKey = (e) => { if (e.key === 'Escape' && stack.at(-1) === api) api.close(); };
-  scrim.addEventListener('click', (e) => { if (e.target === scrim || e.target.closest('[data-close]')) api.close(); });
+  const onKey = (e) => {
+    if (e.key === 'Escape' && stack.at(-1) === api) api.close();
+    else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.matches?.('.ftr.clamp') && el.contains(document.activeElement)) { e.preventDefault(); document.activeElement.click(); }
+  };
+  scrim.addEventListener('click', (e) => {
+    if (e.target === scrim || e.target.closest('[data-close]')) { api.close(); return; }
+    const h = e.target.closest('.ftr.clamp');
+    if (h) { const on = h.classList.toggle('open'); h.setAttribute('aria-expanded', String(on)); if (on) opened.add(h.textContent); else opened.delete(h.textContent); }
+  });
   document.addEventListener('keydown', onKey);
   layer.appendChild(scrim);
   stack.push(api);
