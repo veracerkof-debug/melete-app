@@ -17,7 +17,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
   let lastTap = null;
   let halo = null;
 
-  const target = (e) => e.target.closest('.l-app, .l-dock-btn, .clock-wrap, .l-date, .l-tr-row, .l-tr-live, .l-tr-week');
+  const target = (e) => e.target.closest('.l-app, .l-dock-btn, .clock-wrap, .l-date, .l-tr-row, .l-tr-live, .l-tr-week, .l-trl-main, .l-trl-side');
 
   const clearHalo = () => {
     if (!halo) return;

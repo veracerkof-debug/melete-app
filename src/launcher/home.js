@@ -329,8 +329,9 @@ function renderTracker() {
   // касание — сразу в нужный экран Melete: плашка — занятие (или свободная практика), неделя — свободная практика,
   // чтение — Библия на чтении дня (docs/launcher-bridge.md)
   const go = (route) => (e) => { if (!e.currentTarget.dataset.suppress) handlers.onMelete(route); };
-  const wrap = h('div', { class: 'l-tracker' + (d.demo ? ' demo' : '') });
   const hold = (el) => { el.longPress = () => handlers.onSettings('tracker'); return el; };
+  if (prefs.trackerMode !== 'full') return trackerLine(d, go, hold);
+  const wrap = h('div', { class: 'l-tracker' + (d.demo ? ' demo' : '') });
   if (d.live) {
     const lv = d.live;
     const ctl = h('button', { class: 'l-tr-ctl', 'aria-label': lv.playing ? t('tr.pause') : t('tr.play'), html: lv.playing ? PAUSE : PLAY,
@@ -361,6 +362,30 @@ function renderTracker() {
       rd.ref ? h('i', { class: 'l-tr-bar', 'aria-hidden': 'true' }, h('u', { style: { width: `${rd.total ? Math.round(rd.done / rd.total * 100) : 0}%` } })) : null)));
   }
   if (d.demo) wrap.append(h('small', { class: 'l-tr-note' }, t('tr.demo')));
+  return wrap;
+}
+
+// «Чистый» вид: одна тихая строка — занятие (если идёт) с ▶/❚❚, иначе неделя; справа — чтение дня (церковный режим).
+// Касания те же: занятие — в занятие, неделя — свободная практика, чтение — Библия
+function trackerLine(d, go, hold) {
+  const wrap = h('div', { class: 'l-tracker line' + (d.demo ? ' demo' : '') });
+  const row = h('div', { class: 'l-trl' });
+  const lv = d.live, p = d.practice, rd = d.reading;
+  if (lv) {
+    row.append(hold(h('button', { class: 'l-trl-main', onclick: go(lv.session ? 'session' : 'free') },
+      h('i', { class: 'l-tr-pulse' + (lv.playing ? '' : ' still'), 'aria-hidden': 'true' }),
+      h('span', {}, lv.session ? t('tr.live') : t('tr.playing')),
+      lv.start ? h('em', { 'data-live': lv.start }, liveText(lv.start)) : null)),
+    h('button', { class: 'l-tr-ctl', 'aria-label': lv.playing ? t('tr.pause') : t('tr.play'), html: lv.playing ? PAUSE : PLAY,
+      onclick: (e) => { e.stopPropagation(); handlers.onMeleteControl('toggle'); if (d.demo) setTimeout(refreshTracker, 30); } }));
+  } else if (p) {
+    row.append(hold(h('button', { class: 'l-trl-main', onclick: go('free') },
+      h('span', {}, fmtDur(p.total, t)), h('em', {}, t('tr.ofGoal', { goal: fmtDur(p.goal, t) }).replace(/ · .*$/, '')))));
+  }
+  if (rd?.ref) row.append(hold(h('button', { class: 'l-trl-side', onclick: go('bible') }, rd.ref)));
+  if (!row.children.length) return null;
+  wrap.append(row);
+  if (p) wrap.append(h('i', { class: 'l-trl-bar', 'aria-hidden': 'true' }, h('u', { style: { width: `${Math.min(100, p.progress * 100).toFixed(0)}%` } })));
   return wrap;
 }
 

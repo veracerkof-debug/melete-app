@@ -5,6 +5,7 @@ const KEY = 'elachiston.prefs';
 export const DEFAULTS = {
   // оформление: тема — как в Melete (светлая, тёмная, «Бумага», OLED, системная), чёрно-белый вид, акцент, язык
   theme: 'system',      // system | light | dark | paper | oled
+  style: 'clean',       // вид главного: clean — «Чистый» (умолчание), rich — «Подробный» (STYLES ниже)
   font: 'onest',        // look.js: FONTS
   motion: 'slide',      // переходы: slide | depth | fade | spring (look.js: MOTIONS)
   bw: false,            // чёрно-белый вид (без цвета)
@@ -19,16 +20,16 @@ export const DEFAULTS = {
   hourLine: true,       // строка под часами: литургический час (церковный режим)
   dateLang: '',         // '' — язык интерфейса; ru | en | uz | el
   greekDay: true,       // греческое название дня (церковный режим)
-  status: true,         // сеть и батарея
+  status: false,        // своя строка «сеть и батарея» (системная и так видна над экраном)
   subline: 'verse',     // verse (церковный режим) | note | none
   note: '',
-  align: 'right',       // left | center | right
+  align: 'left',        // left | center | right — одна ось для всего экрана
   size: 'm',            // s | m | l — прежний размер названий (больше не настраивается: см. uiScale)
   setTab: 'look',       // вкладка настроек: look | home | gestures | data
   layout: null,         // layout.js: порядок, видимость, размер блоков, место значков и папок
   clockScale: 100,      // размер часов, % (60–140)
   uiScale: 100,         // размер остального на главном: дата, названия, Melete, плеер, значки, % (60–130)
-  marker: 'auto',       // auto — αʹ в церковном режиме, иначе нет | greek | roman | count | none
+  marker: 'none',       // auto — αʹ в церковном режиме, иначе нет | greek | roman | count | none
   ornament: 'none',     // фоновый символ (церковный режим)
   wallpaper: 'none',    // живые обои: none | hands | planet | sun
   intro: true,
@@ -36,6 +37,7 @@ export const DEFAULTS = {
   dockStyle: 'icons',   // icons | line | none
   player: true,
   tracker: true,        // чтение и практика из Melete (когда мост подключён)
+  trackerMode: 'line',  // line — одна тихая строка, full — плашка, неделя по дням, чтение
   place: null,          // { lat, lon } — восход и закат
   home: null,           // null — по умолчанию; [{ key, label }]
   gestures: {},         // id жеста → действие; пустые — по умолчанию
@@ -53,7 +55,16 @@ export function writeJSON(key, v) {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* память недоступна — до перезапуска */ }
 }
 
-export const prefs = Object.assign(clone(DEFAULTS), readJSON(KEY) || {});
+// Стили главного экрана: набор настроек, который ставится одним выбором; дальше каждую можно менять отдельно
+export const STYLES = {
+  clean: { status: false, marker: 'none', align: 'left', trackerMode: 'line' },
+  rich: { status: true, marker: 'auto', align: 'right', trackerMode: 'full' },
+};
+
+const saved = readJSON(KEY);
+export const prefs = Object.assign(clone(DEFAULTS), saved || {});
+// настройки, сохранённые до появления стилей (DECISIONS 2026-10-28), — один раз переводятся на «Чистый»
+if (saved && !('style' in saved)) { Object.assign(prefs, STYLES.clean, { style: 'clean' }); writeJSON(KEY, prefs); }
 const subs = new Set();
 
 export function save() {
