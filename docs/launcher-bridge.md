@@ -1,7 +1,10 @@
 # Мост Melete ↔ Ἐλάχιστον (главный экран)
 
-> **Решение автора 27.10.2026** (`DECISIONS.md` Melete): этот договор действует целиком. Сторона главного экрана готова:
-> в настройках («Главный» → Melete) видно, пришло ли живое состояние («Melete на связи…» или «Живой связи пока нет»).
+> **28.10.2026: мост готов с обеих сторон.** Melete: `src/core/bridge.js` (состояние, версия 1), `BridgePlugin.java`
+> (рассылка STATE, маршруты `melete://`), `BridgeReceiver.java` (REQUEST, CONTROL) — в сборке Melete DEV от 187.
+> Главный экран: `LauncherPlugin.java` (`meleteState`, `meleteControl`, `openMelete` с маршрутом), `src/launcher/melete.js`,
+> `tracker.js`, `home.js` — в сборке Elachiston DEV от 8. Проверка — Elachiston → настройки → «Главный» → Melete,
+> строка «Melete на связи…».
 
 Договор между двумя отдельными приложениями (DECISIONS 2026-10-26). **Сторона Melete сделана 28.10.2026** (`BridgePlugin.java`, `BridgeReceiver.java`,
 `src/core/bridge.js`, `app.route`; DECISIONS 2026-10-28). Сторона Ἐλάχιστον готова

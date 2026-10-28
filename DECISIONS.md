@@ -1651,4 +1651,6 @@ punch-in, растяжение под темп. (4) Музыканту — ак�
   ссылок убраны упоминания чужих продуктов (идеи часов «Письмена» и «Орбиты» — общие, своя реализация); узбекский
   текст стихов — перевод «Muqaddas Kitob» под авторским правом (как в Melete: короткая цитата со ссылкой) — в окне стиха
   указан источник. Остаётся только лицензионное: шрифты SIL OFL, карта Natural Earth (общественное достояние),
-  androidx.biometric (Apache 2.0) — всё в `LICENSES.md`.
+  androidx.biometric (Apache 2.0) — всё в `LICENSES.md`.- Мост с Melete сверен (28.10): сторона Melete в `main` (`bridge.js`, `BridgePlugin`, `BridgeReceiver`, Melete DEV 187)
+  совпадает с договором `docs/launcher-bridge.md` поле в поле (состояние v1, STATE/REQUEST/CONTROL, `melete://free |
+  session | bible`); сторона главного экрана — Elachiston DEV 8. Правок не нужно, проверка — на телефоне с обеими сборками.
