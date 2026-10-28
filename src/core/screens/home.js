@@ -10,11 +10,11 @@ import { gemSec } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
-import { isOn, makeTab, TABS_MAX, editTabs } from '../settings.js';
+import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
-import { topbar, weekdays, relDay, PLAY, IC, tabIds, TAB_MODULES } from './common.js';
+import { topbar, weekdays, relDay, PLAY, IC, tabIds, TAB_MODULES, isPage, pageName, TAB_ICONS } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML } from './calendar.js';
@@ -94,6 +94,16 @@ export function homeEditAct(app, a) {
 
 /* ---------- «Минимал» (эксперимент): та же главная, но только текст, линии и оттенки серого ---------- */
 
+// Значки «Минимала»: календарь, «Студия», «Библия», инструменты-вкладки и все инструменты из «Инструментов»;
+// «Песни» — своя страница внизу. Порядок — settings.monoGrid (новое — в конец)
+export function monoItems(st) {
+  const T = toolsTab(st), mods = (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id));
+  const tabMods2 = ['studio', 'bible'].filter((id) => isOn(st, id) && moduleById(id));
+  const all = [...new Set(['calendar', ...tabMods2, ...mods, ...T.shown])].filter((id) => id !== 'library');
+  const ord = (st.monoGrid || []).filter((id) => all.includes(id));
+  return ord.concat(all.filter((id) => !ord.includes(id)));
+}
+
 const ARROW = '<svg viewBox="0 0 12 12" class="mtri" aria-hidden="true"><path d="M3.5 2l5 4-5 4z"/></svg>';
 const greet = (h) => t(h < 5 ? 'mono.night' : h < 12 ? 'mono.morning' : h < 18 ? 'mono.day' : h < 23 ? 'mono.evening' : 'mono.night');
 // Церковный режим: чтение дня по плану — главы, сколько прочитано, «Читать» открывает Библию на первой непрочитанной
@@ -152,9 +162,12 @@ function homeMonoHTML(app) {
   }
   P.reading = readingCard(app, true);
   P.start = '<button class="mcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
-  const q = quickList(st);
-  P.quick = mhead(t('home.quick'), '<button class="mbtn" data-act="quickedit" aria-label="' + esc(t('home.edit')) + '">' + IC.plus + '</button>') +
-    '<div class="mtools">' + q.map((id) => { const m = moduleById(id); return '<button data-open-tool="' + id + '"><span class="mcirc">' + m.icon + '</span><span class="mlbl">' + esc(moduleName(m)) + '</span></button>'; }).join('') + '</div>';
+  // всё приложение — значками на одной странице, без подписей (решение автора 28.10.2026): календарь, студия, Библия,
+  // все инструменты; порядок — удержать и перенести (settings.monoGrid), название — в подсказке и для чтения с экрана
+  P.quick = '<div class="mtools mall">' + monoItems(st).map((id) => {
+    const page = isPage(id), m = page ? null : moduleById(id), name = page ? pageName(id) : moduleName(m);
+    return '<button data-open-tool="' + id + '" aria-label="' + esc(name) + '" title="' + esc(name) + '"><span class="mcirc">' + (page ? TAB_ICONS[id] : m.icon) + '</span></button>';
+  }).join('') + '</div>';
   P.events = nextEventsHTML(app);
   const songs = app.store.songs();
   const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
@@ -222,8 +235,10 @@ const HI = {
 };
 export function toolHoldMenu(app, btn, rerender, open) {
   const st = app.store.state.settings, id = btn.dataset.openTool, m = moduleById(id);
+  if (isPage(id)) { pageHoldMenu(app, btn, rerender); return; }
   if (!m) return;
-  const onHome = !!btn.closest('.qgrid, .mtools'), vis = quickList(st), i = vis.indexOf(id), inQuick = i >= 0;
+  if (btn.closest('.mall')) { holdMenu(btn, [{ icon: HI.open, label: t('hold.open'), run: () => open(id) }, { icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) }], moduleName(m)); return; } // «Минимал»: порядок — переносом
+  const onHome = !!btn.closest('.qgrid'), vis = quickList(st), i = vis.indexOf(id), inQuick = i >= 0;
   const save = (q) => { st.quick = q; app.store.settingsChanged(); rerender(); };
   // сдвиг среди видимых: меняемся местами с соседом в полном списке (выключенные инструменты остаются на своих местах)
   const shift = (d) => { const full = (st.quick || QUICK_DEF).slice(), a = full.indexOf(id), b = full.indexOf(vis[i + d]); [full[a], full[b]] = [full[b], full[a]]; save(full); };
@@ -241,8 +256,8 @@ export function toolHoldMenu(app, btn, rerender, open) {
     if (j >= 0 && j < T.shown.length - 1) items.splice(j > 0 ? 2 : 1, 0, { icon: HI.right, label: t('hold.right'), run: () => tmove(1) });
     items.push({ icon: HI.minus, label: t('tools.hide'), danger: true, run: () => { T.off.add(id); setToolsTab(st, T); app.store.settingsChanged(); rerender(); toast(t('tools.hiddenToast')); } });
   }
-  // любой инструмент — вкладкой внизу (обратно — удержание вкладки → «В инструменты»)
-  items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => {
+  // любой инструмент — вкладкой внизу (обратно — удержание вкладки → «В инструменты»); в «Минимале» вкладок две — без этого
+  if (st.uiStyle !== 'mono') items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => {
     const r = TAB_MODULES[id] ? (editTabs(app.store, tabIds(st), id, 'on') ? 'ok' : 'max') : makeTab(app.store, id, tabIds(st)); // «Студия», «Библия» — обратно на своё место внизу
     if (r === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); }
   } });
@@ -250,6 +265,17 @@ export function toolHoldMenu(app, btn, rerender, open) {
   holdMenu(btn, items, moduleName(m));
 }
 
+// Страница ядра («Песни», «Календарь») карточкой в «Инструментах» или значком «Минимала»: открыть, левее, правее, вниз вкладкой
+function pageHoldMenu(app, btn, rerender) {
+  const st = app.store.state.settings, id = btn.dataset.openTool, T = toolsTab(st), j = T.shown.indexOf(id);
+  const tmove = (d) => { const a = T.order.indexOf(id), b = T.order.indexOf(T.shown[j + d]); [T.order[a], T.order[b]] = [T.order[b], T.order[a]]; setToolsTab(st, T); app.store.settingsChanged(); rerender(); };
+  const items = [{ icon: HI.open, label: t('hold.open'), run: () => app.go(id) }];
+  if (btn.closest('.mall')) { holdMenu(btn, items, pageName(id)); return; }
+  if (j > 0) items.push({ icon: HI.left, label: t('hold.left'), run: () => tmove(-1) });
+  if (j >= 0 && j < T.shown.length - 1) items.push({ icon: HI.right, label: t('hold.right'), run: () => tmove(1) });
+  if (st.uiStyle !== 'mono') items.push({ icon: HI.tab, label: t('hold.makeTab'), run: () => { if (placeTab(app.store, tabIds(st), id) === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); } } });
+  holdMenu(btn, items, pageName(id));
+}
 
 // Быстрый доступ: до 8 инструментов, порядок — перетаскиванием по удержанию или стрелкой
 export function quickEdit(app, rerender) {

@@ -38,6 +38,12 @@ export const tabIcon = (id) => TAB_ICONS[id] || (moduleById(id) || {}).icon || '
 // Вкладка-модуль («Студия», «Библия»), убранная с нижней панели, — карточкой во вкладке «Инструменты» (решение автора
 // 28.10.2026: любую вещь — вниз или в инструменты); открывается на весь экран, удержание — обратно вниз
 export const tabModsInTools = (st) => Object.keys(TAB_MODULES).filter((id) => isOn(st, id) && moduleById(id) && tabIds(st).includes(id) && !visibleTabs(st, tabIds(st)).includes(id));
+// Страницы ядра, которые тоже переносятся в «Инструменты» (решение автора 28.10.2026: всё, кроме главной): «Песни»,
+// «Календарь». В «Инструментах» — карточкой, касание открывает страницу; удержание — правка, обратно вниз
+export const PAGES = ['library', 'calendar'];
+export const isPage = (id) => PAGES.includes(id);
+export const pagesInTools = (st) => PAGES.filter((id) => !visibleTabs(st, tabIds(st)).includes(id));
+export const pageName = (id) => t('nav.' + id);
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',
   library: '<svg viewBox="0 0 28 28"><path d="M11 20V7.5l11-2.5V17.5"/><circle cx="8" cy="20" r="3"/><circle cx="19" cy="17.5" r="3"/></svg>',

@@ -18,7 +18,7 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX, FIXED_TABS } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
 import { isBackup } from '../store.js';
@@ -514,7 +514,7 @@ function tabsHTML(app) {
   const row = (k, on, i) => '<div class="cell"' + (on ? ' data-tab-row="' + k + '"' : '') + '><span class="ticon" style="--tc:' + color(k) + '">' + tabIcon(k) + '</span><span class="grow">' + esc(nameOf(k)) +
     (on && tool(k) ? '<span class="st l2" style="display:block;font-size:13px">' + t('tabs.fromTools') + '</span>' : '') + '</span>' +
     (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: nameOf(k) })) + '">' + IC.up + '</button>' : '') +
-      (vis.length > 1 ? (mod(k) ? '<button class="ic sm plain" data-tabun="' + k + '" aria-label="' + esc(t('tabs.toTools') + ': ' + nameOf(k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
+      (vis.length > 1 && !FIXED_TABS.includes(k) ? (mod(k) ? '<button class="ic sm plain" data-tabun="' + k + '" aria-label="' + esc(t('tabs.toTools') + ': ' + nameOf(k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: nameOf(k) })) + '" style="color:var(--red)">' + IC.minus + '</button>') : '')
       : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: nameOf(k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
   // любой включённый инструмент — вниз одним касанием (решение автора 28.10.2026)

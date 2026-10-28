@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { visibleTabs, hiddenTabs, editTabs, DEFAULT_TABS } from '../src/core/settings.js';
+import { visibleTabs, hiddenTabs, editTabs, placeTab, tabToTools, DEFAULT_TABS } from '../src/core/settings.js';
 
 globalThis.document ??= { documentElement: {}, addEventListener() {}, createElement: () => ({ style: {} }) };
 globalThis.navigator ??= { language: 'ru' };
@@ -50,16 +50,31 @@ describe('вкладки', () => {
     expect(visibleTabs({ tabs: ['tools', 'home'], tabsOff: ['library'] }, KNOWN)).toEqual(['tools', 'home', 'calendar']);
     expect(hiddenTabs({ tabs: ['tools', 'home'], tabsOff: ['library'] }, KNOWN)).toEqual(['library']);
   });
-  it('переставить, убрать, вернуть; последнюю не убрать', () => {
+  it('переставить, убрать, вернуть; главная и «Инструменты» остаются', () => {
     const s = mk();
     expect(editTabs(s, T3, 'tools', 'up')).toBe(true);
     expect(visibleTabs(s.state.settings, T3)).toEqual(['home', 'tools', 'library']);
-    editTabs(s, T3, 'home', 'off');
-    editTabs(s, T3, 'library', 'off');
+    expect(editTabs(s, T3, 'home', 'off')).toBe(false);
     expect(editTabs(s, T3, 'tools', 'off')).toBe(false);
-    expect(visibleTabs(s.state.settings, T3)).toEqual(['tools']);
-    editTabs(s, T3, 'home', 'on');
-    expect(visibleTabs(s.state.settings, T3)).toEqual(['tools', 'home']);
-    expect(visibleTabs({ tabs: ['x'], tabsOff: T3 }, T3)).toEqual(['home']);
+    expect(editTabs(s, T3, 'library', 'off')).toBe(true);
+    expect(visibleTabs(s.state.settings, T3)).toEqual(['home', 'tools']);
+    editTabs(s, T3, 'library', 'on');
+    expect(visibleTabs(s.state.settings, T3)).toEqual(['home', 'tools', 'library']);
+    // старые данные с убранной главной — главная возвращается первой
+    expect(visibleTabs({ tabs: ['x'], tabsOff: T3 }, T3)).toEqual(['home', 'tools']);
+  });
+  it('перенос жестом: вкладка в инструменты и обратно на место', () => {
+    const s = mk(), K = ['home', 'library', 'calendar', 'tools'];
+    expect(tabToTools(s, K, 'calendar')).toBe(true);
+    expect(tabToTools(s, K, 'home')).toBe(false);
+    expect(visibleTabs(s.state.settings, K)).toEqual(['home', 'library', 'tools']);
+    expect(placeTab(s, K, 'calendar', 1)).toBe('ok');
+    expect(visibleTabs(s.state.settings, K)).toEqual(['home', 'calendar', 'library', 'tools']);
+    // инструмент — вкладкой (tabMods), обратно — в инструменты
+    expect(placeTab(s, K, 'metro', 2)).toBe('ok');
+    expect(s.state.settings.tabMods).toEqual(['metro']);
+    expect(visibleTabs(s.state.settings, [...K, 'metro'])).toEqual(['home', 'calendar', 'metro', 'library', 'tools']);
+    expect(tabToTools(s, [...K, 'metro'], 'metro')).toBe(true);
+    expect(s.state.settings.tabMods).toEqual([]);
   });
 });

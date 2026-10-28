@@ -5,7 +5,7 @@
 // план чтения, календарь. Без выбора (ежедневная копия в папку) — всё, кроме файлов.
 import { PARTS, pickParts, applyParts, partsOf, mergeTools } from './backupparts.js';
 import { fileSongs } from './files.js';
-import { LS_T } from './device.js';
+import { LS_T, lockDevice } from './device.js';
 import { stripDemo, isDemoFile } from './demo.js';
 import { CORE_DICTS } from '../i18n/index.js';
 
@@ -63,7 +63,7 @@ export async function restoreParts(app, p, parts) {
     }
   }
   if (use.includes('settings') && p.tools) {
-    try { localStorage.setItem(LS_T, JSON.stringify(mergeTools(readTools(), p.tools))); tools = true; } catch { /* нет места */ }
+    try { lockDevice(); localStorage.setItem(LS_T, JSON.stringify(mergeTools(readTools(), p.tools))); tools = true; } catch { /* нет места */ }
   }
   return { sessions: app.store.allSessions().length - before, files, tools };
 }

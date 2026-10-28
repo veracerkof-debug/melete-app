@@ -181,8 +181,14 @@ export function visibleTabs(settings, known) {
     const i = TAB_AFTER[k] ? list.indexOf(TAB_AFTER[k]) : -1;
     if (i >= 0) list.splice(i + 1, 0, k); else list.push(k);
   });
+  // главная и «Инструменты» — всегда внизу: главная — дом, «Инструменты» — куда уходит всё остальное (решение автора
+  // 28.10.2026: любая вкладка, кроме главной, переносится в инструменты и обратно)
+  if (known.includes('home') && !list.includes('home')) list.unshift('home');
+  if (known.includes('tools') && !list.includes('tools')) list.push('tools');
   return list.length ? list : [known[0]];
 }
+// Вкладки, которые нельзя убрать с нижней панели
+export const FIXED_TABS = ['home', 'tools'];
 
 export const hiddenTabs = (settings, known) => known.filter((k) => !visibleTabs(settings, known).includes(k));
 
@@ -220,11 +226,30 @@ export function unmakeTab(store, id) {
   return true;
 }
 
+// Перенос жестом (режим правки): вещь — вкладкой на место at (страница ядра, «Студия», «Библия» или любой инструмент)
+// → 'ok' | 'max'; вкладку — в «Инструменты» → true, если перенесена
+export function placeTab(store, known, id, at, page = false) {
+  const st = store.state.settings, vis = visibleTabs(st, known), i = vis.indexOf(id);
+  if (i < 0 && vis.length >= TABS_MAX) return 'max';
+  if (i >= 0) vis.splice(i, 1);
+  vis.splice(Math.max(0, Math.min(vis.length, at == null ? vis.length : at)), 0, id);
+  if (!page && !known.includes(id)) st.tabMods = [...(st.tabMods || []), id]; // инструмент — вкладкой
+  st.tabs = vis;
+  st.tabsOff = (st.tabsOff || []).filter((k) => k !== id);
+  store.settingsChanged();
+  return 'ok';
+}
+export function tabToTools(store, known, id) {
+  if (FIXED_TABS.includes(id)) return false;
+  if ((store.state.settings.tabMods || []).includes(id)) return unmakeTab(store, id);
+  return editTabs(store, known, id, 'off');
+}
+
 export function editTabs(store, known, id, action) {
   const st = store.state.settings, vis = visibleTabs(st, known), off = new Set(st.tabsOff || []);
   const i = vis.indexOf(id);
   if (action === 'up' && i > 0) [vis[i - 1], vis[i]] = [vis[i], vis[i - 1]];
-  else if (action === 'off' && i >= 0 && vis.length > 1) { vis.splice(i, 1); off.add(id); }
+  else if (action === 'off' && i >= 0 && vis.length > 1 && !FIXED_TABS.includes(id)) { vis.splice(i, 1); off.add(id); }
   else if (action === 'on' && i < 0) { if (vis.length >= TABS_MAX) return false; vis.push(id); off.delete(id); }
   else return false;
   st.tabs = vis;

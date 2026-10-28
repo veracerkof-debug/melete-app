@@ -33,9 +33,26 @@ export function loadDevice(storage = globalThis.localStorage) {
     d.drone.layers = { 2: false, 3: false, 4: false };
     d.drone.layers[d.drone.oct || 3] = true;
   }
+  // как прочитано на диске (не нормализованное: сравнение «не поменял ли кто-то» — по содержимому хранилища)
+  if (storage) { try { lastSaved.set(storage, storage.getItem(LS_T)); } catch { /* */ } }
   return d;
 }
 
-export function saveDevice(d, storage = globalThis.localStorage) {
-  try { storage.setItem(LS_T, JSON.stringify(d)); } catch { /* ignore */ }
+// Настройки из резервной копии записаны прямо на диск и сейчас будет перезапуск: копия в памяти устарела — больше не
+// пишется (иначе сохранение при уходе в фон или закрытии инструмента затёрло бы восстановленное)
+// Пишется, только если в памяти что-то изменилось с прошлой записи: неизменённая копия не затирает записанное другим
+// (резервная копия, вторая вкладка браузера)
+let locked = false;
+const lastSaved = new WeakMap(); // хранилище → последняя записанная (или прочитанная) копия
+export const lockDevice = (v = true) => { locked = v; };
+// soft — страховочная запись (закрытие инструмента, уход в фон): если с прошлой записи хранилище поменял кто-то другой,
+// его версия остаётся (обычное сохранение после правки пишет всегда)
+export function saveDevice(d, storage = globalThis.localStorage, { soft = false } = {}) {
+  if (locked || !storage) return;
+  const j = JSON.stringify(d), last = lastSaved.get(storage);
+  if (j === last) return;
+  try {
+    if (soft && storage.getItem(LS_T) !== (last ?? null)) return;
+    storage.setItem(LS_T, j); lastSaved.set(storage, j);
+  } catch { /* ignore */ }
 }

@@ -454,3 +454,39 @@ html.tablabels:not(.desk) .tab::before{top:5px;margin-top:0;width:54px;height:30
 .updbar .link{padding:0 8px}
 .updprog{flex:none;width:72px;height:6px;margin-right:10px;border-radius:3px;background:linear-gradient(90deg,var(--tint) var(--f),var(--fill) var(--f))}
 html.desk .updbar{left:auto;right:20px;bottom:20px;margin:0}
+
+/* Режим правки вкладок и «Инструментов» (core/screens/arrange.js): значки покачиваются, «−» и «+» в углу,
+   под пальцем — призрак, метка показывает, куда встанет вещь; над вкладками — подсказка и «Готово» */
+@keyframes arr-wig{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+html.arrange .tabbar .tab,html.arrange .tgrid [data-open-tool]{animation:arr-wig .28s ease-in-out infinite;touch-action:none;-webkit-user-select:none;user-select:none}
+html.arrange .tabbar .tab:nth-child(2n),html.arrange .tgrid [data-open-tool]:nth-child(2n){animation-delay:-.14s}
+html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="tools"]{animation:none}
+@media (prefers-reduced-motion:reduce){html.arrange .tabbar .tab,html.arrange .tgrid [data-open-tool]{animation:none}}
+.tab,.tgrid [data-open-tool]{position:relative}
+.arrb{position:absolute;top:2px;right:6px;z-index:3;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font:700 16px/1 var(--font);font-style:normal;color:#fff;background:var(--l2);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.arrb::after{content:"";position:absolute;inset:-10px}
+.arrb.in{background:#5F8568;top:6px;right:6px}
+.arrb.out{background:var(--red,#D2463F)}
+.arrsrc{opacity:.25}
+.arrghost{position:fixed;z-index:200;pointer-events:none;margin:0;opacity:.92;box-shadow:0 12px 30px rgba(0,0,0,.28);border-radius:16px;animation:none!important;transition:none}
+.tabbar .tab.arrins{box-shadow:inset 3px 0 0 var(--tint)}
+.tabbar.arrend .in{box-shadow:inset -3px 0 0 var(--tint)}
+.tabbar.arrout{box-shadow:0 -3px 0 #5F8568}
+.tgrid .arrins{box-shadow:-4px 0 0 var(--tint)}
+.tgrid .arrafter{box-shadow:4px 0 0 var(--tint)}
+.arrbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh,64px) + 10px);z-index:30;display:flex;align-items:center;gap:12px;width:calc(100% - 24px);max-width:520px;box-sizing:border-box;padding:8px 8px 8px 16px;border-radius:999px;background:var(--cell);box-shadow:0 8px 26px rgba(0,0,0,.18);font-size:13px;color:var(--l2)}
+.arrbar span{flex:1;min-width:0;line-height:1.3}
+
+/* «Инструменты» компактно (автор 28.10.2026: все инструменты на одном экране, без пояснений): три колонки, значок,
+   название и одна строка последнего состояния (темп, строй, звук) — его инструмент хранит и после выхода */
+.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px;grid-auto-rows:auto!important;min-height:0}
+.tgrid .tcard2{padding:12px 10px 10px;border-radius:16px;min-height:94px;justify-content:flex-start;gap:6px}
+.tgrid .tcard2:last-child:nth-child(odd){grid-column:auto}
+.tgrid .tci2{width:30px;height:30px}
+.tgrid .tci2 svg{width:28px;height:28px}
+.tgrid .tcn2{font-size:14px;line-height:1.15;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.tgrid .tcs2{font-size:11.5px}
+.tgrid .tcs2:empty{display:none}
+.tgrid .arrb.in{top:4px;right:4px}
+@media (min-width:600px){.tgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media (min-width:900px){.tgrid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}

@@ -6,40 +6,50 @@ import { ui, esc, icons } from '../../ui/index.js';
 import { isOn } from '../settings.js';
 import { mountModule, makeCtx, moduleName, trackToolTime, fmtDur, heavyStub } from '../modules.js';
 import { modules, moduleById } from '../../modules/index.js';
-import { IC, tabModsInTools } from './common.js';
+import { IC, tabModsInTools, pagesInTools, isPage, pageName, TAB_ICONS } from './common.js';
 import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave } from '../pure.js';
 import { bareScope } from '../../i18n/index.js';
 
+// Строка на карточке — только последнее состояние (темп, строй, звук, тональность); описания и счётчики — нет
+const NO_STATUS = ['ear', 'looper', 'audio', 'notes', 'voice', 'studio'];
 export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, root));
 // Порядок и убранные во вкладке (settings.toolsTab: { order, off }): удержание карточки — меню (левее, правее, убрать);
 // убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки
 export function toolsTab(st) {
   const extra = tabModsInTools(st); // «Студия», «Библия», убранные с нижней панели, — здесь
-  const all = modules.filter((m) => (!m.tab || extra.includes(m.id)) && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id), tt = st.toolsTab || {}; // ставшие вкладками — не здесь
+  const all = pagesInTools(st).concat(modules.filter((m) => (!m.tab || extra.includes(m.id)) && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id)), tt = st.toolsTab || {}; // ставшие вкладками — не здесь; страницы ядра, убранные снизу, — здесь
   const order = (tt.order || []).filter((id) => all.includes(id));
   all.forEach((id) => { if (!order.includes(id)) order.push(id); });
   const off = new Set((tt.off || []).filter((id) => all.includes(id)));
   return { order, off, shown: order.filter((id) => !off.has(id)) };
 }
+// Страница ядра («Песни», «Календарь») карточкой в «Инструментах»
+export const pageCard = (id) => ({ id, page: true, icon: TAB_ICONS[id], name: pageName(id), color: 'var(--tint)' });
 export function setToolsTab(st, T) { st.toolsTab = { order: T.order.slice(), off: [...T.off] }; }
 function renderToolsNow(app, root) {
-  const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map(moduleById); // Библия — своя вкладка
+  const st = app.store.state.settings, T = toolsTab(st), list = T.shown.map((id) => (isPage(id) ? pageCard(id) : moduleById(id))); // Библия — своя вкладка
+  // режим правки (arrange.js): у карточки — «+», вниз вкладкой
+  const arr = document.documentElement.classList.contains('arrange') && st.uiStyle !== 'mono';
+  const badge = (id) => (arr ? '<i class="arrb in" data-arr="in:' + id + '" role="button" aria-label="' + esc(t('hold.makeTab')) + '">+</i>' : '');
   root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop">' + list.map((m) => {
+    if (m.page) return '<button class="tcard2 tpage" data-open-tool="' + m.id + '" style="--c:var(--tint);--on:var(--on-tint)">' + badge(m.id) + '<span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' + esc(m.name) + '</span><span class="tcs2"></span></span></button>';
     let s2 = '';
-    if (st.uiStyle !== 'mono') { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния
+    if (st.uiStyle !== 'mono' && !NO_STATUS.includes(m.id)) { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния
     if (heavyStub(m)) s2 = t('heavy.short');
-    return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
+    return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '">' + badge(m.id) + '<span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
       esc(moduleName(m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
   }).join('') + '</div>' +
     (T.off.size ? '<div class="group" style="margin-top:16px"><button class="cell act" data-tools-hidden>' + esc(t('tools.hidden', { n: T.off.size })) + '</button></div>' : '') +
-    (st.uiStyle === 'mono' ? '' : '<p class="ftr">' + t('tools.holdHint') + '</p>');
-  if (st.uiStyle !== 'mono') idleStatus(app, root, list.filter((m) => !m.loaded && !heavyStub(m)));
+    ''; // подсказок нет: удержание — правка (arrange.js)
+  if (st.uiStyle !== 'mono') idleStatus(app, root, list.filter((m) => !m.page && !m.loaded && !heavyStub(m) && !NO_STATUS.includes(m.id)));
   root.onclick = (e) => {
     const b = e.target.closest('[data-open-tool]');
-    if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root));
+    if (b && document.documentElement.classList.contains('arrange')) return; // режим правки: касание — меню (shell.js)
+    if (b && isPage(b.dataset.openTool)) app.go(b.dataset.openTool);
+    else if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root));
     if (e.target.closest('[data-tools-hidden]')) hiddenSheet(app, () => renderTools(app, root));
   };
 }
@@ -61,6 +71,7 @@ function idleStatus(app, root, todo) {
 function hiddenSheet(app, rerender) {
   const st = app.store.state.settings;
   ui.sheet(() => { const T = toolsTab(st); return ui.snav(t('tools.hiddenTitle')) + '<div class="group">' + [...T.off].map((id) => { const m = moduleById(id);
+    if (!m) { const p = pageCard(id); return '<div class="cell"><span class="ticon" style="--tc:var(--tint)">' + p.icon + '</span><span class="grow">' + esc(p.name) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }
     return '<div class="cell"><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
   (el, sh) => el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tback]');
