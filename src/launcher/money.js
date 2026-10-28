@@ -5,6 +5,7 @@ import page from './money.html?raw';
 import script from './money-page.js?url';
 import { unlock, lockSettings, hasLock } from './lock.js';
 import { panel } from './panels.js';
+import { setCover } from './cover.js';
 
 let frame = null;
 let busy = false;
@@ -34,10 +35,11 @@ export async function openMoney() {
 function show() {
   if (frame) frame.contentWindow?.__moneyFresh?.(); else ensure();
   requestAnimationFrame(() => frame.classList.add('open'));
+  setCover('right', true);
   setTimeout(() => frame.contentWindow?.focus(), 300);
 }
 
-export function closeMoney() { frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); dispatchEvent(new Event('wallet:changed')); }
+export function closeMoney() { setCover('right', false); frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); dispatchEvent(new Event('wallet:changed')); }
 
 // панель для перетаскивания: с кодом кошелёк за пальцем не идёт — сначала замок (откроется по отпусканию)
 export const moneyPanel = panel({ el: () => (hasLock() ? null : ensure()), from: 'right', open: show, close: closeMoney, isOpen: moneyOpen });

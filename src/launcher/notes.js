@@ -5,6 +5,7 @@ import page from './notes.html?raw';
 import script from './notes-page.js?url';
 import { openUrl } from './actions.js';
 import { panel } from './panels.js';
+import { setCover } from './cover.js';
 
 let frame = null;
 
@@ -24,10 +25,11 @@ function ensure() {
 export function openNotes() {
   ensure();
   requestAnimationFrame(() => frame.classList.add('open'));
+  setCover('left', true);
   setTimeout(() => frame.contentWindow?.focus(), 300);
 }
 
-export function closeNotes() { frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); }
+export function closeNotes() { setCover('left', false); frame?.classList.remove('open'); frame?.blur(); window.__homeFocus?.(); }
 
 export const notesPanel = panel({ el: ensure, from: 'left', open: openNotes, close: closeNotes, isOpen: notesOpen });
 

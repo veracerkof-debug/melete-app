@@ -673,3 +673,53 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-set-tabs button:not(.on):active { background: var(--fill); }
 .l-sec { scroll-margin-top: 56px; }
 .l-copies .l-pick small { flex: none; font-family: var(--l-mono); font-size: 10.5px; color: var(--l2); }
+
+/* ——— Переходы между экранами (cover.js, look.js: MOTIONS; html[data-motion]) ——— */
+:root { --l-cover: 0; --l-spring: cubic-bezier(.3, 1.35, .5, 1); }
+/* Глубина: главный уходит вглубь и темнеет настолько, насколько накрыт */
+html[data-motion="depth"] .l-home { transform: scale(calc(1 - .07 * var(--l-cover))); filter: brightness(calc(1 - .28 * var(--l-cover))); transform-origin: 50% 45%;
+  transition: transform .36s var(--ease), filter .36s var(--ease), opacity .8s var(--ease); }
+html[data-motion="depth"].l-dragging .l-home { transition: none; }
+html[data-motion="depth"] .l-home.pre { filter: blur(6px); }
+html[data-motion="depth"] .l-money, html[data-motion="depth"] .l-drawer { box-shadow: -8px 0 40px rgba(0,0,0,.18); }
+/* Растворение: панели и шторки проявляются на месте */
+html[data-motion="fade"] .l-money { transform: scale(.96); opacity: 0; transition: opacity .26s var(--ease), transform .26s var(--ease), visibility 0s .26s; }
+html[data-motion="fade"] .l-money.open { transform: none; opacity: 1; transition-delay: 0s; }
+html[data-motion="fade"] .l-money.dragging { transition: none; }
+html[data-motion="fade"] .l-drawer { transform: scale(.96); opacity: 0; transition: opacity .26s var(--ease), transform .26s var(--ease), visibility 0s .26s; }
+html[data-motion="fade"] .l-drawer.open { transform: none; opacity: 1; transition: opacity .26s var(--ease), transform .26s var(--ease); }
+html[data-motion="fade"] .l-drawer.dragging { transition: none; }
+html[data-motion="fade"] .l-sheet { transform: translateY(24px); opacity: 0; transition: transform .26s var(--ease), opacity .26s var(--ease); }
+html[data-motion="fade"] .l-sheet-wrap.open .l-sheet { transform: none; opacity: 1; }
+html[data-motion="fade"] .l-rest { transition-duration: .4s; }
+/* Пружина: доезжает с лёгким качком */
+html[data-motion="spring"] .l-money { transition: transform .5s var(--l-spring), visibility 0s .5s; }
+html[data-motion="spring"] .l-money.open { transition-delay: 0s; }
+html[data-motion="spring"] .l-drawer { transition: transform .55s var(--l-spring), visibility 0s .55s; }
+html[data-motion="spring"] .l-drawer.open { transition: transform .55s var(--l-spring); }
+html[data-motion="spring"] .l-sheet { transition: transform .5s var(--l-spring); }
+html[data-motion="spring"] .l-money.dragging, html[data-motion="spring"] .l-drawer.dragging { transition: none; }
+/* выбор перехода в настройках: карточки с живой миниатюрой */
+.l-motion-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 12px; }
+.l-motion-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--sep); text-align: left; }
+.l-motion-pick.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.l-motion-pick > span:not(.l-motion-demo) { font-size: 14px; }
+.l-motion-pick small { font-size: 11.5px; color: var(--l2); line-height: 1.3; }
+.l-motion-demo { position: relative; width: 56px; height: 36px; border-radius: 6px; background: var(--fill); overflow: hidden; margin-bottom: 4px; }
+.l-motion-demo i { position: absolute; inset: 4px; border-radius: 4px; background: var(--cell); border: 1px solid var(--sep); }
+.l-motion-demo b { position: absolute; top: 4px; bottom: 4px; left: 4px; right: 4px; border-radius: 4px; background: var(--tint); opacity: .85; }
+.l-motion-pick.m-slide b { animation: l-demo-slide 2.2s var(--ease) infinite; }
+.l-motion-pick.m-depth b { animation: l-demo-slide 2.2s var(--ease) infinite; }
+.l-motion-pick.m-depth i { animation: l-demo-depth 2.2s var(--ease) infinite; }
+.l-motion-pick.m-fade b { animation: l-demo-fade 2.2s var(--ease) infinite; }
+.l-motion-pick.m-spring b { animation: l-demo-slide 2.2s var(--l-spring) infinite; }
+@keyframes l-demo-slide { 0%, 15% { transform: translateX(110%); } 45%, 70% { transform: none; } 100% { transform: translateX(110%); } }
+@keyframes l-demo-depth { 0%, 15% { transform: none; filter: none; } 45%, 70% { transform: scale(.88); filter: brightness(.75); } 100% { transform: none; } }
+@keyframes l-demo-fade { 0%, 15% { opacity: 0; transform: scale(.9); } 45%, 70% { opacity: .85; transform: none; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .l-motion-demo b, .l-motion-demo i { animation: none; } }
+/* вкладка настроек въезжает со стороны, куда листали */
+.l-sheet-body.l-tab-in-left > *:not(.l-set-tabs) { animation: l-tab-left .3s var(--ease) both; }
+.l-sheet-body.l-tab-in-right > *:not(.l-set-tabs) { animation: l-tab-right .3s var(--ease) both; }
+@keyframes l-tab-left { from { opacity: 0; transform: translateX(28px); } }
+@keyframes l-tab-right { from { opacity: 0; transform: translateX(-28px); } }
+.v-src { display: block; margin-top: 10px; font-size: 11px; color: var(--l3); line-height: 1.4; }

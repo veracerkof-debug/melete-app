@@ -15,7 +15,7 @@ import { infoLink, clockEntry, wallEntry, ornamentEntry, markerEntry } from './e
 import { clockOpts } from './home.js';
 import { ACCENTS } from './look.js';
 import { hueColor, ACCENT_HUE } from '../core/palettes.js';
-import { fontsFor, fontStack, applyLook } from './look.js';
+import { fontsFor, fontStack, applyLook, MOTIONS } from './look.js';
 import { meleteLive } from './melete.js';
 import { layout, setLayout, resetLayout } from './layout.js';
 import { saveFile, pickFile, restore, summary, localCopies } from './backup.js';
@@ -42,9 +42,11 @@ export function openSettings(onChange, getGesture, tab) {
   if (TABS.includes(tab)) setPrefs({ setTab: tab });
   const church = isChurch();
   let unbindUpd = null;
+  let goTab = () => {};
   openSheet({
     title: t('set.title'), kicker: church ? 'τάξις' : '', full: true,
     onClose: () => unbindUpd?.(),
+    onSwipe: (dir) => { const i = TABS.indexOf(prefs.setTab); const n = TABS[i + (dir === 'left' ? 1 : -1)]; if (n) goTab(n, dir); },
     render(body, _close, rerender) {
       const church = isChurch(); // мог переключиться прямо здесь
       const up = (patch) => { setPrefs(patch); changed(); rerender(); };
@@ -59,6 +61,10 @@ export function openSettings(onChange, getGesture, tab) {
         h('div', { class: 'l-label' }, t('set.theme')),
         segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'paper', label: t('theme.paper') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
         toggle(t('set.bw'), prefs.bw, (v) => up({ bw: v }), t('set.bwHint')),
+        h('div', { class: 'l-label' }, t('set.motion')),
+        h('div', { class: 'l-motion-picks', role: 'radiogroup', 'aria-label': t('set.motion') }, MOTIONS.map((m) =>
+          h('button', { class: `l-motion-pick m-${m} ${(prefs.motion || 'slide') === m ? 'on' : ''}`, role: 'radio', 'aria-checked': String((prefs.motion || 'slide') === m), onclick: keep(() => up({ motion: m })) },
+            h('span', { class: 'l-motion-demo', 'aria-hidden': 'true' }, h('i'), h('b')), h('span', {}, t('motion.' + m)), h('small', {}, t('motion.' + m + '.hint'))))),
         prefs.bw ? null : h('div', { class: 'l-label' }, t('set.accent')), prefs.bw ? null : sw,
         h('div', { class: 'l-label' }, t('set.font')),
         h('div', { class: 'l-font-picks', role: 'radiogroup', 'aria-label': t('set.font') }, fontsFor(church).map((f) =>
@@ -261,10 +267,16 @@ export function openSettings(onChange, getGesture, tab) {
       // четыре страницы: показываем только секции текущей вкладки; переключатель — сверху, всегда на виду
       const tab = TABS.includes(prefs.setTab) ? prefs.setTab : 'look';
       body.querySelectorAll('section.l-sec').forEach((sec) => { if (sec.dataset.tab !== tab) sec.remove(); });
+      goTab = (id, dir) => {
+        if (id === prefs.setTab) return;
+        const from = TABS.indexOf(prefs.setTab);
+        setPrefs({ setTab: id }); rerender(); body.scrollTop = 0; body.parentElement.scrollTop = 0;
+        // новая страница въезжает со стороны, куда листали
+        const side = dir || (TABS.indexOf(id) > from ? 'left' : 'right');
+        body.classList.add('l-tab-in-' + side); setTimeout(() => body.classList.remove('l-tab-in-' + side), 320);
+      };
       body.prepend(h('nav', { class: 'l-set-tabs', role: 'tablist', 'aria-label': t('set.sections') }, TABS.map((id) =>
-        h('button', { class: id === tab ? 'on' : '', role: 'tab', 'aria-selected': String(id === tab), onclick: () => {
-          setPrefs({ setTab: id }); rerender(); body.parentElement.scrollTop = 0;
-        } }, t('tab.' + id)))));
+        h('button', { class: id === tab ? 'on' : '', role: 'tab', 'aria-selected': String(id === tab), onclick: () => goTab(id) }, t('tab.' + id)))));
     },
   });
 }

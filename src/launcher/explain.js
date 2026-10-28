@@ -106,8 +106,8 @@ const CLOCK_LINKS = {
   codex: { plain: () => [wiki('roman')] },
   greek: { plain: () => [wiki('greekNum')] },
   sundial: { bib: () => [bibleLink(ref('Ис 38:8', 'Isa 38:8', 'Ishayo 38:8', 'Is.38:8'))] },
-  orbit: { plain: () => [wiki('golden'), { label: 'Kvaesitso', url: 'https://github.com/MM2-0/Kvaesitso' }], bib: () => [bibleLink(ref('Быт 1:16', 'Gen 1:16', 'Ibtido 1:16', 'Gen.1:16'))] },
-  letters: { plain: () => [{ label: 'QLOCKTWO', url: 'https://qlocktwo.com' }] },
+  orbit: { plain: () => [wiki('golden')], bib: () => [bibleLink(ref('Быт 1:16', 'Gen 1:16', 'Ibtido 1:16', 'Gen.1:16'))] },
+  letters: { plain: () => [] },
   mosaic: { plain: () => [wiki('mosaic')] },
   biblical: { bib: () => [bibleLink(BIB_REFS.gen15), bibleLink(BIB_REFS.jn119), wiki('hebrewCal')] },
 };

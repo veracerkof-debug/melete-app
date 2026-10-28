@@ -6,6 +6,7 @@ export const DEFAULTS = {
   // оформление: тема — как в Melete (светлая, тёмная, «Бумага», OLED, системная), чёрно-белый вид, акцент, язык
   theme: 'system',      // system | light | dark | paper | oled
   font: 'onest',        // look.js: FONTS
+  motion: 'slide',      // переходы: slide | depth | fade | spring (look.js: MOTIONS)
   bw: false,            // чёрно-белый вид (без цвета)
   accent: 'orange',     // оттенок палитры Melete
   lang: '',             // '' — язык системы; ru | uz | en
