@@ -5,6 +5,7 @@ import page from './notes.html?raw';
 import script from './notes-page.js?url';
 import { openUrl } from './actions.js';
 import { panel } from './panels.js';
+import { themeDoc } from './look.js';
 import { setCover } from './cover.js';
 
 let frame = null;
@@ -19,7 +20,7 @@ function ensure() {
   // скрипт — отдельным файлом: CSP главного экрана не пускает встроенные скрипты
   frame.srcdoc = page.replace('<!--SCRIPT-->', `<script src="${new URL(script, location.href).href}"></script>`);
   document.body.append(frame);
-  frame.addEventListener('load', () => window.__applyInsets?.(frame.contentDocument)); // отступы системы — и этой странице
+  frame.addEventListener('load', () => { window.__applyInsets?.(frame.contentDocument); themeDoc(frame.contentDocument); }); // отступы и вид главного — и этой странице
   return frame;
 }
 

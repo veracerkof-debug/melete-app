@@ -36,6 +36,7 @@ test('церковный режим: греческий день, литурги
   await open(page, { church: true });
   await expect(page.locator('.l-echo')).toBeVisible();
   await expect(page.locator('.l-subline .ref')).not.toBeEmpty();
+  await expect(page.locator('html')).toHaveAttribute('data-style', 'clean'); // «Чистый» — умолчание
   await page.locator('.l-hourline').click();
   await expect(page.locator('.l-sheet .l-ex-link').first()).toBeVisible();
   await page.keyboard.press('Escape');

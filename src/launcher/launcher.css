@@ -735,3 +735,36 @@ html[data-motion="spring"] .l-money.dragging, html[data-motion="spring"] .l-draw
   .l-sheet { border-radius: 26px 26px 0 0; }
   .l-lock-keys { grid-template-columns: repeat(3, 84px); }
 }
+
+/* ——— Стиль «Чистый» (html[data-style="clean"], data.js: STYLES) — один герой (часы), тихая дата, одна ось ——— */
+html[data-style="clean"] .ck-tablet { border-width: 1.5px; font-weight: 250; font-size: 88px; letter-spacing: -0.03em; padding: 0 2px; }
+html[data-style="clean"] .ck-tablet i { width: 1.5px; }
+html[data-style="clean"] .ck-tablet span { padding: 0 10px; }
+html[data-style="clean"] .ck-flip { font-weight: 300; }
+html[data-style="clean"] .l-date { margin-bottom: 14px; }
+html[data-style="clean"] .l-weekday { font-weight: 500; font-size: 11px; letter-spacing: 0.18em; color: var(--l2); margin-bottom: 2px; }
+html[data-style="clean"] .l-daymonth { font-size: 34px; font-weight: 400; letter-spacing: -0.01em; text-transform: none; }
+html[data-style="clean"] .l-subline { justify-content: flex-start; margin: 0 0 22px; font-family: var(--font); font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--l2); }
+html[data-style="clean"] .align-center .l-subline { justify-content: center; }
+html[data-style="clean"] .l-subline i { height: 10px; background: var(--l3); }
+html[data-style="clean"] .l-app { font-weight: 400; font-size: 26px; padding: 9px 0; }
+html[data-style="clean"] .l-fold-n { display: none; }
+html[data-style="clean"] .l-bal-k { font-family: var(--font); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--l3); }
+html[data-style="clean"] .l-bal-v { font-size: 16px; font-weight: 400; }
+/* блок Melete одной строкой */
+.l-tracker.line { border-top: 0; margin: 4px 0 12px; }
+.l-trl { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.l-trl-main { display: flex; align-items: baseline; gap: 8px; min-height: 40px; flex: 1; min-width: 0; text-align: left; font-size: 16px; }
+.l-trl-main span { white-space: nowrap; }
+.l-trl-main em { font-style: normal; font-size: 13px; color: var(--l2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l-trl-main .l-tr-pulse { align-self: center; }
+.l-tr-pulse.still { animation: none; opacity: .5; }
+.l-trl-side { flex: none; min-height: 40px; font-size: 13px; color: var(--l2); }
+.l-trl .l-tr-ctl { width: 40px; height: 40px; }
+.l-trl-bar { display: block; height: 1px; background: var(--sep); }
+.l-trl-bar u { display: block; height: 100%; background: var(--tint); transition: width 0.8s var(--ease); }
+.align-right .l-trl { flex-direction: row-reverse; }
+.align-right .l-trl-main { justify-content: flex-end; }
+html[data-style="clean"] .align-left .clock-wrap { align-items: flex-start; }
+html[data-style="clean"] .align-right .clock-wrap { align-items: flex-end; }
+.l-trl-main { align-items: center; }

@@ -1,6 +1,6 @@
 // Elachiston: настройки (удержание пустого места) — оформление и церковный режим, часы, обои, вид, дата, приложения,
 // значки и плеер, мост с Melete, жесты, обновление, выбор главного экрана телефона.
-import { prefs, save, setPrefs, resetPrefs, isChurch } from './data.js';
+import { prefs, save, setPrefs, resetPrefs, isChurch, STYLES } from './data.js';
 import { clocksFor, renderClock } from './clocks.js';
 import { WALLPAPERS, drawPreview } from './wallpapers.js';
 import { ORNAMENTS, iconSVG } from './icons.js';
@@ -58,6 +58,10 @@ export function openSettings(onChange, getGesture, tab) {
       ACCENTS.forEach((a) => sw.append(h('button', { class: `l-swatch ${prefs.accent === a ? 'on' : ''}`, role: 'radio', 'aria-checked': prefs.accent === a ? 'true' : 'false',
         'aria-label': t('accent.' + a), style: { background: hueColor({ palette: 'classic' }, ACCENT_HUE[a]) }, onclick: keep(() => up({ accent: a })) })));
       body.append(S('look', t('set.appearance'), church ? 'μορφή' : '',
+        h('div', { class: 'l-label' }, t('set.style')),
+        segmented([{ value: 'clean', label: t('style.clean') }, { value: 'rich', label: t('style.rich') }], prefs.style === 'rich' ? 'rich' : 'clean',
+          (v) => up({ style: v, ...STYLES[v] }), t('set.style')),
+        h('p', { class: 'l-hint' }, t('style.hint')),
         h('div', { class: 'l-label' }, t('set.theme')),
         segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'paper', label: t('theme.paper') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
         toggle(t('set.bw'), prefs.bw, (v) => up({ bw: v }), t('set.bwHint')),
@@ -197,6 +201,7 @@ export function openSettings(onChange, getGesture, tab) {
         h('p', { class: 'l-hint' }, t(church ? 'mel.whatChurch' : 'mel.what')),
         mel,
         br ? toggle(t('set.trackerShow'), prefs.tracker, (v) => up({ tracker: v })) : null,
+        segmented([{ value: 'line', label: t('trm.line') }, { value: 'full', label: t('trm.full') }], prefs.trackerMode === 'full' ? 'full' : 'line', (v) => up({ trackerMode: v }), t('set.tracker')),
       ));
 
       // — Жесты —
