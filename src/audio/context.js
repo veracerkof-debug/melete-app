@@ -1,6 +1,6 @@
 // Единый AudioContext: общий выход через компрессор, реверберация (свёртка со сгенерированным импульсом).
 // Создаётся лениво — браузер разрешает звук только после жеста пользователя.
-import { spaceOf, latencyFor } from './perf.js';
+import { spaceOf, latencyFor, verbLight, verbAlgo } from './perf.js';
 import { makeSpace, loadReverbWorklet, SPACES, SPACE_DEF } from './spaces.js';
 export { SPACES, SPACE_DEF };
 import { loadAirWorklet } from './airsound.js';
@@ -24,6 +24,10 @@ export function getContext(mode = 'bal') {
     ({ comp, trim, master } = masterChain(ctx));
     loadReverbWorklet(ctx); // лёгкая реверберация (spaces.js) — модуль грузится сразу
     try { spaces.hall = makeSpace(ctx, 'hall', comp); reverb = spaces.hall.input; } catch { reverb = null; }
+    // Остальные пространства — заранее, по одному, пока тихо: создание узла реверберации выделяет память в звуковом
+    // потоке, и если это случается в ту секунду, когда включается всё сразу, — щелчок (отчёт 28.10.2026, пик 225–300 %).
+    // Лёгкие и Airwindows в тишине спят и ничего не стоят; свёртка считает всегда — её заранее не создаём
+    [1500, 2500, 3500].forEach((ms, i) => setTimeout(() => { if (ctx && (verbLight() || verbAlgo() !== 'melete')) spaceNode(['room', 'plate', 'cathedral'][i]); }, ms));
   }
   if (ctx.state === 'suspended' && !held) ctx.resume();
   return ctx;

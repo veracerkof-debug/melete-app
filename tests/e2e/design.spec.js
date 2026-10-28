@@ -6,9 +6,9 @@ test('дизайн: главная, вкладки, пояснения', async (
   await melete.open();
   await expect(page.locator('.gring .rcap')).toHaveCount(1);
   await expect(page.locator('.hfirst[data-act="addSong"]')).toBeVisible();
-  // полоса лиги — тонкая (стиль студии не протекает)
-  const bar = page.locator('.gemrow .rkbar');
-  if (await bar.count()) expect(await bar.evaluate((e) => e.getBoundingClientRect().height)).toBeLessThan(10);
+  // лига — вторым кольцом с камнем в плитке недели, отдельной плитки нет
+  await expect(page.locator('.hwgem .hgring[data-act="gem"] canvas[data-gem3d]')).toHaveCount(1);
+  await expect(page.locator('.gemrow')).toHaveCount(0);
   // подписи вкладок — вариант
   await expect(page.locator('.tab .tl').first()).toBeHidden();
   await page.evaluate(() => localStorage.setItem('melete.variants', JSON.stringify({ tabs: 'labels' })));

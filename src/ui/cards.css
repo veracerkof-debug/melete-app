@@ -28,3 +28,15 @@
 .spill.risk{background:var(--fill);color:var(--l2)}
 .flame{width:18px;height:18px;fill:currentColor;flex:none}
 .hrow{display:flex;align-items:center;gap:16px}
+
+/* Неделя и лига в одной плитке: справа второе кольцо с камнем */
+.hwgem .hrow{gap:12px}
+.hwgem .gring.big{width:100px;height:100px}
+.hwgem .htxt{flex:1;min-width:0}
+.hgring{position:relative;flex:none;width:84px;height:100px;display:flex;flex-direction:column;align-items:center;padding:0}
+.hgring svg{width:84px;height:84px}
+.hgring circle{fill:none;stroke-width:7;stroke-linecap:round}
+.hgring .hgtrack{stroke:var(--fill)}
+.hgring .hgfill{stroke:var(--rk,var(--tint))}
+.hgring .gem3d{position:absolute;left:19px;top:19px}
+.hgring .hgname{font-size:12px;font-weight:600;color:var(--l2);max-width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}

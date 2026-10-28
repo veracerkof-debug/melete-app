@@ -31,10 +31,24 @@ describe('варианты', () => {
     vi.stubGlobal('__CHANNEL__', 'pre');
     const V = await import('../src/core/variants.js');
     expect(V.DEV).toBe(false);
-    const app = { audio: { mixer: { setVerbAlgo: vi.fn() } } };
-    V.setVariant(app, 'verb', 'galactic');
-    expect(V.variant('verb')).toBe('melete');
-    expect(app.audio.mixer.setVerbAlgo).not.toHaveBeenCalled();
+    V.setVariant({}, 'tabs', 'labels');
+    expect(V.variant('tabs')).toBe('icons');
+    expect(V.variant('verb')).toBe(null); // ревербы — обычная настройка звука, не вариант
     vi.unstubAllGlobals();
+  });
+});
+
+describe('звук пространств', () => {
+  it('по умолчанию Melete; в экономном режиме — всегда Melete', async () => {
+    const P = await import('../src/audio/perf.js');
+    P.setVerbAlgo('nope');
+    expect(P.verbAlgo()).toBe('melete');
+    P.setVerbAlgo('verbity');
+    expect(P.verbAlgo()).toBe('verbity');
+    P.setPerf('eco');
+    expect(P.verbAlgo()).toBe('melete');
+    P.setPerf('full');
+    expect(P.verbAlgo()).toBe('verbity');
+    P.setVerbAlgo('melete');
   });
 });

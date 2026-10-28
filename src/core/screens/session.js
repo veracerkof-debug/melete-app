@@ -82,7 +82,7 @@ export function createSessionScreen(app) {
   const { store, device, audio } = app;
   const st = () => store.state.settings;
   let layer = null, wsEl = null, panes = [], w = null, tickT = 0, ro = null, wake = null, prevOpenTool = null;
-  let DRG = null, dragSup = false, pureI = -1;
+  let DRG = null, dragSup = false, pureI = -1, gripTap = null;
 
   const song = () => (app.active && app.active.songId ? store.songById(app.active.songId) : null);
   const titleOf = (a) => (a.songId && song() ? song().title : a.type === 'tool' ? (moduleById(a.tool) ? moduleName(moduleById(a.tool)) : a.tool) : t('ses.free'));
@@ -336,7 +336,14 @@ export function createSessionScreen(app) {
     const b = e.target.closest('[data-s]');
     if (!b) return;
     const a = b.dataset.s;
-    if (a === 'pmenu') { paneMenu(+b.dataset.p); return; }
+    // полоска окна: касание — меню окна, двойное касание — инструмент во весь экран (как развернуть окно в телефоне)
+    if (a === 'pmenu') {
+      const i = +b.dataset.p, now = Date.now();
+      if (gripTap && gripTap.i === i && now - gripTap.t < 320) { clearTimeout(gripTap.tm); gripTap = null; setPanePure(i); return; }
+      if (gripTap) clearTimeout(gripTap.tm);
+      gripTap = { i, t: now, tm: setTimeout(() => { gripTap = null; paneMenu(i); }, 320) };
+      return;
+    }
     if (a === 'pause') {
       audio.metro.flush(); // темп до паузы засчитан, пауза — нет
       togglePause(app.active);
@@ -348,7 +355,8 @@ export function createSessionScreen(app) {
   }
 
   /* ---------- шторки окон ---------- */
-  // Окно во весь экран (глайдер, терменвокс, пианино, медиатека, табы и текст — manifest.pure): только рабочая поверхность,
+  // Окно во весь экран (любой инструмент; глайдер, терменвокс, пианино, медиатека, табы и текст ещё и прячут свои кнопки —
+  // manifest.pure, onPure): только рабочая поверхность,
   // без заголовка сессии, панели и других окон; выход — «Назад», Esc, выход браузера из полного экрана
   function setPanePure(i) {
     if (i === pureI || !layer) return;
@@ -380,7 +388,7 @@ export function createSessionScreen(app) {
   function paneMenu(i) {
     const sz = lsizes(w.layout)[i], id = w.panes[i], multi = w.layout !== 'F';
     const it = (k, n, cls) => '<button class="cell' + (cls ? ' ' + cls : '') + '" data-pm="' + k + '"><span class="grow">' + n + '</span></button>';
-    const canPure = !!(panes[i] && panes[i].mod && panes[i].mod.pure);
+    const canPure = !!(panes[i] && panes[i].inst); // любой инструмент — во весь экран (решение автора 28.10.2026)
     sheet(() => snav(groupName(st(), id)) + '<div class="group">' +
       (canPure ? it('pure', t('pm.pure')) : '') +
       (multi ? it('full', t('pm.full')) : '') +

@@ -11,6 +11,12 @@ const LINES_MS = [23.1, 29.7, 37.3, 43.9, 53.3, 61.7, 71.3, 83.9];
 const AP_MS = [4.77, 3.6, 12.73, 9.3];
 const AP_G = 0.68, S8 = 0.35355339; // 1/√8
 
+// вход тише −100 дБ (или не подключён) — тишина
+const silentIn = (inp) => {
+  if (!inp || !inp.length) return true;
+  for (let c = 0; c < inp.length; c++) { const x = inp[c]; for (let k = 0; k < x.length; k++) if (x[k] > 1e-5 || x[k] < -1e-5) return false; }
+  return true;
+};
 class ReverbProcessor extends AudioWorkletProcessor {
   constructor(opts) {
     super();
@@ -39,6 +45,8 @@ class ReverbProcessor extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const inp = inputs[0], out = outputs[0];
     if (!out || !out[0]) return true;
+    // сон в тишине: на входе тишина дольше, чем звучит хвост, — не считаем (выход и так нули); звук пришёл — сразу дальше
+    if (silentIn(inp)) { this.q = (this.q || 0) + out[0].length; if (this.q > sampleRate * 15) return true; } else this.q = 0;
     const L = out[0], R = out[1] || out[0], N = L.length;
     const x0 = inp && inp[0], x1 = inp && inp[1];
     const { pre, preLen, apBuf, apI, bufs, len, cap, w, g, lp, rd, a, lvl } = this;

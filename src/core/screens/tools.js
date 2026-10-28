@@ -87,7 +87,7 @@ export const openToolView = (app, id, onClose) => bareScope(() => openToolViewNo
 function openToolViewNow(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
   // полный экран (manifest.pure): кнопка — рядом с «?», выход — «Назад», Esc
-  const pureBtn = mod.pure ? ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')) : '';
+  const pureBtn = ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')); // любой инструмент
   const layer = document.createElement('div');
   // запись — во всех инструментах (звук приложения, по желанию микрофон; у терменвокса — и видео)
   const rec = canRecord() && mod.record !== false;

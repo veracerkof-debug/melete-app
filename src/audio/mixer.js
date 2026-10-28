@@ -2,7 +2,7 @@
 // Состояние — объект device.mix (как в прототипе: { metro, piano, drone, audio, theory, mode, mute }).
 import { getContext, masterNode, reverbNode, directOut, spaceInput, rebuildSpaces } from './context.js';
 import { createFxChain, normalizeFx, fxIsFlat } from './fx.js';
-import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, desktopApp, weakPC, setVerbAlgo } from './perf.js';
+import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, desktopApp, weakPC, setVerbAlgo, VERB_ALGOS } from './perf.js';
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 // looper — лупер (слои и монитор), notes — табы и ноты (alphaTab играет своим звуком: шина зеркалит громкость и выключение в masterVolume)
@@ -26,6 +26,7 @@ export function normalizeMix(mx) {
   if (!['full', 'eco'].includes(mx.perf)) mx.perf = 'full'; // режим качества (perf.js): по умолчанию полный
   if (!ENGINES.includes(mx.engine)) mx.engine = 'wl'; // движок воздушных голосов: worklet (по умолчанию) или узлы
   if (!VERBS.includes(mx.verb)) mx.verb = defaultVerb(); // реверберация: свёртка или лёгкая (телефон — лёгкая)
+  if (!VERB_ALGOS.includes(mx.verbAlgo)) mx.verbAlgo = 'melete'; // звук пространств: свои или Airwindows (по выбору)
   if (!mx.fx || typeof mx.fx !== 'object') mx.fx = {}; // эффекты шин (fx.js): ключ — как у громкости
   return mx;
 }
@@ -35,6 +36,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   setPerf(resolvePerf(mx.perf));
   setEngine(mx.engine);
   setVerb(mx.verb);
+  setVerbAlgo(mx.verbAlgo);
   const nodes = {}, sends = {}, chains = {}, probes = {}, subs = new Set(), wets = {};
   let saveTm = 0;
   const saveLater = () => { clearTimeout(saveTm); saveTm = setTimeout(() => onChange(mx), 250); }; // правка эффектов — десятки раз в секунду при ведении точки
@@ -128,14 +130,15 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       onChange(mx);
     },
 
-    setPerf(level) { mx.perf = level; setPerf(resolvePerf(level)); onChange(mx); }, // голоса и пэды — сразу, буфер — при следующем запуске
+    setPerf(level) { mx.perf = level; setPerf(resolvePerf(level)); rebuildSpaces(); onChange(mx); }, // голоса, пэды и звук пространств — сразу, буфер — при следующем запуске
     get perf() { return resolvePerf(mx.perf); },
     setEngine(e) { mx.engine = ENGINES.includes(e) ? e : 'wl'; setEngine(mx.engine); onChange(mx); }, // новые ноты — сразу
     get engine() { return mx.engine; },
     setVerb(v) { mx.verb = VERBS.includes(v) ? v : defaultVerb(); setVerb(mx.verb); rebuildSpaces(); onChange(mx); }, // сразу: пространства пересобираются
     get verb() { return mx.verb; },
-    // алгоритм пространств — вариант dev (core/variants.js): сразу, пространства пересобираются; не в настройках микшера
-    setVerbAlgo(a) { setVerbAlgo(a); rebuildSpaces(); },
+    // звук пространств (Melete / Galactic / Verbity): сразу, пространства пересобираются
+    setVerbAlgo(a) { mx.verbAlgo = VERB_ALGOS.includes(a) ? a : 'melete'; setVerbAlgo(mx.verbAlgo); rebuildSpaces(); onChange(mx); },
+    get verbAlgo() { return mx.verbAlgo; },
     setMode(mode) {
       mx.mode = mode; // применится при следующем запуске (контекст уже создан)
       onChange(mx);

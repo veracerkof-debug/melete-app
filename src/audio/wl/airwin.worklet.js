@@ -125,6 +125,12 @@ class Verbity {
 export const ALGOS = { galactic: Galactic, verbity: Verbity }; // для проверки в Node (tests/airwin.test.js)
 
 if (typeof AudioWorkletProcessor !== 'undefined') {
+  // вход тише −100 дБ (или не подключён) — тишина
+  const silentIn = (inp) => {
+    if (!inp || !inp.length) return true;
+    for (let c = 0; c < inp.length; c++) { const x = inp[c]; for (let k = 0; k < x.length; k++) if (x[k] > 1e-5 || x[k] < -1e-5) return false; }
+    return true;
+  };
   class AirwinProcessor extends AudioWorkletProcessor {
     constructor(opts) {
       super();
@@ -137,6 +143,8 @@ if (typeof AudioWorkletProcessor !== 'undefined') {
     process(inputs, outputs) {
       const inp = inputs[0], out = outputs[0];
       const n = out[0].length;
+      // сон в тишине: на входе тишина дольше, чем звучит хвост, — не считаем (выход и так нули); звук пришёл — сразу дальше
+      if (silentIn(inp)) { this.q = (this.q || 0) + n; if (this.q > sampleRate * 15) return true; } else this.q = 0;
       if (this.z.length < n) this.z = new Float32Array(n);
       const l = (inp && inp[0]) || this.z, r = (inp && (inp[1] || inp[0])) || this.z;
       this.v.run(l, r, out[0], out[1] || out[0], n, this.lvl);

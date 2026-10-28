@@ -58,3 +58,17 @@ test('«Инструменты»: компактно, на карточке — 
   expect(last.y + last.height).toBeLessThan(page.viewportSize().height);
 });
 
+
+test('занятие: любой инструмент во весь экран — двойное касание по полоске окна', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('HH', ['drone', 'metro']);
+  const grip = page.locator('.ws .grip').first();
+  await grip.click(); await page.waitForTimeout(80); await grip.click(); await page.waitForTimeout(700);
+  await expect(page.locator('.ws .pane.pfull')).toHaveCount(1);
+  await expect(page.locator('#sheetLayer .scrim')).toHaveCount(0); // меню окна не открылось
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await expect(page.locator('.ws .pane.pfull')).toHaveCount(0);
+  // одно касание — меню окна, в нём «Полный экран» и у метронома
+  await page.locator('.ws .grip').nth(1).click(); await page.waitForTimeout(700);
+  await expect(page.locator('.sheet [data-pm="pure"]')).toHaveCount(1);
+});
