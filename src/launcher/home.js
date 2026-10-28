@@ -1,43 +1,35 @@
-// Главный экран Elachiston: статус, часы, дата, строка под датой, приложения, трекер (чтение и практика — мост с Melete),
-// плеер, значки. Христианское (стих, литургический и библейский час, греческие слова, символы) — только в церковном режиме.
-import { prefs, isChurch } from './data.js';
-import { renderClock, clockKey, afterClockRender } from './clocks.js';
-import { canonicalOf, GREEK_DAYS, greekNumeral, romanNumeral } from './numerals.js';
-import { iconSVG, ORNAMENTS } from './icons.js';
-import { SLOT_HEIGHT } from './wallpapers.js';
-import { verseOfDay, verseText } from './scripture.js';
-import { biblicalTime, placeOf } from './sun.js';
+// Главный экран Elachiston (DECISIONS 2026-10-28 — минимальный): своя строка состояния (сеть и батарея), часы, дата,
+// Melete (практика и чтение дня — мост с Melete), баланс кошелька, до 7 приложений и папок, ряд маленьких значков.
+// Крест — единственное украшение, только в церковном режиме (cross.js).
+import { prefs, isChurch, HOME_MAX } from './data.js';
+import { iconSVG } from './icons.js';
+import { crossSVG } from './cross.js';
 import { homeItems, dockSlots, appOf, apps } from './apps.js';
 import { openApp, runAction } from './actions.js';
-import { explain, canonicalEntry, biblicalEntry, greekDayEntry } from './explain.js';
-import { current, togglePlayback, nowPlaying, openMediaAccess, MEDIA_SESSIONS } from './nowplaying.js';
 import { trackerData, fmtDur } from './tracker.js';
 import { folderOfKey, folderName, folderApps } from './folders.js';
 import { layout, homeOrder } from './layout.js';
 import { walletBalance } from './wallet.js';
 import { hasLock } from './lock.js';
-import { isNative } from './native.js';
 import { t, getLang } from './i18n.js';
 import { h } from './ui.js';
+import { isNative, Launcher } from './native.js';
 
 let root;
 let handlers = {};
-let lastSig = null, lastTime = null, lastClock = null, lastDay = null;
+let lastSig = null;
 let battery = null;
-
-export const clockOpts = () => ({ hour12: prefs.hour12, lang: dateLang(), church: isChurch(), place: prefs.place });
-export const dateLang = () => {
-  const l = prefs.dateLang;
-  if (l === 'el' && !isChurch()) return getLang();
-  return ['ru', 'en', 'uz', 'el'].includes(l) ? l : getLang();
-};
-export const currentVerse = () => verseOfDay(new Date(), prefs.verseOffset);
-const markerKind = () => (prefs.marker === 'auto' ? (isChurch() ? 'greek' : 'none') : prefs.marker);
+let sys = null; // Android: { battery, charging, net: wifi|cell|other|none, wifi: 0–4, cell: 0–4 } — из системы (LauncherPlugin.status)
+const askStatus = () => Launcher.status().then((x) => { sys = x; renderStatus(); }).catch(() => {});
 
 export function mountHome(el, h0) {
   root = el;
   handlers = h0;
-  navigator.getBattery?.().then((b) => {
+  if (isNative()) {
+    askStatus();
+    Launcher.addListener?.('status', (x) => { sys = x; renderStatus(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) askStatus(); });
+  } else navigator.getBattery?.().then((b) => {
     battery = b;
     b.addEventListener('levelchange', renderStatus);
     b.addEventListener('chargingchange', renderStatus);
@@ -45,6 +37,7 @@ export function mountHome(el, h0) {
   }).catch(() => {});
   addEventListener('online', renderStatus);
   addEventListener('offline', renderStatus);
+  navigator.connection?.addEventListener?.('change', renderStatus);
   renderHome();
   tick();
 }
@@ -55,91 +48,87 @@ function tick() {
   setTimeout(tick, 1000 - now.getMilliseconds() + 5);
 }
 
+// часы — одни: часы и минуты обычными цифрами (12-часовой формат — по настройке)
+function clockText(now) {
+  let hh = now.getHours();
+  if (prefs.hour12) hh = hh % 12 || 12;
+  return [prefs.hour12 ? String(hh) : String(hh).padStart(2, '0'), String(now.getMinutes()).padStart(2, '0')];
+}
+
 function updateClock(now, force = false) {
-  const opts = clockOpts();
-  const tm = clockKey(now, opts);
-  const sig = `${tm}|${prefs.clock}|${opts.lang}|${opts.church}`;
+  const [hh, mm] = clockText(now);
+  const sig = `${hh}:${mm}|${getLang()}|${now.toDateString()}`;
   if (!force && sig === lastSig) return;
   root.querySelectorAll('[data-live]').forEach((x) => { x.textContent = liveText(+x.dataset.live); });
   const el = root.querySelector('.clock');
-  if (!el) return;
-  const prev = !force && lastClock === prefs.clock ? lastTime : null;
-  el.innerHTML = renderClock(prefs.clock, now, opts, prev);
-  el.dataset.style = prefs.clock;
-  // «Без часов» + живые обои: место остаётся, время показывают обои
-  const slot = prefs.clock === 'none' ? SLOT_HEIGHT[prefs.wallpaper] : 0;
-  el.style.height = slot ? `${slot}px` : '';
-  el.parentElement.classList.toggle('empty', prefs.clock === 'none' && !slot);
-  afterClockRender(el);
-  fitClock(el);
-  lastSig = sig; lastTime = tm; lastClock = prefs.clock;
+  if (el) {
+    el.replaceChildren(h('span', {}, hh), h('i', {}, ':'), h('span', {}, mm));
+    el.setAttribute('aria-label', `${hh}:${mm}`);
+    fitClock(el);
+  }
+  lastSig = sig;
   renderDate(now);
-  const day = now.toDateString();
-  if (day !== lastDay) { lastDay = day; renderSubline(); }
-  // трекер — раз в минуту: новый день плана, новая неделя
+  // трекер — раз в минуту: новый день плана, новая неделя; сигнал связи — тоже
   refreshTracker();
+  if (isNative()) askStatus();
 }
+
+// Своя строка состояния (системная скрыта, MainActivity): слева связь (мобильная — столбики, Wi-Fi — дуги по силе
+// сигнала), справа заряд. Посередине ничего — там часто вырез камеры. Android — из системы, браузер — что знает сам
+const SVG = (vb, body) => `<svg viewBox="${vb}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const dim = (on) => (on ? '' : ' opacity=".28"');
+// столбики мобильной связи: уровень 0–4
+const cellIcon = (lv) => SVG('0 0 20 16', [3, 7, 11, 15].map((x, i) => `<path d="M${x + 1} 14.5V${12 - i * 3}"${dim(lv > i)}/>`).join(''));
+// Wi-Fi: три дуги и точка; уровень 0–4 (нет данных — все дуги)
+const wifiIcon = (lv = 4) => SVG('0 0 24 18', `<path d="M2.5 6.5a14 14 0 0 1 19 0"${dim(lv >= 4)}/><path d="M6 10a9 9 0 0 1 12 0"${dim(lv >= 3)}/><path d="M9.3 13.4a4 4 0 0 1 5.4 0"${dim(lv >= 2)}/><circle cx="12" cy="16.3" r=".9" fill="currentColor" stroke="none"/>`);
+const offIcon = () => SVG('0 0 24 18', '<path d="M2.5 6.5a14 14 0 0 1 19 0M6 10a9 9 0 0 1 12 0M9.3 13.4a4 4 0 0 1 5.4 0" opacity=".28"/><path d="M4 2l16 15"/>');
 
 function renderStatus() {
   const el = root?.querySelector('.l-status');
   if (!el) return;
-  el.hidden = !prefs.status;
-  const online = navigator.onLine;
-  const wifi = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="${online ? '' : 'off'}"><path d="M2.5 8.5a14 14 0 0 1 19 0L12 20z"/>${online ? '' : '<path d="M4 4l16 16"/>'}</svg>`;
-  const level = battery ? battery.level : 1;
-  const bat = `<svg viewBox="0 0 30 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1.5" width="24" height="13" rx="2.5" opacity=".45"/><rect x="3" y="3.5" width="${Math.max(1.5, 20 * level).toFixed(1)}" height="9" rx="1" fill="currentColor" stroke="none"/><path d="M28 6v4" stroke-linecap="round" opacity=".45"/></svg>`;
-  el.setAttribute('aria-label', online ? t('status.online') : t('status.offline'));
-  el.innerHTML = `${wifi}<i></i><span>${battery ? Math.round(battery.level * 100) + '%' : '—'}${battery?.charging ? ' ⚡︎' : ''}</span><i></i>${bat}`;
+  let net, level, charging, label;
+  if (sys) {
+    const parts = [];
+    if (sys.cell != null) parts.push(h('span', { class: 'l-st-i', html: cellIcon(sys.cell) }));
+    if (sys.net === 'wifi') parts.push(h('span', { class: 'l-st-i', html: wifiIcon(sys.wifi ?? 4) }));
+    else if (sys.net === 'none') parts.push(h('span', { class: 'l-st-i off', html: offIcon() }));
+    else if (sys.net === 'cell' && sys.cell == null) parts.push(h('span', { class: 'l-st-i', html: cellIcon(4) }));
+    net = parts;
+    level = sys.battery != null ? sys.battery / 100 : null;
+    charging = !!sys.charging;
+    label = t(sys.net === 'none' ? 'status.offline' : sys.net === 'wifi' ? 'status.wifi' : 'status.online');
+  } else {
+    const online = navigator.onLine;
+    const type = navigator.connection?.type;
+    net = [h('span', { class: 'l-st-i' + (online ? '' : ' off'), html: !online ? offIcon() : type === 'cellular' ? cellIcon(4) : wifiIcon() })];
+    level = battery ? battery.level : null;
+    charging = !!battery?.charging;
+    label = online ? t('status.online') : t('status.offline');
+  }
+  const pct = level == null ? '' : Math.round(level * 100) + '%';
+  const bat = SVG('0 0 28 14', `<rect x="1" y="1.5" width="22" height="11" rx="2.6" opacity=".5"/><rect x="3" y="3.5" width="${Math.max(1.5, 18 * (level ?? 1)).toFixed(1)}" height="7" rx="1" fill="currentColor" stroke="none"/><path d="M26 5.5v3" opacity=".5"/>`);
+  el.setAttribute('aria-label', [label, pct && t('status.battery', { p: pct }), charging ? t('status.charging') : ''].filter(Boolean).join(', '));
+  el.replaceChildren(
+    h('span', { class: 'l-st-net' }, net),
+    h('span', { class: 'l-st-bat' + (level != null && level <= 0.15 && !charging ? ' low' : '') },
+      h('span', {}, pct + (charging ? ' ⚡︎' : '')), h('span', { class: 'l-st-bi', html: bat })));
 }
 
-const LOCALES = { ru: 'ru-RU', en: 'en-GB', el: 'el-GR' };
+const LOCALES = { ru: 'ru-RU', en: 'en-GB' };
 // узбекских названий в браузерах часто нет (выходит «M10») — свои
 const UZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
 const UZ_DAYS = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
 const weekdayOf = (now, lang) => (lang === 'uz' ? UZ_DAYS[now.getDay()] : new Intl.DateTimeFormat(LOCALES[lang] || 'ru-RU', { weekday: 'long' }).format(now));
 const dayMonthOf = (now, lang) => (lang === 'uz' ? `${now.getDate()}-${UZ_MONTHS[now.getMonth()]}` : new Intl.DateTimeFormat(LOCALES[lang] || 'ru-RU', { day: 'numeric', month: 'long' }).format(now));
 
+// дата — одной тихой строкой: «вторник, 28 октября»; крест у даты — если его место здесь
 function renderDate(now) {
   const el = root.querySelector('.l-date');
   if (!el) return;
-  const lang = dateLang();
-  const wd = el.querySelector('.l-weekday');
-  wd.replaceChildren(h('span', {}, weekdayOf(now, lang)));
-  if (isChurch() && prefs.greekDay && lang !== 'el') {
-    const day = now.getDay();
-    wd.append(h('button', { class: 'l-echo', lang: 'el', 'aria-label': GREEK_DAYS[day], onclick: (e) => { e.stopPropagation(); explain(greekDayEntry(day)); } }, GREEK_DAYS[day]));
-  }
-  const big = el.querySelector('.l-daymonth');
-  big.textContent = dayMonthOf(now, lang);
-  big.lang = lang;
-  fitText(big);
-  // строка под часами: библейская часть суток или литургический час (церковный режим)
-  const ch = root.querySelector('.l-hourline');
-  if (!ch) return;
-  ch.hidden = !isChurch() || (!prefs.hourLine && prefs.clock !== 'biblical');
-  if (ch.hidden) return;
-  if (prefs.clock === 'biblical') {
-    const b = biblicalTime(now, placeOf(prefs));
-    const r = (b.prayer || b.part).ref;
-    ch.replaceChildren(h('span', {}, t('bib.' + b.part.key)), ` · ${b.prayer ? t('bib.pray.' + b.prayer.key) : r[getLang()] || r.ru}`);
-    ch.onclick = (e) => { e.stopPropagation(); explain(biblicalEntry(biblicalTime(new Date(), placeOf(prefs)), placeOf(prefs))); };
-  } else {
-    const c = canonicalOf(now.getHours());
-    ch.replaceChildren(h('span', { lang: 'el' }, c.el), ` · ${t('canon.' + c.id)}`);
-    ch.onclick = (e) => { e.stopPropagation(); explain(canonicalEntry(new Date())); };
-  }
-}
-
-// выбранный шрифт догрузился — дата могла стать шире строки
-document.fonts?.addEventListener?.('loadingdone', () => { const b = root?.querySelector('.l-daymonth'); if (b) fitText(b); });
-
-function fitText(el) {
-  el.style.fontSize = '';
-  const max = parseFloat(getComputedStyle(el).fontSize);
-  const avail = el.parentElement.clientWidth;
-  if (!avail) return;
-  let size = max;
-  while (el.scrollWidth > avail && size > 18) { size -= 2; el.style.fontSize = size + 'px'; }
+  const lang = getLang();
+  el.replaceChildren(...[
+    crossAt('date') ? h('span', { class: 'l-cross at-date', html: crossSVG(prefs.cross) }) : null,
+    h('span', { class: 'l-date-t' }, `${weekdayOf(now, lang)}, ${dayMonthOf(now, lang)}`)].filter(Boolean));
 }
 
 // Кошелёк на главном: общий баланс (все доходы минус все расходы). С кодом кошелька — сумма скрыта точками,
@@ -159,7 +148,7 @@ export function refreshBalance() {
   const el = root?.querySelector('.l-balance');
   if (!el) return;
   const fresh = renderBalance();
-  fresh.style.cssText = el.style.cssText;
+  keepMarks(el, fresh);
   el.replaceWith(fresh);
 }
 
@@ -188,56 +177,39 @@ export function fitApps() {
 }
 addEventListener('resize', () => fitApps());
 
+// блок перерисован на месте — размер, метка блока и отметки правки (arrange.js) сохраняются
+function keepMarks(old, fresh) {
+  fresh.style.cssText = old.style.cssText;
+  Object.assign(fresh.dataset, old.dataset);
+  ['l-arr-blk', 'sel'].forEach((c) => { if (old.classList.contains(c)) fresh.classList.add(c); });
+}
+
 // перерисовать блок Melete на месте (размер блока из раскладки сохраняется)
 export function refreshTracker() {
   const tr = root?.querySelector('.l-tracker');
   if (!tr) return;
   const fresh = renderTracker() || h('div', { class: 'l-tracker', hidden: true });
-  fresh.style.cssText = tr.style.cssText;
+  keepMarks(tr, fresh);
   tr.replaceWith(fresh);
 }
 
-export function renderSubline() {
-  const el = root?.querySelector('.l-subline');
-  if (!el) return;
-  const mode = prefs.subline === 'verse' && !isChurch() ? 'none' : prefs.subline;
-  el.hidden = mode === 'none' || (mode === 'note' && !prefs.note);
-  el.replaceChildren();
-  if (mode === 'verse') {
-    const v = verseText(currentVerse(), getLang());
-    el.append(h('span', { class: 'ref' }, v.ref), h('i'), h('span', { class: 'txt' }, v.text));
-  } else if (mode === 'note') {
-    el.append(h('span', { class: 'txt' }, prefs.note));
-  }
-}
-
-function marker(i, key) {
-  switch (markerKind()) {
-    case 'greek': return greekNumeral(i + 1);
-    case 'roman': return romanNumeral(i + 1);
-    case 'count': return `×${prefs.usage[key] || 0}`;
-    default: return '';
-  }
-}
+// крест: в церковном режиме, если выбран вид и это его место
+const crossAt = (place) => isChurch() && prefs.cross !== 'none' && (prefs.crossAt || 'center') === place;
 
 export function renderHome() {
   if (!root) return;
-  const church = isChurch();
-  const orn = church ? ORNAMENTS[prefs.ornament] : null;
   const L = layout();
-  root.className = `l-home align-${prefs.align} size-${prefs.size} dock-${L.dock}`;
+  root.className = `l-home align-${prefs.align}` + (handlers.editing?.() ? ' editing' : '');
   // блоки в порядке раскладки; размер блока — множитель к общему размеру (часы — к размеру часов)
   const make = {
-    status: () => h('div', { class: 'l-status' }),
-    clock: () => h('div', { class: 'clock-wrap', onclick: tapAction('clockTap') }, h('div', { class: 'clock' }), h('button', { class: 'l-hourline', hidden: true })),
-    date: () => h('div', { class: 'l-date', onclick: tapAction('dateTap') }, h('div', { class: 'l-weekday' }), h('div', { class: 'l-daymonth' })),
-    subline: () => h('button', { class: 'l-subline', onclick: (e) => { e.stopPropagation(); if (prefs.subline === 'verse') handlers.onVerse(); else handlers.onSettings(); } }),
+    clock: () => h('div', { class: 'clock-wrap', onclick: tapAction('clockTap') }, h('div', { class: 'clock' })),
+    date: () => h('div', { class: 'l-date', onclick: tapAction('dateTap') }),
     balance: renderBalance,
     apps: renderList,
-    space: () => h('div', { class: 'l-spacer' }),
+    // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
+    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross) }) : null),
     tracker: renderTracker,
-    player: () => h('div', { class: 'l-player', hidden: true }),
-    dock: renderDock,
+    dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross) }) : null, renderDock()],
   };
   const sized = (id, el) => {
     if (!el) return el;
@@ -245,19 +217,24 @@ export function renderHome() {
     if (k && k !== 100) el.style.setProperty(id === 'dock' ? '--l-blk' : 'zoom', id === 'clock' ? `calc(var(--l-ck, 1) * ${k / 100})` : id === 'dock' ? String(k / 100) : `calc(var(--l-ui, 1) * ${k / 100})`);
     return el;
   };
-  const side = L.dock === 'left' || L.dock === 'right' ? sized('dock', renderDock()) : null;
-  if (side) side.classList.add('side');
+  const blocks = homeOrder().flatMap((id) => {
+    const out = [make[id]()].flat().filter(Boolean);
+    // блок — последний элемент (у значков перед ним может стоять крест); data-blk — для правки на месте (arrange.js)
+    const el = out[out.length - 1];
+    if (el) { sized(id, el); el.dataset.blk = id; }
+    // крест вверху — по центру, сразу над часами
+    if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross) }));
+    return out;
+  });
   root.replaceChildren(...[
-    orn?.icon ? h('div', { class: `l-ornament orn-${prefs.ornament}`, 'aria-hidden': 'true', html: iconSVG(orn.icon) }) : null,
-    ...homeOrder().map((id) => sized(id, make[id]())),
-    side,
+    prefs.status ? h('div', { class: 'l-status', role: 'status' }) : null,
+    crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5) }) : null,
+    ...blocks,
   ].filter(Boolean));
   lastSig = null;
   renderStatus();
   requestAnimationFrame(fitApps);
   updateClock(new Date(), true);
-  renderSubline();
-  renderPlayer();
 }
 
 // нажатие на часы и дату — действие жеста clockTap / dateTap
@@ -265,108 +242,54 @@ const tapAction = (id) => (e) => { if (!e.currentTarget.dataset.suppress) handle
 
 function renderList() {
   const list = h('nav', { class: 'l-apps', 'aria-label': t('home.apps') });
-  homeItems().forEach((item, i) => {
+  homeItems().slice(0, HOME_MAX).forEach((item, i) => {
     const app = appOf(item.key);
     const fold = folderOfKey(item.key);
     const label = item.label || (fold ? folderName(fold) : app?.label) || t('act.gone');
     const btn = h('button', { class: 'l-app' + (fold ? ' folder' : ''), 'data-i': i, style: { '--d': `${i * 55}ms` } },
       h('span', { class: 'label' }, label),
-      fold ? h('span', { class: 'l-fold-n', 'aria-label': t('fold.n', { n: folderApps(fold).length }) }, String(folderApps(fold).length)) : null,
-      markerKind() !== 'none' ? h('span', { class: 'mark', 'aria-hidden': 'true' }, marker(i, item.key)) : null);
+      fold ? h('span', { class: 'l-fold-n', 'aria-label': t('fold.n', { n: folderApps(fold).length }) }, String(folderApps(fold).length)) : null);
     btn.addEventListener('click', () => {
       if (btn.dataset.suppress) return;
       btn.classList.add('pressed');
       setTimeout(() => btn.classList.remove('pressed'), 500);
       if (fold) handlers.onFolder(fold.id); else openApp(app);
     });
-    btn.longPress = () => handlers.onAppHold(i);
+    btn.longPress = () => handlers.onBlockHold('apps');
     list.append(btn);
   });
   if (!homeItems().length) list.append(h('p', { class: 'l-empty' }, t('home.empty')));
+  list.longPress = () => handlers.onBlockHold('apps');
   return list;
 }
 
 function renderDock() {
   const slots = dockSlots();
-  if (prefs.dockStyle === 'none' || !slots.length) return h('div', { class: 'l-dock-gap' });
-  const dock = h('div', { class: `l-dock ${prefs.dockStyle === 'line' ? 'line' : ''}` });
+  if (!slots.length) return h('div', { class: 'l-dock-gap' });
+  const dock = h('div', { class: 'l-dock' });
   slots.forEach((slot, i) => {
-    const b = h('button', { class: 'l-dock-btn', 'aria-label': handlers.describe(slot.action), html: iconSVG(slot.icon) });
+    const b = h('button', { class: 'l-dock-btn', 'data-i': i, 'aria-label': handlers.describe(slot.action), html: iconSVG(slot.icon) });
     b.addEventListener('click', () => { if (!b.dataset.suppress) runAction(slot.action, apps); });
-    b.longPress = () => handlers.onDockHold(i);
+    b.longPress = () => handlers.onBlockHold('dock');
     dock.append(b);
   });
   return dock;
 }
 
-// — Строка плеера —
 const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
 const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5.5" width="3.4" height="13" rx="1"/><rect x="13.6" y="5.5" width="3.4" height="13" rx="1"/></svg>';
 
-export function renderPlayer() {
-  const el = root?.querySelector('.l-player');
-  if (!el) return;
-  el.replaceChildren();
-  const c = prefs.player && isNative() && MEDIA_SESSIONS ? current() : null;
-  if (!c) {
-    // доступа к медиасессиям нет — одна тихая строка-приглашение (пока строка плеера включена)
-    const ask = prefs.player && isNative() && MEDIA_SESSIONS && nowPlaying().access === false;
-    el.hidden = !ask;
-    if (ask) el.append(h('button', { class: 'l-pl-info l-pl-ask', onclick: openMediaAccess }, h('span', {}, t('player.ask'))));
-    return;
-  }
-  el.hidden = false;
-  el.append(
-    h('button', { class: `l-pl-btn ${c.playing ? 'on' : ''}`, 'aria-label': c.playing ? t('player.pause') : t('player.play'), html: c.playing ? PAUSE : PLAY, onclick: () => togglePlayback() }),
-    h('button', { class: 'l-pl-info', onclick: () => c.pkg && openApp({ key: c.pkg, pkg: c.pkg, label: c.app }) },
-      h('span', { class: 'l-pl-t' }, c.title || c.app), c.app && c.title ? h('small', {}, c.app) : null));
-}
-
 // — Melete на главном: идёт занятие, неделя практики (по дням), чтение дня —
+// — Melete на главном: одна тихая строка — занятие (если идёт) с ▶/❚❚, иначе неделя; справа — чтение дня (церковный режим).
+// Касание — сразу в нужный экран Melete: занятие, свободная практика, Библия на чтении дня (docs/launcher-bridge.md)
 function renderTracker() {
   const d = prefs.tracker ? trackerData() : null;
   if (!d) return null; // мост с Melete не подключён — блока нет
-  // касание — сразу в нужный экран Melete: плашка — занятие (или свободная практика), неделя — свободная практика,
-  // чтение — Библия на чтении дня (docs/launcher-bridge.md)
   const go = (route) => (e) => { if (!e.currentTarget.dataset.suppress) handlers.onMelete(route); };
-  const hold = (el) => { el.longPress = () => handlers.onSettings('tracker'); return el; };
-  if (prefs.trackerMode !== 'full') return trackerLine(d, go, hold);
-  const wrap = h('div', { class: 'l-tracker' + (d.demo ? ' demo' : '') });
-  if (d.live) {
-    const lv = d.live;
-    const ctl = h('button', { class: 'l-tr-ctl', 'aria-label': lv.playing ? t('tr.pause') : t('tr.play'), html: lv.playing ? PAUSE : PLAY,
-      onclick: (e) => { e.stopPropagation(); handlers.onMeleteControl('toggle'); if (d.demo) setTimeout(refreshTracker, 30); } });
-    wrap.append(hold(h('div', { class: 'l-tr-live' + (lv.playing ? ' on' : '') },
-      h('button', { class: 'l-tr-open', onclick: go(lv.session ? 'session' : 'free') },
-        h('i', { class: 'l-tr-pulse', 'aria-hidden': 'true' }),
-        h('span', { class: 'l-tr-lk' }, lv.session ? t('tr.live') : t('tr.playing')),
-        h('span', { class: 'l-tr-lt' }, lv.what || lv.title || ''),
-        lv.start ? h('span', { class: 'l-tr-lm', 'data-live': lv.start }, liveText(lv.start)) : null),
-      ctl)));
-  }
-  const p = d.practice;
-  const max = p ? Math.max(...p.per, p.goal / 7, 1) : 1;
-  const today = (new Date().getDay() + 6) % 7;
-  if (p) wrap.append(hold(h('button', { class: 'l-tr-week', onclick: go('free') },
-    h('span', { class: 'l-tr-k' }, t('tr.week')),
-    h('span', { class: 'l-tr-v' }, fmtDur(p.total, t), h('small', {}, ' ' + t('tr.ofGoal', { goal: fmtDur(p.goal, t) }).replace(/ · .*$/, ''))),
-    h('span', { class: 'l-tr-days', 'aria-hidden': 'true' }, p.per.map((v, i) =>
-      h('i', { class: (i === today ? 'today' : '') + (i > today ? ' future' : '') }, h('u', { style: { height: `${Math.max(v ? 12 : 0, Math.round(v / max * 100))}%` } })))),
-    h('i', { class: 'l-tr-bar', 'aria-hidden': 'true' }, h('u', { style: { width: `${Math.min(100, p.progress * 100).toFixed(0)}%` } })))));
-  const rd = d.reading;
-  if (rd) {
-    const v = rd.none ? t('tr.noPlan') : rd.idle ? t('tr.idle') : rd.ref;
-    const m = rd.ref ? t('tr.readDay', { done: rd.done, total: rd.total, day: rd.day }) : '';
-    wrap.append(hold(h('button', { class: 'l-tr-row', onclick: go('bible') },
-      h('span', { class: 'l-tr-k' }, t('tr.reading')), h('span', { class: 'l-tr-v' }, v), h('span', { class: 'l-tr-m' }, m),
-      rd.ref ? h('i', { class: 'l-tr-bar', 'aria-hidden': 'true' }, h('u', { style: { width: `${rd.total ? Math.round(rd.done / rd.total * 100) : 0}%` } })) : null)));
-  }
-  if (d.demo) wrap.append(h('small', { class: 'l-tr-note' }, t('tr.demo')));
-  return wrap;
+  const hold = (el) => { el.longPress = () => handlers.onBlockHold('tracker'); return el; };
+  return trackerLine(d, go, hold);
 }
 
-// «Чистый» вид: одна тихая строка — занятие (если идёт) с ▶/❚❚, иначе неделя; справа — чтение дня (церковный режим).
-// Касания те же: занятие — в занятие, неделя — свободная практика, чтение — Библия
 function trackerLine(d, go, hold) {
   const wrap = h('div', { class: 'l-tracker line' + (d.demo ? ' demo' : '') });
   const row = h('div', { class: 'l-trl' });

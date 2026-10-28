@@ -1,7 +1,7 @@
 // Главный экран: приложения. Android — список приложений со значком запуска и приложения по ролям (LauncherPlugin);
 // браузер (знакомство с главным экраном) — несколько ссылок вместо приложений. У каждого — ключ key (pkg или id).
 import { isNative, Launcher } from './native.js';
-import { prefs } from './data.js';
+import { prefs, HOME_MAX } from './data.js';
 import { t } from './i18n.js';
 
 const WEB = [
@@ -60,5 +60,5 @@ export function defaultDock() {
     app('camera', 'camera') || { icon: 'camera', action: { t: 'cmd', id: 'camera' } },
   ].filter(Boolean);
 }
-export const homeItems = () => prefs.home || defaultHome();
+export const homeItems = () => (prefs.home || defaultHome()).slice(0, HOME_MAX);
 export const dockSlots = () => prefs.dock || defaultDock();

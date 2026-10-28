@@ -1,5 +1,5 @@
 // Главный экран: все приложения (смахнуть вверх) — по алфавиту, с поиском. Удержание — меню приложения.
-import { prefs, save, isChurch } from './data.js';
+import { prefs, save, HOME_MAX } from './data.js';
 import { allApps, homeItems, loadApps } from './apps.js';
 import { openApp, openUrl } from './actions.js';
 import { isNative, Launcher } from './native.js';
@@ -29,7 +29,7 @@ export function mountDrawer(container, { onChange }) {
   drawer = h('div', { class: 'l-drawer', 'aria-hidden': 'true' },
     h('div', { class: 'l-d-head' },
       h('button', { class: 'l-d-grip', 'aria-label': t('ui.close'), onclick: closeDrawer }),
-      h('div', { class: 'l-d-title' }, titleName = h('span', { class: 'l-d-name' }, t('drawer.title')), isChurch() ? h('span', { class: 'l-d-el', lang: 'el' }, 'πάντα') : null,
+      h('div', { class: 'l-d-title' }, titleName = h('span', { class: 'l-d-name' }, t('drawer.title')), 
         isNative() ? null : h('button', { class: 'l-d-link', onclick: () => addWebLink() }, t('drawer.addLink'))),
       search),
     // папки — значками справа, низ свободен: список идёт до самого низа
@@ -165,6 +165,7 @@ function folderMenu(f) {
           h('span', { class: 'l-fold-ico', html: iconSVG(folderIcon(f)) }), h('span', {}, t('fold.icon'))),
         h('button', { class: 'l-pick', onclick: () => {
           const home = ownHome(), there = home.findIndex((x) => x.key === key);
+          if (there < 0 && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); return; }
           if (there >= 0) home.splice(there, 1); else home.push({ key, label: '' });
           save(); changed(); close(); toast(there >= 0 ? t('drawer.removed') : t('drawer.added'));
         } }, h('span', {}, onHome(key) ? t('drawer.fromHome') : t('drawer.toHome'))),
@@ -237,6 +238,7 @@ function appMenu(a) {
     render(body, close) {
       body.append(h('button', { class: 'l-pick', onclick: () => {
         const home = ownHome();
+        if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); return; }
         if (there) home.splice(home.findIndex((x) => x.key === a.key), 1);
         else home.push({ key: a.key, label: '' });
         save(); fill(); changed(); close();

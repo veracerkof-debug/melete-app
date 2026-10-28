@@ -183,14 +183,4 @@ export function iconSVG(id, cls = '') {
   return `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic.svg}</svg>`;
 }
 
-// Большие фоновые символы (церковный режим); название — строка orn.<id>
-export const ORNAMENTS = {
-  none: {},
-  wheel: { icon: 'wheel' },
-  chirho: { icon: 'chirho' },
-  alphaomega: { icon: 'alphaomega' },
-  star: { icon: 'star' },
-  thorns: { icon: 'thorns' },
-};
-
 export const iconsFor = (church) => ICONS.filter((i) => church || !i.church);

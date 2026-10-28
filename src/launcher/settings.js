@@ -1,23 +1,18 @@
-// Elachiston: настройки (удержание пустого места) — оформление и церковный режим, часы, обои, вид, дата, приложения,
-// значки и плеер, мост с Melete, жесты, обновление, выбор главного экрана телефона.
-import { prefs, save, setPrefs, resetPrefs, isChurch, STYLES } from './data.js';
-import { clocksFor, renderClock } from './clocks.js';
-import { WALLPAPERS, drawPreview } from './wallpapers.js';
-import { ORNAMENTS, iconSVG } from './icons.js';
-import { GESTURES, GLYPHS } from './gestures.js';
+// Elachiston: настройки (удержание пустого места) — четыре страницы: вид, главный экран, жесты, данные.
+// Только практичное: тема, язык, размеры, сторона, церковный режим и крест; приложения, значки, Melete
+// (порядок, размер и видимость блоков — не здесь, а на самом главном: удержание элемента, arrange.js);
+// жесты; копии и обновление (DECISIONS 2026-10-28 — минимальный экран).
+import { prefs, save, setPrefs, resetPrefs, isChurch, HOME_MAX } from './data.js';
+import { iconSVG } from './icons.js';
+import { CROSS_IDS, CROSS_PLACES, crossSVG } from './cross.js';
+import { GESTURES } from './gestures.js';
 import { describeAction, openUrl } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
 import { homeItems, dockSlots, appOf, appName } from './apps.js';
-import { placeOf } from './sun.js';
+import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
-import { openMediaAccess, MEDIA_SESSIONS } from './nowplaying.js';
-import { infoLink, clockEntry, wallEntry, ornamentEntry, markerEntry } from './explain.js';
-import { clockOpts } from './home.js';
-import { ACCENTS } from './look.js';
-import { hueColor, ACCENT_HUE } from '../core/palettes.js';
-import { fontsFor, fontStack, applyLook, MOTIONS } from './look.js';
+import { applyLook } from './look.js';
 import { meleteLive } from './melete.js';
-import { layout, setLayout, resetLayout } from './layout.js';
 import { saveFile, pickFile, restore, summary, localCopies } from './backup.js';
 import { meleteBridge, connectMelete, refreshMelete, disconnectMelete } from './melete.js';
 import { updAvailable, updState, onUpdate, check, download, install, CHANNEL, BUILD } from './update.js';
@@ -25,6 +20,20 @@ import { t, getLang } from './i18n.js';
 import { h, openSheet, segmented, toggle, field, section, toast } from './ui.js';
 
 let changed = () => {};
+// название на главном: приложение или папка
+const nameOf = (key) => { const f = folderOfKey(key); return f ? folderName(f) : appOf(key)?.label || t('act.gone'); };
+// значки жестов — одной тонкой линией, как всё остальное
+const G = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const GESTURE_ICONS = {
+  swipeUp: G('<path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/>'),
+  swipeDown: G('<path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/>'),
+  swipeLeft: G('<path d="M19 12H5M10.5 6.5 5 12l5.5 5.5"/>'),
+  swipeRight: G('<path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/>'),
+  doubleTap: G('<circle cx="8.5" cy="12" r="2.5"/><circle cx="15.5" cy="12" r="2.5"/>'),
+  longPress: G('<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7.5" opacity=".45"/>'),
+  clockTap: G('<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>'),
+  dateTap: G('<rect x="4.5" y="5.5" width="15" height="14" rx="2"/><path d="M4.5 10h15M9 3.5v3.5M15 3.5v3.5"/>'),
+};
 let gestureOf = () => null;
 
 // главный экран и значки хранят свой список, только когда их изменили
@@ -34,131 +43,64 @@ const move = (arr, i, d) => { const j = i + d; if (j >= 0 && j < arr.length) [ar
 
 // вкладка настроек; секции помечены ею и показываются только на своей (четыре страницы — DECISIONS 2026-10-27)
 const TABS = ['look', 'home', 'gestures', 'data'];
-const S = (tab, ...args) => { const el = section(...args); el.dataset.tab = tab; return el; };
+const S = (tab, title, ...kids) => { const el = section(title, '', ...kids); el.dataset.tab = tab; return el; };
 
 export function openSettings(onChange, getGesture, tab) {
   changed = onChange;
   gestureOf = getGesture;
   if (TABS.includes(tab)) setPrefs({ setTab: tab });
-  const church = isChurch();
   let unbindUpd = null;
   let goTab = () => {};
   openSheet({
-    title: t('set.title'), kicker: church ? 'τάξις' : '', full: true,
+    title: t('set.title'), full: true,
     onClose: () => unbindUpd?.(),
     onSwipe: (dir) => { const i = TABS.indexOf(prefs.setTab); const n = TABS[i + (dir === 'left' ? 1 : -1)]; if (n) goTab(n, dir); },
     render(body, _close, rerender) {
       const church = isChurch(); // мог переключиться прямо здесь
       const up = (patch) => { setPrefs(patch); changed(); rerender(); };
       const keep = (fn) => () => { const sc = body.parentElement, y = sc.scrollTop; fn(); requestAnimationFrame(() => { sc.scrollTop = y; }); };
-      const now = new Date();
 
-      // — Оформление и церковный режим —
-      const sw = h('div', { class: 'l-swatches', role: 'radiogroup', 'aria-label': t('set.accent') });
-      ACCENTS.forEach((a) => sw.append(h('button', { class: `l-swatch ${prefs.accent === a ? 'on' : ''}`, role: 'radio', 'aria-checked': prefs.accent === a ? 'true' : 'false',
-        'aria-label': t('accent.' + a), style: { background: hueColor({ palette: 'classic' }, ACCENT_HUE[a]) }, onclick: keep(() => up({ accent: a })) })));
-      body.append(S('look', t('set.appearance'), church ? 'μορφή' : '',
-        h('div', { class: 'l-label' }, t('set.style')),
-        segmented([{ value: 'clean', label: t('style.clean') }, { value: 'rich', label: t('style.rich') }], prefs.style === 'rich' ? 'rich' : 'clean',
-          (v) => up({ style: v, ...STYLES[v] }), t('set.style')),
-        h('p', { class: 'l-hint' }, t('style.hint')),
+      // — Вид: тема, язык, размеры, сторона, своя строка состояния —
+      body.append(S('look', t('set.appearance'),
         h('div', { class: 'l-label' }, t('set.theme')),
-        segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'paper', label: t('theme.paper') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
-        toggle(t('set.bw'), prefs.bw, (v) => up({ bw: v }), t('set.bwHint')),
-        h('div', { class: 'l-label' }, t('set.motion')),
-        h('div', { class: 'l-motion-picks', role: 'radiogroup', 'aria-label': t('set.motion') }, MOTIONS.map((m) =>
-          h('button', { class: `l-motion-pick m-${m} ${(prefs.motion || 'slide') === m ? 'on' : ''}`, role: 'radio', 'aria-checked': String((prefs.motion || 'slide') === m), onclick: keep(() => up({ motion: m })) },
-            h('span', { class: 'l-motion-demo', 'aria-hidden': 'true' }, h('i'), h('b')), h('span', {}, t('motion.' + m)), h('small', {}, t('motion.' + m + '.hint'))))),
-        prefs.bw ? null : h('div', { class: 'l-label' }, t('set.accent')), prefs.bw ? null : sw,
-        h('div', { class: 'l-label' }, t('set.font')),
-        h('div', { class: 'l-font-picks', role: 'radiogroup', 'aria-label': t('set.font') }, fontsFor(church).map((f) =>
-          h('button', { class: `l-font-pick ${(prefs.font || 'onest') === f.id ? 'on' : ''}`, role: 'radio', 'aria-checked': String((prefs.font || 'onest') === f.id), onclick: keep(() => up({ font: f.id })) },
-            h('b', { style: { fontFamily: fontStack(f.display) } }, '07:46'),
-            h('span', { style: { fontFamily: fontStack(f.text) } }, t('font.' + f.id))))),
+        segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
         h('div', { class: 'l-label' }, t('set.lang')),
         segmented([{ value: '', label: t('set.lang.sys') }, { value: 'ru', label: 'Русский' }, { value: 'uz', label: 'Oʻzbekcha' }, { value: 'en', label: 'English' }], prefs.lang || '', (v) => up({ lang: v }), t('set.lang')),
-        toggle(t('set.church'), prefs.church, (v) => up({ church: v }), t('set.churchHint')),
-      ));
-
-      // — Часы —
-      const opts = clockOpts();
-      const clocks = h('div', { class: 'l-clock-picks' });
-      clocksFor(opts).forEach((c) => clocks.append(h('button', { class: `l-clock-pick ${prefs.clock === c.id ? 'on' : ''}`, onclick: keep(() => up({ clock: c.id })) },
-        h('div', { class: 'l-clock-mini clock', 'data-style': c.id, html: renderClock(c.id, now, opts) }),
-        h('span', {}, t('clock.' + c.id)), church ? h('small', { lang: 'el' }, c.el) : null)));
-      const place = placeOf(prefs);
-      body.append(S('look', t('set.clock'), church ? 'ὡρολόγιον' : '',
-        clocks,
-        h('p', { class: 'l-hint' }, t('clock.' + prefs.clock + '.info'), ' ', infoLink(() => clockEntry(prefs.clock, church))),
-        prefs.clock === 'biblical' ? h('div', { class: 'l-row' },
-          h('span', { class: 'l-row-main' }, h('span', {}, t('set.place')), h('small', {}, place.approx ? t('set.placeApprox') : `${place.lat.toFixed(2)}°, ${place.lon.toFixed(2)}°`)),
-          h('button', { class: 'l-btn', onclick: () => locate(up) }, place.approx ? t('set.placeFind') : t('set.placeAgain'))) : null,
-        toggle(t('set.hour12'), prefs.hour12, (v) => up({ hour12: v })),
-        church ? toggle(t('set.hourLine'), prefs.hourLine, (v) => up({ hourLine: v }), t('set.hourLineHint')) : null,
-      ));
-
-      // — Живые обои —
-      const walls = h('div', { class: 'l-wall-picks' });
-      WALLPAPERS.forEach((w) => {
-        const cv = h('canvas', { width: 300, height: 220, 'aria-hidden': 'true' });
-        walls.append(h('button', { class: `l-wall-pick ${prefs.wallpaper === w.id ? 'on' : ''}`, onclick: keep(() => up({ wallpaper: w.id })) },
-          cv, h('span', {}, t('wall.' + w.id)), church ? h('small', { lang: 'el' }, w.el) : null));
-        requestAnimationFrame(() => drawPreview(cv, w.id, church));
-      });
-      body.append(S('look', t('set.wall'), church ? 'εἰκὼν ζῶσα' : '',
-        walls,
-        prefs.wallpaper !== 'none' ? h('p', { class: 'l-hint' }, t('wall.' + prefs.wallpaper + '.hint'), ' ', infoLink(() => wallEntry(prefs.wallpaper))) : null,
-        prefs.wallpaper !== 'none' ? toggle(t('set.wallClock'), prefs.clock === 'none', (v) => up({ clock: v ? 'none' : 'tablet' }), t('set.wallClockHint')) : null,
-      ));
-
-      // — Вид —
-      const orns = church ? h('div', { class: 'l-orn-picks' }) : null;
-      if (orns) Object.entries(ORNAMENTS).forEach(([id, o]) => orns.append(h('button', { class: `l-orn-pick ${prefs.ornament === id ? 'on' : ''}`, onclick: keep(() => up({ ornament: id })) },
-        h('span', { class: 'l-orn-ico', html: o.icon ? iconSVG(o.icon) : '' }), h('small', {}, t('orn.' + id)))));
-      const markers = [['auto', t('set.marker.auto')], ['greek', 'αʹ βʹ'], ['roman', 'I II'], ['count', t('set.marker.count')], ['none', t('set.none')]]
-        .filter(([v]) => church || v !== 'greek').map(([value, label]) => ({ value, label }));
-      body.append(S('look', t('set.look'), church ? 'μορφή' : '',
         h('div', { class: 'l-label' }, t('set.align')),
         segmented([{ value: 'left', label: t('set.left') }, { value: 'center', label: t('set.center') }, { value: 'right', label: t('set.right') }], prefs.align, (v) => up({ align: v }), t('set.align')),
         scaleRow(t('set.clockScale'), 'clockScale', 60, 140),
         scaleRow(t('set.uiScale'), 'uiScale', 60, 130),
-        h('div', { class: 'l-label' }, t('set.marker'), ' ', infoLink(markerEntry)),
-        segmented(markers, prefs.marker, (v) => up({ marker: v }), t('set.marker')),
-        orns ? h('div', { class: 'l-label' }, t('set.ornament'), ' ', infoLink(ornamentEntry)) : null,
-        orns,
+        toggle(t('set.hour12'), prefs.hour12, (v) => up({ hour12: v })),
         toggle(t('set.status'), prefs.status, (v) => up({ status: v }), t('set.statusHint')),
-        toggle(t('set.intro'), prefs.intro, (v) => up({ intro: v }), t(church ? 'set.introHintChurch' : 'set.introHint')),
+      ));
+
+      // — Церковный режим и крест —
+      const crosses = church ? h('div', { class: 'l-cross-picks', role: 'radiogroup', 'aria-label': t('set.cross') },
+        [...CROSS_IDS, 'none'].map((id) => h('button', { class: `l-cross-pick ${prefs.cross === id ? 'on' : ''}`, role: 'radio', 'aria-checked': String(prefs.cross === id),
+          'aria-label': t('cross.' + id), onclick: keep(() => up({ cross: id })) },
+          h('span', { class: 'l-cross-ico', html: id === 'none' ? '' : crossSVG(id) }), h('small', {}, t('cross.' + id))))) : null;
+      body.append(S('look', t('set.churchSec'),
+        toggle(t('set.church'), prefs.church, (v) => up({ church: v }), t('set.churchHint')),
+        crosses ? h('div', { class: 'l-label' }, t('set.cross')) : null, crosses,
+        church && prefs.cross !== 'none' ? h('div', { class: 'l-label' }, t('set.crossAt')) : null,
+        church && prefs.cross !== 'none' ? segmented(CROSS_PLACES.map((v) => ({ value: v, label: t('crossAt.' + v) })), prefs.crossAt || 'center', (v) => up({ crossAt: v }), t('set.crossAt')) : null,
       ));
 
       // — Раскладка: главный экран и «Все приложения» —
-      body.append(S('home', t('set.layout'), church ? 'τάξις' : '', layoutEditor(() => changed(), keep)));
-
-      // — Дата и строка —
-      const langs = [{ value: '', label: t('set.dateLang.ui') }, { value: 'ru', label: 'Рус' }, { value: 'uz', label: 'Oʻzb' }, { value: 'en', label: 'Eng' }];
-      if (church) langs.push({ value: 'el', label: 'Ελλ' });
-      const sub = [{ value: 'note', label: t('set.sub.note') }, { value: 'none', label: t('set.none') }];
-      if (church) sub.unshift({ value: 'verse', label: t('set.sub.verse') });
-      body.append(S('look', t('set.date'), church ? 'ἡμέρα' : '',
-        h('div', { class: 'l-label' }, t('set.dateLang')),
-        segmented(langs, prefs.dateLang || '', (v) => up({ dateLang: v }), t('set.dateLang')),
-        church ? toggle(t('set.greekDay'), prefs.greekDay, (v) => up({ greekDay: v }), 'Κυριακή, Δευτέρα…') : null,
-        h('div', { class: 'l-label' }, t('set.sub')),
-        segmented(sub, prefs.subline === 'verse' && !church ? 'none' : prefs.subline, (v) => up({ subline: v }), t('set.sub')),
-        prefs.subline === 'note' ? field(t('set.note'), prefs.note, (v) => { prefs.note = v; save(); changed(); }, { maxlength: 80 }) : null,
-      ));
-
+      
       // — Главный экран: приложения —
       const homeList = h('div', { class: 'l-edit-list' });
       homeItems().forEach((item, i, all) => {
         homeList.append(h('div', { class: 'l-edit-row' },
-          h('button', { class: 'l-edit-main', onclick: () => editHomeItem(i, rerender) }, h('span', {}, item.label || appOf(item.key)?.label || t('act.gone')), h('small', {}, appOf(item.key)?.label || '')),
-          h('button', { class: 'l-mini', 'aria-label': t('set.up'), disabled: i === 0, onclick: keep(() => { move(ownHome(), i, -1); save(); changed(); rerender(); }) }, '↑'),
-          h('button', { class: 'l-mini', 'aria-label': t('set.down'), disabled: i === all.length - 1, onclick: keep(() => { move(ownHome(), i, 1); save(); changed(); rerender(); }) }, '↓')));
+          h('button', { class: 'l-edit-main', onclick: () => editHomeItem(i, rerender) }, h('span', {}, item.label || nameOf(item.key)), item.label ? h('small', {}, nameOf(item.key)) : null),
+          h('button', { class: 'l-lay-btn', 'aria-label': t('set.up'), disabled: i === 0, onclick: keep(() => { move(ownHome(), i, -1); save(); changed(); rerender(); }) }, '↑'),
+          h('button', { class: 'l-lay-btn', 'aria-label': t('set.down'), disabled: i === all.length - 1, onclick: keep(() => { move(ownHome(), i, 1); save(); changed(); rerender(); }) }, '↓')));
       });
-      body.append(S('home', t('set.home'), church ? 'οἶκος' : '',
-        h('p', { class: 'l-hint' }, t('set.homeHint')),
+      const full = homeItems().length >= HOME_MAX;
+      body.append(S('home', t('set.home'),
+        h('p', { class: 'l-hint' }, t('set.homeHint'), ' ', t('home.count', { n: homeItems().length, max: HOME_MAX })),
         homeList,
-        h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { ownHome().push({ key: a.key, label: '' }); save(); changed(); rerender(); }, { appsOnly: true }) }, t('set.homeAdd')),
+        full ? null : h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { if (ownHome().length < HOME_MAX) ownHome().push({ key: a.key, label: '' }); save(); changed(); rerender(); }, { appsOnly: true }) }, t('set.homeAdd')),
       ));
 
       // — Значки внизу и плеер —
@@ -167,14 +109,11 @@ export function openSettings(onChange, getGesture, tab) {
         dockList.append(h('div', { class: 'l-edit-row' },
           h('button', { class: 'l-slot-ico', 'aria-label': t('pick.icon'), html: iconSVG(slot.icon), onclick: () => pickIcon(slot.icon, (id) => { ownDock()[i].icon = id; save(); changed(); rerender(); }) }),
           h('button', { class: 'l-edit-main', onclick: () => pickAction(slot.action, (a) => { ownDock()[i].action = a; save(); changed(); rerender(); }) }, h('span', {}, describeAction(slot.action, appName))),
-          h('button', { class: 'l-mini', 'aria-label': t('set.remove'), onclick: keep(() => { ownDock().splice(i, 1); save(); changed(); rerender(); }) }, '×')));
+          h('button', { class: 'l-lay-btn', 'aria-label': t('set.remove'), onclick: keep(() => { ownDock().splice(i, 1); save(); changed(); rerender(); }) }, '×')));
       });
-      body.append(S('home', t('set.dock'), church ? 'εἰκόνες' : '',
-        segmented([{ value: 'icons', label: t('set.dock.icons') }, { value: 'line', label: t('set.dock.line') }, { value: 'none', label: t('set.dock.none') }], prefs.dockStyle, (v) => up({ dockStyle: v }), t('set.dock')),
+      body.append(S('home', t('set.dock'),
         dockList,
         dockSlots().length < 6 ? h('button', { class: 'l-btn', onclick: () => { ownDock().push({ icon: 'grid', action: { t: 'cmd', id: 'drawer' } }); save(); changed(); rerender(); } }, t('set.dockAdd')) : null,
-        MEDIA_SESSIONS ? toggle(t('set.player'), prefs.player, (v) => up({ player: v }), t('set.playerHint')) : null,
-        MEDIA_SESSIONS && prefs.player && isNative() ? h('button', { class: 'l-btn', onclick: openMediaAccess }, t('set.mediaAccess')) : null,
       ));
 
       // — Мост с Melete: чтение и практика —
@@ -197,20 +136,20 @@ export function openSettings(onChange, getGesture, tab) {
         } }, br ? t(isNative() ? 'mel.again' : 'mel.againFile') : t(isNative() ? 'mel.pick' : 'mel.pickFile')),
         br && isNative() ? h('button', { class: 'l-btn', onclick: async () => { try { await refreshMelete(true); toast(t('mel.updated')); changed(); rerender(); } catch { toast(t('mel.fail')); } } }, t('mel.refresh')) : null,
         br ? h('button', { class: 'l-btn danger', onclick: () => { disconnectMelete(); changed(); rerender(); } }, t('mel.off')) : null));
-      body.append(S('home', t(church ? 'set.tracker.church' : 'set.tracker'), church ? 'μελέτη' : '',
+      body.append(S('home', t(church ? 'set.tracker.church' : 'set.tracker'),
         h('p', { class: 'l-hint' }, t(church ? 'mel.whatChurch' : 'mel.what')),
         mel,
         br ? toggle(t('set.trackerShow'), prefs.tracker, (v) => up({ tracker: v })) : null,
-        segmented([{ value: 'line', label: t('trm.line') }, { value: 'full', label: t('trm.full') }], prefs.trackerMode === 'full' ? 'full' : 'line', (v) => up({ trackerMode: v }), t('set.tracker')),
       ));
+
 
       // — Жесты —
       const gList = h('div', { class: 'l-edit-list' });
       GESTURES.forEach((id) => gList.append(h('div', { class: 'l-edit-row' },
-        h('span', { class: 'l-glyph', 'aria-hidden': 'true' }, GLYPHS[id]),
+        h('span', { class: 'l-glyph', 'aria-hidden': 'true', html: GESTURE_ICONS[id] || '' }),
         h('button', { class: 'l-edit-main', onclick: () => pickAction(gestureOf(id), (a) => { prefs.gestures[id] = a; save(); rerender(); }) },
           h('span', {}, t('gest.' + id)), h('small', {}, '→ ' + describeAction(gestureOf(id), appName))))));
-      body.append(S('gestures', t('set.gestures'), church ? 'κινήσεις' : '', gList, h('p', { class: 'l-hint' }, t('set.gesturesHint'))));
+      body.append(S('gestures', t('set.gestures'), gList, h('p', { class: 'l-hint' }, t('set.gesturesHint'))));
 
       // — Данные: копия кошелька, блокнота и настроек —
       const copies = h('div', { class: 'l-copies' });
@@ -224,7 +163,7 @@ export function openSettings(onChange, getGesture, tab) {
             h('small', {}, t('data.counts', { n: n.notes, r: n.recs })));
         }));
       });
-      body.append(S('data', t('set.data'), church ? 'θησαυρός' : '',
+      body.append(S('data', t('set.data'),
         h('p', { class: 'l-hint' }, t('data.hint')),
         h('div', { class: 'l-btn-row' },
           h('button', { class: 'l-btn primary', onclick: () => saveFile().then(() => toast(t('data.saved')), (e) => { if (!/cancel/i.test(String(e?.message || e))) toast(t('data.err')); }) }, t('data.save')),
@@ -237,7 +176,7 @@ export function openSettings(onChange, getGesture, tab) {
           const u = updState();
           const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
             : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
-          return S('data', t('set.upd'), '',
+          return S('data', t('set.upd'),
             h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
             segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => { setPrefs({ updMode: v }); changed(); swap(); }, t('set.upd')),
             toggle(t('upd.mobile'), prefs.updMobile, (v) => { setPrefs({ updMobile: v }); changed(); }),
@@ -261,13 +200,13 @@ export function openSettings(onChange, getGesture, tab) {
             h('button', { class: 'l-btn', onclick: () => Launcher.openHomeSettings() }, t('set.sys.choose')));
         }).catch(() => {});
       }
-      body.append(S('data', t('set.sys'), '',
+      body.append(S('data', t('set.sys'),
         sys,
         h('div', { class: 'l-btn-row' },
           h('button', { class: 'l-btn danger', onclick: () => { if (confirm(t('set.resetAsk'))) { resetPrefs(); changed(); rerender(); } } }, t('set.reset'))),
-        h('p', { class: 'l-colophon', lang: 'el' }, 'Ἐλάχιστον', h('small', {}, t('about.motto'))),
+        h('p', { class: 'l-colophon' }, 'Ἐλάχιστον', church ? h('small', {}, t('about.motto')) : null),
         // лицензии: код — GPL-3.0, шрифты — SIL OFL, карта — общественное достояние (LICENSES.md)
-        h('button', { class: 'l-ex-link', onclick: () => openUrl('https://github.com/veracerkof-debug/melete-app/blob/main/LICENSES.md', t('about.lic')) }, h('span', {}, t('about.lic')), h('small', {}, 'github.com'))));
+        h('button', { class: 'l-ex-link l-lic', onclick: () => openUrl('https://github.com/veracerkof-debug/melete-app/blob/main/LICENSES.md', t('about.lic')) }, h('span', {}, t('about.lic')), h('small', {}, 'github.com'))));
 
       // четыре страницы: показываем только секции текущей вкладки; переключатель — сверху, всегда на виду
       const tab = TABS.includes(prefs.setTab) ? prefs.setTab : 'look';
@@ -286,75 +225,11 @@ export function openSettings(onChange, getGesture, tab) {
   });
 }
 
-// местоположение для восхода и заката (ветхозаветные часы) — только по нажатию
-function locate(up) {
-  if (!navigator.geolocation) return toast(t('set.placeNone'));
-  toast(t('set.placeWait'));
-  navigator.geolocation.getCurrentPosition(
-    (p) => { up({ place: { lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3) } }); toast(t('set.placeSaved')); },
-    () => toast(t('set.placeNone')),
-    { timeout: 15000, maximumAge: 864e5 },
-  );
-}
-
 // Загрузить копию: что в ней — и подтверждение; текущее перед этим само сохраняется копией на телефоне
 function askRestore(c, after) {
   const n = summary(c);
   if (!confirm(t('data.ask', { d: new Date(c.at).toLocaleDateString(), n: n.notes, r: n.recs }))) return;
   restore(c).then(() => { toast(t('data.restored')); setTimeout(() => location.reload(), 600); after?.(); });
-}
-
-// Раскладка: блоки главного экрана — порядок (↑ ↓), видно или нет, размер (касание названия); место значков;
-// «Все приложения» — место папок и поиска, размер названий. «Как было» — раскладка по умолчанию.
-function layoutEditor(redraw, keep) {
-  const wrap = h('div', { class: 'l-lay' });
-  let openId = null;
-  const commit = (patch) => { setLayout(patch); applyLook(); redraw(); draw(); };
-  const draw = () => {
-    const l = layout();
-    const rows = l.order.map((id, i) => {
-      const off = !!l.hide[id];
-      const pct = l.scale[id] || 100;
-      const move = (d) => keep(() => { const o = [...l.order]; [o[i], o[i + d]] = [o[i + d], o[i]]; commit({ order: o }); })();
-      const row = h('div', { class: `l-lay-row ${off ? 'off' : ''}` },
-        h('button', { class: 'l-lay-name', onclick: () => { openId = openId === id ? null : id; draw(); }, disabled: id === 'space' },
-          t('blk.' + id), id !== 'space' && pct !== 100 ? h('small', {}, pct + ' %') : null),
-        h('button', { class: 'l-lay-btn', 'aria-label': t('lay.up'), disabled: i === 0, onclick: () => move(-1) }, '↑'),
-        h('button', { class: 'l-lay-btn', 'aria-label': t('lay.down'), disabled: i === l.order.length - 1, onclick: () => move(1) }, '↓'),
-        h('button', { class: 'l-lay-btn', 'aria-label': off ? t('lay.show') : t('lay.hide'), onclick: keep(() => commit({ hide: { ...l.hide, [id]: !off } })),
-          html: off ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 4l16 16"/></svg>'
-            : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.6"/></svg>' }));
-      if (openId !== id || id === 'space') return row;
-      const r = h('input', { type: 'range', class: 'l-scale', min: 60, max: 160, step: 5, value: pct, 'aria-label': t('blk.' + id) });
-      r.addEventListener('change', keep(() => commit({ scale: { ...l.scale, [id]: +r.value } })));
-      r.addEventListener('dblclick', keep(() => commit({ scale: { ...l.scale, [id]: 100 } })));
-      return h('div', {}, row, h('div', { class: 'l-lay-size' }, r));
-    });
-    wrap.replaceChildren(
-      h('div', { class: 'l-label' }, t('lay.blocks')), ...rows,
-      h('div', { class: 'l-label' }, t('lay.dock')),
-      segmented(['bottom', 'top', 'left', 'right'].map((v) => ({ value: v, label: t('lay.' + v) })), l.dock, (v) => {
-        // вверху и внизу — значки первыми или последними в порядке; слева и справа — столбиком у края
-        const rest = l.order.filter((x) => x !== 'dock');
-        commit({ dock: v, order: v === 'top' ? ['dock', ...rest] : v === 'bottom' ? [...rest, 'dock'] : l.order, hide: { ...l.hide, dock: false } });
-      }, t('lay.dock')),
-      h('div', { class: 'l-label' }, t('lay.rail')),
-      segmented(['right', 'left', 'bottom', 'top'].map((v) => ({ value: v, label: t('lay.' + v) })), l.rail, (v) => commit({ rail: v }), t('lay.rail')),
-      h('div', { class: 'l-label' }, t('lay.search')),
-      segmented(['top', 'bottom'].map((v) => ({ value: v, label: t('lay.' + v) })), l.search, (v) => commit({ search: v }), t('lay.search')),
-      scaleLay(t('lay.drawerScale'), l.drawerScale, (v) => commit({ drawerScale: v })),
-      h('button', { class: 'l-btn', onclick: () => { resetLayout(); applyLook(); redraw(); draw(); } }, t('lay.reset')));
-  };
-  draw();
-  return wrap;
-}
-
-function scaleLay(label, value, onSet) {
-  const val = h('span', { class: 'l-scale-v' }, value + ' %');
-  const r = h('input', { type: 'range', class: 'l-scale', min: 60, max: 140, step: 5, value, 'aria-label': label });
-  r.addEventListener('input', () => { val.textContent = r.value + ' %'; });
-  r.addEventListener('change', () => onSet(+r.value));
-  return h('div', { class: 'l-scale-row' }, h('div', { class: 'l-label' }, label, ' ', val), r);
 }
 
 // ползунок размера: двигается — главный экран меняется сразу; двойное касание — 100 %
@@ -372,16 +247,13 @@ function scaleRow(label, key, min, max) {
 export function editHomeItem(i, after, onChange = changed) {
   const item = homeItems()[i];
   if (!item) return;
-  const church = isChurch();
   openSheet({
-    title: t('set.item'), kicker: church ? 'ὄνομα' : '',
+    title: t('set.item'),
     render(body, close, rerender) {
       const app = appOf(item.key);
       const commit = (fn) => { fn(ownHome()[i]); save(); onChange(); after?.(); };
       body.append(
         field(t('set.itemLabel'), item.label, (v) => commit((x) => { x.label = v; }), { placeholder: app?.label || '', maxlength: 40 }),
-        church ? h('div', { class: 'l-chips' }, ...['βίβλος', 'λόγος', 'φῶς', 'ζωή', 'ὁδός', 'φωνή', 'ψαλμοί', 'εἰρήνη'].map((w) =>
-          h('button', { class: 'l-chip', lang: 'el', onclick: () => { commit((x) => { x.label = (x.label ? x.label.split(' · ')[0] + ' · ' : '') + w; }); rerender(); } }, w))) : null,
         h('button', { class: 'l-pick', onclick: () => pickAction({ t: 'app', key: item.key }, (a) => { commit((x) => { x.key = a.key; }); rerender(); }, { appsOnly: true }) },
           h('span', {}, t('set.itemOpens', { name: app?.label || '—' }))),
         h('div', { class: 'l-btn-row' },
@@ -398,7 +270,7 @@ export function editDockSlot(i, onChange) {
   const slot = dockSlots()[i];
   if (!slot) return;
   openSheet({
-    title: t('set.slot'), kicker: isChurch() ? 'εἰκών' : '',
+    title: t('set.slot'),
     render(body, close, rerender) {
       const cur = dockSlots()[i];
       body.append(
