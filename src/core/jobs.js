@@ -5,6 +5,7 @@
 // stem: { src, part, mode, hq, db } — обычная и улучшенная (hq) версии живут рядом, ноты — .mid с пометкой trans: { src }. Запускают плеер медиатеки (по кнопке) и
 // фоновая очередь (autostems.js). Подписчики получают состояние: { kind: 'stems' | 'notes' | 'lyrics' | 'denoise', id, stage, frac, stageAt, mode, auto }.
 // Без DOM: имена дорожек — через t() ядра.
+import { time as dTime, gauge as dGauge } from './diag.js';
 import { t } from '../i18n/index.js';
 import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported, stemsPack } from '../audio/stems.js';
 import { transcribe } from '../audio/transcribe.js';
@@ -47,6 +48,8 @@ export function createJobs(files) {
   let pro = false; // модели YourMT3+ на месте (компьютер) — все инструменты по партиям; проверка один раз
   if (isDesktop()) ymtAvailable().then((v) => { pro = !!v; if (pro) emit(); }).catch(() => {});
   const set = (patch) => { if (!cur) return; Object.assign(cur, patch); emit(); };
+  // диагностика: сколько шла обработка и во сколько раз дольше самой записи (screens/diag.js)
+  const jobDone = () => { if (!cur || !cur.t0) return; const ms = Date.now() - cur.t0, k = 'job.' + cur.kind + (cur.hq ? '.hq' : ''); dTime(k, ms); if (cur.rec && cur.rec.dur > 1) dGauge(k + '.x', ms / 1000 / cur.rec.dur); };
 
   // Разделить запись rec в режиме mode ('2' | '4' | '6') → { stems: [записи], absent: [части] }
   async function runStems(rec, mode, hq) {
@@ -149,7 +152,7 @@ export function createJobs(files) {
       cur = { kind: 'stems', id: rec.id, rec, stage: 'load', frac: 0, mode, hq: !!hq, auto, t0: Date.now() };
       cur.job = separate(rec.blob, { mode, hq, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
-      return runStems(rec, mode, hq).then((r) => { onDone(r); return r; }).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+      return runStems(rec, mode, hq).then((r) => { onDone(r); return r; }).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { jobDone(); cur = null; emit(); });
     },
     // Снятие нот — только компьютер (DECISIONS «Телефон лёгкий, тяжёлое — компьютер»); телефон получает готовые ноты синхронизацией
     notesSupported: () => isDesktop(),
@@ -161,7 +164,7 @@ export function createJobs(files) {
       const onStage = (stage, f) => set({ stage, frac: f, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) });
       cur.job = notesJob(rec.blob, { sens, bends, name: base(rec), onStage });
       emit();
-      return runNotes(rec, bends).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+      return runNotes(rec, bends).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { jobDone(); cur = null; emit(); });
     },
     lyricsSupported: () => lyricsSupported(),
     // Текст песни (Windows): по отделённому вокалу, если он есть, иначе по записи целиком
@@ -172,7 +175,7 @@ export function createJobs(files) {
       cur = { kind: 'lyrics', id: rec.id, rec, stage: 'decode', frac: 0, auto, t0: Date.now() };
       cur.job = transcribeLyrics((v || rec).blob, { lang, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
-      return runLyrics(rec, src).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+      return runLyrics(rec, src).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { jobDone(); cur = null; emit(); });
     },
     denoiseSupported: () => denoiseSupported(),
     // Убрать шум (Windows): atten — предел ослабления в дБ (null — полностью)
@@ -182,7 +185,7 @@ export function createJobs(files) {
       cur = { kind: 'denoise', id: rec.id, rec, stage: 'decode', frac: 0, t0: Date.now() };
       cur.job = denoise(rec.blob, { atten, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
-      return runDenoise(rec).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { cur = null; emit(); });
+      return runDenoise(rec).catch((e) => { if (!(e && e.message === 'cancel')) logErr('jobs', e); throw e; }).finally(() => { jobDone(); cur = null; emit(); });
     },
     cancel() { if (cur && cur.job) cur.job.cancel(); },
   };

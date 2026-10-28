@@ -20,7 +20,8 @@ const PASSES = 4; // записи планируются на столько к�
 
 // getFile(id) → запись медиатеки с blob (клипы-записи) или null
 // context и clock — сведение «на бумаге» (render.js): свой OfflineAudioContext и часы по нему; без них — живой звук
-export function createSequencer({ mixer, synth, getProject, getFile = () => null, onBeat = () => {}, context = null, clock = null }) {
+// onLate(s) — нота спланирована позже своего времени на s секунд (главный поток не успел; для диагностики)
+export function createSequencer({ mixer, synth, getProject, getFile = () => null, onBeat = () => {}, onLate = () => {}, context = null, clock = null }) {
   const { after, every, cancel } = clock || CLOCK;
   const ctxOf = () => context || getContext(mixer.state.mode);
   let c = null, timer = null, t0 = 0, nextBeat = 0, playing = false, noise = null, click = false, seq = 0, focus = null;
@@ -123,7 +124,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       for (const n of notes) {
         if (n.t < inLoop) continue;
         if (n.t >= inLoop + 1 || n.t >= loop.b) break;
-        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.gain || 1; // громкость дорожки — узел vol в trackOut
+        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.gain || 1;
+        if (!context && at < c.currentTime - 0.003) onLate(c.currentTime - at); // громкость дорожки — узел vol в trackOut
         if (n.drum) { hit(n.tr, n.drum, out, at, n.v * g); continue; }
         if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
         if (n.tr.inst === 'gm' && gmReady()) { gm.on(c, n.m, 'sg' + seq++, { program: n.tr.gm || 0, out, vel: Math.min(1, n.v * g), at, dur: n.d * spb }); continue; } // отпускание — точно по длине ноты

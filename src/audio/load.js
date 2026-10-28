@@ -18,7 +18,8 @@ export const loadLevel = (v) => (v >= LOAD_HIGH ? 'high' : v >= LOAD_WARN ? 'war
 
 // detail() — строка с подробностями для журнала (буфер, голоса, экран) — подставляет ядро; onHeavy() — ужатие уже
 // предельное, а нагрузка выше 90 %: звук облегчает то, что не голоса (реверберация), — один раз
-export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy = () => {}) {
+// onSample(state, m) — каждый замер (ядро ведёт диагностику: src/core/diag.js)
+export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy = () => {}, onSample = () => {}) {
   let state = null, subs = new Set(), node = null, cap = null, warned = false, lowSince = 0, lastStep = 0, heavy = false;
   const emit = () => subs.forEach((fn) => { try { fn(api); } catch { /* */ } });
   const take = (m) => {
@@ -31,6 +32,7 @@ export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy
     else if (state.avg > 0.9 && PERF.squeeze >= 2 && !heavy && now - lastStep > 4000) { heavy = true; try { onHeavy(); } catch { /* */ } }
     else if (state.avg < 0.55 && PERF.squeeze > 0) { if (!lowSince) lowSince = now; else if (now - lowSince > 15000) { setSqueeze(PERF.squeeze - 1); lastStep = now; lowSince = 0; logger('нагрузка спала — голоса возвращены (ужатие ' + PERF.squeeze + ')'); } }
     else lowSince = 0;
+    try { onSample(state, m); } catch { /* */ }
     emit();
   };
   async function start() {
@@ -38,7 +40,7 @@ export function createLoadMeter(c, logger = () => {}, detail = () => '', onHeavy
     try {
       if (c.renderCapacity && c.renderCapacity.start) { // Chrome: загрузка рендера от самого браузера
         cap = c.renderCapacity;
-        cap.onupdate = (e) => take({ load: e.averageLoad, peak: e.peakLoad });
+        cap.onupdate = (e) => take({ load: e.averageLoad, peak: e.peakLoad, underrun: e.underrunRatio });
         cap.start({ updateInterval: 1 });
         return;
       }
