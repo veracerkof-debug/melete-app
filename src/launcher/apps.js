@@ -19,6 +19,8 @@ let roles = {};
 const subs = new Set();
 export const onApps = (fn) => subs.add(fn);
 
+let sig = '';
+// загрузить список; вернёт true, если он изменился (иначе главный не перерисовывается — без рывков при возвращении)
 export async function loadApps() {
   if (isNative()) {
     try {
@@ -30,8 +32,11 @@ export async function loadApps() {
     list = [...WEB.map((w) => ({ key: w.id, url: w.url, label: t(w.id) })), ...((prefs.web || []).map((w) => ({ key: w.id, url: w.url, label: w.name })))];
   }
   list.sort((a, b) => a.label.localeCompare(b.label));
+  const now = JSON.stringify([list.map((a) => a.key + a.label), roles]);
+  if (now === sig) return false;
+  sig = now;
   subs.forEach((fn) => fn());
-  return list;
+  return true;
 }
 
 // Скрытые приложения (решение автора 2026-10-28 — самая важная функция): их нет во «Всех приложениях», в поиске,

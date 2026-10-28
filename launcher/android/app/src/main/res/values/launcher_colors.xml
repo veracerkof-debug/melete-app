@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Фон окна главного экрана = фон страницы (styles/tokens.css, фон светлой темы): без швов и вспышек при переходах -->
+<resources>
+    <color name="l_bg">#F3F2EE</color>
+</resources>

@@ -9,14 +9,17 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Главный экран: фон окна — цвет страницы (без швов по краям при переходах), без анимаций окна
+         (уход в недавние и возвращение — мгновенно, решение автора 2026-10-28) -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <item name="android:windowBackground">@color/l_bg</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowShowWallpaper">false</item>
     </style>
 
-
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
-    </style>
+    <!-- окно при запуске — сразу цвет главного, без заставки -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar" />
 </resources>

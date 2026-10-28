@@ -127,12 +127,17 @@ watchMelete();
 onMeleteLive(() => refreshTracker());
 addEventListener('wallet:changed', refreshBalance);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { syncMelete(); watchMelete(); loadApps().then(renderHome); return; }
-  // ушли в другое приложение — по возвращении главный экран чистый: шторки, все приложения и блокнот закрыты
-  // (кошелёк закрывается сам, money.js); жест «Домой» на главном экране ничего не меняет (MainActivity.onNewIntent)
+  // вернулись: перерисовать, только если что-то поменялось (новое приложение, данные Melete) — без рывков
+  if (!document.hidden) { syncMelete(); watchMelete(); loadApps().then((ch) => { if (ch) renderHome(); }); return; }
+  // ушли в другое приложение или в недавние — по возвращении главный чистый: шторки, все приложения, блокнот и правка
+  // закрыты мгновенно, без анимаций (в недавних главный не шевелится); «Домой» на главном ничего не меняет (onNewIntent)
+  const de = document.documentElement;
+  de.classList.add('l-instant');
   while (closeTopSheet()) { /* все шторки */ }
   if (drawerOpen()) closeDrawer();
   if (notesOpen()) closeNotes();
+  exitArrange();
+  setTimeout(() => de.classList.remove('l-instant'), 400);
 });
 
 // Обновление из GitHub: «автоматически» — раз в сутки; скачано — тихая полоса «Установить»

@@ -29,6 +29,13 @@ public class MainActivity extends BridgeActivity {
         // Системная строка состояния скрыта (решение автора): у главного экрана своя — сеть и заряд (home.js).
         // Смахнуть сверху — системная появляется на время, второе смахивание — шторка уведомлений
         hideStatusBar();
+        // без анимаций окна: главный появляется сразу (и после недавних, и после других приложений)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0);
+            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0);
+        }
+        // до первого кадра страницы — тот же цвет, что у неё (не белая вспышка)
+        if (getBridge() != null) getBridge().getWebView().setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.l_bg));
         ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
             androidx.core.graphics.Insets s = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             // сверху — место скрытой строки (там своя строка и вырез камеры), а не ноль
@@ -52,6 +59,18 @@ public class MainActivity extends BridgeActivity {
         WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         c.hide(WindowInsetsCompat.Type.statusBars());
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (android.os.Build.VERSION.SDK_INT < 34) overridePendingTransition(0, 0);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (android.os.Build.VERSION.SDK_INT < 34) overridePendingTransition(0, 0);
     }
 
     // система может вернуть строку (после другого приложения, шторки, поворота) — снова прячем

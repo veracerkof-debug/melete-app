@@ -233,6 +233,8 @@ export function renderHome() {
   ].filter(Boolean));
   lastSig = null;
   renderStatus();
+  // подогнать сразу (без кадра «до»), и ещё раз, когда шрифт и место устоялись
+  fitApps();
   requestAnimationFrame(fitApps);
   updateClock(new Date(), true);
 }

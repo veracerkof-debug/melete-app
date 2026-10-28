@@ -37,7 +37,6 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
   display: flex; flex-direction: column;
   padding: calc(var(--l-sat) + 30px * var(--l-auto, 1)) max(var(--l-gut), var(--l-sar), calc((100% - 640px) / 2)) calc(var(--l-sab) + 14px * var(--l-auto, 1)) max(var(--l-gut), var(--l-sal), calc((100% - 640px) / 2));
   touch-action: none; user-select: none; -webkit-user-select: none;
-  animation: appear .5s var(--ease) both;
 }
 .l-home > * { position: relative; z-index: 1; min-height: 0; flex-shrink: 0; }
 .l-home .l-apps { flex: 0 1 auto; min-height: 0; overflow: hidden; } /* тесно — список ужимается, остальное на месте */
@@ -413,3 +412,6 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* скрытые приложения: «Вернуть» — в строке */
 .l-hide-back { margin: 0; flex: none; }
+
+/* ушли с экрана — всё закрывается мгновенно (main.js, visibilitychange): в недавних главный не шевелится */
+html.l-instant *, html.l-instant *::before, html.l-instant *::after { transition: none !important; animation: none !important; }

@@ -34,10 +34,11 @@ export function applyLook(de = document.documentElement) {
   de.style.setProperty('--l-ui', String(auto * ui));
   // значки строки состояния Android: тёмные на светлом фоне, светлые на тёмном
   if (isNative()) {
-    const bg = getComputedStyle(de).getPropertyValue('--bg').trim();
+    let bg = getComputedStyle(de).getPropertyValue('--bg').trim();
+    if (/^#[0-9a-f]{3}$/i.test(bg)) bg = '#' + [...bg.slice(1)].map((c) => c + c).join(''); // #000 → #000000
     const m = bg.match(/^#([0-9a-f]{6})$/i);
     const lum = m ? (0.299 * parseInt(m[1].slice(0, 2), 16) + 0.587 * parseInt(m[1].slice(2, 4), 16) + 0.114 * parseInt(m[1].slice(4, 6), 16)) / 255 : 1;
-    Launcher.setBars({ lightBg: lum > 0.5 }).catch(() => {});
+    Launcher.setBars({ lightBg: lum > 0.5, bg: m ? bg : undefined }).catch(() => {});
   }
   // цвет полосы состояния — по фону
   const meta = document.querySelector('meta[name="theme-color"]');

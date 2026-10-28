@@ -527,6 +527,15 @@ public class LauncherPlugin extends Plugin {
             androidx.core.view.WindowInsetsControllerCompat c = androidx.core.view.WindowCompat.getInsetsController(a.getWindow(), a.getWindow().getDecorView());
             c.setAppearanceLightStatusBars(lightBg);
             c.setAppearanceLightNavigationBars(lightBg);
+            // фон окна и WebView — цвет темы главного (тёмная, OLED, светлая выбраны в самом приложении)
+            String bg = call.getString("bg");
+            if (bg != null) {
+                try {
+                    int col = android.graphics.Color.parseColor(bg);
+                    a.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(col));
+                    if (getBridge() != null) getBridge().getWebView().setBackgroundColor(col);
+                } catch (Exception ignored) { }
+            }
         });
         call.resolve();
     }
