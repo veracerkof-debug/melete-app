@@ -31,7 +31,7 @@ export async function loadApps() {
   } else {
     list = [...WEB.map((w) => ({ key: w.id, url: w.url, label: t(w.id) })), ...((prefs.web || []).map((w) => ({ key: w.id, url: w.url, label: w.name })))];
   }
-  list.sort((a, b) => a.label.localeCompare(b.label));
+  applyNames();
   const now = JSON.stringify([list.map((a) => a.key + a.label), roles]);
   if (now === sig) return false;
   sig = now;
@@ -55,6 +55,26 @@ export function setHidden(key, on = true) {
 }
 export const hiddenApps = () => list.filter((a) => isHidden(a.key));
 export const allApps = () => list.filter((a) => !isHidden(a.key));
+
+// Свои названия (решение автора 2026-10-29): одно название приложения — везде; системное остаётся в a.sys (поиск
+// находит по обоим). Пустое — снова системное
+function applyNames() {
+  const names = prefs.names || {};
+  list.forEach((a) => { a.sys = a.sys || a.label; a.label = names[a.key] || a.sys; });
+  list.sort((a, b) => a.label.localeCompare(b.label));
+}
+export function renameApp(key, name) {
+  const names = { ...(prefs.names || {}) };
+  const v = String(name || '').trim().slice(0, 40);
+  if (v) names[key] = v; else delete names[key];
+  prefs.names = names;
+  // своя подпись на главном (прежняя) уступает общему названию
+  (prefs.home || []).forEach((x) => { if (x.key === key) x.label = ''; });
+  applyNames();
+  save();
+  subs.forEach((fn) => fn());
+}
+export const systemName = (key) => appOf(key)?.sys || appOf(key)?.label || '';
 export const appOf = (key) => list.find((a) => a.key === key) || null;
 export const rolesOf = () => roles;
 

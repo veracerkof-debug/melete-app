@@ -72,29 +72,21 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 let db;
 function load() {
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
-  if (!db || !Array.isArray(db.recs)) { db = { recs: sample(), budget: 4000000 }; save(); }
+  // новый кошелёк — пустой (решение автора 2026-10-28: без примера)
+  if (!db || !Array.isArray(db.recs)) { db = { recs: [], budget: 0 }; save(); }
   (db.custom || []).forEach(addCustom);
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} }
 
-// пример: три месяца правдоподобных записей
-function sample() {
-  let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const pick = (a) => a[Math.floor(rnd() * a.length)];
-  const recs = []; const now = new Date();
-  const add = (d, h, k, c, a, n = '') => { const t = new Date(d); t.setHours(h, Math.floor(rnd() * 60)); if (t <= now) recs.push({ id: uid() + recs.length, t: t.getTime(), k, c, a, n }); };
-  for (let i = 95; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    if (rnd() < .8) add(d, 13, 'e', 'food', pick([18000, 25000, 25000, 30000, 45000]));
-    if (rnd() < .6) add(d, 8, 'e', 'trans', pick([13000, 29000, 29000, 6000]));
-    if (rnd() < .5) add(d, 18, 'e', 'cig', pick([34000, 34000, 68000]));
-    if (d.getDay() === 6) add(d, 11, 'e', 'groc', pick([180000, 240000, 310000]));
-    if (d.getDate() === 5) { add(d, 10, 'i', 'salary', 4200000); add(d, 12, 'e', 'tithe', 420000); add(d, 15, 'e', 'util', 380000); }
-    if (d.getDate() === 12) add(d, 9, 'e', 'phone', 65000, 'тариф');
-    if (rnd() < .06) add(d, 20, 'i', 'gig', pick([600000, 900000]), 'свадьба');
-    if (rnd() < .05) add(d, 17, 'e', pick(['gift', 'cloth', 'music', 'health', 'online']), pick([120000, 250000, 400000]));
-  }
-  return recs;
+// Пример из прежних версий: его записи — с номером в хвосте id (uid() + номер); свои — без. Убрать одним касанием
+const isDemo = (r) => r.demo || /^[0-9a-z]{12}\d+$/.test(r.id || '');
+const hasDemo = () => db.recs.some(isDemo);
+function dropDemo() {
+  const before = { recs: db.recs, budget: db.budget };
+  db.recs = db.recs.filter((r) => !isDemo(r));
+  if (db.budget === 4000000) db.budget = 0; // бюджет примера
+  save(); closeSheets(); renderEntry(); if (over.classList.contains('open')) renderOver();
+  toast('Пример удалён', () => { db.recs = before.recs; db.budget = before.budget; save(); renderEntry(); if (over.classList.contains('open')) renderOver(); });
 }
 
 // ── частые: категории по частоте и времени суток, пары «категория + сумма» ──
@@ -147,6 +139,8 @@ function renderEntry() {
       left != null ? h('button', { onclick: openOver }, 'остаток ', h('b', { class: 'num' + (left < 0 ? ' neg' : '') }, fmt(left))) : null,
       parent !== window ? h('button', { class: 'lockbtn', onclick: () => parent.postMessage('money:lock', '*'), 'aria-label': 'Код и отпечаток',
         html: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>' }) : null),
+    // в кошельке пример из прежних версий — убрать одним касанием
+    hasDemo() ? h('div', { class: 'demo' }, h('span', {}, 'Сейчас здесь пример записей'), h('button', { onclick: dropDemo }, 'Удалить пример')) : null,
     // бюджет месяца — тонкой полосой: сколько ушло из лимита (касание — обзор месяца)
     db.budget ? h('button', { class: 'ebar', onclick: openOver, 'aria-label': `Бюджет: потрачено ${fmt(spent)} из ${fmt(db.budget)}` },
       h('i', { class: spent > db.budget ? 'over' : '', style: { width: Math.min(100, spent / db.budget * 100) + '%' } })) : null,
@@ -435,7 +429,7 @@ function stats(tab, kind = 'e') {
       })), h('div', { class: 'hint' }, `${mname[0].toUpperCase() + mname.slice(1)} ${m.getFullYear()} · «т» — тысяч`)];
   }
   sheet(null, [tabs, body,
-    h('div', { class: 'hint' }, h('button', { class: 'link', onclick: resetSample }, 'Вернуть пример'), ' · ',
+    h('div', { class: 'hint' }, hasDemo() ? [h('button', { class: 'link', onclick: dropDemo }, 'Удалить пример'), ' · '] : null,
       h('button', { class: 'link', onclick: clearAll }, 'Очистить всё'))]);
 }
 
@@ -445,7 +439,6 @@ function dayList(d) {
   sheet(`${d.getDate()} ${MON_S[d.getMonth()]} · ${WD[d.getDay()]}`, h('div', { style: { margin: '0 -16px' } }, rs.map(row)));
 }
 
-function resetSample() { if (!confirm('Заменить записи примером?')) return; db = { recs: sample(), budget: 4000000 }; save(); closeSheets(); renderOver(); renderEntry(); }
 function clearAll() { if (!confirm('Удалить все записи?')) return; db = { recs: [], budget: 0 }; save(); closeSheets(); renderOver(); renderEntry(); }
 
 // клавиатура компьютера
