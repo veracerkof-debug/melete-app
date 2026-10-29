@@ -381,7 +381,7 @@ Object.assign(S.en, {
 // Минимальный главный экран: крест, своя строка состояния, не больше 7 приложений (DECISIONS 2026-10-28)
 Object.assign(S.ru, {
   'set.mono': 'Чёрно-белый', 'set.monoHint': 'Без цвета: акцент, значки приложений, кошелёк', 'icg.apps': 'Значки приложений (ч/б)', 'pick.noIcon': 'Без значка', 'set.itemIcon': 'Значок у названия', 'set.appIcons': 'Родные значки у приложений', 'set.appIconsHint': 'На главном и во всех приложениях; всегда чёрно-белые',
-  'fold.choose': 'Выбрать приложения', 'fold.chooseHint': 'Отмеченные — в этой папке. Приложения из папок не показываются во «Всех» — только в своих папках и в поиске. Порядок в папке — удержать и перетащить.', 'fold.allIn': 'Все приложения — в папках. Найти любое — поиск сверху.',
+  'fold.choose': 'Добавить приложения', 'fold.inThis': 'В этой папке', 'fold.free': 'Не в папках', 'fold.chooseHint': 'Отмеченные — в этой папке. Приложения из папок не показываются во «Всех» — только в своих папках и в поиске. Порядок в папке — удержать и перетащить.', 'fold.allIn': 'Все приложения — в папках. Найти любое — поиск сверху.',
   'ren.name': 'Название', 'hide.title': 'Скрытые приложения', 'hide.hint': 'Скрытых нет нигде: ни во всех приложениях, ни в поиске, ни на главном, ни в папках. Открыть или вернуть — только здесь.', 'hide.app': 'Скрыть приложение', 'hide.add': 'Скрыть приложение', 'hide.done': 'Скрыто. Вернуть — Настройки → Главный', 'hide.open': 'Открыть', 'hide.back': 'Вернуть',
   'arr.title': 'Правка главного', 'arr.done': 'Готово', 'arr.hide': 'Убрать', 'arr.smaller': 'Меньше', 'arr.bigger': 'Больше', 'arr.reset': 'Как было', 'arr.addApp': 'Приложение', 'arr.addIcon': 'Значок', 'arr.hint': 'Перетащить — переставить, щипок — размер, касание — выбрать.',
   'crossAt.center': 'Посередине', 'status.wifi': 'Wi-Fi', 'status.battery': 'заряд {p}', 'status.charging': 'заряжается',
@@ -394,7 +394,7 @@ Object.assign(S.ru, {
 });
 Object.assign(S.uz, {
   'set.mono': 'Oq-qora', 'set.monoHint': 'Rangsiz: urgʻu, ilova belgilari, hamyon', 'icg.apps': 'Ilova belgilari (oq-qora)', 'pick.noIcon': 'Belgisiz', 'set.itemIcon': 'Nom yonidagi belgi', 'set.appIcons': 'Ilovalarning asl belgilari', 'set.appIconsHint': 'Bosh ekranda va barcha ilovalarda; doim oq-qora',
-  'fold.choose': 'Ilovalarni tanlash', 'fold.chooseHint': 'Belgilanganlar — shu jildda. Jilddagi ilovalar «Barchasi»da koʻrinmaydi — faqat oʻz jildlarida va qidiruvda. Tartib — bosib turib sudrash.', 'fold.allIn': 'Barcha ilovalar jildlarda. Istalganini topish — yuqoridagi qidiruv.',
+  'fold.choose': 'Ilova qoʻshish', 'fold.inThis': 'Shu jildda', 'fold.free': 'Jildlarda emas', 'fold.chooseHint': 'Belgilanganlar — shu jildda. Jilddagi ilovalar «Barchasi»da koʻrinmaydi — faqat oʻz jildlarida va qidiruvda. Tartib — bosib turib sudrash.', 'fold.allIn': 'Barcha ilovalar jildlarda. Istalganini topish — yuqoridagi qidiruv.',
   'ren.name': 'Nomi', 'hide.title': 'Yashirin ilovalar', 'hide.hint': 'Yashirin ilovalar hech qayerda yoʻq: barcha ilovalarda ham, qidiruvda ham, bosh ekranda ham, jildlarda ham. Ochish yoki qaytarish — faqat shu yerda.', 'hide.app': 'Ilovani yashirish', 'hide.add': 'Ilovani yashirish', 'hide.done': 'Yashirildi. Qaytarish — Sozlamalar → Bosh ekran', 'hide.open': 'Ochish', 'hide.back': 'Qaytarish',
   'arr.title': 'Bosh ekranni tahrirlash', 'arr.done': 'Tayyor', 'arr.hide': 'Olib tashlash', 'arr.smaller': 'Kichikroq', 'arr.bigger': 'Kattaroq', 'arr.reset': 'Avvalgidek', 'arr.addApp': 'Ilova', 'arr.addIcon': 'Belgi', 'arr.hint': 'Sudrash — joyini almashtirish, chimdish — oʻlcham, bosish — tanlash.',
   'crossAt.center': 'Oʻrtada', 'status.wifi': 'Wi-Fi', 'status.battery': 'quvvat {p}', 'status.charging': 'quvvatlanmoqda',
@@ -407,7 +407,7 @@ Object.assign(S.uz, {
 });
 Object.assign(S.en, {
   'set.mono': 'Black and white', 'set.monoHint': 'No colour: accent, app icons, wallet', 'icg.apps': 'App icons (b/w)', 'pick.noIcon': 'No icon', 'set.itemIcon': 'Icon by the name', 'set.appIcons': 'Original app icons', 'set.appIconsHint': 'On home and in all apps; always black and white',
-  'fold.choose': 'Choose apps', 'fold.chooseHint': 'Checked apps are in this folder. Apps in folders are not shown in All — only in their folders and in search. Order: hold and drag.', 'fold.allIn': 'All apps are in folders. Search above finds any.',
+  'fold.choose': 'Add apps', 'fold.inThis': 'In this folder', 'fold.free': 'Not in folders', 'fold.chooseHint': 'Checked apps are in this folder. Apps in folders are not shown in All — only in their folders and in search. Order: hold and drag.', 'fold.allIn': 'All apps are in folders. Search above finds any.',
   'ren.name': 'Name', 'hide.title': 'Hidden apps', 'hide.hint': 'Hidden apps appear nowhere: not in all apps, search, home or folders. Open or bring back — only here.', 'hide.app': 'Hide app', 'hide.add': 'Hide an app', 'hide.done': 'Hidden. Bring back — Settings → Home', 'hide.open': 'Open', 'hide.back': 'Bring back',
   'arr.title': 'Edit home', 'arr.done': 'Done', 'arr.hide': 'Remove', 'arr.smaller': 'Smaller', 'arr.bigger': 'Bigger', 'arr.reset': 'Reset', 'arr.addApp': 'App', 'arr.addIcon': 'Icon', 'arr.hint': 'Drag to move, pinch to resize, tap to select.',
   'crossAt.center': 'Centre', 'status.wifi': 'Wi-Fi', 'status.battery': 'battery {p}', 'status.charging': 'charging',

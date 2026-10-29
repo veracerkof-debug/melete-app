@@ -123,8 +123,6 @@ function fill() {
     list.append(btn);
   });
   if (!apps.length) list.append(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
-  // папка: выбрать приложения галочками
-  if (f) list.append(h('button', { class: 'l-btn l-fold-pickbtn', onclick: () => pickFolderApps(f) }, t('fold.choose')));
 }
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
@@ -173,7 +171,8 @@ function folderMenu(f) {
       let name = folderName(f);
       body.append(
         field(t('fold.rename'), name, (v) => { name = v; renameFolder(f.id, v); fill(); changed(); }, { maxlength: 24 }),
-        h('button', { class: 'l-pick', onclick: () => { close(); pickFolderApps(folderById(f.id)); } }, h('span', {}, t('fold.choose')), h('small', {}, String(folderApps(f).length))),
+        h('button', { class: 'l-pick l-pick-add', onclick: () => { close(); pickFolderApps(folderById(f.id)); } },
+          h('span', { class: 'l-pick-ico', html: PLUS }), h('span', {}, t('fold.choose')), h('small', {}, String(folderApps(f).length))),
         h('button', { class: 'l-pick', onclick: () => { close(); pickIcon(folderIcon(f), (icon) => { setFolderIcon(f.id, icon); fill(); }); } },
           h('span', { class: 'l-fold-ico', html: iconSVG(folderIcon(f)) }), h('span', {}, t('fold.icon'))),
         h('button', { class: 'l-pick', onclick: () => {
@@ -204,7 +203,6 @@ export function openFolder(id) {
       holdDrag(box, '.l-fold-app', { onMove: (from, to) => { moveInFolder(f.id, from, to); changed(); rerender(); } });
       body.append(box);
       if (!apps.length) body.append(h('p', { class: 'l-empty' }, t('fold.empty')));
-      body.append(h('button', { class: 'l-btn', onclick: () => { close(); pickFolderApps(folderById(id)); } }, t('fold.choose')));
       body.append(h('button', { class: 'l-btn', onclick: () => { close(); tab = f.id; openDrawer(); } }, t('drawer.title') + ' · ' + folderName(f)));
     },
   });
@@ -249,7 +247,10 @@ export function typeIntoSearch(ch) {
   fill();
 }
 
-// Приложения папки — галочками: весь список, отмеченные — в папке (касание — отметить или снять); поиск сверху
+// Приложения папки — галочками (меню папки → «Добавить приложения»; новая папка — сразу). Сверху — уже в этой папке
+// (в её порядке), ниже — свободные по алфавиту; приложения из других папок не показываются (одно приложение — одна
+// папка). Своё название — крупно, системное — бледно рядом; поиск — по обоим
+const PLUS = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 function pickFolderApps(f) {
   if (!f) return;
   let q = '';
@@ -257,19 +258,24 @@ function pickFolderApps(f) {
     title: folderName(f), kicker: '', full: true,
     render(body, close) {
       const listEl = h('div', { class: 'l-check-list' });
+      const row = (a, on) => h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on),
+        onclick: () => { setInFolder(f.id, a.key, !on); draw(); fill(); changed(); } },
+        h('span', { class: 'l-check-box', 'aria-hidden': 'true' }),
+        h('span', { class: 'l-check-t' }, a.label, a.sys && a.sys !== a.label ? h('small', { class: 'l-check-sys' }, a.sys) : null));
       const draw = () => {
         const cur = folderById(f.id) || f;
         const ql = q.trim().toLowerCase();
-        const all = everyApp().filter((a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql));
-        listEl.replaceChildren(...all.map((a) => {
-          const on = cur.apps.includes(a.key);
-          const other = folders().filter((x) => x.id !== f.id && x.apps.includes(a.key)).map(folderName).join(', ');
-          return h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on),
-            onclick: () => { setInFolder(f.id, a.key, !on); draw(); fill(); changed(); } },
-            h('span', { class: 'l-check-box', 'aria-hidden': 'true' }), h('span', { class: 'l-check-t' }, a.label), other ? h('small', {}, other) : null);
-        }));
+        const match = (a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql);
+        const mine = cur.apps.map((k) => everyApp().find((a) => a.key === k)).filter((a) => a && match(a));
+        const free = everyApp().filter((a) => !inAnyFolder(a.key) && match(a));
+        listEl.replaceChildren(...[
+          mine.length ? h('div', { class: 'l-check-k' }, t('fold.inThis')) : null,
+          ...mine.map((a) => row(a, true)),
+          free.length ? h('div', { class: 'l-check-k' }, t('fold.free')) : null,
+          ...free.map((a) => row(a, false)),
+          !mine.length && !free.length ? h('p', { class: 'l-empty' }, t('drawer.none')) : null].filter(Boolean));
       };
-      body.append(h('p', { class: 'l-hint' }, t('fold.chooseHint')),
+      body.append(
         h('input', { class: 'l-search', type: 'search', placeholder: t('drawer.search'), 'aria-label': t('drawer.search'), oninput: (e) => { q = e.target.value; draw(); } }),
         listEl, h('button', { class: 'l-btn primary', onclick: close }, t('ui.done')));
       draw();
@@ -296,8 +302,10 @@ function appMenu(a) {
         toast(there ? t('drawer.removed') : t('drawer.added'));
       } }, h('span', {}, there ? t('drawer.fromHome') : t('drawer.toHome'))));
       body.append(h('div', { class: 'l-fold-k' }, t('fold.toFolder')), h('div', { class: 'l-chips' },
+        // одна папка: выбрать другую — приложение переезжает; касание текущей — убрать из папки
         ...folders().map((f) => h('button', { class: `l-chip ${f.apps.includes(a.key) ? 'on' : ''}`, onclick: (e) => {
           const added = toggleInFolder(f.id, a.key);
+          e.currentTarget.parentElement.querySelectorAll('.l-chip').forEach((c) => c.classList.remove('on'));
           e.currentTarget.classList.toggle('on', added);
           fill(); changed(); toast(added ? t('fold.added') : t('fold.removed'));
         } }, folderName(f))),

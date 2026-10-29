@@ -217,8 +217,17 @@ test('папки: «Все» без приложений из папок; гал
   const names = () => page.locator('.l-d-app span').allTextContents();
   const before = await names();
   expect(before.length).toBeGreaterThan(2);
-  await page.locator('.l-fold-pickbtn').click();
-  await page.locator('.l-check', { hasText: before[0] }).click();
+  await expect(page.locator('.l-fold-pickbtn')).toHaveCount(0); // в самой папке кнопки нет — только в меню папки
+  const tb = await tab1.boundingBox();
+  await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up();
+  await page.locator('.l-sheet .l-pick', { hasText: 'Добавить приложения' }).click();
+  // сверху — «В этой папке», ниже — «Не в папках»; приложений других папок в списке нет (одно приложение — одна папка)
+  const heads = await page.locator('.l-check-k').allTextContents();
+  expect(heads[0]).toBe('В этой папке');
+  await expect(page.locator('.l-check-list')).not.toContainText('null');
+  await expect(page.locator('.l-check', { hasText: 'Карты' })).toHaveCount(0); // «Карты» — в папке «Инструменты»
+  await page.locator('.l-check.on', { hasText: before[0] }).click();
+  await expect(page.locator('.l-check:not(.on)', { hasText: before[0] })).toHaveCount(1); // переехало вниз, в свободные
   await page.locator('.l-sheet .l-btn.primary').click();
   await expect(page.locator('.l-d-app', { hasText: before[0] })).toHaveCount(0);
   await page.locator('.l-d-tab').first().click(); // «Все»
@@ -245,7 +254,7 @@ test('папки: «Все» без приложений из папок; гал
   // удержать и отпустить — меню папки
   const t = await page.locator('.l-d-tab.fold').first().boundingBox();
   await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up();
-  await expect(page.locator('.l-sheet .l-pick', { hasText: 'Выбрать приложения' })).toHaveCount(1);
+  await expect(page.locator('.l-sheet .l-pick', { hasText: 'Добавить приложения' })).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 
@@ -304,6 +313,7 @@ test('смахнуть вправо — блокнот, влево — коше�
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('iframe.l-notes.open')).toHaveCount(1);
   await expect(page.frameLocator('iframe.l-notes').locator('.row').first()).toBeVisible();
+  await expect(page.frameLocator('iframe.l-notes').locator('#app')).not.toContainText('null');
   await page.evaluate(() => window.__launcherBack());
   await expect(page.locator('iframe.l-notes.open')).toHaveCount(0);
   await page.keyboard.press('ArrowLeft');

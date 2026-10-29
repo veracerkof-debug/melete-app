@@ -267,7 +267,7 @@ export function editHomeItem(i, after, onChange = changed) {
     render(body, close, rerender) {
       const app = appOf(item.key);
       const commit = (fn) => { fn(ownHome()[i]); save(); onChange(); after?.(); };
-      body.append(
+      body.append(...[
         // название: у приложения — общее, для всех мест сразу (пустое — системное); у папки — имя папки
         app ? field(t('ren.name'), (prefs.names || {})[item.key] || item.label || '', (v) => { renameApp(item.key, v); onChange(); after?.(); }, { placeholder: systemName(item.key), maxlength: 40 })
           : field(t('set.itemLabel'), item.label, (v) => commit((x) => { x.label = v; }), { placeholder: nameOf(item.key), maxlength: 40 }),
@@ -281,7 +281,7 @@ export function editHomeItem(i, after, onChange = changed) {
           h('button', { class: 'l-btn', disabled: i === homeItems().length - 1, onclick: () => { move(ownHome(), i, 1); save(); onChange(); close(); } }, '↓ ' + t('set.down')),
           h('button', { class: 'l-btn danger', onclick: () => { ownHome().splice(i, 1); save(); onChange(); close(); } }, t('set.remove'))),
         app ? h('button', { class: 'l-pick danger', onclick: () => { setHidden(item.key, true); onChange(); close(); toast(t('hide.done')); } }, h('span', {}, t('hide.app'))) : null,
-      );
+      ].filter(Boolean)); // папка — без «Скрыть приложение» (и без текста «null»)
     },
   });
 }
