@@ -36,7 +36,9 @@ export function busyText(app) {
 
 export function initBackground(app) {
   if (!KA) return;
-  let on = false, shown = '', asked = !!app.device.bgAsked;
+  // on = true: служба могла остаться от прошлой страницы (Android перезапустил WebView, приложение открыли снова) —
+  // первый же тик без дела её снимет; иначе уведомление «Идёт занятие» висит, хотя занятие давно кончилось
+  let on = true, shown = '', asked = !!app.device.bgAsked;
   const tick = () => {
     const text = busyText(app), face = busyFace(app), key = text + '|' + face;
     if (text && (!on || key !== shown)) {
