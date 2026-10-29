@@ -30,7 +30,10 @@ export const folders = () => prefs.folders || examples();
 export const folderById = (id) => folders().find((f) => f.id === id) || null;
 export const folderName = (f) => f.name || t('fold.' + f.id);
 export const folderIcon = (f) => f.icon || 'star';
-export const folderApps = (f) => f.apps.filter((k) => !isHidden(k)).map(appOf).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
+// приложения папки — в своём порядке (переставляются удержанием и перетаскиванием, DECISIONS 2026-10-29)
+export const folderApps = (f) => f.apps.filter((k) => !isHidden(k)).map(appOf).filter(Boolean);
+// в какой-нибудь папке — такого приложения во «Всех» нет (только в его папках и в поиске)
+export const inAnyFolder = (key) => folders().some((f) => f.apps.includes(key));
 export const foldersOfApp = (key) => folders().filter((f) => f.apps.includes(key));
 
 // изменили — папки хранятся свои (с названиями примеров, чтобы язык не менял имя, данное человеком)
@@ -58,6 +61,31 @@ export function toggleInFolder(id, key) {
   if (i >= 0) f.apps.splice(i, 1); else f.apps.push(key);
   save();
   return i < 0;
+}
+export function setInFolder(id, key, on) {
+  const f = own().find((x) => x.id === id);
+  if (!f) return;
+  const i = f.apps.indexOf(key);
+  if (on && i < 0) f.apps.push(key);
+  if (!on && i >= 0) f.apps.splice(i, 1);
+  save();
+}
+// переставить приложение в папке: from/to — места среди видимых (скрытые и удалённые остаются в конце)
+export function moveInFolder(id, from, to) {
+  const f = own().find((x) => x.id === id);
+  if (!f) return;
+  const vis = folderApps(f).map((a) => a.key);
+  const [k] = vis.splice(from, 1);
+  vis.splice(to, 0, k);
+  f.apps = [...vis, ...f.apps.filter((x) => !vis.includes(x))];
+  save();
+}
+// переставить папку
+export function moveFolder(from, to) {
+  const list = own();
+  const [f] = list.splice(from, 1);
+  list.splice(to, 0, f);
+  save();
 }
 export const folderKey = keyOf;
 // приложения, которых нет в системе, в папке не показываются (удалили приложение — папка не ломается)

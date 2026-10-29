@@ -3,7 +3,7 @@
 // (порядок, размер и видимость блоков — не здесь, а на самом главном: удержание элемента, arrange.js);
 // жесты; копии и обновление (DECISIONS 2026-10-28 — минимальный экран).
 import { prefs, save, setPrefs, resetPrefs, isChurch, HOME_MAX } from './data.js';
-import { iconSVG } from './icons.js';
+import { iconSVG, appIconsAvailable } from './icons.js';
 import { CROSS_IDS, CROSS_PLACES, crossSVG } from './cross.js';
 import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
@@ -64,6 +64,7 @@ export function openSettings(onChange, getGesture, tab) {
       body.append(S('look', t('set.appearance'),
         h('div', { class: 'l-label' }, t('set.theme')),
         segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
+        toggle(t('set.mono'), prefs.mono !== false, (v) => up({ mono: v }), t('set.monoHint')),
         h('div', { class: 'l-label' }, t('set.lang')),
         segmented([{ value: '', label: t('set.lang.sys') }, { value: 'ru', label: 'Русский' }, { value: 'uz', label: 'Oʻzbekcha' }, { value: 'en', label: 'English' }], prefs.lang || '', (v) => up({ lang: v }), t('set.lang')),
         h('div', { class: 'l-label' }, t('set.align')),
@@ -84,6 +85,9 @@ export function openSettings(onChange, getGesture, tab) {
         crosses ? h('div', { class: 'l-label' }, t('set.cross')) : null, crosses,
         church && prefs.cross !== 'none' ? h('div', { class: 'l-label' }, t('set.crossAt')) : null,
         church && prefs.cross !== 'none' ? segmented(CROSS_PLACES.map((v) => ({ value: v, label: t('crossAt.' + v) })), prefs.crossAt || 'center', (v) => up({ crossAt: v }), t('set.crossAt')) : null,
+        // толщина и непрозрачность: двигается — крест на главном меняется сразу; двойное касание — 100 %
+        church && prefs.cross !== 'none' ? scaleRow(t('set.crossWeight'), 'crossWeight', 50, 300) : null,
+        church && prefs.cross !== 'none' ? scaleRow(t('set.crossOpacity'), 'crossOpacity', 20, 300) : null,
       ));
 
       // — Раскладка: главный экран и «Все приложения» —
@@ -110,6 +114,7 @@ export function openSettings(onChange, getGesture, tab) {
       body.append(S('home', t('set.home'),
         h('p', { class: 'l-hint' }, t('set.homeHint'), ' ', t('home.count', { n: homeItems().length, max: HOME_MAX })),
         homeList,
+        appIconsAvailable() ? toggle(t('set.appIcons'), prefs.appIcons, (v) => up({ appIcons: v }), t('set.appIconsHint')) : null,
         full ? null : h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { if (ownHome().length < HOME_MAX) ownHome().push({ key: a.key, label: '' }); save(); changed(); rerender(); }, { appsOnly: true }) }, t('set.homeAdd')),
       ));
 
@@ -266,6 +271,9 @@ export function editHomeItem(i, after, onChange = changed) {
         // название: у приложения — общее, для всех мест сразу (пустое — системное); у папки — имя папки
         app ? field(t('ren.name'), (prefs.names || {})[item.key] || item.label || '', (v) => { renameApp(item.key, v); onChange(); after?.(); }, { placeholder: systemName(item.key), maxlength: 40 })
           : field(t('set.itemLabel'), item.label, (v) => commit((x) => { x.label = v; }), { placeholder: nameOf(item.key), maxlength: 40 }),
+        // значок у названия: свой из набора, родной любого приложения или без значка
+        h('button', { class: 'l-pick', onclick: () => pickIcon(item.icon || null, (id) => { commit((x) => { x.icon = id || undefined; }); rerender(); }, { none: true }) },
+          item.icon ? h('span', { class: 'l-pick-ico', html: iconSVG(item.icon) }) : null, h('span', {}, t('set.itemIcon'))),
         h('button', { class: 'l-pick', onclick: () => pickAction({ t: 'app', key: item.key }, (a) => { commit((x) => { x.key = a.key; }); rerender(); }, { appsOnly: true }) },
           h('span', {}, t('set.itemOpens', { name: app?.label || '—' }))),
         h('div', { class: 'l-btn-row' },

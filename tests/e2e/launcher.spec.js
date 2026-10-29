@@ -43,7 +43,7 @@ test('минимальный вид по умолчанию: часы, дата,
 
 test('церковный режим: крест посередине, вверху, у даты, внизу и за часами; без режима — нет', async ({ page, errors }) => {
   for (const at of ['center', 'top', 'date', 'bottom', 'back']) {
-    for (const cross of ['latin', 'greek', 'orthodox', 'circle']) {
+    for (const cross of ['classic', 'dove', 'latin', 'orthodox']) {
       await open(page, { church: true, cross, crossAt: at });
       await expect(page.locator('.l-cross.at-' + at + ' svg'), `${cross} ${at}`).toHaveCount(1);
     }
@@ -61,7 +61,7 @@ test('удержание — настройки; церковный режим �
   await expect(page.locator('.l-sheet h2')).toHaveText('Главный экран');
   await expect(page.locator('.l-set-tabs button.on')).toHaveText('Вид'); // четыре страницы; переключатель — вверху
   await page.locator('.l-row', { hasText: 'Церковный режим' }).click();
-  await page.locator('.l-cross-pick', { hasText: 'Восьмиконечный' }).click();
+  await page.locator('.l-cross-pick', { hasText: 'С голубем' }).first().click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-cross.at-center')).toBeVisible(); // по умолчанию — посередине
   expect(errors).toEqual([]);
@@ -114,12 +114,11 @@ test('скрыть приложение: из «Всех приложений» 
   await open(page);
   await page.keyboard.press('ArrowUp');
   await expect(page.locator('.l-drawer')).toHaveClass(/open/);
+  await page.locator('.l-drawer .l-search').fill('муз'); // «Музыка» — в папке, во «Всех» её нет; поиск находит
   const app = page.locator('.l-d-app', { hasText: 'Музыка' });
   const box = await app.boundingBox();
   await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
   await page.locator('.l-sheet .l-pick', { hasText: 'Скрыть приложение' }).click();
-  await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(0);
-  await page.locator('.l-drawer .l-search').fill('муз');
   await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-app .label', { hasText: 'Музыка' })).toHaveCount(0); // и с главного
@@ -129,6 +128,7 @@ test('скрыть приложение: из «Всех приложений» 
   await page.locator('.l-edit-row', { hasText: 'Музыка' }).locator('.l-hide-back').click();
   await page.keyboard.press('Escape');
   await page.keyboard.press('ArrowUp');
+  await page.locator('.l-drawer .l-search').fill('муз');
   await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(1);
   expect(errors).toEqual([]);
 });
@@ -140,6 +140,7 @@ test('кошелёк: новый — пустой; пример из прежн�
   await expect(w.locator('.cats.grid .cat').first()).toBeVisible();
   await expect(w.locator('.demo')).toHaveCount(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elachiston.money.draft')).recs.length)).toBe(0);
+  await expect(w.locator('#app')).not.toContainText('null'); // пустой кошелёк — без «null»
   // как было у прежних версий: записи примера — id с номером в хвосте; своя — без
   await page.evaluate(() => {
     const t = Date.now();
@@ -162,10 +163,12 @@ test('кошелёк: новый — пустой; пример из прежн�
 test('переименовать приложение: новое название везде, поиск — и по старому; пустое — снова системное', async ({ page, errors }) => {
   await open(page);
   await page.keyboard.press('ArrowUp');
+  await page.locator('.l-drawer .l-search').fill('карт');
   const box = await page.locator('.l-d-app', { hasText: 'Карты' }).boundingBox();
   await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
   await page.locator('.l-sheet .l-field input').fill('Дорога');
   await page.keyboard.press('Escape');
+  await page.locator('.l-drawer .l-search').fill('дор');
   await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1);
   await page.locator('.l-drawer .l-search').fill('карт');
   await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1); // по системному названию тоже
@@ -179,6 +182,94 @@ test('переименовать приложение: новое названи
   await page.keyboard.press('Escape');
   await page.locator('.l-arr-done').click();
   await expect(page.locator('.l-app .label', { hasText: 'Карты' })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('текст не выделяется: главный, настройки, кошелёк; в полях ввода — выделяется', async ({ page, errors }) => {
+  await open(page);
+  const sel = (loc) => loc.evaluate((e) => getComputedStyle(e).userSelect || getComputedStyle(e).webkitUserSelect);
+  expect(await sel(page.locator('.l-date-t'))).toBe('none');
+  await hold(page, 60, 330);
+  expect(await sel(page.locator('.l-sheet h2'))).toBe('none');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowUp');
+  await page.locator('.l-drawer .l-search').fill('а');
+  expect(await sel(page.locator('.l-d-app').first())).toBe('none');
+  expect(await sel(page.locator('.l-drawer .l-search'))).toBe('text');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowLeft');
+  const w = page.frameLocator('iframe.l-money:not(.l-notes)');
+  expect(await w.locator('.top').evaluate((e) => getComputedStyle(e).userSelect)).toBe('none');
+  expect(errors).toEqual([]);
+});
+
+test('папки: «Все» без приложений из папок; галочки; порядок в папке и порядок папок — удержать и перетащить', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowUp');
+  // в браузере все ссылки разложены по папкам-примерам — «Все» пусто, поиск находит
+  await expect(page.locator('.l-d-app')).toHaveCount(0);
+  await page.locator('.l-drawer .l-search').fill('карт');
+  await expect(page.locator('.l-d-app', { hasText: 'Карты' })).toHaveCount(1);
+  await page.locator('.l-drawer .l-search').fill('');
+  // папка «Связь» (первая): галочками убрать «Почту» — она появится во «Всех»
+  const tab1 = page.locator('.l-d-tab.fold').first();
+  await tab1.click();
+  const names = () => page.locator('.l-d-app span').allTextContents();
+  const before = await names();
+  expect(before.length).toBeGreaterThan(2);
+  await page.locator('.l-fold-pickbtn').click();
+  await page.locator('.l-check', { hasText: before[0] }).click();
+  await page.locator('.l-sheet .l-btn.primary').click();
+  await expect(page.locator('.l-d-app', { hasText: before[0] })).toHaveCount(0);
+  await page.locator('.l-d-tab').first().click(); // «Все»
+  await expect(page.locator('.l-d-app', { hasText: before[0] })).toHaveCount(1);
+  // порядок в папке: первое — вниз на одно место
+  await tab1.click();
+  const order = await names();
+  const a0 = await page.locator('.l-d-app').nth(0).boundingBox();
+  const a1 = await page.locator('.l-d-app').nth(1).boundingBox();
+  await page.mouse.move(a0.x + 40, a0.y + a0.height / 2); await page.mouse.down(); await page.waitForTimeout(600);
+  await page.mouse.move(a0.x + 40, a0.y + a0.height, { steps: 4 }); await page.mouse.move(a0.x + 40, a1.y + a1.height - 4, { steps: 6 });
+  await page.mouse.up();
+  expect((await names()).slice(0, 2)).toEqual([order[1], order[0]]);
+  await expect(page.locator('.l-drawer')).toHaveClass(/open/); // панель не закрылась
+  // порядок папок: первая — вниз на одно место
+  const ids = () => page.locator('.l-d-tab.fold').evaluateAll((els) => els.map((e) => e.dataset.id));
+  const was = await ids();
+  const t0 = await page.locator('.l-d-tab.fold').nth(0).boundingBox();
+  const t1 = await page.locator('.l-d-tab.fold').nth(1).boundingBox();
+  await page.mouse.move(t0.x + t0.width / 2, t0.y + t0.height / 2); await page.mouse.down(); await page.waitForTimeout(600);
+  await page.mouse.move(t0.x + t0.width / 2, t0.y + t0.height, { steps: 4 }); await page.mouse.move(t0.x + t0.width / 2, t1.y + t1.height - 2, { steps: 6 });
+  await page.mouse.up();
+  expect((await ids()).slice(0, 2)).toEqual([was[1], was[0]]);
+  // удержать и отпустить — меню папки
+  const t = await page.locator('.l-d-tab.fold').first().boundingBox();
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up();
+  await expect(page.locator('.l-sheet .l-pick', { hasText: 'Выбрать приложения' })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('родные значки приложений: в значках внизу, у названия и в папке — всегда чёрно-белые', async ({ page, errors }) => {
+  await page.goto(PAGE);
+  await page.evaluate(() => {
+    // цветной значок, как его отдала бы система (на Android — LauncherPlugin.appIcon), уже запомненный
+    const c = document.createElement('canvas'); c.width = c.height = 8;
+    const x = c.getContext('2d'); x.fillStyle = '#e02020'; x.fillRect(0, 0, 8, 8);
+    localStorage.clear();
+    localStorage.setItem('elachiston.icons', JSON.stringify({ 'com.example.ai': c.toDataURL() }));
+    localStorage.setItem('elachiston.prefs', JSON.stringify({ v: 2, lang: 'ru',
+      dock: [{ icon: 'app:com.example.ai', action: { t: 'app', key: 'web.music' } }],
+      home: [{ key: 'web.maps', label: '', icon: 'app:com.example.ai' }, { key: 'web.music', label: '' }],
+      folders: [{ id: 'ai', name: 'ИИ', icon: 'app:com.example.ai', apps: ['web.music'] }] }));
+  });
+  await page.reload();
+  await page.waitForSelector('.l-home .clock');
+  const imgs = page.locator('img.app-ico[data-pkg="com.example.ai"]');
+  await expect(page.locator('.l-dock img.app-ico')).toHaveCount(1);
+  await expect(page.locator('.l-app .l-app-ico img.app-ico')).toHaveCount(1);
+  for (const f of await imgs.evaluateAll((els) => els.map((e) => getComputedStyle(e).filter))) expect(f).toContain('grayscale(1)');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-d-tab.fold img.app-ico')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 

@@ -2,12 +2,12 @@
 // Melete (практика и чтение дня — мост с Melete), баланс кошелька, до 7 приложений и папок, ряд маленьких значков.
 // Крест — единственное украшение, только в церковном режиме (cross.js).
 import { prefs, isChurch, HOME_MAX } from './data.js';
-import { iconSVG } from './icons.js';
+import { iconSVG, appIconHTML } from './icons.js';
 import { crossSVG } from './cross.js';
 import { homeItems, dockSlots, appOf, apps } from './apps.js';
 import { openApp, runAction } from './actions.js';
 import { trackerData, fmtDur } from './tracker.js';
-import { folderOfKey, folderName, folderApps } from './folders.js';
+import { folderOfKey, folderName, folderApps, folderIcon } from './folders.js';
 import { layout, homeOrder } from './layout.js';
 import { walletBalance } from './wallet.js';
 import { hasLock } from './lock.js';
@@ -127,7 +127,7 @@ function renderDate(now) {
   if (!el) return;
   const lang = getLang();
   el.replaceChildren(...[
-    crossAt('date') ? h('span', { class: 'l-cross at-date', html: crossSVG(prefs.cross) }) : null,
+    crossAt('date') ? h('span', { class: 'l-cross at-date', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null,
     h('span', { class: 'l-date-t' }, `${weekdayOf(now, lang)}, ${dayMonthOf(now, lang)}`)].filter(Boolean));
 }
 
@@ -207,9 +207,9 @@ export function renderHome() {
     balance: renderBalance,
     apps: renderList,
     // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
-    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross) }) : null),
+    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null),
     tracker: renderTracker,
-    dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross) }) : null, renderDock()],
+    dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
   };
   const sized = (id, el) => {
     if (!el) return el;
@@ -223,12 +223,12 @@ export function renderHome() {
     const el = out[out.length - 1];
     if (el) { sized(id, el); el.dataset.blk = id; }
     // крест вверху — по центру, сразу над часами
-    if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross) }));
+    if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }));
     return out;
   });
   root.replaceChildren(...[
     prefs.status ? h('div', { class: 'l-status', role: 'status' }) : null,
-    crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5) }) : null,
+    crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5, (prefs.crossWeight || 100) / 100) }) : null,
     ...blocks,
   ].filter(Boolean));
   lastSig = null;
@@ -248,7 +248,10 @@ function renderList() {
     const app = appOf(item.key);
     const fold = folderOfKey(item.key);
     const label = item.label || (fold ? folderName(fold) : app?.label) || t('act.gone');
+    // значок у названия: свой (выбран для этого места) или, если включено «Родные значки», — родной приложения / папки
+    const ico = item.icon ? iconSVG(item.icon) : prefs.appIcons ? (fold ? iconSVG(folderIcon(fold)) : app?.pkg ? appIconHTML(app.pkg) : null) : null;
     const btn = h('button', { class: 'l-app' + (fold ? ' folder' : ''), 'data-i': i, style: { '--d': `${i * 55}ms` } },
+      ico ? h('span', { class: 'l-app-ico', html: ico }) : null,
       h('span', { class: 'label' }, label),
       fold ? h('span', { class: 'l-fold-n', 'aria-label': t('fold.n', { n: folderApps(fold).length }) }, String(folderApps(fold).length)) : null);
     btn.addEventListener('click', () => {

@@ -1,12 +1,13 @@
 // Главный экран: выбор значка и действия (общие для значков внизу и жестов).
-import { iconsFor, iconSVG } from './icons.js';
+import { iconsFor, iconSVG, ICON_GROUPS, appIconsAvailable, appIconHTML, appIconId } from './icons.js';
 import { commandsFor, LINK_PRESETS } from './actions.js';
 import { allApps } from './apps.js';
 import { isChurch } from './data.js';
 import { t } from './i18n.js';
 import { h, openSheet, segmented, field } from './ui.js';
 
-export function pickIcon(current, onPick) {
+// opts.none — пункт «Без значка» (подпись на главном); родные значки приложений — первым разделом (Android), всегда ч/б
+export function pickIcon(current, onPick, opts = {}) {
   const church = isChurch();
   let q = '';
   openSheet({
@@ -16,9 +17,27 @@ export function pickIcon(current, onPick) {
       const fill = () => {
         grid.replaceChildren();
         const ql = q.trim().toLowerCase();
-        iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.id].some((s) => s.toLowerCase().includes(ql)))
-          .forEach((i) => grid.append(h('button', { class: `l-icon-cell ${i.id === current ? 'on' : ''}`, 'aria-label': t('icon.' + i.id), onclick: () => { onPick(i.id); close(); } },
+        // по группам (техника, работа и учёба, творчество, жизнь, знаки, церковь); поиск — по названию и словам (ИИ, игры…)
+        const found = iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.id, i.k || ''].some((s) => s.toLowerCase().includes(ql)));
+        if (opts.none && !ql) grid.append(h('button', { class: `l-icon-cell ${!current ? 'on' : ''}`, onclick: () => { onPick(null); close(); } }, h('span', { class: 'l-icon-none' }, '—'), h('small', {}, t('pick.noIcon'))));
+        if (appIconsAvailable()) {
+          const apps = allApps().filter((a) => a.pkg && (!ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql)));
+          if (apps.length) {
+            grid.append(h('div', { class: 'l-icon-group' }, t('icg.apps')));
+            apps.forEach((a) => {
+              const id = appIconId(a.pkg);
+              grid.append(h('button', { class: `l-icon-cell ${id === current ? 'on' : ''}`, 'aria-label': a.label, onclick: () => { onPick(id); close(); } },
+                h('span', { html: appIconHTML(a.pkg) }), h('small', {}, a.label)));
+            });
+          }
+        }
+        ICON_GROUPS.forEach((g) => {
+          const items = found.filter((i) => i.g === g);
+          if (!items.length) return;
+          if (!ql) grid.append(h('div', { class: 'l-icon-group' }, t('icg.' + g)));
+          items.forEach((i) => grid.append(h('button', { class: `l-icon-cell ${i.id === current ? 'on' : ''}`, 'aria-label': t('icon.' + i.id), onclick: () => { onPick(i.id); close(); } },
             h('span', { html: iconSVG(i.id) }), h('small', {}, t('icon.' + i.id)))));
+        });
       };
       body.append(h('input', { class: 'l-search', type: 'search', placeholder: t('pick.iconSearch'), 'aria-label': t('pick.iconSearch'), oninput: (e) => { q = e.target.value; fill(); } }), grid);
       fill();

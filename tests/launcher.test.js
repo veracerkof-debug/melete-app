@@ -96,7 +96,7 @@ describe('главный экран: минимальный', () => {
   });
   it('каждый крест — свой рисунок; на главном не больше семи приложений', async () => {
     const { CROSS_IDS, crossSVG } = await import('../src/launcher/cross.js');
-    expect(CROSS_IDS).toEqual(['latin', 'greek', 'orthodox', 'circle']);
+    expect(CROSS_IDS).toEqual(['classic', 'dove', 'dovemono', 'latin', 'greek', 'orthodox', 'circle']);
     expect(new Set(CROSS_IDS.map((id) => crossSVG(id))).size).toBe(CROSS_IDS.length);
     const data = await import('../src/launcher/data.js');
     expect(data.HOME_MAX).toBe(7);

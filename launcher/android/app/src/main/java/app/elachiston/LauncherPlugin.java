@@ -79,6 +79,30 @@ public class LauncherPlugin extends Plugin {
         call.resolve(r);
     }
 
+    // Родной значок приложения картинкой (PNG, data: URL) — для своих мест на главном (DECISIONS 2026-10-29).
+    // Берётся у системы в момент показа: в Elachiston чужие значки не хранятся. Цвет снимает страница (ч/б фильтр).
+    @PluginMethod
+    public void appIcon(PluginCall call) {
+        String pkg = call.getString("pkg");
+        int size = Math.max(24, Math.min(256, call.getInt("size", 96)));
+        if (pkg == null) { call.reject("no pkg"); return; }
+        try {
+            android.graphics.drawable.Drawable d = pm().getApplicationIcon(pkg);
+            android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas c = new android.graphics.Canvas(bmp);
+            d.setBounds(0, 0, size, size);
+            d.draw(c);
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bo);
+            bmp.recycle();
+            JSObject r = new JSObject();
+            r.put("src", "data:image/png;base64," + android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP));
+            call.resolve(r);
+        } catch (Exception e) {
+            call.reject("no icon");
+        }
+    }
+
     private String handlerOf(Intent i) {
         try {
             ResolveInfo ri = pm().resolveActivity(i, PackageManager.MATCH_DEFAULT_ONLY);

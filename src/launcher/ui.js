@@ -1,4 +1,5 @@
 // Мелкие элементы главного экрана: узлы, шторки (снизу, закрываются смахиванием вниз), сообщение, переключатели.
+import { reordering } from './reorder.js';
 import { t } from './i18n.js';
 import { setCover } from './cover.js';
 
@@ -69,6 +70,7 @@ export function openSheet({ title, kicker, render, full = false, onClose, onSwip
     st = { x: e.clientX, y: e.clientY, can: body.scrollTop <= 0 || !body.contains(e.target), lock: null, vel: [] };
   });
   panel.addEventListener('pointermove', (e) => {
+    if (reordering()) { st = null; return; } // внутри шторки что-то перетаскивают (reorder.js)
     if (!st) return;
     const dx = e.clientX - st.x, dy = e.clientY - st.y;
     if (!st.lock) {

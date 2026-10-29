@@ -5,8 +5,10 @@ import { openApp, openUrl } from './actions.js';
 import { isNative, Launcher } from './native.js';
 import { t } from './i18n.js';
 import { h, openSheet, field, toast } from './ui.js';
-import { folders, folderById, folderName, folderApps, folderIcon, folderKey, addFolder, renameFolder, setFolderIcon, deleteFolder, toggleInFolder } from './folders.js';
-import { iconSVG } from './icons.js';
+import { folders, folderById, folderName, folderApps, folderIcon, folderKey, addFolder, renameFolder, setFolderIcon, deleteFolder, toggleInFolder, inAnyFolder, setInFolder, moveInFolder, moveFolder } from './folders.js';
+import { holdDrag, reordering } from './reorder.js';
+import { allApps as everyApp } from './apps.js';
+import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
@@ -42,6 +44,7 @@ export function mountDrawer(container, { onChange }) {
     st = { y: e.clientY, x: e.clientX, can: list.scrollTop <= 0 || !list.contains(e.target), drag: false, vel: [] };
   });
   drawer.addEventListener('pointermove', (e) => {
+    if (reordering()) { if (st?.drag) drawerPanel.cancel(); st = null; return; } // перетаскивают приложение или папку
     if (!st) return;
     const dy = e.clientY - st.y, dx = e.clientX - st.x;
     if (!st.drag) {
@@ -71,6 +74,7 @@ export function mountDrawer(container, { onChange }) {
   list.addEventListener('pointerup', (e) => {
     if (sx == null) return;
     const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+    if (reordering()) return;
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && !search.value) {
       const ids = ['all', ...folders().map((f) => f.id)];
       const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
@@ -78,6 +82,20 @@ export function mountDrawer(container, { onChange }) {
     }
   });
   drawer.addEventListener('wheel', (e) => { if (e.deltaY < -40 && list.scrollTop <= 0) closeDrawer(); }, { passive: true });
+  // удержать и перетащить: приложение в папке — на новое место; удержать и отпустить — меню приложения
+  holdDrag(list, '.l-d-app', {
+    onHold: (el) => { const a = everyApp().find((x) => x.key === el.dataset.key); if (a) appMenu(a); },
+    onMove: (from, to) => {
+      const f = !search.value.trim() && tab !== 'all' ? folderById(tab) : null;
+      if (!f) { fill(); return; } // во «Всех» — по алфавиту, переставлять нечего
+      moveInFolder(f.id, from, to); fill(); changed();
+    },
+  });
+  // папки справа: удержать и перетащить — порядок; удержать и отпустить — меню папки
+  holdDrag(tabs, '.l-d-tab.fold', {
+    onHold: (el) => folderMenu(folderById(el.dataset.id)),
+    onMove: (from, to) => { moveFolder(from, to); fill(); changed(); },
+  });
 }
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
@@ -86,42 +104,36 @@ function fill() {
   const q = search.value.trim().toLowerCase();
   if (tab !== 'all' && !folderById(tab)) tab = 'all';
   const f = !q && tab !== 'all' ? folderById(tab) : null;
-  const apps = f ? folderApps(f) : allApps().filter((a) => !q || a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q));
+  // «Все» — без приложений из папок (они — в своих папках); поиск находит все
+  const apps = f ? folderApps(f) : allApps().filter((a) => (q ? a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q) : !inAnyFolder(a.key)));
   renderTabs(!!q);
   list.replaceChildren();
   let letter = '';
   apps.forEach((a, i) => {
     const L = (a.label[0] || '#').toUpperCase();
     if (L !== letter && !q && !f) { letter = L; list.append(h('div', { class: 'l-d-letter' }, L)); }
-    const btn = h('button', { class: 'l-d-app', style: { '--d': `${Math.min(i, 14) * 18}ms` } }, h('span', {}, a.label), onHome(a.key) ? h('i', { class: 'l-d-dot', 'aria-label': t('drawer.onHome') }) : null);
-    let timer;
-    btn.addEventListener('pointerdown', () => { timer = setTimeout(() => { btn.dataset.held = '1'; navigator.vibrate?.(12); appMenu(a); }, 450); });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, () => clearTimeout(timer)));
-    btn.addEventListener('contextmenu', (e) => { e.preventDefault(); appMenu(a); });
+    const btn = h('button', { class: 'l-d-app', 'data-key': a.key, style: { '--d': `${Math.min(i, 14) * 18}ms` } },
+      prefs.appIcons && a.pkg ? h('span', { class: 'l-app-ico', html: appIconHTML(a.pkg) }) : null, h('span', {}, a.label), onHome(a.key) ? h('i', { class: 'l-d-dot', 'aria-label': t('drawer.onHome') }) : null);
     btn.addEventListener('click', () => {
-      if (btn.dataset.held) { delete btn.dataset.held; return; }
+      if (btn.dataset.held) return;
       if (list.dataset.swiped) return;
       openApp(a);
       closeDrawer();
     });
     list.append(btn);
   });
-  if (!apps.length) list.append(h('p', { class: 'l-empty' }, f ? t('fold.empty') : t('drawer.none')));
+  if (!apps.length) list.append(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
+  // папка: выбрать приложения галочками
+  if (f) list.append(h('button', { class: 'l-btn l-fold-pickbtn', onclick: () => pickFolderApps(f) }, t('fold.choose')));
 }
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
 function renderTabs(searching) {
   const tb = (id, label, icon, cls = '') => {
-    const b = h('button', { class: `l-d-tab ${cls} ${!searching && tab === id ? 'on' : ''}`, role: 'tab', 'aria-selected': String(tab === id), 'aria-label': label, title: label,
+    const b = h('button', { class: `l-d-tab ${cls} ${id !== 'all' && id !== '+' ? 'fold' : ''} ${!searching && tab === id ? 'on' : ''}`, 'data-id': id, role: 'tab', 'aria-selected': String(tab === id), 'aria-label': label, title: label,
       html: icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>' });
-    let timer;
-    if (id !== 'all' && id !== '+') {
-      b.addEventListener('pointerdown', () => { timer = setTimeout(() => { b.dataset.held = '1'; navigator.vibrate?.(12); folderMenu(folderById(id)); }, 450); });
-      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => clearTimeout(timer)));
-      b.addEventListener('contextmenu', (e) => { e.preventDefault(); folderMenu(folderById(id)); });
-    }
     b.addEventListener('click', () => {
-      if (b.dataset.held) { delete b.dataset.held; return; }
+      if (b.dataset.held) return;
       if (id === '+') return newFolder();
       tab = id; search.value = ''; fill(); list.scrollTop = 0;
     });
@@ -142,7 +154,7 @@ function newFolder(withApp) {
         if (!name.trim()) return;
         const f = addFolder(name, withApp ? [withApp] : []);
         tab = f.id; close(); fill(); changed();
-        toast(withApp ? t('fold.added') : folderName(f));
+        if (withApp) toast(t('fold.added')); else setTimeout(() => pickFolderApps(f), 300); // новая папка — сразу выбрать приложения
       };
       const fl = field(t('fold.name'), '', (v) => { name = v; }, { maxlength: 24 });
       fl.querySelector('input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(); });
@@ -161,6 +173,7 @@ function folderMenu(f) {
       let name = folderName(f);
       body.append(
         field(t('fold.rename'), name, (v) => { name = v; renameFolder(f.id, v); fill(); changed(); }, { maxlength: 24 }),
+        h('button', { class: 'l-pick', onclick: () => { close(); pickFolderApps(folderById(f.id)); } }, h('span', {}, t('fold.choose')), h('small', {}, String(folderApps(f).length))),
         h('button', { class: 'l-pick', onclick: () => { close(); pickIcon(folderIcon(f), (icon) => { setFolderIcon(f.id, icon); fill(); }); } },
           h('span', { class: 'l-fold-ico', html: iconSVG(folderIcon(f)) }), h('span', {}, t('fold.icon'))),
         h('button', { class: 'l-pick', onclick: () => {
@@ -180,10 +193,18 @@ export function openFolder(id) {
   if (!f) return;
   openSheet({
     title: folderName(f), kicker: '',
-    render(body, close) {
-      const apps = folderApps(f);
-      apps.forEach((a) => body.append(h('button', { class: 'l-pick l-fold-app', onclick: () => { close(); openApp(a); } }, h('span', {}, a.label))));
+    render(body, close, rerender) {
+      const apps = folderApps(folderById(id) || f);
+      // удержать и перетащить — порядок в папке
+      const box = h('div', { class: 'l-fold-list' }, apps.map((a) => {
+        const b = h('button', { class: 'l-pick l-fold-app' }, h('span', {}, a.label));
+        b.addEventListener('click', () => { if (b.dataset.held) return; close(); openApp(a); });
+        return b;
+      }));
+      holdDrag(box, '.l-fold-app', { onMove: (from, to) => { moveInFolder(f.id, from, to); changed(); rerender(); } });
+      body.append(box);
       if (!apps.length) body.append(h('p', { class: 'l-empty' }, t('fold.empty')));
+      body.append(h('button', { class: 'l-btn', onclick: () => { close(); pickFolderApps(folderById(id)); } }, t('fold.choose')));
       body.append(h('button', { class: 'l-btn', onclick: () => { close(); tab = f.id; openDrawer(); } }, t('drawer.title') + ' · ' + folderName(f)));
     },
   });
@@ -226,6 +247,34 @@ export function typeIntoSearch(ch) {
   search.value += ch;
   search.focus();
   fill();
+}
+
+// Приложения папки — галочками: весь список, отмеченные — в папке (касание — отметить или снять); поиск сверху
+function pickFolderApps(f) {
+  if (!f) return;
+  let q = '';
+  openSheet({
+    title: folderName(f), kicker: '', full: true,
+    render(body, close) {
+      const listEl = h('div', { class: 'l-check-list' });
+      const draw = () => {
+        const cur = folderById(f.id) || f;
+        const ql = q.trim().toLowerCase();
+        const all = everyApp().filter((a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql));
+        listEl.replaceChildren(...all.map((a) => {
+          const on = cur.apps.includes(a.key);
+          const other = folders().filter((x) => x.id !== f.id && x.apps.includes(a.key)).map(folderName).join(', ');
+          return h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on),
+            onclick: () => { setInFolder(f.id, a.key, !on); draw(); fill(); changed(); } },
+            h('span', { class: 'l-check-box', 'aria-hidden': 'true' }), h('span', { class: 'l-check-t' }, a.label), other ? h('small', {}, other) : null);
+        }));
+      };
+      body.append(h('p', { class: 'l-hint' }, t('fold.chooseHint')),
+        h('input', { class: 'l-search', type: 'search', placeholder: t('drawer.search'), 'aria-label': t('drawer.search'), oninput: (e) => { q = e.target.value; draw(); } }),
+        listEl, h('button', { class: 'l-btn primary', onclick: close }, t('ui.done')));
+      draw();
+    },
+  });
 }
 
 // главный экран хранит свой список, только когда его изменили
