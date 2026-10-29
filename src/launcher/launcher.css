@@ -80,20 +80,23 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 /* — Крест (церковный режим): вверху по центру, у даты, внизу над значками или большой и тихий за часами — */
 .l-cross { color: var(--ink); display: block; pointer-events: none; }
 .l-cross svg { display: block; width: 100%; height: 100%; }
-.l-home > .l-cross.at-top { align-self: center; width: 18px; height: 24px; margin: -6px 0 18px; opacity: .85; }
-.l-cross.at-date { width: 11px; height: 15px; flex: none; opacity: .8; }
-.l-home > .l-cross.at-bottom { align-self: center; width: 12px; height: 16px; margin: 6px 0 2px; opacity: .6; }
+.l-home > .l-cross.at-top { align-self: center; width: 18px; height: 24px; margin: -6px 0 18px; opacity: min(1, calc(.85 * var(--l-co, 1))); }
+.l-cross.at-date { width: 11px; height: 15px; flex: none; opacity: min(1, calc(.8 * var(--l-co, 1))); }
+.l-home > .l-cross.at-bottom { align-self: center; width: 12px; height: 16px; margin: 6px 0 2px; opacity: min(1, calc(.6 * var(--l-co, 1))); }
 .l-home .l-spacer { position: relative; }
 /* посередине: крупно, тонкой ровной линией (толщина не растёт с размером) и с тёплым светом за ним */
 .l-cross.at-center { position: absolute; inset: 6% 0; display: grid; place-items: center; }
 .l-cross.at-center::before { content: ''; position: absolute; left: 50%; top: 50%; width: min(78%, 340px); aspect-ratio: 1; transform: translate(-50%, -50%);
   border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 16%, transparent), transparent); }
-.l-cross.at-center svg { position: relative; width: auto; height: min(100%, 300px); max-width: 80%; color: var(--ink); opacity: .9; }
-.l-cross.at-center svg * { vector-effect: non-scaling-stroke; stroke-width: 1.6px; }
+.l-cross.at-center svg { position: relative; width: auto; height: min(100%, 300px); max-width: 80%; color: var(--ink); opacity: min(1, calc(.9 * var(--l-co, 1))); }
+.l-cross.at-center svg * { vector-effect: non-scaling-stroke; stroke-width: calc(1.6px * var(--l-cw, 1)); }
 .l-home > .l-cross.at-back {
   position: absolute !important; z-index: 0 !important; left: 50%; top: calc(var(--l-sat) + 2%);
-  width: auto; height: 48%; aspect-ratio: 24 / 32; transform: translateX(-50%); opacity: .07;
+  width: auto; height: 48%; aspect-ratio: 24 / 32; transform: translateX(-50%); opacity: min(1, calc(.07 * var(--l-co, 1)));
 }
+/* толщина линии креста (вверху, у даты, внизу, за часами): в единицах рисунка */
+.l-home .l-cross:not(.at-center) svg * { stroke-width: calc(1.2 * var(--l-cw, 1)); }
+.l-home .l-cross.at-back svg * { stroke-width: calc(.5 * var(--l-cw, 1)); }
 
 /* — Melete одной строкой: занятие с ▶/❚❚ или неделя; справа — чтение дня — */
 .l-tracker { display: flex; flex-direction: column; margin: 0 0 10px; }
@@ -415,3 +418,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 
 /* ушли с экрана — всё закрывается мгновенно (main.js, visibilitychange): в недавних главный не шевелится */
 html.l-instant *, html.l-instant *::before, html.l-instant *::after { transition: none !important; animation: none !important; }
+
+/* выбор значка: заголовки групп во всю ширину */
+.l-icon-group { grid-column: 1 / -1; margin: 14px 0 0; font-size: 13px; font-weight: 600; color: var(--l2); }
+.l-icon-group:first-child { margin-top: 2px; }

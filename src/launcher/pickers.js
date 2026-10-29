@@ -1,5 +1,5 @@
 // Главный экран: выбор значка и действия (общие для значков внизу и жестов).
-import { iconsFor, iconSVG } from './icons.js';
+import { iconsFor, iconSVG, ICON_GROUPS } from './icons.js';
 import { commandsFor, LINK_PRESETS } from './actions.js';
 import { allApps } from './apps.js';
 import { isChurch } from './data.js';
@@ -16,9 +16,15 @@ export function pickIcon(current, onPick) {
       const fill = () => {
         grid.replaceChildren();
         const ql = q.trim().toLowerCase();
-        iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.id].some((s) => s.toLowerCase().includes(ql)))
-          .forEach((i) => grid.append(h('button', { class: `l-icon-cell ${i.id === current ? 'on' : ''}`, 'aria-label': t('icon.' + i.id), onclick: () => { onPick(i.id); close(); } },
+        // по группам (техника, работа и учёба, творчество, жизнь, знаки, церковь); поиск — по названию и словам (ИИ, игры…)
+        const found = iconsFor(church).filter((i) => !ql || [t('icon.' + i.id), i.id, i.k || ''].some((s) => s.toLowerCase().includes(ql)));
+        ICON_GROUPS.forEach((g) => {
+          const items = found.filter((i) => i.g === g);
+          if (!items.length) return;
+          if (!ql) grid.append(h('div', { class: 'l-icon-group' }, t('icg.' + g)));
+          items.forEach((i) => grid.append(h('button', { class: `l-icon-cell ${i.id === current ? 'on' : ''}`, 'aria-label': t('icon.' + i.id), onclick: () => { onPick(i.id); close(); } },
             h('span', { html: iconSVG(i.id) }), h('small', {}, t('icon.' + i.id)))));
+        });
       };
       body.append(h('input', { class: 'l-search', type: 'search', placeholder: t('pick.iconSearch'), 'aria-label': t('pick.iconSearch'), oninput: (e) => { q = e.target.value; fill(); } }), grid);
       fill();

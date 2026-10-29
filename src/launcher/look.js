@@ -30,6 +30,9 @@ export function applyLook(de = document.documentElement) {
   de.style.setProperty('--l-auto', String(auto));
   de.style.setProperty('--l-ck', String(auto * ((prefs.clockScale || 100) / 100)));
   const ui = (prefs.uiScale || 100) / 100;
+  // крест: толщина и непрозрачность (настройки «Вид» → крест)
+  de.style.setProperty('--l-cw', String((prefs.crossWeight || 100) / 100));
+  de.style.setProperty('--l-co', String((prefs.crossOpacity || 100) / 100));
   de.style.setProperty('--l-dui', String(auto * ui * ((prefs.layout?.drawerScale || 100) / 100)));
   de.style.setProperty('--l-ui', String(auto * ui));
   // значки строки состояния Android: тёмные на светлом фоне, светлые на тёмном

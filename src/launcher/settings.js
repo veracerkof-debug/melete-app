@@ -84,6 +84,9 @@ export function openSettings(onChange, getGesture, tab) {
         crosses ? h('div', { class: 'l-label' }, t('set.cross')) : null, crosses,
         church && prefs.cross !== 'none' ? h('div', { class: 'l-label' }, t('set.crossAt')) : null,
         church && prefs.cross !== 'none' ? segmented(CROSS_PLACES.map((v) => ({ value: v, label: t('crossAt.' + v) })), prefs.crossAt || 'center', (v) => up({ crossAt: v }), t('set.crossAt')) : null,
+        // толщина и непрозрачность: двигается — крест на главном меняется сразу; двойное касание — 100 %
+        church && prefs.cross !== 'none' ? scaleRow(t('set.crossWeight'), 'crossWeight', 50, 300) : null,
+        church && prefs.cross !== 'none' ? scaleRow(t('set.crossOpacity'), 'crossOpacity', 20, 300) : null,
       ));
 
       // — Раскладка: главный экран и «Все приложения» —

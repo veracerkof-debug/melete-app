@@ -9,6 +9,8 @@ export const DEFAULTS = {
   lang: '',             // '' — язык системы; ru | uz | en
   church: false,        // церковный режим: крест и чтение Библии (решение автора: по умолчанию выкл)
   cross: 'latin',       // крест (церковный режим): latin | greek | orthodox | circle | none (cross.js)
+  crossWeight: 100,     // толщина линии креста, % (50–300)
+  crossOpacity: 100,    // непрозрачность креста, % от обычной для его места (20–300; не больше полной)
   crossAt: 'center',    // где: center — крупно посередине, на пустом месте (вместо обоев) | top — вверху | date — у даты |
                         // bottom — над значками | back — большой и тихий за часами
   updMode: 'auto',      // обновление из GitHub: auto | button
