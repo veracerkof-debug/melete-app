@@ -945,6 +945,7 @@
   "gem.title": "League",
   "gem.aria": "League: {name}, {total} in the app",
   "gem.toNext": "{left} to {name}",
+  "gem.left": "{left} to go",
   "gem.total": "Practice in the app: {total}",
   "gem.top": "The last league — a legend. From here obsidian only grows deeper.",
   "gem.from": "from {h} h",

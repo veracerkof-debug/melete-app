@@ -118,3 +118,5 @@ html.desk .hlist .hblk[data-hb="quick"] .hhdr, html.desk .hlist .hblk[data-hb="e
 }
 /* календарь: месяц помещается в окно */
 html.desk .cday { min-height: 92px; }
+/* компьютер: карточки «Инструментов» своей высоты, не тянутся на весь экран */
+html.desk .tgrid { min-height: 0 !important; grid-auto-rows: 150px !important; }

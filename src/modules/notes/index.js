@@ -19,6 +19,7 @@ import { projectXML } from '../../music/musicxml.js';
 import { readMidi, takeDur } from '../../music/midi.js';
 import { sniffScore } from './sniff.js';
 import { asciiToTex } from '../../music/asciitab.js';
+import { createLive } from './live.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -37,14 +38,16 @@ const I = {
   minus: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
   list: '<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>',
   pen: '<svg viewBox="0 0 24 24"><path d="M15.5 5.5l3 3L9 18l-4 1 1-4z"/></svg>',
+  rec: '<svg viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="12" cy="12" r="6" fill="var(--red)"/></svg>',
   metro: '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2"><path d="M8 21h8l-3-17h-2zM12 14l5-7"/></svg>',
 };
 const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.cap,.capx,.txt,.tab,.pdf,application/pdf,.mid,.midi,.als,.rpp,.flp';
 const FMT_NAMES = { pdf: 'PDF', gp345: 'Guitar Pro 3–5', gpx: 'Guitar Pro 6', gp7: 'Guitar Pro 7/8', mxl: 'MusicXML', musicxml: 'MusicXML', capella: 'Capella', ascii: 'ASCII', text: 'TXT' };
 
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
-let host = null, ctx = null, size = 'full', input = null, offs = [];
+let host = null, ctx = null, size = 'full', input = null, offs = [], live = null;
 const st = () => ctx.store.all();
+const scaleOf = () => (+st().scale > 0 ? +st().scale : 1); // масштаб стана; нет в настройках — 1 (иначе alphaTab рисует в ноль)
 const tabs = () => ctx.files.list('tab');
 const daws = () => [...ctx.files.list('midi'), ...ctx.files.list('daw')].sort((a, b) => (b.created || 0) - (a.created || 0));
 const isDaw = (r) => !!r && (r.kind === 'midi' || r.kind === 'daw');
@@ -62,7 +65,15 @@ const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e
 // Партия без струн (ноты из студии, фортепиано) в профиле «только табы» не рисуется — для неё нотный стан
 const stringed = (sc) => !sc || sc.tracks.some((tr) => tr.staves.some((x) => x.tuning && x.tuning.length));
 // MIDI и файлы студий: у каждой партии свой стан — гитара и бас табулатурой (строй из MusicXML), остальные нотами
-const prof = (at) => (st().prof === 'both' ? at.StaveProfile.ScoreTab : isDaw(AT.cur) ? at.StaveProfile.Default : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
+const prof = (at) => (isLive() ? liveProf(at) : st().prof === 'both' ? at.StaveProfile.ScoreTab : isDaw(AT.cur) ? at.StaveProfile.Default : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
+// Партия с игры: ноты и табы вместе (по умолчанию), только ноты или только табы; без струн — ноты
+const isLive = () => !!(AT.cur && AT.cur.fmt === 'live');
+// (стан и таб — флагами партии при загрузке, профиль — «как в файле»)
+const liveProf = (at) => at.StaveProfile.Default;
+function liveStaves(sc) {
+  const v = st().liveProf;
+  sc.tracks.forEach((tr) => tr.staves.forEach((x) => { const tab = !!(x.tuning && x.tuning.length); x.showTablature = tab && v !== 'score'; x.showStandardNotation = !tab || v !== 'tab'; }));
+}
 
 /* ---------- PDF: один просмотр на приложение (как и alphaTab) ---------- */
 
@@ -182,7 +193,9 @@ async function openPdfRec(rec) {
 }
 
 async function openTab(rec) {
+  if (live) live.close();
   if (isDaw(rec)) return openDaw(rec);
+  if (rec.fmt === 'live') { st().lastTab = rec.id; st().sec = 'tabs'; ctx.store.save(); closePdf(); AT.text = null; live.open(rec); return; }
   st().lastTab = rec.id; // при следующем запуске откроется он же, с того же места
   ctx.store.save();
   // загруженный раньше PDF без расширения и типа — узнать по содержимому (один раз, потом запомнено)
@@ -196,6 +209,7 @@ async function openTab(rec) {
   let at;
   try { at = await loadLib(); } catch (e) { ctx && ctx.logErr(e); AT.state = 'error'; render(); ctx && ctx.ui.toast(ctx.t('libFail')); return; }
   ensureApi(at);
+  if (AT.api.settings.notation.elements.get(at.NotationElement.GuitarTuning) === false) { AT.api.settings.notation.elements.set(at.NotationElement.GuitarTuning, true); AT.api.updateSettings(); } // строй — как в файле (у партии с игры скрыт)
   const bytes = new Uint8Array(await rec.blob.arrayBuffer());
   if (!rec.det) { rec.det = sniffScore(bytes, rec.name + (rec.ext ? '.' + rec.ext : '')) || ''; if (rec.det === 'ascii' || rec.det === 'text') rec.fmt = rec.det; ctx.files.save(rec); }
   if (rec.fmt === 'ascii' || rec.fmt === 'text') { openText(rec, new TextDecoder().decode(bytes)); return; }
@@ -216,11 +230,14 @@ function ensureApi(at) {
     AT.api = new at.AlphaTabApi(AT.el, {
       core: { smuflFontSources: new Map([[at.FontFileFormat.Woff2, BRAVURA]]), includeNoteBounds: true }, // границы цифр — для подсветки играемого места
       player: { enablePlayer: false },
-      display: { scale: st().scale, layoutMode: at.LayoutMode.Page, staveProfile: prof(at) },
+      display: { scale: scaleOf(), layoutMode: at.LayoutMode.Page, staveProfile: prof(at) },
     });
-    AT.api.scoreLoaded.on((sc) => { const was = AT.score; AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); if (stringed(was) !== stringed(sc)) restyle(); render(); });
+    AT.api.scoreLoaded.on((sc) => { if (isLive()) liveStaves(sc); const was = AT.score; AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); if (stringed(was) !== stringed(sc)) restyle(); render(); });
     // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
-    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); });
+    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); if (live && isLive()) live.markBars(); });
+    // партия с игры: касание ноты — правка, касание паузы — новая нота, такты — выбор
+    AT.api.noteMouseDown.on((n) => { if (live && isLive()) live.onNote(n); });
+    AT.api.beatMouseDown.on((b) => { if (live && isLive()) live.onBeat(b); });
     playerSetup(); // звуковой банк грузится сразу: нажатие на такт переводит туда, «Играть» — без ожидания
     AT.api.error.on((e) => {
       const msg = (e && (e.message || e.type)) || 'ошибка';
@@ -268,7 +285,7 @@ function toStudio() {
 function restyle() {
   if (!AT.api) return;
   AT.lib.then((at) => {
-    AT.api.settings.display.scale = st().scale;
+    AT.api.settings.display.scale = scaleOf();
     AT.api.settings.display.staveProfile = prof(at);
     AT.api.updateSettings();
     AT.api.render();
@@ -284,7 +301,12 @@ function setTrack(i) {
 // Поверхность alphaTab живёт между перерисовками окна: переносим её в новое место
 function attach() {
   const slot = host && host.querySelector('#atSlot');
-  if (slot && AT.el && AT.el.parentNode !== slot) slot.appendChild(AT.el);
+  if (slot && AT.el && AT.el.parentNode !== slot) {
+    slot.appendChild(AT.el);
+    // отрисовка шла, пока поверхность была вне окна (перерисовка окна) — пусто; нарисовать заново уже на месте
+    const sf = AT.el.querySelector('.at-surface');
+    if (AT.api && AT.score && sf && !sf.childElementCount) requestAnimationFrame(() => { if (AT.el && AT.el.isConnected) AT.api.render(); });
+  }
   // прокрутка за играемым местом — в текущем окне (разметка окна пересоздаётся при каждой перерисовке)
   if (slot && AT.api && ATP.on && AT.api.settings.player.scrollElement !== slot) { AT.api.settings.player.scrollElement = slot; AT.api.updateSettings(); }
   const ps = host && host.querySelector('#pdfSlot');
@@ -383,7 +405,7 @@ function togglePlay() {
 function tabRow(x) {
   const songs = ctx.songs(), so = fileSongs(x).map((id) => songs.find((s) => s.id === id)).find(Boolean);
   return '<div class="cell"><button class="grow" data-x="topen" data-id="' + x.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(x.name) + '</div><div class="st">' +
-    (isPdf(x) ? 'PDF · ' : x.det && FMT_NAMES[x.det] ? FMT_NAMES[x.det] + ' · ' : '') + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
+    (isPdf(x) ? 'PDF · ' : x.fmt === 'live' ? ctx.t('live.fmt') + ' · ' : x.det && FMT_NAMES[x.det] ? FMT_NAMES[x.det] + ' · ' : '') + ctx.t('kb', { n: ctx.num((x.size || 0) / 1024, 0) }) + (so ? ', ' + esc(so.title) : '') + '</div></button>' +
     '<button class="ic sm" data-x="tdel" data-id="' + x.id + '" aria-label="' + esc(ctx.t('deleteX', { name: x.name })) + '" style="color:var(--red)">' + I.minus + '</button></div>';
 }
 
@@ -407,6 +429,7 @@ function barHTML() {
 
 function tabsBody() {
   const { t } = ctx, song = ctx.song(), all = tabs();
+  if (isLive() && AT.state !== 'error') return live.body();
   if (!AT.cur || AT.state === 'error' || isDaw(AT.cur)) {
     const mine = song ? all.filter((x) => inSong(x, song.id)) : [];
     const rest = all.filter((x) => !mine.includes(x));
@@ -415,7 +438,8 @@ function tabsBody() {
         (rest.length ? '<div class="hdr">' + t(mine.length ? 'others' : 'allTabs') + '</div><div class="group">' + rest.map(tabRow).join('') + '</div>' : '')
       : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('uploadHint') + '</p>') +
       '<div class="vrow" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button>' +
-      '<button class="btn sm" data-x="tpaste">' + I.pen.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"') + ' ' + t('pasteTab') + '</button></div>' +
+      '<button class="btn sm" data-x="tpaste">' + I.pen.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"') + ' ' + t('pasteTab') + '</button>' +
+      '<button class="btn sm" data-x="lvnew">' + I.rec + ' ' + t('live.new') + '</button></div>' +
       (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
   }
   if (AT.state === 'text') { // текст без строк струн — как есть
@@ -528,7 +552,7 @@ function render() {
 function tabSheet() {
   const { t, ui } = ctx;
   const daw = st().sec === 'midi';
-  ui.sheet(() => ui.snav(t(daw ? 'sec.midi' : 'tabFiles')) + '<div class="group">' + (daw ? daws().map(dawRow) : tabs().map(tabRow)).join('') + '<button class="cell act" data-x="tadd">' + t(daw ? 'uploadDaw' : 'uploadTab') + '</button></div>',
+  ui.sheet(() => ui.snav(t(daw ? 'sec.midi' : 'tabFiles')) + '<div class="group">' + (daw ? daws().map(dawRow) : tabs().map(tabRow)).join('') + '<button class="cell act" data-x="tadd">' + t(daw ? 'uploadDaw' : 'uploadTab') + '</button>' + (daw ? '' : '<button class="cell act" data-x="lvnew">' + t('live.new') + '</button>') + '</div>',
     (el, sh) => el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-x]');
       if (!b) return;
@@ -693,6 +717,7 @@ async function onFile(e) {
 }
 
 function act(a, el) {
+  if (a.startsWith('lv') && live && live.act(a, el)) return;
   const { t, ui } = ctx, x = el.dataset.id ? ctx.files.get(el.dataset.id) : null;
   switch (a) {
     case 'nsec': st().sec = el.dataset.v; ctx.store.save(); render(); break;
@@ -723,7 +748,7 @@ function act(a, el) {
     case 'pfull': pdfFull(true); break;
     case 'pfull0': pdfFull(false); break;
     case 'ttrack': setTrack(+el.dataset.i); render(); break;
-    case 'tzoom': st().scale = Math.max(0.5, Math.min(2, Math.round((st().scale + +el.dataset.d * 0.1) * 10) / 10)); ctx.store.save(); restyle(); break;
+    case 'tzoom': st().scale = Math.max(0.5, Math.min(2, Math.round((scaleOf() + +el.dataset.d * 0.1) * 10) / 10)); ctx.store.save(); restyle(); break;
     case 'tprof': st().prof = st().prof === 'both' ? 'tab' : 'both'; ctx.store.save(); restyle(); render(); break;
     case 'atplay': togglePlay(); break;
     case 'atstop': if (AT.api && ATP.sf) AT.api.stop(); ATP.want = false; break;
@@ -748,9 +773,15 @@ export default {
     return n ? c.tn('tabs', n) : c.t('statusIdle');
   },
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
+  // MIDI-клавиатура: в партию с игры (звучит пианино); вне партии окно клавиши не берёт
+  midiIn(e) { if (live && host && isLive()) live.midiIn(e); },
+  midiStop() {},
   mount(el, c, sz = 'full') {
     onHold(el, '[data-x="ncapo"]', () => { const s = curSong(); if (s && s.capo) { updCur({ capo: 0 }); render(); c.ui.toast(c.t('capo.none')); } });
     host = el; ctx = c; size = sz;
+    if (!live) live = createLive({ get ctx() { return ctx; }, st, esc, icb, I, AT, loadLib, ensureApi, render, host: () => host,
+      setProf: (at) => { if (AT.api) { AT.api.settings.display.staveProfile = prof(at); AT.api.settings.notation.elements.set(at.NotationElement.GuitarTuning, false); AT.api.updateSettings(); } },
+      playBtns: () => '<button class="ic sm" id="atplay" data-x="atplay" aria-label="' + ctx.t('playTab') + '">' + (ATP.playing ? I.pause : I.play) + '</button>' });
     input = document.createElement('input');
     input.type = 'file';
     input.accept = ACCEPT;
@@ -763,6 +794,9 @@ export default {
     host.addEventListener('click', click);
     offs.push(() => host.removeEventListener('click', click));
     // текст с аккордами: щипок двумя пальцами — размер шрифта (как кнопки A− и A+)
+    // ноты: щипок — масштаб стана (как −/+)
+    offs.push(pinch(host, { min: 5, max: 20, ok: (e) => !!e.target.closest('.atwrap'), get: () => Math.round(scaleOf() * 10),
+      set: (v, live) => { if (live) return; st().scale = v / 10; ctx.store.save(); restyle(); } }));
     offs.push(pinch(host, { min: 11, max: 40, ok: (e) => !!e.target.closest('.lyr'), get: () => st().fs || 15,
       set: (v, live) => { st().fs = v; const l = host.querySelector('.lyr'); if (l) l.style.fontSize = v + 'px'; if (!live) ctx.store.save(); } }));
     // Громкость табов — шина медиатеки
@@ -779,6 +813,7 @@ export default {
   resize(sz) { size = sz; render(); },
   // Окно закрыто: табулатура останавливается, сама поверхность остаётся для быстрого повторного открытия
   unmount() {
+    if (live && !ctx.session) live.close(); // в занятии окно может вернуться — запись идёт дальше
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
     if (AT.api && ATP.sf && !ctx.session) AT.api.pause();

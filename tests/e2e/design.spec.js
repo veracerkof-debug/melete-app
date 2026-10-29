@@ -9,11 +9,11 @@ test('дизайн: главная, вкладки, пояснения', async (
   // лига — вторым кольцом с камнем в плитке недели, отдельной плитки нет
   await expect(page.locator('.hwgem .hgring[data-act="gem"] canvas[data-gem3d]')).toHaveCount(1);
   await expect(page.locator('.gemrow')).toHaveCount(0);
-  // подписи вкладок — вариант
-  await expect(page.locator('.tab .tl').first()).toBeHidden();
-  await page.evaluate(() => localStorage.setItem('melete.variants', JSON.stringify({ tabs: 'labels' })));
-  await page.reload(); await page.waitForTimeout(1200);
+  // подписи вкладок — по умолчанию (решение автора 29.10.2026); вариант «только значки» — в dev
   await expect(page.locator('.tab .tl').first()).toBeVisible();
+  await page.evaluate(() => localStorage.setItem('melete.variants', JSON.stringify({ tabs: 'icons' })));
+  await page.reload(); await page.waitForTimeout(1200);
+  await expect(page.locator('.tab .tl').first()).toBeHidden();
   // длинное пояснение в шторке — две строки, касание раскрывает
   const h = await page.evaluate(async () => {
     const u = await import('/src/ui/index.js');

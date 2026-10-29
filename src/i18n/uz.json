@@ -923,6 +923,7 @@
   "gem.title": "Liga",
   "gem.aria": "Liga: {name}, ilovada {total}",
   "gem.toNext": "«{name}» gacha {left}",
+  "gem.left": "yana {left}",
   "gem.total": "Ilovadagi mashgʻulot: {total}",
   "gem.top": "Oxirgi liga — afsona. Bundan keyin obsidian faqat chuqurroq yaltiraydi.",
   "gem.from": "{h} soatdan",

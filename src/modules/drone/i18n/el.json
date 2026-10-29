@@ -1,3 +1,14 @@
 {
-  "name": "Φωνή"
+  "name": "Φωνή",
+  "mode.keys": "Προβολή: πλήκτρα",
+  "mode.grid": "Προβολή: πλέγμα",
+  "latch.off": "Παίξιμο",
+  "latch.on": "Κράτημα",
+  "chord.ftr": "Το άγγιγμα παίζει αυτή τη συγχορδία. Πάνω — μείζονα, κάτω — ελάσσονα, αριστερά — πέμπτη, δεξιά — sus4.",
+  "help.2": "Πάνω — μείζονα, κάτω — ελάσσονα, αριστερά — πέμπτη, δεξιά — sus4.",
+  "help.3": "Πλήκτρα — μία οκτάβα σε όλα τα στρώματα: «Παίξιμο» όσο κρατιούνται, «Κράτημα» — άγγιγμα ναι/όχι.",
+  "mode.circle": "View: circle of fifths",
+  "circle": "Circle of fifths",
+  "circle.key": "Key {k}",
+  "help.4": "Circle: tap a chord; turn it with a finger — the key on top and its chords light up."
 }

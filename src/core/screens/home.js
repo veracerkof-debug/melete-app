@@ -387,13 +387,16 @@ function gemRow(app) {
     (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
 }
 
+// До следующей лиги — коротко: «ещё 9 ч», меньше часа — «ещё 40 мин»
+const leftShort = (h) => (h >= 1 ? t('time.h', { n: Math.round(h) }) : t('time.m', { n: Math.max(1, Math.ceil(h * 60)) }));
 // Лига кольцом: доля пути до следующего самоцвета, камень внутри, название под ним; касание — все лиги
 function gemRing(app) {
   const hrs = leagueHours(app), g = gemOf(hrs), name = t('gem.' + g.gem.id), r = 40, c = 2 * Math.PI * r, f = g.next ? g.frac : 1;
   return '<button class="hgring" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(hrs * 3600) })) + '">' +
     '<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="' + r + '" class="hgtrack"/>' +
     (f > 0.001 ? '<circle cx="48" cy="48" r="' + r + '" class="hgfill" stroke-dasharray="' + c * f + ' ' + c + '" transform="rotate(-90 48 48)"/>' : '') + '</svg>' +
-    gemCanvas(g.gem.id, g.frac, 46) + '<span class="hgname">' + esc(name) + '</span></button>';
+    gemCanvas(g.gem.id, g.frac, 46) + '<span class="hgname">' + esc(name) + '</span>' +
+    (g.next ? '<span class="hgleft num">' + esc(t('gem.left', { left: leftShort(g.left) })) + '</span>' : '') + '</button>';
 }
 
 export function gemSheet(app) {

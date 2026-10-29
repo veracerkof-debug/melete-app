@@ -31,8 +31,8 @@ describe('варианты', () => {
     vi.stubGlobal('__CHANNEL__', 'pre');
     const V = await import('../src/core/variants.js');
     expect(V.DEV).toBe(false);
-    V.setVariant({}, 'tabs', 'labels');
-    expect(V.variant('tabs')).toBe('icons');
+    V.setVariant({}, 'tabs', 'icons');
+    expect(V.variant('tabs')).toBe('labels');
     expect(V.variant('verb')).toBe(null); // ревербы — обычная настройка звука, не вариант
     vi.unstubAllGlobals();
   });

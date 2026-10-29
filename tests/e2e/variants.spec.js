@@ -24,10 +24,10 @@ test('варианты и ревербы Airwindows', async ({ page, melete, err
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-act="variants"]'); await page.waitForTimeout(400);
   const seg = page.locator('.sheet [data-seg="var-tabs"]');
-  await expect(seg.locator('[data-v="icons"]')).toHaveAttribute('aria-pressed', 'true');
-  await seg.locator('[data-v="labels"]').click();
   await expect(seg.locator('[data-v="labels"]')).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.variants')).tabs)).toBe('labels');
+  await seg.locator('[data-v="icons"]').click();
+  await expect(seg.locator('[data-v="icons"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.variants')).tabs)).toBe('icons');
   // звук пространств — обычная настройка звука (не вариант)
   const al = await page.evaluate(async () => (await import('/src/audio/perf.js')).verbAlgo());
   expect(al).toBe('melete');
