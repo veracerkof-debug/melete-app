@@ -132,7 +132,8 @@ function renderEntry() {
   const recs = db.recs.filter((r) => inMonth(r.t, m));
   const spent = recs.filter((r) => r.k === 'e').reduce((a, r) => a + r.a, 0);
   const left = db.budget ? db.budget - spent : null;
-  entry.replaceChildren(
+  // пустые места (нет бюджета, нет примера) не превращаются в текст «null»
+  entry.replaceChildren(...[
     h('div', { class: 'top' },
       parent !== window ? h('button', { class: 'back', onclick: () => parent.postMessage('money:close', '*'), 'aria-label': 'На главный экран' }, '‹') : null,
       h('button', { onclick: openOver, 'aria-label': 'Обзор месяца' }, MONTHS[m.getMonth()][0].toUpperCase() + MONTHS[m.getMonth()].slice(1) + ': ', h('b', { class: 'num' }, '−' + fmt(spent))),
@@ -151,7 +152,7 @@ function renderEntry() {
       h('button', { onclick: () => add(p.c, p.a), style: { '--c': CATS[p.c].c } }, ico(icoOf(p.c)), CATS[p.c].n, h('span', { class: 'num' }, fmt(p.a))))),
     h('div', { class: 'cats grid' },
       sortedCats(S.kind).map((id) => catBtn(id)),
-      h('button', { class: 'cat more', onclick: newCat }, ico('plus'), 'Своя')));
+      h('button', { class: 'cat more', onclick: newCat }, ico('plus'), 'Своя'))].filter((x) => x != null));
 }
 
 // категория выбрана — снизу клавиатура для суммы

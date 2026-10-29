@@ -19,6 +19,8 @@ import { autoUpdate, onUpdate, install } from './update.js';
 import { openMoney, moneyOpen, moneyBack, moneyPanel } from './money.js';
 import { openNotes, notesOpen, notesBack, closeNotes, notesPanel } from './notes.js';
 import { dailyCopy } from './backup.js';
+import { setAppIconLoader } from './icons.js';
+import { isNative, Launcher } from './native.js';
 import { h, toast, sheetOpen, closeTopSheet } from './ui.js';
 
 const root = document.getElementById('l');
@@ -46,6 +48,8 @@ root.append(home);
 // фокус в поле ввода может прокрутить контейнер с overflow: hidden — возвращаем
 root.addEventListener('scroll', () => { root.scrollTop = 0; root.scrollLeft = 0; });
 
+// родные значки приложений — у системы (Android); в браузере их нет
+if (isNative()) setAppIconLoader((pkg) => Launcher.appIcon({ pkg, size: 96 }).then((r) => r?.src || null));
 initI18n(prefs.lang);
 applyLook();
 setNotify(toast);

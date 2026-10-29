@@ -239,7 +239,42 @@ export const ICONS = [
 
 export const iconById = (id) => ICONS.find((i) => i.id === id) || ICONS[0];
 
+// Родные значки приложений (DECISIONS 2026-10-29): значок вида «app:<пакет>» — картинка у системы (LauncherPlugin.appIcon),
+// всегда в ч/б (launcher.css: .app-ico). Запомненные — сразу (elachiston.icons, без мигания при запуске), новые — подгружаются
+const APP = 'app:';
+export const isAppIcon = (id) => typeof id === 'string' && id.startsWith(APP);
+export const appIconId = (pkg) => APP + pkg;
+const ICON_KEY = 'elachiston.icons';
+const mem = (() => { try { return new Map(Object.entries(JSON.parse(localStorage.getItem(ICON_KEY)) || {})); } catch { return new Map(); } })();
+const waiting = new Set();
+let queue = Promise.resolve();
+let loader = null;
+// main.js даёт загрузчик (на Android — плагин); без него (браузер) родных значков нет
+export const setAppIconLoader = (fn) => { loader = fn; };
+export const appIconsAvailable = () => !!loader;
+function keepIcon(pkg, src) {
+  mem.set(pkg, src);
+  try { localStorage.setItem(ICON_KEY, JSON.stringify(Object.fromEntries([...mem].slice(-60)))); } catch { /* место кончилось — только в памяти */ }
+}
+function loadAppIcon(pkg) {
+  if (!loader || mem.has(pkg) || waiting.has(pkg)) return;
+  waiting.add(pkg);
+  // по одному: список из сотни приложений не забивает мост к системе
+  queue = queue.then(() => loader(pkg)).then((src) => {
+    waiting.delete(pkg);
+    if (!src) return;
+    keepIcon(pkg, src);
+    document.querySelectorAll(`img.app-ico[data-pkg="${CSS.escape(pkg)}"]`).forEach((im) => { im.src = src; });
+  }).catch(() => waiting.delete(pkg));
+}
+export function appIconHTML(pkg, cls = '') {
+  const src = mem.get(pkg);
+  if (!src) loadAppIcon(pkg);
+  return `<img class="ico app-ico ${cls}" data-pkg="${pkg.replace(/"/g, '')}" src="${src || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}" alt="" aria-hidden="true" draggable="false">`;
+}
+
 export function iconSVG(id, cls = '') {
+  if (isAppIcon(id)) return appIconHTML(id.slice(APP.length), cls);
   const ic = iconById(id);
   return `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic.svg}</svg>`;
 }

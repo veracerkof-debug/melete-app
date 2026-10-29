@@ -23,6 +23,12 @@ export function applyLook(de = document.documentElement) {
   if (THEMES.includes(prefs.theme)) de.setAttribute('data-theme', prefs.theme);
   else de.removeAttribute('data-theme');
   Object.entries(accentVars({ palette: 'classic', accent: ACCENT }) || {}).forEach(([k, v]) => de.style.setProperty(k, v));
+  // чёрно-белый вид: акцент — цветом текста (голубь, полоски, точки), красное — тоже; кошелёк и блокнот — ч/б (themeDoc)
+  if (prefs.mono !== false) {
+    ['--tint', '--tint-text', '--red'].forEach((k) => de.style.setProperty(k, 'var(--ink)'));
+    de.style.setProperty('--on-tint', 'var(--bg)');
+    de.dataset.mono = '';
+  } else delete de.dataset.mono;
   // переход один — появление (панели и шторки проявляются на месте; панель за пальцем — часть жеста)
   de.dataset.motion = 'fade';
   // размеры: сначала авто по экрану (autoScale), поверх — ползунки «часы» и «остальное» (settings.js → «Вид»)
@@ -57,6 +63,7 @@ export function themeDoc(doc) {
   const cs = getComputedStyle(document.documentElement);
   VARS.forEach((v) => { const x = cs.getPropertyValue(v).trim(); if (x) de.style.setProperty(v, x); });
   de.style.setProperty('--serif', cs.getPropertyValue('--l-display').trim());
+  if ('mono' in document.documentElement.dataset) de.dataset.mono = ''; else delete de.dataset.mono;
   const bg = cs.getPropertyValue('--bg').trim(), m = bg.match(/^#([0-9a-f]{6})$/i);
   const dark = m && (0.299 * parseInt(m[1].slice(0, 2), 16) + 0.587 * parseInt(m[1].slice(2, 4), 16) + 0.114 * parseInt(m[1].slice(4, 6), 16)) / 255 < 0.5;
   de.style.colorScheme = dark ? 'dark' : 'light';
