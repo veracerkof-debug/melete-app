@@ -141,6 +141,14 @@ public class KeepAliveService extends Service {
         return START_NOT_STICKY;
     }
 
+    // Приложение смахнули из недавних — закрыли: служба и уведомление уходят вместе с ним (страница, которая
+    // сняла бы их сама, уже закрыта)
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        stopSelf();
+        super.onTaskRemoved(rootIntent);
+    }
+
     @Override
     public void onDestroy() {
         running = false;

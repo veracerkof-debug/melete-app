@@ -54,6 +54,14 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onStop() { super.onStop(); visible = false; }
 
+    // Приложение закрыли («Назад» до конца, система закрыла окно насовсем): страница больше не снимет уведомление
+    // «Идёт занятие» сама — служба фона останавливается здесь
+    @Override
+    public void onDestroy() {
+        if (isFinishing()) { try { stopService(new android.content.Intent(this, KeepAliveService.class)); } catch (Exception ignored) { } }
+        super.onDestroy();
+    }
+
     // Всплывающее окно («картинка в картинке»): ушли на рабочий стол, пока открыт инструмент и что-то звучит
     @Override
     public void onUserLeaveHint() {
