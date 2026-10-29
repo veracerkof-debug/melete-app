@@ -170,6 +170,25 @@ export function boot(root) {
     return true;
   }
 
+  // Выход звука (Android): Bluetooth — буфер побольше (context.js: setOutKind). Подключили, когда звук уже создан, —
+  // буфер прежний: сказать один раз, что поможет перезапуск
+  if (Capacitor.isNativePlatform()) {
+    let told = false;
+    import('../audio/voiceengine.js').then(async (V) => {
+      const C = await import('../audio/context.js'), eng = V.engine();
+      const check = async () => {
+        let outs = [];
+        try { outs = (await eng.devices()).outputs || []; } catch { return; }
+        const bt = outs.some((o) => V.devKind(o) === 'bt');
+        C.setOutKind(bt ? 'bt' : 'phone');
+        const made = C.ctxOutKind();
+        if (bt && made && made !== 'bt' && !told) { told = true; log('audio', 'Bluetooth подключён после запуска звука: буфер малый — нужен перезапуск', 'w'); toast(t('snd.btRestart')); }
+        else if (made === null) log('audio', 'выход: ' + (bt ? 'Bluetooth — буфер 100 мс' : 'телефон'));
+      };
+      check();
+      eng.on('devices', check);
+    }).catch(() => {});
+  }
   audio.onLoadLog = (m) => { log('audio', m, 'w'); if (/ужатие \d/.test(m) && /меньше/.test(m)) dCount('audio.squeeze'); };
   // нагрузка звука — в диагностику: средняя, секунды выше 70 и 90 %, доля пропусков; перегрузка — событие с обстановкой
   audio.onLoadSample = (st, m) => {

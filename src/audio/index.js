@@ -6,6 +6,7 @@ import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
+import { setFxTempo } from './fx.js';
 import { openMic } from './mic.js';
 import { after } from './clock.js';
 
@@ -18,6 +19,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getLayer: () => pianoLayer(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
   const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
+  setFxTempo(() => (metro.cfg && metro.cfg.bpm) || 0); // тремоло «в такт» — по темпу метронома
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
   mixer.probe('drone', () => drone.sounding);

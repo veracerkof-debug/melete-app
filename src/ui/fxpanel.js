@@ -6,7 +6,7 @@
 import { t } from '../i18n/index.js';
 import { esc, seg, sw } from './index.js';
 import { eqCanvas, BAND_COLORS } from './eq.js';
-import { EQ_TYPES, REV_TYPES, CHORUS_TYPES, BANDS_MAX, Q_MIN, Q_MAX, normalizeFx } from '../audio/fx.js';
+import { EQ_TYPES, REV_TYPES, CHORUS_TYPES, BANDS_MAX, Q_MIN, Q_MAX, TREM_SHAPES, TREM_DIV_ORDER, normalizeFx } from '../audio/fx.js';
 
 export const fmtFreq = (f) => (f >= 1000 ? String(Math.round(f / 100) / 10) + ' ' + t('fx.khz') : Math.round(f) + ' ' + t('fx.hz'));
 const pc = (v) => Math.round(v * 100) + '%';
@@ -40,12 +40,17 @@ export function createFxPanel({ get, set, profile }) {
     (mode === 'adv' ? bandRow() : '') +
     '<div class="hdr">' + esc(t('fx.fx')) + '</div><div class="group">' +
     slider('comp', t('fx.comp'), fx.comp, 0, 1, 0.05, pc(fx.comp)) + slider('drive', t('fx.drive'), fx.drive, 0, 1, 0.05, pc(fx.drive)) +
-    slider('trem', t('fx.trem'), fx.trem, 0, 1, 0.05, pc(fx.trem)) +
-    (mode === 'adv' ? slider('tremRate', t('fx.tremRate'), fx.tremRate, 0.5, 12, 0.1, fx.tremRate + ' ' + t('fx.hz')) : '') +
     slider('delay', t('fx.delay'), fx.delay, 0, 1, 0.05, pc(fx.delay)) +
     (mode === 'adv' ? slider('delayTime', t('fx.delayTime'), fx.delayTime, 0.05, 1.5, 0.01, Math.round(fx.delayTime * 1000) + ' ' + t('fx.ms')) + slider('delayFb', t('fx.delayFb'), fx.delayFb, 0, 0.9, 0.05, pc(fx.delayFb)) : '') +
     slider('chorus', t('fx.chorus'), fx.chorus, 0, 1, 0.05, pc(fx.chorus)) +
     '<div class="cell fxtypes">' + seg('ctype', CHORUS_TYPES.map((k) => [k, t('fx.ct.' + k)]), fx.chorusType || 'chorus', t('fx.chorusType')) + '</div></div>' +
+    // Волна громкости (тремоло): сила, форма, частота — свободно или в такт метронома; полоска показывает саму волну
+    '<div class="hdr">' + esc(t('fx.trem')) + '</div><div class="group">' +
+    slider('trem', t('fx.tremDepth'), fx.trem, 0, 1, 0.05, pc(fx.trem)) +
+    '<div class="cell fxtypes">' + seg('tshape', TREM_SHAPES.map((k) => [k, t('fx.ts.' + k)]), fx.tremShape, t('fx.tremShape')) + '</div>' +
+    '<div class="cell fxtypes">' + seg('tdiv', TREM_DIV_ORDER.map((k) => [k, t('fx.td.' + k)]), fx.tremDiv, t('fx.tremDiv')) + '</div>' +
+    '<div data-tremrate' + (fx.tremDiv === 'free' ? '' : ' hidden') + '>' + slider('tremRate', t('fx.tremRate'), fx.tremRate, 0.5, 12, 0.1, fx.tremRate + ' ' + t('fx.hz')) + '</div>' +
+    '<div class="cell fxwave"><i class="' + fx.tremShape + '" style="--per:' + (1 / Math.max(0.2, fx.tremDiv === 'free' ? fx.tremRate : 2)).toFixed(3) + 's;--d:' + fx.trem + '"></i></div></div>' +
     '<div class="hdr">' + esc(t('fx.rev')) + '</div><div class="group">' +
     slider('rev', t('fx.rev'), fx.rev, 0, 1, 0.05, pc(fx.rev)) +
     '<div class="cell fxtypes">' + seg('revtype', REV_TYPES.map((k) => [k, t('fx.rt.' + k)]), fx.revType, t('fx.revType')) + '</div></div>' +
@@ -86,6 +91,7 @@ export function createFxPanel({ get, set, profile }) {
       const k = s.dataset.fxs, v = +s.value, lab = el.querySelector('[data-fxv="' + k + '"]');
       if (k === 'q') { const b = bands()[sel]; if (!b) return; b.q = v; save({ adv: bands() }); if (lab) lab.textContent = v.toFixed(2); eq && eq.draw(); return; }
       save({ [k]: v });
+      if (k === 'trem' || k === 'tremRate') { const w = el.querySelector('.fxwave i'); if (w) { w.style.setProperty('--d', fx.trem); if (k === 'tremRate') w.style.setProperty('--per', (1 / v).toFixed(3) + 's'); } }
       if (lab) lab.textContent = k === 'delayTime' ? Math.round(v * 1000) + ' ' + t('fx.ms') : k === 'tremRate' ? v + ' ' + t('fx.hz') : pc(v);
     });
     el.addEventListener('change', (e) => {
@@ -96,6 +102,11 @@ export function createFxPanel({ get, set, profile }) {
       let b;
       if ((b = g('[data-seg="fxmode"] [data-v]'))) { mode = b.dataset.v; sel = 0; save({ mode }); rerender(); return; }
       if ((b = g('[data-seg="revtype"] [data-v]'))) { save({ revType: b.dataset.v }); el.querySelectorAll('[data-seg="revtype"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
+      if ((b = g('[data-seg="tshape"] [data-v]')) || (b = g('[data-seg="tdiv"] [data-v]'))) {
+        const k = b.closest('[data-seg]').dataset.seg === 'tshape' ? 'tremShape' : 'tremDiv';
+        save({ [k]: b.dataset.v, ...(fx.trem ? {} : { trem: 0.5 }) }); // выбрали вид — эффект сразу слышен
+        rerender(); return;
+      }
       if ((b = g('[data-seg="ctype"] [data-v]'))) { save({ chorusType: b.dataset.v }); el.querySelectorAll('[data-seg="ctype"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
       if ((b = g('[data-seg="btype"] [data-v]'))) { const bd = bands()[sel]; if (!bd) return; bd.type = b.dataset.v; if (isCut(bd)) bd.g = 0; save({ adv: bands() }); refreshBand(); eq && eq.draw(); return; }
       if ((b = g('[data-band]'))) { sel = +b.dataset.band; refreshBand(); eq && eq.select(sel); return; }
