@@ -16,8 +16,15 @@ let ctx = null, master = null, reverb = null, comp = null, trim = null;
 // Задержка Bluetooth и так 200–250 мс, буфер 100 мс к ней почти незаметен. Выход узнаётся до создания контекста
 // (core/index.js: setOutKind), контекст создаётся один раз — сменить буфер можно только перезапуском
 const BT_LATENCY = 0.1;
-let outKind = null, ctxKind = null;
-export const setOutKind = (k) => { outKind = k; };
+// Выход прошлого запуска — сразу (ответ Android приходит позже, а пианино при открытии уже подгружает рояль и создаёт
+// звук; отчёт 29.10 09:47: «Bluetooth подключён после запуска звука»). outReady — ответ пришёл (или 0,8 с прошло)
+const OUT_KEY = 'melete.outKind';
+let outKind = null, ctxKind = null, outDone = null;
+try { outKind = localStorage.getItem(OUT_KEY) || null; } catch { /* приватный режим */ }
+const outKnown = new Promise((r) => { outDone = r; });
+export const outReady = () => Promise.race([outKnown, new Promise((r) => setTimeout(r, 800))]);
+export const outUnknown = () => outDone(); // веб: выход не узнать — не ждать
+export const setOutKind = (k) => { outKind = k; try { localStorage.setItem(OUT_KEY, k); } catch { /* */ } outDone(); };
 export const ctxOutKind = () => ctxKind; // каким был выход, когда создавался контекст (null — ещё не создан)
 
 export function getContext(mode = 'bal') {

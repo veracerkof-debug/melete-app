@@ -793,6 +793,7 @@
   "ses.divider": "Window divider",
   "ses.toolOutside": "“{name}” opens separately in the Tools tab",
   "pm.pure": "Full screen",
+  "pm.unpure": "Exit full screen",
   "pm.full": "Keep only this window",
   "pm.addBottom": "Add window below",
   "pm.addRight": "Add window on the right",

@@ -188,7 +188,7 @@ export function boot(root) {
       check();
       eng.on('devices', check);
     }).catch(() => {});
-  }
+  } else import('../audio/context.js').then((C) => C.outUnknown());
   audio.onLoadLog = (m) => { log('audio', m, 'w'); if (/ужатие \d/.test(m) && /меньше/.test(m)) dCount('audio.squeeze'); };
   // нагрузка звука — в диагностику: средняя, секунды выше 70 и 90 %, доля пропусков; перегрузка — событие с обстановкой
   audio.onLoadSample = (st, m) => {

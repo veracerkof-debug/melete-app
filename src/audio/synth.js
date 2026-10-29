@@ -4,7 +4,7 @@
 // эквалайзер (низ, середина, верх). У каждого звука — свои ручки: то, что у него действительно меняется
 // (у рояля — крышка, удар, демпферы; у пэда — дыхание, мерцание, плавание; у баса — фильтр и резонанс).
 // Параметры звука (patch) — как в прототипе (device.piano.syn), слой — device.piano.layer.
-import { getContext, midiFreq, sendToHall } from './context.js';
+import { getContext, midiFreq, sendToHall, outReady } from './context.js';
 import { maxVoices } from './perf.js';
 import { synWave, noiseBuf } from './waves.js';
 import { airVoice } from './airsound.js';
@@ -457,7 +457,8 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     },
     get voiceCount() { return voices.size; },
     // Заранее скачать записи рояля (при открытии пианино)
-    preload() { grandPreload(ctxOf()); },
+    // подгрузка рояля создаёт звук — сначала узнать выход (Bluetooth — буфер побольше, context.js)
+    preload() { outReady().then(() => grandPreload(ctxOf())); },
   };
   return syn;
 }

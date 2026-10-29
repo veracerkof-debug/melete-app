@@ -72,3 +72,19 @@ test('занятие: любой инструмент во весь экран �
   await page.locator('.ws .grip').nth(1).click(); await page.waitForTimeout(700);
   await expect(page.locator('.sheet [data-pm="pure"]')).toHaveCount(1);
 });
+
+test('занятие: кнопка полного экрана видна в каждом окне — войти и свернуть', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('HH', ['drone', 'metro']); // окна внутри колонок — тоже на весь экран
+  const btn = page.locator('.ws .pane .pfbtn').first();
+  await expect(btn).toBeVisible();
+  await btn.click(); await page.waitForTimeout(600);
+  await expect(page.locator('.ws .pane.pfull')).toHaveCount(1);
+  const vp = page.viewportSize(), box = await page.locator('.ws .pane.pfull').boundingBox();
+  expect(box.width).toBe(vp.width); expect(box.height).toBe(vp.height);
+  const b = await page.locator('.ws .pane.pfull > .pfbtn').boundingBox();
+  expect(b.width).toBeGreaterThanOrEqual(40); // в полном экране — крупная «Свернуть»
+  await page.locator('.ws .pane.pfull > .pfbtn').click(); await page.waitForTimeout(600);
+  await expect(page.locator('.ws .pane.pfull')).toHaveCount(0);
+  await expect(btn).toBeVisible();
+});
