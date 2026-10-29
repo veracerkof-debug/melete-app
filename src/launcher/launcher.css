@@ -469,3 +469,8 @@ img.app-ico { filter: grayscale(1) contrast(1.05); object-fit: contain; display:
 .l-drawer.rail-top .l-d-tab svg, .l-drawer.rail-top .l-d-tab img.app-ico { width: 18px; height: 18px; }
 .l-drawer.rail-top .l-d-tab.on { border-color: var(--ink); }
 .l-drawer.rail-top .l-d-tab.add { width: 40px; padding: 0; justify-content: center; }
+/* вкладки сверху без названий — круглые значки */
+.l-drawer.rail-top .l-d-tab:not(:has(span)), .l-drawer.rail-top:has(.l-d-tab.fold:not(:has(span))) .l-d-tab.add { width: 44px; height: 44px; padding: 0; justify-content: center; }
+.l-drawer.rail-top .l-d-tab:not(:has(span)) svg, .l-drawer.rail-top .l-d-tab:not(:has(span)) img.app-ico { width: 20px; height: 20px; }
+/* список приложений: вертикаль — прокрутка, горизонталь — смахивание между папками (браузер её не забирает) */
+.l-d-list { touch-action: pan-y; }

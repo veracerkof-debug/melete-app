@@ -68,19 +68,26 @@ export function mountDrawer(container, { onChange }) {
   drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
   drawer.addEventListener('pointerup', endDrag);
   drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
-  // смахнуть влево-вправо по списку — соседняя вкладка
-  let sx = null, sy = 0;
-  list.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
-  list.addEventListener('pointerup', (e) => {
-    if (sx == null) return;
-    const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
-    if (reordering()) return;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && !search.value) {
-      const ids = tabIds();
-      const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
-      if (i >= 0 && i < ids.length) { tab = ids[i]; list.dataset.swiped = '1'; fill(); setTimeout(() => delete list.dataset.swiped, 50); }
-    }
-  });
+  // смахнуть влево-вправо по списку — соседняя вкладка. Чутко: от 36 px, или короткий быстрый взмах (от 20 px).
+  // Пальцем — касания (touchend приходит, даже если браузер успел начать прокрутку), мышью — указатель.
+  let sw = null;
+  const swStart = (x, y) => { sw = { x, y, t: performance.now() }; };
+  const swEnd = (x, y) => {
+    if (!sw) return;
+    const dx = x - sw.x, dy = y - sw.y, ms = Math.max(1, performance.now() - sw.t); sw = null;
+    if (reordering() || search.value) return;
+    const ax = Math.abs(dx);
+    const far = ax >= 36 && ax > Math.abs(dy) * 1.2;
+    const flick = ax >= 20 && ax / ms > 0.35 && ax > Math.abs(dy) * 1.5;
+    if (!far && !flick) return;
+    const ids = tabIds();
+    const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < ids.length) { tab = ids[i]; list.dataset.swiped = '1'; fill(); slideIn(dx < 0 ? 1 : -1); setTimeout(() => delete list.dataset.swiped, 50); }
+  };
+  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else sw = null; }, { passive: true });
+  list.addEventListener('touchend', (e) => { const c = e.changedTouches[0]; if (c) swEnd(c.clientX, c.clientY); }, { passive: true });
+  list.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') swStart(e.clientX, e.clientY); });
+  list.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') swEnd(e.clientX, e.clientY); });
   drawer.addEventListener('wheel', (e) => { if (e.deltaY < -40 && list.scrollTop <= 0) closeDrawer(); }, { passive: true });
   // удержать и перетащить: приложение в папке — на новое место; удержать и отпустить — меню приложения
   holdDrag(list, '.l-d-app', {
@@ -101,6 +108,12 @@ export function mountDrawer(container, { onChange }) {
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
 // вкладки по порядку: «Все» (если не убрана) и папки
+// переход между вкладками: список въезжает с той стороны, куда листаем (dir: 1 — следующая, −1 — предыдущая)
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function slideIn(dir) {
+  if (!dir || calm() || !list.animate) return;
+  list.animate([{ opacity: 0, transform: `translateX(${dir * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+}
 const tabIds = () => [...(prefs.drawerAll !== false || !folders().length ? ['all'] : []), ...folders().map((f) => f.id)];
 
 function fill() {
@@ -133,9 +146,9 @@ function renderTabs(searching) {
   const top = prefs.foldTabs === 'top';
   const tb = (id, label, icon, cls = '') => {
     const ico = icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
-    // сверху — вкладки с названием; справа — значки
+    // сверху — вкладки с названием (или только значки, prefs.foldLabels); справа — значки
     const b = h('button', { class: `l-d-tab ${cls} ${id !== 'all' && id !== '+' ? 'fold' : ''} ${!searching && tab === id ? 'on' : ''}`, 'data-id': id, role: 'tab', 'aria-selected': String(tab === id), 'aria-label': label, title: label,
-      html: top && id !== '+' ? `${ico}<span>${label.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))}</span>` : ico });
+      html: top && prefs.foldLabels !== false && id !== '+' ? `${ico}<span>${label.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))}</span>` : ico });
     // «Все»: удержание — убрать вкладку (вернуть — Настройки → Главный)
     if (id === 'all') {
       let timer;
@@ -145,7 +158,8 @@ function renderTabs(searching) {
     b.addEventListener('click', () => {
       if (b.dataset.held) { delete b.dataset.held; return; }
       if (id === '+') return newFolder();
-      tab = id; search.value = ''; fill(); list.scrollTop = 0;
+      const ids = tabIds(), was = ids.indexOf(tab), dir = id === tab ? 0 : Math.sign(ids.indexOf(id) - was) || 1;
+      tab = id; search.value = ''; fill(); list.scrollTop = 0; slideIn(dir);
     });
     return b;
   };

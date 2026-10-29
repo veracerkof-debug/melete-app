@@ -135,6 +135,7 @@ export function openSettings(onChange, getGesture, tab) {
       body.append(S('home', t('set.drawer'),
         h('div', { class: 'l-label' }, t('set.foldTabs')),
         segmented([{ value: 'side', label: t('set.foldTabs.side') }, { value: 'top', label: t('set.foldTabs.top') }], prefs.foldTabs === 'top' ? 'top' : 'side', (v) => up({ foldTabs: v }), t('set.foldTabs')),
+        prefs.foldTabs === 'top' ? toggle(t('set.foldLabels'), prefs.foldLabels !== false, (v) => up({ foldLabels: v }), t('set.foldLabelsHint')) : null,
         toggle(t('set.drawerAll'), prefs.drawerAll !== false, (v) => up({ drawerAll: v }), t('set.drawerAllHint')),
       ));
 
@@ -196,16 +197,16 @@ export function openSettings(onChange, getGesture, tab) {
       if (updAvailable()) {
         const updSec = () => {
           const u = updState();
-          const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.wait' : 'upd.down', { p: Math.round(u.f * 100) })
+          const st = u.st === 'avail' ? t('upd.avail', { n: u.info.build }) : u.st === 'down' ? t(u.wait ? 'upd.net' : 'upd.down', { p: Math.round(u.f * 100) }) : u.st === 'nowifi' ? t('upd.wait')
             : u.st === 'ready' ? t('upd.readyShort') : u.st === 'none' ? t('upd.none') : u.st === 'err' ? t('upd.err') : u.st === 'checking' ? t('upd.checking') : '';
           return S('data', t('set.upd'),
             h('p', { class: 'l-hint' }, t('upd.build', { ch: CHANNEL, n: BUILD }), st ? ' · ' + st : ''),
             segmented([{ value: 'auto', label: t('upd.auto') }, { value: 'button', label: t('upd.button') }], prefs.updMode, (v) => { setPrefs({ updMode: v }); changed(); swap(); }, t('set.upd')),
-            toggle(t('upd.mobile'), prefs.updMobile, (v) => { setPrefs({ updMobile: v }); changed(); }),
+            toggle(t('upd.mobile'), prefs.updMobile, (v) => { setPrefs({ updMobile: v }); changed(); if (v && updState().st === 'nowifi') download(); }),
             h('div', { class: 'l-btn-row' },
-              u.st === 'avail' ? h('button', { class: 'l-btn primary', onclick: () => download() }, t('upd.get')) : null,
+              u.st === 'avail' || u.st === 'nowifi' ? h('button', { class: 'l-btn primary', onclick: () => download() }, t('upd.get')) : null,
               u.st === 'ready' ? h('button', { class: 'l-btn primary', onclick: () => install() }, t('upd.install')) : null,
-              ['avail', 'down', 'ready'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check() }, t('upd.check'))));
+              ['avail', 'down', 'ready', 'nowifi'].includes(u.st) ? null : h('button', { class: 'l-btn', onclick: () => check() }, t('upd.check'))));
         };
         let updEl = updSec();
         const swap = () => { if (!updEl.isConnected) return; const n = updSec(); updEl.replaceWith(n); updEl = n; };

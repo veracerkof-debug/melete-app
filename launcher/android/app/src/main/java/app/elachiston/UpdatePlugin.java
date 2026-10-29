@@ -32,6 +32,7 @@ public class UpdatePlugin extends Plugin {
         String url = call.getString("url", "");
         if (!url.startsWith("https://github.com/veracerkof-debug/")) { call.reject("url"); return; }
         try {
+            if (call.getBoolean("wifi", true) && !onWifi()) { call.reject("nowifi"); return; }
             File f = apk();
             if (f.exists()) f.delete();
             DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
@@ -39,12 +40,26 @@ public class UpdatePlugin extends Plugin {
             r.setMimeType("application/vnd.android.package-archive");
             r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
             r.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, NAME);
-            if (call.getBoolean("wifi", true)) r.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
+            // «только по Wi-Fi» проверяем сами: системный загрузчик с NETWORK_WIFI на части телефонов (Honor, Wi-Fi,
+            // помеченный лимитным, раздача с телефона) ждёт «настоящий» Wi-Fi бесконечно. Есть Wi-Fi — качаем без запретов
+            r.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+            r.setAllowedOverMetered(true);
+            r.setAllowedOverRoaming(true);
             long id = dm().enqueue(r);
             JSObject o = new JSObject();
             o.put("id", id);
             call.resolve(o);
         } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+    }
+
+    // сейчас — Wi-Fi или проводная сеть с интернетом
+    private boolean onWifi() {
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return nc != null && nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && (nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) || nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
+        } catch (Exception e) { return false; }
     }
 
     // { id } → { status: run | wait | done | fail, got, total, reason }

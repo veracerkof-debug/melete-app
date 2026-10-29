@@ -4,7 +4,7 @@
 // запуске: проверить, скачать (только по Wi-Fi, если не разрешена мобильная сеть) и предложить установку — системный
 // установщик, одно касание «Установить». Сеть — только api.github.com и сам файл релиза.
 import { registerPlugin } from '@capacitor/core';
-import { isNative } from './native.js';
+import { isNative, Launcher } from './native.js';
 import { prefs, readJSON, writeJSON } from './data.js';
 
 export const REPO = 'veracerkof-debug/melete-app';
@@ -62,7 +62,15 @@ export async function download() {
       else if (r.status === 'fail') { clearInterval(poll); set({ st: 'err' }); }
       else set({ f: r.total > 0 ? r.got / r.total : 0, wait: r.status === 'wait' });
     }, 1000);
-  } catch { set({ st: 'err' }); }
+  } catch (e) {
+    // нет Wi-Fi, а мобильная сеть не разрешена — ждём Wi-Fi сами и начинаем, как только он появится
+    set({ st: /nowifi/.test(String(e?.message || e)) ? 'nowifi' : 'err' });
+  }
+}
+if (Native) {
+  const retry = () => { if (s.st === 'nowifi') download(); };
+  Launcher.addListener?.('status', (x) => { if (x?.net === 'wifi') retry(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) retry(); });
 }
 
 // 'allow' — сначала разрешение «Установка неизвестных приложений» (один раз), потом установка

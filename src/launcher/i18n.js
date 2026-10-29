@@ -339,7 +339,7 @@ Object.assign(S.ru, {
   'mel.connected': 'Melete подключено', 'mel.updated': 'Обновлено', 'mel.noFile': 'В папке нет Data/melete-data.json', 'mel.fail': 'Данные Melete не прочитаны',
   'set.upd': 'Обновление', 'upd.build': 'Сборка {n}, канал {ch}', 'upd.auto': 'Автоматически', 'upd.button': 'Только по кнопке', 'upd.mobile': 'Скачивать и по мобильной сети',
   'upd.check': 'Проверить', 'upd.get': 'Скачать', 'upd.install': 'Установить', 'upd.checking': 'проверка…', 'upd.none': 'новее нет', 'upd.err': 'нет связи с GitHub',
-  'upd.avail': 'есть сборка {n}', 'upd.down': 'скачано {p}%', 'upd.wait': 'ждёт Wi-Fi', 'upd.readyShort': 'скачано, можно ставить',
+  'upd.avail': 'есть сборка {n}', 'upd.down': 'скачано {p}%', 'upd.wait': 'ждёт Wi-Fi', 'upd.net': 'ждёт сеть', 'upd.readyShort': 'скачано, можно ставить',
   'about.motto': '«Верный в малом и во многом верен» — Лк 16:10', 'about.lic': 'Лицензии: код — GPL-3.0, шрифты — SIL OFL',
 });
 Object.assign(S.uz, {
@@ -357,7 +357,7 @@ Object.assign(S.uz, {
   'mel.connected': 'Melete ulandi', 'mel.updated': 'Yangilandi', 'mel.noFile': 'Papkada Data/melete-data.json yoʻq', 'mel.fail': 'Melete maʼlumotlari oʻqilmadi',
   'set.upd': 'Yangilanish', 'upd.build': 'Yigʻma {n}, kanal {ch}', 'upd.auto': 'Avtomatik', 'upd.button': 'Faqat tugma bilan', 'upd.mobile': 'Mobil tarmoqda ham yuklash',
   'upd.check': 'Tekshirish', 'upd.get': 'Yuklash', 'upd.install': 'Oʻrnatish', 'upd.checking': 'tekshirilmoqda…', 'upd.none': 'yangisi yoʻq', 'upd.err': 'GitHub bilan aloqa yoʻq',
-  'upd.avail': '{n}-yigʻma bor', 'upd.down': '{p}% yuklandi', 'upd.wait': 'Wi-Fi kutilmoqda', 'upd.readyShort': 'yuklandi, oʻrnatish mumkin',
+  'upd.avail': '{n}-yigʻma bor', 'upd.down': '{p}% yuklandi', 'upd.wait': 'Wi-Fi kutilmoqda', 'upd.net': 'tarmoq kutilmoqda', 'upd.readyShort': 'yuklandi, oʻrnatish mumkin',
   'about.motto': '«Kichik ishda sodiq boʻlgan katta ishda ham sodiqdir» — Luqo 16:10', 'about.lic': 'Litsenziyalar: kod — GPL-3.0, shriftlar — SIL OFL',
 });
 Object.assign(S.en, {
@@ -375,13 +375,13 @@ Object.assign(S.en, {
   'mel.connected': 'Melete connected', 'mel.updated': 'Updated', 'mel.noFile': 'No Data/melete-data.json in the folder', 'mel.fail': 'Melete data not read',
   'set.upd': 'Updates', 'upd.build': 'Build {n}, channel {ch}', 'upd.auto': 'Automatic', 'upd.button': 'Manual only', 'upd.mobile': 'Download over mobile data too',
   'upd.check': 'Check', 'upd.get': 'Download', 'upd.install': 'Install', 'upd.checking': 'checking…', 'upd.none': 'up to date', 'upd.err': 'no connection to GitHub',
-  'upd.avail': 'build {n} available', 'upd.down': '{p}% downloaded', 'upd.wait': 'waiting for Wi-Fi', 'upd.readyShort': 'downloaded, ready to install',
+  'upd.avail': 'build {n} available', 'upd.down': '{p}% downloaded', 'upd.wait': 'waiting for Wi-Fi', 'upd.net': 'waiting for network', 'upd.readyShort': 'downloaded, ready to install',
   'about.motto': '"Whoever is faithful in very little is also faithful in much" — Luke 16:10', 'about.lic': 'Licences: code GPL-3.0, fonts SIL OFL',
 });
 // Минимальный главный экран: крест, своя строка состояния, не больше 7 приложений (DECISIONS 2026-10-28)
 Object.assign(S.ru, {
   'set.mono': 'Чёрно-белый', 'set.monoHint': 'Без цвета: акцент, значки приложений, кошелёк', 'icg.apps': 'Значки приложений (ч/б)', 'pick.noIcon': 'Без значка', 'set.itemIcon': 'Значок у названия', 'set.appIcons': 'Родные значки у приложений', 'set.appIconsHint': 'На главном и во всех приложениях; всегда чёрно-белые',
-  'set.drawer': 'Все приложения', 'set.foldTabs': 'Папки', 'set.foldTabs.side': 'Значками справа', 'set.foldTabs.top': 'Вкладками сверху', 'set.drawerAll': 'Вкладка «Все»', 'set.drawerAllHint': 'Убрана — сразу папки; приложения вне папок находит поиск', 'fold.allHide': 'Убрать вкладку «Все»', 'fold.allHideHint': 'Сразу будут открываться папки. Приложения вне папок находит поиск. Вернуть — Настройки → Главный.',
+  'set.drawer': 'Все приложения', 'set.foldTabs': 'Папки', 'set.foldTabs.side': 'Значками справа', 'set.foldTabs.top': 'Вкладками сверху', 'set.foldLabels': 'Названия у вкладок', 'set.foldLabelsHint': 'Выключено — только значки', 'set.drawerAll': 'Вкладка «Все»', 'set.drawerAllHint': 'Убрана — сразу папки; приложения вне папок находит поиск', 'fold.allHide': 'Убрать вкладку «Все»', 'fold.allHideHint': 'Сразу будут открываться папки. Приложения вне папок находит поиск. Вернуть — Настройки → Главный.',
   'fold.choose': 'Добавить приложения', 'fold.inThis': 'В этой папке', 'fold.free': 'Не в папках', 'fold.chooseHint': 'Отмеченные — в этой папке. Приложения из папок не показываются во «Всех» — только в своих папках и в поиске. Порядок в папке — удержать и перетащить.', 'fold.allIn': 'Все приложения — в папках. Найти любое — поиск сверху.',
   'ren.name': 'Название', 'hide.title': 'Скрытые приложения', 'hide.hint': 'Скрытых нет нигде: ни во всех приложениях, ни в поиске, ни на главном, ни в папках. Открыть или вернуть — только здесь.', 'hide.app': 'Скрыть приложение', 'hide.add': 'Скрыть приложение', 'hide.done': 'Скрыто. Вернуть — Настройки → Главный', 'hide.open': 'Открыть', 'hide.back': 'Вернуть',
   'arr.title': 'Правка главного', 'arr.done': 'Готово', 'arr.hide': 'Убрать', 'arr.smaller': 'Меньше', 'arr.bigger': 'Больше', 'arr.reset': 'Как было', 'arr.addApp': 'Приложение', 'arr.addIcon': 'Значок', 'arr.hint': 'Перетащить — переставить, щипок — размер, касание — выбрать.',
@@ -395,7 +395,7 @@ Object.assign(S.ru, {
 });
 Object.assign(S.uz, {
   'set.mono': 'Oq-qora', 'set.monoHint': 'Rangsiz: urgʻu, ilova belgilari, hamyon', 'icg.apps': 'Ilova belgilari (oq-qora)', 'pick.noIcon': 'Belgisiz', 'set.itemIcon': 'Nom yonidagi belgi', 'set.appIcons': 'Ilovalarning asl belgilari', 'set.appIconsHint': 'Bosh ekranda va barcha ilovalarda; doim oq-qora',
-  'set.drawer': 'Barcha ilovalar', 'set.foldTabs': 'Jildlar', 'set.foldTabs.side': 'Oʻngda belgilar', 'set.foldTabs.top': 'Tepada yorliqlar', 'set.drawerAll': '«Barchasi» yorligʻi', 'set.drawerAllHint': 'Olib tashlansa — darhol jildlar; jilddan tashqaridagilarni qidiruv topadi', 'fold.allHide': '«Barchasi» yorligʻini olib tashlash', 'fold.allHideHint': 'Darhol jildlar ochiladi. Jilddan tashqaridagi ilovalarni qidiruv topadi. Qaytarish — Sozlamalar → Bosh ekran.',
+  'set.drawer': 'Barcha ilovalar', 'set.foldTabs': 'Jildlar', 'set.foldTabs.side': 'Oʻngda belgilar', 'set.foldTabs.top': 'Tepada yorliqlar', 'set.foldLabels': 'Yorliqlarda nomlar', 'set.foldLabelsHint': 'Oʻchirilsa — faqat belgilar', 'set.drawerAll': '«Barchasi» yorligʻi', 'set.drawerAllHint': 'Olib tashlansa — darhol jildlar; jilddan tashqaridagilarni qidiruv topadi', 'fold.allHide': '«Barchasi» yorligʻini olib tashlash', 'fold.allHideHint': 'Darhol jildlar ochiladi. Jilddan tashqaridagi ilovalarni qidiruv topadi. Qaytarish — Sozlamalar → Bosh ekran.',
   'fold.choose': 'Ilova qoʻshish', 'fold.inThis': 'Shu jildda', 'fold.free': 'Jildlarda emas', 'fold.chooseHint': 'Belgilanganlar — shu jildda. Jilddagi ilovalar «Barchasi»da koʻrinmaydi — faqat oʻz jildlarida va qidiruvda. Tartib — bosib turib sudrash.', 'fold.allIn': 'Barcha ilovalar jildlarda. Istalganini topish — yuqoridagi qidiruv.',
   'ren.name': 'Nomi', 'hide.title': 'Yashirin ilovalar', 'hide.hint': 'Yashirin ilovalar hech qayerda yoʻq: barcha ilovalarda ham, qidiruvda ham, bosh ekranda ham, jildlarda ham. Ochish yoki qaytarish — faqat shu yerda.', 'hide.app': 'Ilovani yashirish', 'hide.add': 'Ilovani yashirish', 'hide.done': 'Yashirildi. Qaytarish — Sozlamalar → Bosh ekran', 'hide.open': 'Ochish', 'hide.back': 'Qaytarish',
   'arr.title': 'Bosh ekranni tahrirlash', 'arr.done': 'Tayyor', 'arr.hide': 'Olib tashlash', 'arr.smaller': 'Kichikroq', 'arr.bigger': 'Kattaroq', 'arr.reset': 'Avvalgidek', 'arr.addApp': 'Ilova', 'arr.addIcon': 'Belgi', 'arr.hint': 'Sudrash — joyini almashtirish, chimdish — oʻlcham, bosish — tanlash.',
@@ -409,7 +409,7 @@ Object.assign(S.uz, {
 });
 Object.assign(S.en, {
   'set.mono': 'Black and white', 'set.monoHint': 'No colour: accent, app icons, wallet', 'icg.apps': 'App icons (b/w)', 'pick.noIcon': 'No icon', 'set.itemIcon': 'Icon by the name', 'set.appIcons': 'Original app icons', 'set.appIconsHint': 'On home and in all apps; always black and white',
-  'set.drawer': 'All apps', 'set.foldTabs': 'Folders', 'set.foldTabs.side': 'Icons on the right', 'set.foldTabs.top': 'Tabs on top', 'set.drawerAll': 'All tab', 'set.drawerAllHint': 'Without it, folders open first; search finds apps outside folders', 'fold.allHide': 'Remove the All tab', 'fold.allHideHint': 'Folders will open first. Search finds apps outside folders. Bring back — Settings → Home.',
+  'set.drawer': 'All apps', 'set.foldTabs': 'Folders', 'set.foldTabs.side': 'Icons on the right', 'set.foldTabs.top': 'Tabs on top', 'set.foldLabels': 'Tab names', 'set.foldLabelsHint': 'Off — icons only', 'set.drawerAll': 'All tab', 'set.drawerAllHint': 'Without it, folders open first; search finds apps outside folders', 'fold.allHide': 'Remove the All tab', 'fold.allHideHint': 'Folders will open first. Search finds apps outside folders. Bring back — Settings → Home.',
   'fold.choose': 'Add apps', 'fold.inThis': 'In this folder', 'fold.free': 'Not in folders', 'fold.chooseHint': 'Checked apps are in this folder. Apps in folders are not shown in All — only in their folders and in search. Order: hold and drag.', 'fold.allIn': 'All apps are in folders. Search above finds any.',
   'ren.name': 'Name', 'hide.title': 'Hidden apps', 'hide.hint': 'Hidden apps appear nowhere: not in all apps, search, home or folders. Open or bring back — only here.', 'hide.app': 'Hide app', 'hide.add': 'Hide an app', 'hide.done': 'Hidden. Bring back — Settings → Home', 'hide.open': 'Open', 'hide.back': 'Bring back',
   'arr.title': 'Edit home', 'arr.done': 'Done', 'arr.hide': 'Remove', 'arr.smaller': 'Smaller', 'arr.bigger': 'Bigger', 'arr.reset': 'Reset', 'arr.addApp': 'App', 'arr.addIcon': 'Icon', 'arr.hint': 'Drag to move, pinch to resize, tap to select.',

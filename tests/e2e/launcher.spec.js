@@ -418,3 +418,15 @@ test('настройки: смахнуть вбок — соседняя вкл�
   await expect(page.locator('.l-sheet-wrap')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('вкладки сверху без названий — только значки; переход между папками с движением', async ({ page, errors }) => {
+  await open(page, { foldTabs: 'top', foldLabels: false });
+  await page.keyboard.press('ArrowUp');
+  const tab = page.locator('.l-d-tab.fold').first();
+  await expect(tab.locator('svg, img')).toHaveCount(1);
+  await expect(tab.locator('span')).toHaveCount(0);
+  await expect(tab).toHaveAttribute('aria-label', 'Связь');
+  await tab.click();
+  expect(await page.locator('.l-d-list').evaluate((e) => e.getAnimations().length)).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
