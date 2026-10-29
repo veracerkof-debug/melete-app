@@ -182,6 +182,23 @@ test('переименовать приложение: новое названи
   expect(errors).toEqual([]);
 });
 
+test('текст не выделяется: главный, настройки, кошелёк; в полях ввода — выделяется', async ({ page, errors }) => {
+  await open(page);
+  const sel = (loc) => loc.evaluate((e) => getComputedStyle(e).userSelect || getComputedStyle(e).webkitUserSelect);
+  expect(await sel(page.locator('.l-date-t'))).toBe('none');
+  await hold(page, 60, 330);
+  expect(await sel(page.locator('.l-sheet h2'))).toBe('none');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowUp');
+  expect(await sel(page.locator('.l-d-app').first())).toBe('none');
+  expect(await sel(page.locator('.l-drawer .l-search'))).toBe('text');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowLeft');
+  const w = page.frameLocator('iframe.l-money:not(.l-notes)');
+  expect(await w.locator('.top').evaluate((e) => getComputedStyle(e).userSelect)).toBe('none');
+  expect(errors).toEqual([]);
+});
+
 test('старые настройки: украшения убраны, приложения на месте', async ({ page, errors }) => {
   await page.goto(PAGE);
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('elachiston.prefs', JSON.stringify({ intro: true, lang: 'ru', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', theme: 'paper', style: 'rich' })); });

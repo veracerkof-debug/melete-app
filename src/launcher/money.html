@@ -12,6 +12,9 @@
   --l3:rgba(243,242,238,.36);--sep:rgba(243,242,238,.10);--fill:rgba(243,242,238,.07);--fill2:rgba(243,242,238,.13);
   --tint:#EE8A3C;--red:#E0675E;--green:#5DB477;color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* текст не выделяется — только там, где печатают */
+html{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable="true"]{user-select:text;-webkit-user-select:text;-webkit-touch-callout:default}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);overscroll-behavior:none}
 body{display:flex;justify-content:center}
 #app{width:100%;max-width:460px;height:calc(100dvh / var(--l-auto,1));position:relative;overflow:hidden;zoom:var(--l-auto,1)}
