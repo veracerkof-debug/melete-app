@@ -8,7 +8,7 @@ import { CROSS_IDS, CROSS_PLACES, crossSVG } from './cross.js';
 import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
-import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden } from './apps.js';
+import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp, systemName } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
 import { applyLook } from './look.js';
@@ -263,7 +263,9 @@ export function editHomeItem(i, after, onChange = changed) {
       const app = appOf(item.key);
       const commit = (fn) => { fn(ownHome()[i]); save(); onChange(); after?.(); };
       body.append(
-        field(t('set.itemLabel'), item.label, (v) => commit((x) => { x.label = v; }), { placeholder: app?.label || '', maxlength: 40 }),
+        // название: у приложения — общее, для всех мест сразу (пустое — системное); у папки — имя папки
+        app ? field(t('ren.name'), (prefs.names || {})[item.key] || item.label || '', (v) => { renameApp(item.key, v); onChange(); after?.(); }, { placeholder: systemName(item.key), maxlength: 40 })
+          : field(t('set.itemLabel'), item.label, (v) => commit((x) => { x.label = v; }), { placeholder: nameOf(item.key), maxlength: 40 }),
         h('button', { class: 'l-pick', onclick: () => pickAction({ t: 'app', key: item.key }, (a) => { commit((x) => { x.key = a.key; }); rerender(); }, { appsOnly: true }) },
           h('span', {}, t('set.itemOpens', { name: app?.label || '—' }))),
         h('div', { class: 'l-btn-row' },

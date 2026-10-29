@@ -133,6 +133,55 @@ test('скрыть приложение: из «Всех приложений» 
   expect(errors).toEqual([]);
 });
 
+test('кошелёк: новый — пустой; пример из прежних версий удаляется одним касанием, свои записи остаются', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowLeft');
+  const w = page.frameLocator('iframe.l-money:not(.l-notes)');
+  await expect(w.locator('.cats.grid .cat').first()).toBeVisible();
+  await expect(w.locator('.demo')).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elachiston.money.draft')).recs.length)).toBe(0);
+  // как было у прежних версий: записи примера — id с номером в хвосте; своя — без
+  await page.evaluate(() => {
+    const t = Date.now();
+    const base = t.toString(36) + 'abcd';
+    localStorage.setItem('elachiston.money.draft', JSON.stringify({ budget: 4000000, recs: [
+      { id: base + '0', t, k: 'e', c: 'food', a: 25000, n: '' }, { id: base + '17', t, k: 'i', c: 'salary', a: 4200000, n: '' },
+      { id: t.toString(36) + 'wxyz', t, k: 'e', c: 'cig', a: 34000, n: 'своя' }] }));
+  });
+  await page.evaluate(() => window.__launcherBack());
+  await page.reload(); await page.waitForSelector('.l-home .clock');
+  await page.keyboard.press('ArrowLeft');
+  await w.locator('.demo button').click();
+  await expect(w.locator('.demo')).toHaveCount(0);
+  const db = await page.evaluate(() => JSON.parse(localStorage.getItem('elachiston.money.draft')));
+  expect(db.recs.map((r) => r.n)).toEqual(['своя']);
+  expect(db.budget).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('переименовать приложение: новое название везде, поиск — и по старому; пустое — снова системное', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowUp');
+  const box = await page.locator('.l-d-app', { hasText: 'Карты' }).boundingBox();
+  await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
+  await page.locator('.l-sheet .l-field input').fill('Дорога');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1);
+  await page.locator('.l-drawer .l-search').fill('карт');
+  await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1); // по системному названию тоже
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.l-app .label', { hasText: 'Дорога' })).toHaveCount(1); // и на главном
+  // пустое — снова «Карты»; правка — касанием приложения в правке главного
+  const c = await page.locator('[data-blk="clock"]').boundingBox();
+  await hold(page, c.x + c.width / 2, c.y + c.height / 2);
+  await page.locator('.l-app', { hasText: 'Дорога' }).click();
+  await page.locator('.l-sheet .l-field input').fill('');
+  await page.keyboard.press('Escape');
+  await page.locator('.l-arr-done').click();
+  await expect(page.locator('.l-app .label', { hasText: 'Карты' })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
 test('старые настройки: украшения убраны, приложения на месте', async ({ page, errors }) => {
   await page.goto(PAGE);
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('elachiston.prefs', JSON.stringify({ intro: true, lang: 'ru', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', theme: 'paper', style: 'rich' })); });

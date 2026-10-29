@@ -1,6 +1,6 @@
 // Главный экран: все приложения (смахнуть вверх) — по алфавиту, с поиском. Удержание — меню приложения.
 import { prefs, save, HOME_MAX } from './data.js';
-import { allApps, homeItems, loadApps, setHidden } from './apps.js';
+import { allApps, homeItems, loadApps, setHidden, renameApp } from './apps.js';
 import { openApp, openUrl } from './actions.js';
 import { isNative, Launcher } from './native.js';
 import { t } from './i18n.js';
@@ -86,7 +86,7 @@ function fill() {
   const q = search.value.trim().toLowerCase();
   if (tab !== 'all' && !folderById(tab)) tab = 'all';
   const f = !q && tab !== 'all' ? folderById(tab) : null;
-  const apps = f ? folderApps(f) : allApps().filter((a) => !q || a.label.toLowerCase().includes(q) || (a.pkg || '').includes(q));
+  const apps = f ? folderApps(f) : allApps().filter((a) => !q || a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q));
   renderTabs(!!q);
   list.replaceChildren();
   let letter = '';
@@ -236,6 +236,8 @@ function appMenu(a) {
   openSheet({
     title: a.label, kicker: '',
     render(body, close) {
+      // название — своё, для всех мест сразу; пустое — системное
+      body.append(field(t('ren.name'), a.label === a.sys ? '' : a.label, (v) => { renameApp(a.key, v); fill(); changed(); }, { placeholder: a.sys || a.label, maxlength: 40 }));
       body.append(h('button', { class: 'l-pick', onclick: () => {
         const home = ownHome();
         if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); return; }
