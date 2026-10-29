@@ -76,7 +76,7 @@ export function mountDrawer(container, { onChange }) {
     const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
     if (reordering()) return;
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && !search.value) {
-      const ids = ['all', ...folders().map((f) => f.id)];
+      const ids = tabIds();
       const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
       if (i >= 0 && i < ids.length) { tab = ids[i]; list.dataset.swiped = '1'; fill(); setTimeout(() => delete list.dataset.swiped, 50); }
     }
@@ -93,16 +93,19 @@ export function mountDrawer(container, { onChange }) {
   });
   // папки справа: удержать и перетащить — порядок; удержать и отпустить — меню папки
   holdDrag(tabs, '.l-d-tab.fold', {
+    axis: () => (prefs.foldTabs === 'top' ? 'x' : 'y'),
     onHold: (el) => folderMenu(folderById(el.dataset.id)),
     onMove: (from, to) => { moveFolder(from, to); fill(); changed(); },
   });
 }
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
+// вкладки по порядку: «Все» (если не убрана) и папки
+const tabIds = () => [...(prefs.drawerAll !== false || !folders().length ? ['all'] : []), ...folders().map((f) => f.id)];
 
 function fill() {
   const q = search.value.trim().toLowerCase();
-  if (tab !== 'all' && !folderById(tab)) tab = 'all';
+  if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
   const f = !q && tab !== 'all' ? folderById(tab) : null;
   // «Все» — без приложений из папок (они — в своих папках); поиск находит все
   const apps = f ? folderApps(f) : allApps().filter((a) => (q ? a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q) : !inAnyFolder(a.key)));
@@ -127,20 +130,40 @@ function fill() {
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
 function renderTabs(searching) {
+  const top = prefs.foldTabs === 'top';
   const tb = (id, label, icon, cls = '') => {
+    const ico = icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
+    // сверху — вкладки с названием; справа — значки
     const b = h('button', { class: `l-d-tab ${cls} ${id !== 'all' && id !== '+' ? 'fold' : ''} ${!searching && tab === id ? 'on' : ''}`, 'data-id': id, role: 'tab', 'aria-selected': String(tab === id), 'aria-label': label, title: label,
-      html: icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>' });
+      html: top && id !== '+' ? `${ico}<span>${label.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))}</span>` : ico });
+    // «Все»: удержание — убрать вкладку (вернуть — Настройки → Главный)
+    if (id === 'all') {
+      let timer;
+      b.addEventListener('pointerdown', () => { timer = setTimeout(() => { b.dataset.held = '1'; navigator.vibrate?.(12); allMenu(); }, 450); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => clearTimeout(timer)));
+    }
     b.addEventListener('click', () => {
-      if (b.dataset.held) return;
+      if (b.dataset.held) { delete b.dataset.held; return; }
       if (id === '+') return newFolder();
       tab = id; search.value = ''; fill(); list.scrollTop = 0;
     });
     return b;
   };
-  tabs.replaceChildren(tb('all', t('fold.all'), 'grid'), ...folders().map((f) => tb(f.id, folderName(f), folderIcon(f))), tb('+', t('fold.new'), null, 'add'));
+  tabs.replaceChildren(...[tabIds().includes('all') ? tb('all', t('fold.all'), 'grid') : null, ...folders().map((f) => tb(f.id, folderName(f), folderIcon(f))), tb('+', t('fold.new'), null, 'add')].filter(Boolean));
   tabs.querySelector('.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   const f = !searching && tab !== 'all' ? folderById(tab) : null;
   titleName.textContent = f ? folderName(f) : t('drawer.title');
+}
+
+// «Все» — убрать вкладку (приложения вне папок находит поиск; вернуть — Настройки → Главный → «Вкладка «Все»»)
+function allMenu() {
+  openSheet({
+    title: t('fold.all'), kicker: '',
+    render(body, close) {
+      body.append(h('p', { class: 'l-hint' }, t('fold.allHideHint')),
+        h('button', { class: 'l-pick', onclick: () => { prefs.drawerAll = false; save(); tab = tabIds()[0]; close(); fill(); changed(); } }, h('span', {}, t('fold.allHide'))));
+    },
+  });
 }
 
 function newFolder(withApp) {
@@ -213,7 +236,7 @@ export function openDrawer(focus = false) {
   open = true;
   const L = layout();
   drawer.classList.remove('rail-right', 'rail-left', 'rail-top', 'rail-bottom', 'search-top', 'search-bottom');
-  drawer.classList.add('rail-' + L.rail, 'search-' + L.search);
+  drawer.classList.add('rail-' + (prefs.foldTabs === 'top' ? 'top' : 'right'), 'search-' + L.search);
   // поиск сверху (под заголовком) или внизу — под рукой
   if (L.search === 'bottom') drawer.append(search); else drawer.querySelector('.l-d-head').append(search);
   search.value = '';

@@ -131,6 +131,13 @@ export function openSettings(onChange, getGesture, tab) {
         dockSlots().length < 6 ? h('button', { class: 'l-btn', onclick: () => { ownDock().push({ icon: 'grid', action: { t: 'cmd', id: 'drawer' } }); save(); changed(); rerender(); } }, t('set.dockAdd')) : null,
       ));
 
+      // — Все приложения: где папки и нужна ли вкладка «Все» —
+      body.append(S('home', t('set.drawer'),
+        h('div', { class: 'l-label' }, t('set.foldTabs')),
+        segmented([{ value: 'side', label: t('set.foldTabs.side') }, { value: 'top', label: t('set.foldTabs.top') }], prefs.foldTabs === 'top' ? 'top' : 'side', (v) => up({ foldTabs: v }), t('set.foldTabs')),
+        toggle(t('set.drawerAll'), prefs.drawerAll !== false, (v) => up({ drawerAll: v }), t('set.drawerAllHint')),
+      ));
+
       // — Мост с Melete: чтение и практика —
       const br = meleteBridge();
       const mel = h('div', {});

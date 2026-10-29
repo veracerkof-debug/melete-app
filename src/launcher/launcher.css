@@ -461,3 +461,11 @@ img.app-ico { filter: grayscale(1) contrast(1.05); object-fit: contain; display:
 .l-app-ico svg, .l-app-ico img { width: 100%; height: 100%; }
 .l-app { align-items: center; }
 .l-d-app .l-app-ico { width: 26px; height: 26px; margin-right: 4px; }
+
+/* папки вкладками сверху (prefs.foldTabs = top): строка листается пальцем, вкладка — значок и название */
+.l-drawer.rail-top .l-d-rail { gap: 6px; margin: 0 calc(-1 * var(--l-gut)); padding: 2px var(--l-gut) 10px; scroll-snap-type: x proximity; scroll-padding-inline: var(--l-gut); }
+.l-drawer.rail-top .l-d-tab { width: auto; height: 40px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; white-space: nowrap; border: 1px solid var(--sep); scroll-snap-align: start; }
+.l-drawer.rail-top .l-d-tab svg, .l-drawer.rail-top .l-d-tab img.app-ico { width: 18px; height: 18px; }
+.l-drawer.rail-top .l-d-tab.on { border-color: var(--ink); }
+.l-drawer.rail-top .l-d-tab.add { width: 40px; padding: 0; justify-content: center; }

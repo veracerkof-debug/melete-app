@@ -6,14 +6,16 @@ const HOLD_MS = 450, SLOP = 8;
 let active = false;
 export const reordering = () => active;
 
-export function holdDrag(container, selector, { axis = 'y', onHold, onMove }) {
+export function holdDrag(container, selector, { axis: ax = 'y', onHold, onMove }) {
   let st = null;
+  let axis = 'y';
   const items = () => [...container.querySelectorAll(selector)].filter((x) => !x.hidden);
   const pos = (e) => (axis === 'y' ? e.clientY : e.clientX);
 
   container.addEventListener('pointerdown', (e) => {
     const el = e.target.closest(selector);
     if (!el || !container.contains(el) || e.button > 0) return;
+    axis = typeof ax === 'function' ? ax() : ax; // вкладки сверху — по горизонтали
     st = { el, id: e.pointerId, x: e.clientX, y: e.clientY, p0: pos(e), held: false, moved: false };
     st.timer = setTimeout(() => {
       if (!st) return;

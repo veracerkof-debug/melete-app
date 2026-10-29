@@ -282,6 +282,39 @@ test('родные значки приложений: в значках вниз
   expect(errors).toEqual([]);
 });
 
+test('папки вкладками сверху: листаются смахиванием, порядок — перетащить; «Все» убирается удержанием', async ({ page, errors }) => {
+  await open(page, { foldTabs: 'top' });
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer')).toHaveClass(/rail-top/);
+  // вкладки — над списком, с названием
+  const rail = await page.locator('.l-d-rail').boundingBox();
+  const lst = await page.locator('.l-d-list').boundingBox();
+  expect(rail.y).toBeLessThan(lst.y);
+  await expect(page.locator('.l-d-tab.fold').first()).toContainText('Связь');
+  // «Все» — удержать → убрать; открывается первая папка
+  const all = await page.locator('.l-d-tab[data-id="all"]').boundingBox();
+  await page.mouse.move(all.x + all.width / 2, all.y + all.height / 2); await page.mouse.down(); await page.waitForTimeout(600); await page.mouse.up();
+  await page.locator('.l-sheet .l-pick', { hasText: 'Убрать вкладку' }).click();
+  await expect(page.locator('.l-d-tab[data-id="all"]')).toHaveCount(0);
+  await expect(page.locator('.l-d-tab.fold.on')).toContainText('Связь');
+  // смахнуть по списку влево — следующая папка
+  const b = await page.locator('.l-d-list').boundingBox();
+  await page.mouse.move(b.x + b.width - 40, b.y + 80); await page.mouse.down();
+  await page.mouse.move(b.x + 40, b.y + 90, { steps: 6 }); await page.mouse.up();
+  await expect(page.locator('.l-d-tab.fold.on')).not.toContainText('Связь');
+  // порядок вкладок — удержать и перетащить вправо
+  const ids = () => page.locator('.l-d-tab.fold').evaluateAll((els) => els.map((e) => e.dataset.id));
+  const was = await ids();
+  const t0 = await page.locator('.l-d-tab.fold').nth(0).boundingBox();
+  const t1 = await page.locator('.l-d-tab.fold').nth(1).boundingBox();
+  await page.mouse.move(t0.x + t0.width / 2, t0.y + t0.height / 2); await page.mouse.down(); await page.waitForTimeout(600);
+  await page.mouse.move(t0.x + t0.width, t0.y + t0.height / 2, { steps: 4 }); await page.mouse.move(t1.x + t1.width - 4, t1.y + t1.height / 2, { steps: 6 });
+  await page.mouse.up();
+  expect((await ids()).slice(0, 2)).toEqual([was[1], was[0]]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elachiston.prefs')).drawerAll)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
 test('старые настройки: украшения убраны, приложения на месте', async ({ page, errors }) => {
   await page.goto(PAGE);
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('elachiston.prefs', JSON.stringify({ intro: true, lang: 'ru', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', theme: 'paper', style: 'rich' })); });
