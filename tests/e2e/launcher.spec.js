@@ -43,7 +43,7 @@ test('минимальный вид по умолчанию: часы, дата,
 
 test('церковный режим: крест посередине, вверху, у даты, внизу и за часами; без режима — нет', async ({ page, errors }) => {
   for (const at of ['center', 'top', 'date', 'bottom', 'back']) {
-    for (const cross of ['latin', 'greek', 'orthodox', 'circle']) {
+    for (const cross of ['classic', 'dove', 'latin', 'orthodox']) {
       await open(page, { church: true, cross, crossAt: at });
       await expect(page.locator('.l-cross.at-' + at + ' svg'), `${cross} ${at}`).toHaveCount(1);
     }
@@ -61,7 +61,7 @@ test('удержание — настройки; церковный режим �
   await expect(page.locator('.l-sheet h2')).toHaveText('Главный экран');
   await expect(page.locator('.l-set-tabs button.on')).toHaveText('Вид'); // четыре страницы; переключатель — вверху
   await page.locator('.l-row', { hasText: 'Церковный режим' }).click();
-  await page.locator('.l-cross-pick', { hasText: 'Восьмиконечный' }).click();
+  await page.locator('.l-cross-pick', { hasText: 'С голубем' }).first().click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-cross.at-center')).toBeVisible(); // по умолчанию — посередине
   expect(errors).toEqual([]);

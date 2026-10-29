@@ -301,7 +301,7 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* крест: выбор вида */
-.l-cross-picks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.l-cross-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .l-cross-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 2px 8px; border-radius: 14px; border: 1px solid var(--fill); min-height: 84px; }
 .l-cross-pick.on { border-color: var(--ink); }
 .l-cross-ico { width: 18px; height: 24px; }
@@ -422,3 +422,9 @@ html.l-instant *, html.l-instant *::before, html.l-instant *::after { transition
 /* выбор значка: заголовки групп во всю ширину */
 .l-icon-group { grid-column: 1 / -1; margin: 14px 0 0; font-size: 13px; font-weight: 600; color: var(--l2); }
 .l-icon-group:first-child { margin-top: 2px; }
+
+/* крест с голубем: голубь — цветом акцента, крест — цветом текста */
+.l-cross .l-dove, .l-cross-ico .l-dove { fill: var(--tint); }
+.l-home > .l-cross.at-top:has(svg[data-cross^="dove"]) { width: 30px; height: 38px; }
+.l-cross.at-date:has(svg[data-cross^="dove"]) { width: 16px; height: 20px; }
+.l-home > .l-cross.at-bottom:has(svg[data-cross^="dove"]) { width: 20px; height: 26px; }

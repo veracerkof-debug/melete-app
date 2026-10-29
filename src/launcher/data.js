@@ -8,7 +8,8 @@ export const DEFAULTS = {
   theme: 'system',      // system | light | dark | oled
   lang: '',             // '' — язык системы; ru | uz | en
   church: false,        // церковный режим: крест и чтение Библии (решение автора: по умолчанию выкл)
-  cross: 'latin',       // крест (церковный режим): latin | greek | orthodox | circle | none (cross.js)
+  cross: 'classic',     // крест (церковный режим): classic | latin | greek | orthodox | circle | none (cross.js)
+  crossSet: 1,          // крест уже выбран по-новому (2026-10-29: «Классический» стал обычным)
   crossWeight: 100,     // толщина линии креста, % (50–300)
   crossOpacity: 100,    // непрозрачность креста, % от обычной для его места (20–300; не больше полной)
   crossAt: 'center',    // где: center — крупно посередине, на пустом месте (вместо обоев) | top — вверху | date — у даты |
@@ -55,6 +56,8 @@ if (saved && saved.v !== 2) {
   if (Array.isArray(prefs.home)) prefs.home = prefs.home.slice(0, HOME_MAX);
 }
 prefs.v = 2;
+// 2026-10-29: обычный крест — «Классический»; кто не выбирал сам (стоял прежний обычный, тонкий) — переходит на него
+if (saved && !('crossSet' in saved) && (saved.cross || 'latin') === 'latin') prefs.cross = 'classic';
 if (saved && saved.v !== 2) writeJSON(KEY, prefs);
 const subs = new Set();
 

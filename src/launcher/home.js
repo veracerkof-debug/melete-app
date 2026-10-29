@@ -127,7 +127,7 @@ function renderDate(now) {
   if (!el) return;
   const lang = getLang();
   el.replaceChildren(...[
-    crossAt('date') ? h('span', { class: 'l-cross at-date', html: crossSVG(prefs.cross) }) : null,
+    crossAt('date') ? h('span', { class: 'l-cross at-date', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null,
     h('span', { class: 'l-date-t' }, `${weekdayOf(now, lang)}, ${dayMonthOf(now, lang)}`)].filter(Boolean));
 }
 
@@ -207,9 +207,9 @@ export function renderHome() {
     balance: renderBalance,
     apps: renderList,
     // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
-    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross) }) : null),
+    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null),
     tracker: renderTracker,
-    dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross) }) : null, renderDock()],
+    dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
   };
   const sized = (id, el) => {
     if (!el) return el;
@@ -223,12 +223,12 @@ export function renderHome() {
     const el = out[out.length - 1];
     if (el) { sized(id, el); el.dataset.blk = id; }
     // крест вверху — по центру, сразу над часами
-    if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross) }));
+    if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }));
     return out;
   });
   root.replaceChildren(...[
     prefs.status ? h('div', { class: 'l-status', role: 'status' }) : null,
-    crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5) }) : null,
+    crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5, (prefs.crossWeight || 100) / 100) }) : null,
     ...blocks,
   ].filter(Boolean));
   lastSig = null;

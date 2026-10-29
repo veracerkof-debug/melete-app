@@ -1,7 +1,30 @@
 // Крест — единственное украшение главного экрана (DECISIONS 2026-10-28), только в церковном режиме.
-// Рисунки свои, тонкой линией (viewBox 24×32, цвет — currentColor). Место — prefs.crossAt (home.js).
+// Рисунки свои (viewBox 24×32, цвет — currentColor). Место — prefs.crossAt (home.js).
+// «Классический» (по умолчанию, 2026-10-29) — залитый, тяжёлый, острые углы и прямые срезы; остальные — тонкой линией.
+
+// Классический латинский: 2 : 3 (18 × 27), верхнее плечо равно боковым — перекладина на своём классическом месте.
+// Толщина балок — от ползунка «Толщина креста» (weight: 1 = обычная), углы остаются острыми.
+function classic(weight = 1) {
+  const W = 18, H = 27, x0 = (24 - W) / 2, y0 = (32 - H) / 2;
+  const t = Math.max(1.6, Math.min(9, 4.2 * weight));   // ширина балки
+  const arm = (W - t) / 2;                                 // боковые плечи = верхнее плечо
+  const bx = 12 - t / 2, by = y0 + arm;                    // левый край стойки, верх перекладины
+  const n = (v) => +v.toFixed(2);
+  return `<path fill="currentColor" stroke="none" d="M${n(bx)} ${n(y0)}H${n(bx + t)}V${n(by)}H${n(x0 + W)}V${n(by + t)}H${n(bx + t)}V${n(y0 + H)}H${n(bx)}V${n(by + t)}H${n(x0)}V${n(by)}H${n(bx)}Z"/>`;
+}
+
+// Крест с голубем — логотип автора (прислан автором 2026-10-29), переведён в контуры (potrace): крест — цветом текста,
+// голубь — акцентом («С голубем») или тем же цветом («одним цветом»). Свой viewBox — пропорции рисунка.
+const DOVE_VB = '208 72 833 1046';
+const DOVE_CROSS = 'M6123 11732 l-1173 -2 0 -1340 0 -1340 -1395 0 -1395 0 0 -1090 0 -1090 1395 0 1395 0 0 -2720 0 -2720 1175 0 1175 0 0 1274 0 1274 -67 16 -68 17 -85 30 -85 31 -117 59 -118 59 0 -1023 0 -1022 -6 -53 -7 -52 -628 0 -629 0 -2 2518 -3 2517 -24 85 -23 85 -26 48 -26 49 -47 42 -47 42 -52 17 -52 17 -1239 0 -1239 0 0 510 0 510 1388 2 1387 3 3 1358 2 1357 635 0 635 0 0 -1360 0 -1360 264 0 265 0 103 74 103 74 125 72 125 72 120 58 120 58 175 70 175 69 30 11 30 10 -548 1 -548 1 1 1341 1 1341 -3 2 -3 1 -1172 -3z';
+const DOVE_BIRD = 'M10050 9914 c-133 -293 -399 -580 -710 -769 -213 -129 -429 -227 -780 -355 -922 -335 -1375 -659 -1754 -1253 l-76 -119 -79 124 c-292 453 -424 593 -618 655 -234 74 -441 -16 -656 -287 -33 -41 -80 -99 -105 -128 -25 -29 -43 -54 -41 -56 2 -2 27 -9 54 -15 183 -45 336 -198 404 -403 57 -174 60 -220 52 -858 -7 -501 39 -752 199 -1088 203 -426 539 -756 995 -978 452 -220 994 -297 1444 -206 84 17 84 17 -42 59 -493 163 -874 495 -953 829 -20 87 -15 256 11 329 37 105 115 205 220 280 155 111 307 154 750 215 478 66 818 227 1101 522 206 215 401 571 448 817 6 34 6 34 -36 -3 -415 -354 -883 -530 -1408 -531 -170 0 -319 10 -308 20 1 2 62 13 133 25 226 38 455 116 710 240 976 478 1477 1423 1289 2433 -29 156 -100 386 -160 515 -39 84 -39 84 -84 -14z';
+const dove = (mono) => `<g transform="translate(0,1254) scale(.1,-.1)"><path fill="currentColor" d="${DOVE_CROSS}"/><path class="${mono ? '' : 'l-dove'}" fill="currentColor" d="${DOVE_BIRD}"/></g>`;
+
 export const CROSSES = {
-  // латинский: тонкий, перекладина выше середины — главный
+  classic,
+  dove: () => dove(false),
+  dovemono: () => dove(true),
+  // латинский: тонкий, перекладина выше середины
   latin: '<path d="M12 2.5v27M5.5 10h13"/>',
   // греческий: равноконечный
   greek: '<path d="M12 6v20M2 16h20"/>',
@@ -13,5 +36,10 @@ export const CROSSES = {
 export const CROSS_IDS = Object.keys(CROSSES);
 export const CROSS_PLACES = ['center', 'top', 'date', 'bottom', 'back'];
 
-export const crossSVG = (id, width = 1.2) =>
-  `<svg viewBox="0 0 24 32" fill="none" stroke="currentColor" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CROSSES[id] || CROSSES.latin}</svg>`;
+// width — толщина линии тонких крестов (в единицах рисунка), weight — толщина балок классического
+export function crossSVG(id, width = 1.2, weight = 1) {
+  const c = CROSSES[id] || CROSSES.classic;
+  const body = typeof c === 'function' ? c(weight) : c;
+  if (id === 'dove' || id === 'dovemono') return `<svg viewBox="${DOVE_VB}" fill="none" stroke="none" aria-hidden="true" data-cross="${id}">${body}</svg>`;
+  return `<svg viewBox="0 0 24 32" fill="none" stroke="currentColor" stroke-width="${width}" stroke-linecap="${id === 'classic' ? 'butt' : 'round'}" stroke-linejoin="${id === 'classic' ? 'miter' : 'round'}" aria-hidden="true" data-cross="${id}">${body}</svg>`;
+}
