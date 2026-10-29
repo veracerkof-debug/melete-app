@@ -11,11 +11,29 @@ const LATENCY = { fast: 'interactive', bal: 'balanced', smooth: 'playback' };
 
 let ctx = null, master = null, reverb = null, comp = null, trim = null;
 
+// Bluetooth на выходе (отчёт 29.10.2026: треск только на Bluetooth, на динамике — нет). «Надёжная» в Android даёт буфер
+// 21 мс: динамику хватает, а Bluetooth забирает звук крупными и неровными порциями — буфер пустеет, слышен треск.
+// Задержка Bluetooth и так 200–250 мс, буфер 100 мс к ней почти незаметен. Выход узнаётся до создания контекста
+// (core/index.js: setOutKind), контекст создаётся один раз — сменить буфер можно только перезапуском
+const BT_LATENCY = 0.1;
+// Выход прошлого запуска — сразу (ответ Android приходит позже, а пианино при открытии уже подгружает рояль и создаёт
+// звук; отчёт 29.10 09:47: «Bluetooth подключён после запуска звука»). outReady — ответ пришёл (или 0,8 с прошло)
+const OUT_KEY = 'melete.outKind';
+let outKind = null, ctxKind = null, outDone = null;
+try { outKind = localStorage.getItem(OUT_KEY) || null; } catch { /* приватный режим */ }
+const outKnown = new Promise((r) => { outDone = r; });
+export const outReady = () => Promise.race([outKnown, new Promise((r) => setTimeout(r, 800))]);
+export const outUnknown = () => outDone(); // веб: выход не узнать — не ждать
+export const setOutKind = (k) => { outKind = k; try { localStorage.setItem(OUT_KEY, k); } catch { /* */ } outDone(); };
+export const ctxOutKind = () => ctxKind; // каким был выход, когда создавался контекст (null — ещё не создан)
+
 export function getContext(mode = 'bal') {
   if (!ctx) {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!C) return null;
-    try { ctx = new C({ latencyHint: LATENCY[latencyFor(mode)] || 'balanced' }); } catch { ctx = new C(); }
+    const hint = outKind === 'bt' ? BT_LATENCY : LATENCY[latencyFor(mode)] || 'balanced';
+    try { ctx = new C({ latencyHint: hint }); } catch { ctx = new C(); }
+    ctxKind = outKind || 'phone';
     loadAirWorklet(ctx); // движок воздушных голосов (airsound.js) — грузится сразу, ноты до готовности идут узлами
     installClock(ctx); // часы звука для планировщиков — не засыпают при погашенном экране (clock.js)
     // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть

@@ -41,7 +41,7 @@
   "ch.maj": "Major",
   "ch.min": "Minor",
   "ch.sus4": "Sus4",
-  "chord.ftr": "Har bir bosilgan notada nima yangraydi: faqat tonika, kvinta bilan yoki to‘liq uchtovush.",
+  "chord.ftr": "Plitkaga tegish — shu sado. Plitka bo‘ylab yuqoriga — major, pastga — minor, chapga — kvinta, o‘ngga — sus4.",
   "character": "Xarakter",
   "k.bright": "Yorqinlik",
   "k.move": "Harakat",
@@ -57,7 +57,7 @@
   "about": "Intonatsiya uchun choʻziluvchi nota va pedlar",
   "help.what": "Choʻziluvchi nota yoki uygʻunlik — intonatsiya tayanchi.",
   "help.1": "Notaga bosish — dron; qayta bosish — toʻxtatish.",
-  "help.2": "Qatlam, uygʻunlik va tembr — tugmalarda; oʻz presetlari — sozlamalarda.",
+  "help.2": "Plitka bo‘ylab yuqoriga — major, pastga — minor, chapga — kvinta, o‘ngga — sus4.",
   "help.tip": "Dron ustida gammalar notoʻgʻri intonatsiyani darhol koʻrsatadi.",
   "worship": "Katta zal va havo",
   "k.hall": "Katta zal",
@@ -74,5 +74,14 @@
   "snd.wwarm.s": "iliqlik",
   "snd.wchoir": "Ovozlar",
   "snd.wchoir.d": "«a» tovushidagi ovozlar",
-  "snd.wchoir.s": "ovozlar"
+  "snd.wchoir.s": "ovozlar",
+  "mode.keys": "Ko‘rinish: klavishlar",
+  "mode.grid": "Ko‘rinish: to‘r",
+  "latch.off": "Chalish",
+  "latch.on": "Ushlab turish",
+  "help.3": "Klavishlar — barcha qatlamlarda bir oktava: «Chalish» — bosib turilganda, «Ushlab turish» — tegish bilan yoqish/o‘chirish.",
+  "mode.circle": "Ko‘rinish: kvinta doirasi",
+  "circle": "Kvinta doirasi",
+  "circle.key": "Tonallik {k}",
+  "help.4": "Doira: tegish — akkord; barmoq bilan aylantirish — yuqoridagi tonallik va uning akkordlari yorqinroq."
 }

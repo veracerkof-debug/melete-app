@@ -479,14 +479,24 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 
 /* «Инструменты» компактно (автор 28.10.2026: все инструменты на одном экране, без пояснений): три колонки, значок,
    название и одна строка последнего состояния (темп, строй, звук) — его инструмент хранит и после выхода */
-.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px;grid-auto-rows:auto!important;min-height:0}
-.tgrid .tcard2{padding:12px 10px 10px;border-radius:16px;min-height:94px;justify-content:flex-start;gap:6px}
+.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px;grid-auto-rows:minmax(118px,1fr)!important;min-height:calc(100dvh - var(--tabh,64px) - 44px - env(safe-area-inset-top,0px))}
+/* карточки тянутся, пока страница не заполнена до вкладок (автор 29.10.2026: без пустоты снизу); значок сверху, название внизу */
+.tgrid .tcard2{padding:12px 10px 10px;border-radius:16px;min-height:118px;justify-content:space-between;gap:6px}
 .tgrid .tcard2:last-child:nth-child(odd){grid-column:auto}
-.tgrid .tci2{width:30px;height:30px}
-.tgrid .tci2 svg{width:28px;height:28px}
-.tgrid .tcn2{font-size:14px;line-height:1.15;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.tgrid .tcs2{font-size:11.5px}
-.tgrid .tcs2:empty{display:none}
+.tgrid .tcard2{container-type:size}
+/* значок и название растут вместе с карточкой (автор 29.10.2026: есть место — значки крупнее) */
+.tgrid .tci2{width:clamp(30px,52cqmin,88px);height:clamp(30px,52cqmin,88px)}
+.tgrid .tci2 svg{width:100%;height:100%}
+/* надписи — постоянная разметка (автор 29.10.2026: «надписи едут»): под названием всегда две строки, под состоянием —
+   одна, есть оно или нет; название начинается на одной высоте во всём ряду */
+.tgrid .tcb{--nfs:clamp(14px,12cqmin,17px);width:100%;height:calc(var(--nfs) * 2.3 + 18px);justify-content:flex-start;flex:none}
+.tgrid .tcn2{font-size:var(--nfs);line-height:1.15;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.tgrid .tcs2{font-size:11.5px;line-height:16px;min-height:16px;flex:none}
 .tgrid .arrb.in{top:4px;right:4px}
 @media (min-width:600px){.tgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media (min-width:900px){.tgrid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+/* неполная последняя строка — карточки делят её ширину, без пустых клеток */
+@media (max-width:599px){
+  .tgrid .tcard2:last-child:nth-child(3n+1){grid-column:span 3}
+  .tgrid .tcard2:last-child:nth-child(3n+2){grid-column:span 2}
+}

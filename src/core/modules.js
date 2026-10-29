@@ -88,6 +88,8 @@ export function makeCtx(app, mod) {
     pulse: app.pulse,
     // Вид «Минимал» (эксперимент): у инструментов с выбором вида он закреплён — самый простой и функциональный
     get mono() { return app.store.state.settings.uiStyle === 'mono'; },
+    // профиль музыканта (инструменты) — умолчания модулей: строй, инструмент партии
+    get profile() { return app.store.state.settings.profile || null; },
     presets: (kind) => presetsApi(app, kind),
     // Стих-эпиграф (Пс 89:12) — помодоро и секундомер
     epigraph: () => epigraphHTML(),

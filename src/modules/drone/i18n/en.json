@@ -41,7 +41,7 @@
   "ch.maj": "Major",
   "ch.min": "Minor",
   "ch.sus4": "Sus4",
-  "chord.ftr": "What sounds on each note you tap: the root alone, with a fifth, or a full triad.",
+  "chord.ftr": "A tap plays this chord. Swipe a tile up — major, down — minor, left — fifth, right — sus4.",
   "character": "Character",
   "k.bright": "Brightness",
   "k.move": "Movement",
@@ -57,7 +57,7 @@
   "about": "Sustained note and pads for intonation",
   "help.what": "A sustained note or chord to anchor intonation.",
   "help.1": "Tap a note to start the drone; tap again to stop.",
-  "help.2": "Layers, chord and timbre are buttons; own presets in settings.",
+  "help.2": "Swipe a tile up — major, down — minor, left — fifth, right — sus4.",
   "help.tip": "Scales over a drone expose tuning slips at once.",
   "worship": "Large hall and air",
   "k.hall": "Large hall",
@@ -74,5 +74,14 @@
   "snd.wwarm.s": "warmth",
   "snd.wchoir": "Voices",
   "snd.wchoir.d": "voices on “ah”",
-  "snd.wchoir.s": "voices"
+  "snd.wchoir.s": "voices",
+  "mode.keys": "View: keys",
+  "mode.grid": "View: grid",
+  "latch.off": "Play",
+  "latch.on": "Hold",
+  "help.3": "Keys — one octave on all layers: “Play” sounds while held, “Hold” toggles on tap.",
+  "mode.circle": "View: circle of fifths",
+  "circle": "Circle of fifths",
+  "circle.key": "Key {k}",
+  "help.4": "Circle: tap a chord; turn it with a finger — the key on top and its chords light up."
 }

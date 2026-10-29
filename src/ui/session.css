@@ -165,6 +165,15 @@
 .sdock .tb[aria-selected="true"] svg,.sdock .tb.used svg{stroke-width:2.1}
 .sdock .tb[aria-selected="true"]::after{content:"";position:absolute;bottom:4px;left:50%;width:16px;height:3px;margin-left:-8px;border-radius:2px;background:var(--tint)}
 /* Окно во весь экран (меню окна → «Полный экран»): поверх заголовка, панели и других окон */
-.session .ws>.pane.toolhost.pfull{position:fixed;inset:0;z-index:80;margin:0;padding:0!important;border-radius:0;box-shadow:none;background:var(--bg);padding-top:env(safe-area-inset-top,0px)!important;padding-bottom:env(safe-area-inset-bottom,0px)!important}
+.session .ws .pane.toolhost.pfull{position:fixed;inset:0;z-index:80;margin:0;padding:0!important;border-radius:0;box-shadow:none;background:var(--bg);padding-top:env(safe-area-inset-top,0px)!important;padding-bottom:env(safe-area-inset-bottom,0px)!important}
 .pane.pfull>.grip,.pane.pfull>.comp>.csw{display:none!important}
+/* Полный экран окна — видимая кнопка в углу окна; в полном экране — «Свернуть» поверх, не перехватывает игру вокруг */
+.pfbtn{position:absolute;top:0;right:2px;width:40px;height:26px;z-index:5;display:flex;align-items:center;justify-content:center;border:0;padding:0;background:none;color:var(--l3);border-radius:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pfbtn svg{width:16px;height:16px}
+.pfbtn:active{background:var(--fill);color:var(--tint)}
+.session .ws .pane.toolhost,.session .ws .pane.toolhost.quarter{padding-top:22px}
+.session .ws .pane.toolhost.strip{padding-top:20px!important}
+.session.toolmode .ws .pane.toolhost{padding-top:22px}
+.pane.pfull>.pfbtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--bg) 70%,transparent);box-shadow:0 1px 4px rgba(0,0,0,.18);z-index:81;color:var(--l2)}
+.pane.pfull>.pfbtn svg{width:20px;height:20px}
 body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный экран — без язычка микшера */

@@ -83,3 +83,18 @@ describe('эффекты: настройки', () => {
     expect(compParams(0.5).threshold).toBe(-14);
   });
 });
+
+describe('тремоло — волна громкости', () => {
+  it('форма и частота: по умолчанию волна, свободно; мусор — к умолчанию', async () => {
+    const { normalizeFx, tremHz } = await import('../src/audio/fx.js');
+    const d = normalizeFx(null);
+    expect([d.tremShape, d.tremDiv]).toEqual(['wave', 'free']);
+    expect(normalizeFx({ tremShape: 'x', tremDiv: 'y' }).tremDiv).toBe('free');
+    expect(tremHz(normalizeFx({ tremRate: 3 }), 120)).toBe(3);
+    // в такт: 120 ударов — 2 доли в секунду; восьмые — 4 Гц, триоли — 6, шестнадцатые — 8
+    expect(tremHz(normalizeFx({ tremDiv: '8' }), 120)).toBe(4);
+    expect(tremHz(normalizeFx({ tremDiv: '8t' }), 120)).toBe(6);
+    expect(tremHz(normalizeFx({ tremDiv: '16' }), 90)).toBe(6);
+    expect(tremHz(normalizeFx({ tremDiv: '4', tremRate: 5 }), 0)).toBe(5); // темпа нет — свободная частота
+  });
+});

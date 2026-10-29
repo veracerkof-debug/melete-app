@@ -19,7 +19,7 @@ import { sendToSpace, SPACES, SPACE_DEF } from './context.js';
 import { makeSpace } from './spaces.js';
 import { makeIR } from './waves.js';
 import { eco } from './perf.js';
-import { after, cancel } from './clock.js';
+import { after, cancel, every } from './clock.js';
 
 export const EQ_TYPES = ['highpass', 'lowshelf', 'peaking', 'highshelf', 'lowpass'];
 export const F_MIN = 20, F_MAX = 20000, G_MAX = 15, Q_MIN = 0.2, Q_MAX = 8, BANDS_MAX = 8;
@@ -34,9 +34,35 @@ export const advancedBands = () => [band('highpass', 40, 0.7, false), band('lows
 // Полный набор настроек (всё в нуле — прозрачно)
 export const FX_DEF = () => ({
   mode: null, simple: simpleBands(), adv: advancedBands(),
-  comp: 0, drive: 0, trem: 0, tremRate: 5, delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, chorusType: 'chorus', rev: 0, revType: 'hall',
+  comp: 0, drive: 0, trem: 0, tremRate: 5, tremShape: 'wave', tremDiv: 'free', delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, chorusType: 'chorus', rev: 0, revType: 'hall',
 });
 export const FX_KEYS = ['comp', 'drive', 'trem', 'delay', 'chorus', 'rev']; // силы 0…1
+// Тремоло — «волна» громкости (автор 29.10.2026): форма — плавная волна или пульс (мягко обрывается и возвращается);
+// частота — свободная (Гц) или в такт метронома: волн на долю — четверти 1, восьмые 2, триоли 3, шестнадцатые 4
+export const TREM_SHAPES = ['wave', 'pulse'];
+export const TREM_DIVS = { free: 0, 4: 1, 8: 2, '8t': 3, 16: 4 };
+export const TREM_DIV_ORDER = ['free', '4', '8', '8t', '16']; // порядок кнопок (у объекта числовые ключи идут первыми)
+export const tremHz = (fx, bpm) => (TREM_DIVS[fx.tremDiv] && bpm > 0 ? Math.round((bpm / 60) * TREM_DIVS[fx.tremDiv] * 1000) / 1000 : fx.tremRate);
+// Темп для тремоло в такт: откуда брать (audio/index.js — метроном); цепочки «в такт» сверяются с ним
+let tempoOf = () => 0;
+export const setFxTempo = (fn) => { tempoOf = fn; };
+const synced = new Set();
+let syncTm = 0;
+const syncWatch = () => {
+  if (synced.size && !syncTm) syncTm = every(400, () => synced.forEach((ch) => ch.retempo()));
+  else if (!synced.size && syncTm) { cancel(syncTm); syncTm = 0; }
+};
+// Пульс: мягкий прямоугольник (нечётные гармоники с убыванием) — громкость держится, коротко обрывается и
+// возвращается без щелчка; одна волна на контекст
+const pulses = new WeakMap();
+function pulseWave(c) {
+  if (!pulses.has(c)) {
+    const n = 8, re = new Float32Array(n), im = new Float32Array(n);
+    for (let k = 1; k < n; k += 2) im[k] = (4 / (Math.PI * k)) * Math.exp(-k / 6);
+    pulses.set(c, c.createPeriodicWave(re, im));
+  }
+  return pulses.get(c);
+}
 export const CHORUS_TYPES = ['chorus', 'flanger', 'phaser']; // вид модуляции: хор (задержка ~20 мс), фленджер (короткая с обратной связью), фейзер (всепропускающие)
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, +v || 0));
@@ -63,6 +89,8 @@ export function normalizeFx(fx) {
   o.adv = (Array.isArray(o.adv) && o.adv.length ? o.adv.slice(0, BANDS_MAX) : d.adv).map(normalizeBand);
   FX_KEYS.forEach((k) => { o[k] = Math.round(clamp(o[k], 0, 1) * 100) / 100; });
   o.tremRate = Math.round(clamp(o.tremRate, 0.5, 12) * 10) / 10;
+  if (!TREM_SHAPES.includes(o.tremShape)) o.tremShape = 'wave';
+  if (!(o.tremDiv in TREM_DIVS)) o.tremDiv = 'free';
   o.delayTime = Math.round(clamp(o.delayTime, 0.05, 1.5) * 1000) / 1000;
   o.delayFb = Math.round(clamp(o.delayFb, 0, 0.9) * 100) / 100;
   if (!REV_TYPES.includes(o.revType)) o.revType = 'hall';
@@ -184,11 +212,11 @@ export function createFxChain(c, fx, { space = null } = {}) {
       i.connect(dry).connect(o); i.connect(ws).connect(wet).connect(o);
       return { i, o, ws, dry, wet };
     },
-    trem() { // генератор качает громкость вокруг единицы
+    trem() { // генератор качает громкость вокруг единицы; форма — волна (синус) или пульс (мягкий прямоугольник)
       const g = c.createGain(), lfo = c.createOscillator(), depth = c.createGain();
       lfo.type = 'sine'; lfo.frequency.value = 5; depth.gain.value = 0; g.gain.value = 1;
       lfo.connect(depth).connect(g.gain); try { lfo.start(); } catch { /* */ }
-      return { i: g, o: g, g, lfo, depth };
+      return { i: g, o: g, g, lfo, depth, shape: 'wave' };
     },
     delay() { // параллельно от tap к выходу: петля с приглушением верха
       const dl = c.createDelay(2), fb = c.createGain(), damp = c.createBiquadFilter(), wet = c.createGain();
@@ -273,7 +301,13 @@ export function createFxChain(c, fx, { space = null } = {}) {
       if (dv !== driveLevel) { driveLevel = dv; S.drive.ws.curve = driveCurve(dv); }
       ramp(S.drive.wet.gain, Math.min(1, 0.3 + cur.drive)); ramp(S.drive.dry.gain, Math.max(0, 0.7 - cur.drive));
     }
-    if (S.trem) { ramp(S.trem.lfo.frequency, cur.tremRate); ramp(S.trem.depth.gain, cur.trem * 0.5); ramp(S.trem.g.gain, 1 - cur.trem * 0.5); }
+    if (S.trem) {
+      ramp(S.trem.lfo.frequency, tremHz(cur, tempoOf()));
+      if (S.trem.shape !== cur.tremShape) { S.trem.shape = cur.tremShape; if (cur.tremShape === 'pulse') S.trem.lfo.setPeriodicWave(pulseWave(c)); else S.trem.lfo.type = 'sine'; }
+      ramp(S.trem.depth.gain, cur.trem * 0.5); ramp(S.trem.g.gain, 1 - cur.trem * 0.5);
+    }
+    if (cur.trem > 0 && cur.tremDiv !== 'free') synced.add(api); else synced.delete(api);
+    syncWatch();
     if (S.delay) { ramp(S.delay.dl.delayTime, cur.delayTime); ramp(S.delay.fb.gain, cur.delayFb); ramp(S.delay.wet.gain, cur.delay * 0.7); }
     if (S.chorus) {
       const ty = S.chorus.type;
@@ -288,19 +322,25 @@ export function createFxChain(c, fx, { space = null } = {}) {
       if (s) ramp(s.gain, lvl);
     });
   }
-  apply(true);
-  return {
+  let bpmSeen = 0;
+  const api = {
     input, output,
     get fx() { return cur; },
     set(next) { cur = normalizeFx(next); apply(); },
+    // темп метронома сменился — частота тремоло «в такт» следом (плавно)
+    retempo() { const b = tempoOf(); if (b !== bpmSeen && S.trem) { bpmSeen = b; ramp(S.trem.lfo.frequency, tremHz(cur, b)); } },
     // сколько узлов живёт сейчас (для проверки экономии)
     get nodes() { const w = want(); return 4 + filters.length + ['comp', 'drive', 'trem', 'delay', 'chorus'].filter((k) => w[k]).reduce((n, k) => n + Object.values(S[k]).filter((x) => x && x.disconnect).length, 0) + Object.values(sends).filter(Boolean).length; },
     dispose() {
       cancel(rewireTm);
       Object.values(S).forEach(kill);
       [input, output, fade, tap, ...filters, ...Object.values(sends)].forEach((x) => { try { x && x.disconnect(); } catch { /* */ } });
+      synced.delete(api);
+      syncWatch();
     },
   };
+  apply(true);
+  return api;
 }
 
 // Хвост после сигнала, с — чтобы реверберация и задержка дозвучали при офлайн-рендере

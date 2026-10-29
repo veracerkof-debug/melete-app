@@ -30,6 +30,9 @@ import { dragSort, holdMenu } from '../../ui/hold.js';
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  // во весь экран и обратно — видимая кнопка окна (автор 29.10.2026: «нет этой кнопки»; двойное касание полоски осталось)
+  full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  unfull: '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
   pomo: '<svg viewBox="0 0 24 24" class="pcico"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M10 3h4"/></svg>',
 };
 
@@ -203,16 +206,17 @@ export function createSessionScreen(app) {
   const saveWS = () => app.saveDevice();
   const GRIP = (i) => '<button class="grip" data-s="pmenu" data-p="' + i + '" aria-label="' + esc(t('ses.grip')) + '"></button>';
 
+  const PFBTN = (i) => '<button class="pfbtn" data-s="ppure" data-p="' + i + '" aria-label="' + esc(t('pm.pure')) + '" title="' + esc(t('pm.pure')) + '">' + IC.full + '</button>';
   function paneHTML(i, flex) {
     const sz = lsizes(w.layout)[i], multi = lsizes(w.layout).length > 1;
-    return '<div class="pane toolhost ' + sz + (multi && w.focus === i ? ' focus' : '') + '" data-pane="' + i + '" data-group="' + w.panes[i] + '" style="flex:' + (flex == null ? 1 : flex) + ' 1 0px">' + GRIP(i) + '</div>';
+    return '<div class="pane toolhost ' + sz + (multi && w.focus === i ? ' focus' : '') + '" data-pane="' + i + '" data-group="' + w.panes[i] + '" style="flex:' + (flex == null ? 1 : flex) + ' 1 0px">' + GRIP(i) + PFBTN(i) + '</div>';
   }
 
   // Содержимое окна: переключатель модулей группы (если их два) и место для модуля
   function fillPane(frame, i, size) { return bareScope(() => fillPaneNow(frame, i, size)); }
   function fillPaneNow(frame, i, size) {
     const g = w.panes[i], m = pickModule(st(), w, g, size), list = members(st(), g), big = size === 'full' || size === 'half';
-    frame.querySelectorAll(':scope > :not(.grip)').forEach((x) => x.remove());
+    frame.querySelectorAll(':scope > :not(.grip):not(.pfbtn)').forEach((x) => x.remove());
     let host;
     if (list.length > 1) {
       const comp = document.createElement('div');
@@ -337,6 +341,8 @@ export function createSessionScreen(app) {
     if (!b) return;
     const a = b.dataset.s;
     // полоска окна: касание — меню окна, двойное касание — инструмент во весь экран (как развернуть окно в телефоне)
+    // кнопка окна: во весь экран; в полном экране — обратно
+    if (a === 'ppure') { const i = +b.dataset.p; setPanePure(pureI === i ? -1 : i); return; }
     if (a === 'pmenu') {
       const i = +b.dataset.p, now = Date.now();
       if (gripTap && gripTap.i === i && now - gripTap.t < 320) { clearTimeout(gripTap.tm); gripTap = null; setPanePure(i); return; }
@@ -363,6 +369,7 @@ export function createSessionScreen(app) {
     const ses = layer.querySelector('.session'), was = pureI >= 0 ? panes[pureI] : null;
     if (was) {
       was.frame.classList.remove('pfull');
+      pfIcon(was.frame, false);
       ses.classList.remove('pure');
       pureI = -1;
       document.removeEventListener('keydown', pureKey);
@@ -375,6 +382,7 @@ export function createSessionScreen(app) {
     pureI = i;
     ses.classList.add('pure');
     p.frame.classList.add('pfull');
+    pfIcon(p.frame, true);
     document.addEventListener('keydown', pureKey);
     pureEnter(() => setPanePure(-1));
     toast(t('tools.pureHint'));
@@ -382,6 +390,13 @@ export function createSessionScreen(app) {
       if (p.size !== 'full') { p.size = 'full'; p.inst.resize('full'); }
       if (p.mod.onPure) { try { p.mod.onPure(true, p.inst.ctx); } catch { /* перерисуется по размеру */ } }
     });
+  }
+  function pfIcon(frame, on) {
+    const b = frame.querySelector(':scope > .pfbtn');
+    if (!b) return;
+    b.innerHTML = on ? IC.unfull : IC.full;
+    b.setAttribute('aria-label', t(on ? 'pm.unpure' : 'pm.pure'));
+    b.title = t(on ? 'pm.unpure' : 'pm.pure');
   }
   function pureKey(e) { if (e.key === 'Escape' && !document.querySelector('#sheetLayer .scrim')) setPanePure(-1); }
 

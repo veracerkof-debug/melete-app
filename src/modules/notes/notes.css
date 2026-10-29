@@ -46,3 +46,22 @@
 .notes-root{position:relative}
 
 .trview.capo.on{background:var(--tint);color:var(--on-tint);border-color:transparent}
+/* Партия с игры (live.js): стан на всё окно, управление — одной полосой снизу */
+.lvwrap{display:flex;flex-direction:column;min-height:0;flex:1}
+.pane .lvwrap .atwrap{flex:1;min-height:0}
+.lvempty{flex:1;display:flex;align-items:center;justify-content:center;min-height:40vh;padding:24px;text-align:center;color:var(--l2);font-size:14.5px;line-height:1.45}
+.lvempty p{max-width:30em}
+.lvbar2{display:flex;align-items:center;gap:6px;padding:8px 2px 2px;flex-wrap:wrap}
+.lvbar2 .vrow.tight{gap:2px;background:var(--fill);border-radius:12px;padding:2px}
+.lvv{font-size:14px;font-weight:600;min-width:2.6em;text-align:center}
+.lvv.grow{flex:1;text-align:left}
+.lvrec{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--cell));flex:none}
+.lvrec svg{width:26px;height:26px}
+.lvrec.on{color:#fff;background:var(--red);animation:lvpulse 1.6s ease-in-out infinite}
+@keyframes lvpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--red) 18%,transparent)}}
+.lvpos{font-size:28px;font-weight:700;min-width:1.6em;text-align:center}
+.lvpitch{font-size:22px;font-weight:600;color:var(--tint-text);min-width:2.4em}
+.lvhint{font-size:13px;flex:1;min-width:8em}
+.lvchip{min-height:36px}
+.lvbar{position:absolute;background:color-mix(in srgb,var(--tint) 18%,transparent);border-radius:6px;pointer-events:none;z-index:2}
+@media (prefers-reduced-motion:reduce){.lvrec.on{animation:none}}

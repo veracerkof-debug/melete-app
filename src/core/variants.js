@@ -10,8 +10,8 @@ const KEY = 'melete.variants';
 
 export const VARIANTS = [
   // ревербы Airwindows — с 28.10.2026 обычная настройка «Звук пространств» (Настройки → Звук), не вариант
-  // подписи под значками вкладок (обзор дизайна 28.10.2026): без подписей — как было; с подписями — понятнее новому
-  { id: 'tabs', options: ['icons', 'labels'], pre: 'icons', apply: (app, v) => document.documentElement.classList.toggle('tablabels', v === 'labels') },
+  // подписи под значками вкладок (обзор дизайна 28.10.2026; решение автора 29.10.2026 — с подписями)
+  { id: 'tabs', options: ['icons', 'labels'], pre: 'labels', apply: (app, v) => document.documentElement.classList.toggle('tablabels', v === 'labels') },
 ];
 
 const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };

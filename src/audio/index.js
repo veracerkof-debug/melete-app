@@ -6,6 +6,7 @@ import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
 import { createMetronome } from './metronome.js';
+import { setFxTempo } from './fx.js';
 import { openMic } from './mic.js';
 import { after } from './clock.js';
 
@@ -18,9 +19,10 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getLayer: () => pianoLayer(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
   const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
+  setFxTempo(() => (metro.cfg && metro.cfg.bpm) || 0); // тремоло «в такт» — по темпу метронома
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
-  mixer.probe('drone', () => drone.on);
+  mixer.probe('drone', () => drone.sounding);
   // Дрон на ноте (из теории): сменить тонику и зазвучать
   drone.tonic = (pc) => {
     device.drone.pc = pc;
@@ -92,7 +94,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     if (!c) return '';
     const ms = (s) => Math.round((s || 0) * 1000) + ' мс';
     return 'буфер ' + ms(c.baseLatency) + ', выход ' + ms(c.outputLatency) + ', ' + c.sampleRate + ' Гц, режим ' + device.mix.mode + '/' + device.mix.perf + '/' + device.mix.engine +
-      ', голосов ' + synth.voiceCount + (drone.on ? ', пэды' : '') + (metro.running ? ', метроном' : '') + ', экран ' + (typeof document !== 'undefined' ? document.visibilityState : '?');
+      ', голосов ' + synth.voiceCount + (drone.sounding ? ', пэды' : '') + (metro.running ? ', метроном' : '') + ', экран ' + (typeof document !== 'undefined' ? document.visibilityState : '?');
   };
   // Экран погас при звуке: нагрузка в момент и через 20 с (так видно, душит ли телефон процессор при блокировке)
   let offLogged = false;
@@ -100,7 +102,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     if (!loadMeter || !audio.onLoadLog) return;
     const pct = () => Math.round(loadMeter.value * 100) + ' %';
     if (document.visibilityState === 'hidden') {
-      if (!synth.voiceCount && !drone.on && !metro.running) return;
+      if (!synth.voiceCount && !drone.sounding && !metro.running) return;
       offLogged = true;
       audio.onLoadLog('экран погашен: нагрузка ' + pct() + ' · ' + diag());
       after(20000, () => { if (document.visibilityState === 'hidden') audio.onLoadLog('через 20 с без экрана: нагрузка ' + pct() + ', пик ' + Math.round(loadMeter.peak * 100) + ' %'); });
@@ -115,7 +117,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     onLoadLog: null, // ядро подставляет запись в журнал
     onLoadSample: null, // и счёт нагрузки для диагностики (src/core/diag.js)
     // обстановка звука для диагностики: что звучит и как настроено (без названий)
-    state() { const c = peekContext(); return c ? { sr: c.sampleRate, base: Math.round((c.baseLatency || 0) * 1000), out: Math.round((c.outputLatency || 0) * 1000), st: c.state, mode: device.mix.mode, perf: device.mix.perf, engine: device.mix.engine, verb: device.mix.verb, voices: synth.voiceCount, pads: !!drone.on, metro: !!metro.running } : null; },
+    state() { const c = peekContext(); return c ? { sr: c.sampleRate, base: Math.round((c.baseLatency || 0) * 1000), out: Math.round((c.outputLatency || 0) * 1000), st: c.state, mode: device.mix.mode, perf: device.mix.perf, engine: device.mix.engine, verb: device.mix.verb, voices: synth.voiceCount, pads: drone.sounding, metro: !!metro.running } : null; },
     mixer, synth, drone, metro,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя
     release: () => { if (isHeld()) hold(false); }, // «играть» в приложении снимает паузу из шторки (player.js)
@@ -150,6 +152,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     stopAll() {
       if (metro.running) metro.stop();
       drone.stop();
+      drone.keysOff();
       synth.all();
     },
   };
