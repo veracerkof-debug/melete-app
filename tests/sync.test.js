@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64, mergeMeta, metaHash, createSyncClient } from '../src/core/sync.js';
+import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64, mergeMeta, metaHash, createSyncClient, PORT, PORT_DEV } from '../src/core/sync.js';
 import { createStore } from '../src/core/store.js';
 
 // localStorage для node: и у телефона, и у компьютера своё — переключаем подменой
@@ -43,8 +43,8 @@ describe('связь телефона и компьютера: план файл
     expect(p.delTheirs).toEqual(['e']);    // было у обоих, я удалил — удалить у них
   });
   it('адрес с компьютера в любом виде', () => {
-    expect(baseOf('192.168.1.5')).toBe('http://192.168.1.5:53319');
-    expect(baseOf(' 192,168,1,5 ')).toBe('http://192.168.1.5:53319');
+    expect(baseOf('192.168.1.5')).toBe('http://192.168.1.5:' + PORT);
+    expect(baseOf(' 192,168,1,5 ')).toBe('http://192.168.1.5:' + PORT);
     expect(baseOf('http://10.0.0.2:8000/')).toBe('http://10.0.0.2:8000');
     expect(baseOf('')).toBeNull();
   });
@@ -179,5 +179,16 @@ describe('связь телефона и компьютера: целиком', 
     phone.store.state.settings.pcWork = true;
     t += 4 * 86400000; // компьютера не было четыре дня
     expect(C.waits({ id: 'n', created: t - 3600000 }, 'stems')).toBe(false);
+  });
+});
+
+describe('порт DEV', () => {
+  it('сопряжение DEV до 30.10 (общий порт 53319) переезжает на свой порт один раз', () => {
+    let store = JSON.stringify({ pc: { addr: 'http://192.168.1.5:53319', key: 'k', name: 'PC' } });
+    globalThis.localStorage = { getItem: () => store, setItem: (_, v) => { store = v; } };
+    const pc = pcOf();
+    if (PORT === PORT_DEV) expect(pc.addr).toBe('http://192.168.1.5:' + PORT_DEV);
+    expect(JSON.parse(store).pc.v).toBe(2);
+    delete globalThis.localStorage;
   });
 });

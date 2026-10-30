@@ -1,5 +1,5 @@
 // Связь телефона и компьютера: синхронизация в своей сети Wi-Fi. Компьютер (Windows) — сервер (посредник в Rust:
-// src-tauri/src/sync.rs, порт 53319), телефон — клиент. Сопряжение один раз: на компьютере включается «Связь с
+// src-tauri/src/sync.rs, порт 53319, у DEV — 53329), телефон — клиент. Сопряжение один раз: на компьютере включается «Связь с
 // телефоном» — виден адрес и код из 6 цифр; на телефоне вводятся адрес и код, компьютер выдаёт ключ. Дальше —
 // кнопка «Синхронизировать» на телефоне (сеть — только по нажатию).
 // Что синхронизируется: песни с метками и проекты студии, занятия и профиль, чтение, календарь — части резервной копии
@@ -19,7 +19,9 @@ import { stripDemo, isDemoFile } from './demo.js';
 import { CORE_DICTS } from '../i18n/index.js';
 import { log } from './log.js';
 
-export const PORT = 53319;
+// Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
+export const PORT_PRE = 53319, PORT_DEV = 53329;
+export const PORT = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? PORT_PRE : PORT_DEV;
 export const SYNC_PARTS = ['songs', 'profile', 'reading', 'calendar'];
 export const CHUNK = 2 << 20; // кусок файла — 2 МБ (в base64 ~2,7 МБ на запрос)
 const LS_KEY = 'melete.sync'; // { peers: { ключ: { name, at } } } на компьютере; { pc: { addr, key, name, last, ids } } на телефоне
@@ -169,7 +171,7 @@ const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.li
 export function createSyncServer(app, { isDesktop }) {
   const avail = isDesktop();
   const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch { /* */ } });
-  let state = { on: false, ips: [], name: '', code: '' }, un = null;
+  let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null;
   const mem = readLS(), incoming = new Map();
   const core = () => import('@tauri-apps/api/core');
   async function onReq(e) {
@@ -195,8 +197,14 @@ export function createSyncServer(app, { isDesktop }) {
       if (!avail) return state;
       const { invoke } = await core();
       if (!un) { const { listen } = await import('@tauri-apps/api/event'); un = await listen('sync-req', onReq); }
+      // порт занят (открыто другое окно Melete с «Принимать телефон»): раньше молчали и показывали «вкл», а телефону
+      // отвечало другое приложение — «компьютер забыл этот телефон»
+      if (!unErr) {
+        const { listen } = await import('@tauri-apps/api/event');
+        unErr = await listen('sync-error', (e) => { log('sync', 'порт занят: ' + e.payload, 'w'); state = { ...state, on: false, code: '', err: 'port' }; mem.on = false; writeLS({ peers: mem.peers, on: false }); emit(); });
+      }
       const r = await invoke('sync_start');
-      state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode() };
+      state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '' };
       mem.on = true; writeLS({ peers: mem.peers, on: true });
       log('sync', 'связь с телефоном включена: ' + state.ips.join(', '));
       emit();
@@ -233,7 +241,15 @@ export async function http(method, url, { key = '', json = null, bin = false, ti
   } finally { clearTimeout(tm); }
 }
 
-export const pcOf = () => readLS().pc || null;
+// Сопряжение до 30.10 у Melete DEV шло на общий порт 53319 — теперь у DEV свой; запись переезжает один раз
+export const pcOf = () => {
+  const m = readLS(), pc = m.pc || null;
+  if (pc && !pc.v) {
+    if (PORT === PORT_DEV && /:53319$/.test(pc.addr || '')) pc.addr = pc.addr.replace(/:53319$/, ':' + PORT_DEV);
+    pc.v = 2; writeLS(m);
+  }
+  return pc;
+};
 export const forgetPc = () => { const m = readLS(); delete m.pc; writeLS(m); };
 
 // Сопряжение: адрес и код с экрана компьютера → ключ. → { name }
@@ -246,7 +262,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   let r;
   try { r = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName } }); } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : 'off' }); }
   const m = readLS();
-  m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [] };
+  m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 2 };
   writeLS(m);
   log('sync', 'сопряжено с ' + m.pc.name);
   return m.pc;
@@ -256,6 +272,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
 // может отказать, если у него звучит музыка), stop() — прервать между кусками (у телефона зазвучало), want — какие
 // дорожки нужны телефону (уходит с записью). → итог { songs, sessions, up, down, removed, meta }
 export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
+  pcOf(); // переезд адреса DEV (выше)
   const m = readLS(), pc = m.pc;
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });
   const base = pc.addr, key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';

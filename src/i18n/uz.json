@@ -404,6 +404,7 @@
   "sy.err.key": "Kompyuter bu telefonni unutgan — qayta ulang",
   "sy.err.nopc": "Kompyuter ulanmagan",
   "sy.err.port": "Yoqib boʻlmadi: port band",
+  "sy.err.port2": "Port band: Melete ning boshqa versiyasi (DEV yoki oddiy) «Telefonni qabul qilish» bilan ochiq. Uni yopib, bu yerda qayta yoqing.",
   "check.title": "Oʻz-oʻzini tekshirish",
   "check.sub": "ovoz, yozuv, xotira, modellar — shu qurilmada",
   "check.intro": "Ilova ovoz, ovoz oqimi soati, pleer, mikrofon, yozuv, xotira, modellar va ekranni oʻzi tekshiradi. Qisqa past signal eshitiladi. Natija jurnalga va muammo hisobotiga tushadi; hech narsa yuborilmaydi.",

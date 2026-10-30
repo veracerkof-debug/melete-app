@@ -416,6 +416,7 @@
   "sy.err.key": "The computer forgot this phone — connect again",
   "sy.err.nopc": "No computer connected",
   "sy.err.port": "Could not turn on: the port is busy",
+  "sy.err.port2": "Port busy: another Melete (DEV or regular) is open with “Accept phone” on. Close it and turn this on again.",
   "check.title": "Self-check",
   "check.sub": "sound, recording, storage, models — on this device",
   "check.intro": "The app checks its own sound, audio clock, player, microphone, recording, storage, models and screen. A short quiet tone will play. The result goes to the log and the problem report; nothing is sent.",

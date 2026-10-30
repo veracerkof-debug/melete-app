@@ -13,9 +13,13 @@ use std::time::Duration;
 
 use serde::Serialize;
 use tauri::ipc::{InvokeBody, Request, Response};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 pub const PORT: u16 = 53319;
+// Melete DEV — свой порт: на одном компьютере могут стоять обе версии, и вторая не займёт порт первой
+// (иначе телефон попадает не в то приложение и слышит «компьютер забыл этот телефон»)
+pub const PORT_DEV: u16 = 53329;
+fn port_of(app: &AppHandle) -> u16 { if app.config().identifier.ends_with(".dev") { PORT_DEV } else { PORT } }
 const MAX_BODY: u64 = 32 << 20; // один запрос — до 32 МБ (файлы идут кусками по 4 МБ)
 
 type Reply = (u16, String, Vec<u8>); // статус, тип, тело
@@ -76,7 +80,7 @@ fn handle(app: AppHandle, on: Arc<AtomicBool>, next: Arc<AtomicU64>, bodies: Arc
 }
 
 fn serve(app: AppHandle, on: Arc<AtomicBool>, next: Arc<AtomicU64>, bodies: Arc<Mutex<HashMap<u64, Vec<u8>>>>, waits: Arc<Mutex<HashMap<u64, mpsc::Sender<Reply>>>>) {
-    let server = match tiny_http::Server::http(("0.0.0.0", PORT)) { Ok(s) => s, Err(e) => { let _ = app.emit("sync-error", e.to_string()); on.store(false, Ordering::Relaxed); return; } };
+    let server = match tiny_http::Server::http(("0.0.0.0", port_of(&app))) { Ok(s) => s, Err(e) => { let _ = app.emit("sync-error", e.to_string()); on.store(false, Ordering::Relaxed); return; } };
     while on.load(Ordering::Relaxed) {
         let req = match server.recv_timeout(Duration::from_millis(500)) { Ok(Some(r)) => r, Ok(None) => continue, Err(_) => break };
         let (a, o, n, b, w) = (app.clone(), on.clone(), next.clone(), bodies.clone(), waits.clone());
@@ -88,9 +92,10 @@ fn serve(app: AppHandle, on: Arc<AtomicBool>, next: Arc<AtomicU64>, bodies: Arc<
 pub fn sync_start(app: AppHandle, st: State<'_, SyncSrv>) -> Status {
     if !st.on.swap(true, Ordering::Relaxed) {
         let (o, n, b, w) = (st.on.clone(), st.next.clone(), st.bodies.clone(), st.waits.clone());
-        std::thread::spawn(move || serve(app, o, n, b, w));
+        let a = app.clone();
+        std::thread::spawn(move || serve(a, o, n, b, w));
     }
-    sync_status(st)
+    sync_status(app, st)
 }
 #[tauri::command]
 pub fn sync_stop(st: State<'_, SyncSrv>) {
@@ -100,7 +105,7 @@ pub fn sync_stop(st: State<'_, SyncSrv>) {
 // Адреса компьютера в сети и его имя — и для раздачи гостям (guest.rs)
 pub fn sync_status_plain() -> (Vec<String>, String) { (local_ips(), host_name()) }
 #[tauri::command]
-pub fn sync_status(st: State<'_, SyncSrv>) -> Status { Status { on: st.on.load(Ordering::Relaxed), port: PORT, ips: local_ips(), name: host_name() } }
+pub fn sync_status(app: AppHandle, st: State<'_, SyncSrv>) -> Status { Status { on: st.on.load(Ordering::Relaxed), port: port_of(&app), ips: local_ips(), name: host_name() } }
 
 // Тело запроса rid — окну (двоичное, без base64)
 #[tauri::command]
