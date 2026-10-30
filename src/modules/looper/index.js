@@ -39,6 +39,7 @@ const I = {
   pen: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4 9.5-9.5 3 3L9 18z"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>',
+  keys: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5v9M12 5v9M16 5v9M8 14v5M12 14v5M16 14v5"/></svg>',
 };
 const REELS = 4, NUDGE = 1; // катушек на экране; шаг точной донастройки сдвига, мс (удержание — автоповтор)
 const VIEWS = ['ring', 'reels', 'parts']; // «Дорожки» (до 30.10.2026) заменены «Партиями» — студия стала частью лупера
@@ -111,10 +112,12 @@ function partsHTML(S, main, time, slots, bar) {
     I[tr.kind] || I.notes, P.name(tr), '<canvas class="lprowcv" data-pv="t" data-id="' + tr.id + '"></canvas>',
     '<input type="range" class="lprvol" min="0" max="1.5" step="0.01" value="' + (tr.vol == null ? 1 : tr.vol) + '" data-tvol="' + tr.id + '" aria-label="' + ui.esc(t('partVol', { name: P.name(tr) })) + '">')));
   S.layers.forEach((L, i) => rows.push(row(' layer' + (L.mute ? ' off' : '') + (L.pend ? ' pend' : ''), 'data-li="' + i + '" aria-pressed="' + !L.mute + '" aria-label="' + ui.esc(t('rowTap', { name: L.name || t('layerN', { n: i + 1 }) })) + '"',
-    L.src === 'file' ? I.file : I.mic, L.name || t('layerN', { n: i + 1 }), '<canvas class="lprowcv lplanecv" data-pv="l" data-i="' + i + '"></canvas>',
+    L.src === 'file' ? I.file : I.mic, L.name || t('layerN', { n: i + 1 }),
+    // дубли: номер поверх волны — касание или смахивание по строке — следующий дубль (сравнить на ходу)
+    '<span class="lpcvw"><canvas class="lprowcv lplanecv" data-pv="l" data-i="' + i + '"></canvas>' + (L.takes > 1 ? '<button class="lptkb num" data-tk="1" data-i="' + i + '" aria-label="' + ui.esc(t('takeNext') + ' · ' + (L.take + 1) + '/' + L.takes) + '">' + (L.take + 1) + '/' + L.takes + '</button>' : '') + '</span>',
     '<input type="range" class="lprvol" min="0" max="1.5" step="0.01" value="' + L.gain + '" data-vol="' + i + '" aria-label="' + ui.esc(t('layerVol', { n: i + 1 })) + '">')));
   const top = '<div class="lpptop">' + ui.seg('lpbars', [...BARS.map((b) => [String(b), String(b)]), ['rec', t('lenRec')]], P.byRec() ? 'rec' : String(P.loopBars()), t('loopLen')) +
-    '<span class="lptempo num" title="' + ui.esc(t('tempoHint')) + '">' + ui.esc(tempo) + '</span>' + ui.icb('data-x="padd"', I.plus, t('add'), 'sm') + '</div>';
+    (P.cap ? '<button class="lpcap' + (P.cap.wait ? ' wait' : '') + '" data-x="capstop" aria-label="' + ui.esc(t('capStop')) + '">● ' + ui.esc(t(P.cap.wait ? 'capWait' : 'capRec')) + '</button>' : '<span class="lptempo num" title="' + ui.esc(t('tempoHint')) + '">' + ui.esc(tempo) + '</span>') + ui.icb('data-x="padd"', I.plus, t('add'), 'sm') + '</div>';
   const list = rows.length ? '<div class="lprows">' + rows.join('') + '</div>' : '<div class="lprows empty"><div class="lphint l2">' + ui.esc(t('partsHint')) + '</div></div>';
   return '<div class="lpwrap parts ' + size + '">' + top + list + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
 }
@@ -213,6 +216,9 @@ function tick() {
   if (!host || !lp) return;
   const S = lp.state, ring = host.querySelector('.lpring'), tm = host.querySelector('.lptime');
   if (ring) ring.setAttribute('stroke-dashoffset', (C * (1 - S.pos)).toFixed(1));
+  // лампочка темпа: вспышка кольца на каждую долю петли, первая доля такта — ярче (держать темп глазами)
+  const btn = host.querySelector('.lpbtn');
+  if (btn) { let v = '0'; if ((S.state === 'play' || S.state === 'dub') && parts) { const b = parts.beat(); if (b) { const x = (b.now - b.t0) / b.spb, f = x - Math.floor(x); if (f >= 0 && f < 0.14) v = ((Math.floor(x) % b.num) + b.num) % b.num === 0 ? '2' : '1'; } } if (btn.dataset.beat !== v) btn.dataset.beat = v; }
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
   if ((reelsView() || tracksView() || partsView()) && ((frame++ & 1) === 0 || live)) drawAll(); // волны — через кадр (30 в секунду хватает глазу); при ведении — каждый
   if (S.state !== 'idle' || live) raf = requestAnimationFrame(tick);
@@ -362,7 +368,7 @@ async function main() {
     return;
   }
   if (S.state === 'idle' && S.len) { lp.play(); render(); return; }
-  try { await lp.tap(withMetro() ? barSec() : 0); } catch (e) { fail(e); }
+  try { await lp.tap(withMetro() ? barSec() : 0, null, { takes: partsView() }); } catch (e) { fail(e); }
   render();
 }
 // Касание кнопки: как раньше; второе касание сразу следом во время петли — наложение становится заменой
@@ -410,7 +416,30 @@ function act(x, el) {
     case 'view': st().view = VIEWS[(VIEWS.indexOf(curView()) + 1) % VIEWS.length]; ctx.store.save(); render(); break;
     case 'edit': layerSheet(i); break;
     case 'padd': addMenu(el); break;
+    case 'capstop': parts.capDone(); render(); break;
   }
+}
+
+// Клик в левом ухе (по желанию): пока петля играет, метроном только слева — в наушниках слышен лишь музыканту
+// и не мешает петле; петля встала — клик снова посередине. В «В медиатеку» клик не идёт никогда (сводятся слои и партии)
+let panNow = 0;
+function clickPan() {
+  const S = lp.state, want = st().clickLeft && (S.state === 'play' || S.state === 'dub' || S.state === 'rec') ? -1 : 0;
+  if (want !== panNow) { panNow = want; ctx.audio.mixer.setMetroPan(want); }
+}
+let swallowRow = 0;
+function takeStep(row, d) {
+  const i = row ? +row.dataset.li : -1, L = lp.state.layers[i];
+  if (!L || L.takes < 2) return;
+  swallowRow = performance.now();
+  lp.setTake(i, (L.take + d + L.takes) % L.takes); render();
+}
+function metroMenu(anchor) {
+  const { t } = ctx;
+  holdMenu(anchor, [
+    { icon: I.metro, label: t(withMetro() ? 'metroOff' : 'metroOn'), run: () => act('metro') },
+    { icon: I.ear, label: t(st().clickLeft ? 'clickMid' : 'clickLeft'), run: () => { st().clickLeft = !st().clickLeft; ctx.store.save(); clickPan(); ctx.ui.toast(t(st().clickLeft ? 'clickLeftOn' : 'clickMidOn')); } },
+  ], t('metro'));
 }
 
 /* ---------- «Партии»: добавить, меню строки, длина петли ---------- */
@@ -424,6 +453,7 @@ function addMenu(anchor) {
       if (!lp.state.len && !parts.byRec()) lp.setLoop(parts.planSec());
       render(); parts.follow(); parts.edit(tr.id);
     } })),
+    { icon: I.keys, label: t('part.play'), run: () => { if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; } if (parts.capArm()) ctx.ui.toast(t('capArm')); render(); } },
     { icon: I.file, label: t('part.file'), run: () => filePicker() },
   ], t('add'));
 }
@@ -469,8 +499,9 @@ function rowMenu(row) {
     ], parts.name(tr));
     return;
   }
-  const i = +row.dataset.li;
+  const i = +row.dataset.li, L = lp.state.layers[i];
   holdMenu(row, [
+    ...(L && L.takes > 1 ? [{ icon: I.x, label: t('takeDrop', { n: L.take + 1 }), danger: true, run: () => { lp.dropTake(i, L.take); render(); } }] : []),
     { icon: I.wave, label: t('layerEdit', { n: i + 1 }), run: () => layerSheet(i) },
     { icon: I.x, label: t('removeLayer'), danger: true, run: () => { lp.removeLayer(i); render(); } },
   ], t('layerN', { n: i + 1 }));
@@ -500,15 +531,17 @@ export default {
   status(c) { return c.t(c.store.get('metro') ? 'st.metro' : 'st.free'); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
-    if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); }, log: c.log });
+    if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); clickPan(); }, log: c.log });
     if (!parts) parts = createParts(c, lp, { render: () => render(), barSec: () => barSec(), play: () => { if (lp.state.state === 'idle') main(); } });
     lp.setShift(st().shift || 0);
     const on = (t, ev, fn, o) => { t.addEventListener(ev, fn, o); offs.push(() => t.removeEventListener(ev, fn, o)); };
     on(host, 'click', (e) => {
       const b = e.target.closest('[data-x]'); if (b) { act(b.dataset.x, b); return; }
       const sg = e.target.closest('[data-seg="lpbars"] [data-v]'); if (sg) { setLen(sg.dataset.v); return; }
+      const tk = e.target.closest('[data-tk]'); // дубли слоя: ‹ › — сравнить на ходу
+      if (tk) { const i = +tk.dataset.i, L = lp.state.layers[i]; if (L && L.takes) { lp.setTake(i, (L.take + +tk.dataset.tk + L.takes) % L.takes); render(); } return; }
       const row = e.target.closest('.lprow'); // касание строки — вкл/выкл с начала такта
-      if (row && !e.target.closest('input, button')) { if (row.dataset.tr) parts.toggleTrack(row.dataset.tr); else parts.toggleLayer(+row.dataset.li); render(); }
+      if (row && !e.target.closest('input, button') && performance.now() - swallowRow > 400) { if (row.dataset.tr) parts.toggleTrack(row.dataset.tr); else parts.toggleLayer(+row.dataset.li); render(); }
     });
     on(host, 'input', (e) => {
       if (e.target.dataset.vol != null) lp.setGain(+e.target.dataset.vol, +e.target.value);
@@ -523,11 +556,20 @@ export default {
     onHold(host, '[data-x="main"]', () => { const S = lp.state; if (S.state === 'play' && S.len) act('multiply'); else act('undo'); });
     // смахивание по кнопке: влево — отменить слой, вправо — вернуть снятый
     unswipe = swipe(host, { min: 50, left: () => act('undo'), right: () => act('redo'), ok: (ev) => !!ev.target.closest('[data-x="main"]') });
+    // смахнуть строку слоя с дублями — соседний дубль
+    let swRow = null;
+    const unsw2 = swipe(host, { min: 50, ok: (ev) => { swRow = ev.target.closest('.lprow.layer'); return !!swRow && !ev.target.closest('input'); },
+      left: () => takeStep(swRow, 1), right: () => takeStep(swRow, -1) });
+    offs.push(unsw2);
     onHold(host, '.lprow', rowMenu);
+    onHold(host, '[data-x="metro"]', (b) => metroMenu(b));
     onHold(host, '.lplayer, .lplane:not(.lpnone), .lpreel:not(.lpnone)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
     render();
   },
   resize(sz) { size = sz; render(); },
+  // MIDI-клавиатура: в лупере звучит пианино; при «С игры» — пишется в партию
+  midiIn(e) { if (parts) parts.midi(e); },
+  midiStop() { if (parts) parts.midi({ k: 'off', id: '*' }); },
   // Окно закрыто: петля звучит дальше (как Hold у пианино), пока не остановят — удобно играть под неё в другом инструменте
   unmount() {
     if (unswipe) { unswipe(); unswipe = null; }

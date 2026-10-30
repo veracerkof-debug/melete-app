@@ -92,5 +92,22 @@
   "place.once": "Once",
   "pieceFrom": "Piece start",
   "pieceHint": "A sample or short sound: “Beat” or “Bar” with repeat. Longer material: “Loop”. A single hit at the start: “Once”.",
-  "err.lenLayers": "Layers have a different length — remove them first"
+  "err.lenLayers": "Layers have a different length — remove them first",
+  "metroOn": "Loop by metronome",
+  "metroOff": "Free loop",
+  "clickLeft": "Click in left ear only",
+  "clickMid": "Click centered",
+  "clickLeftOn": "Click goes to the left ear while the loop plays",
+  "clickMidOn": "Click centered",
+  "takePrev": "Previous take",
+  "takeNext": "Next take",
+  "takeDrop": "Delete take {n}",
+  "part.play": "From playing an instrument",
+  "capArm": "From the next loop start — play piano, pads, glider, theremin or a MIDI keyboard",
+  "capWait": "waiting",
+  "capRec": "recording",
+  "capStop": "Stop recording playing",
+  "capNone": "Nothing played",
+  "capName": "Played",
+  "capDone": "Played part: {n} notes"
 }

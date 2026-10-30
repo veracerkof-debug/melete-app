@@ -90,5 +90,22 @@
   "place.once": "Bir marta",
   "pieceFrom": "Bo'lak boshi",
   "pieceHint": "Sempl yoki qisqa tovush — «Hissa» yoki «Takt» takrorlash bilan. Uzun — «Halqa». Boshida bir marta — «Bir marta».",
-  "err.lenLayers": "Qatlamlar boshqa uzunlikda — avval ularni olib tashlang"
+  "err.lenLayers": "Qatlamlar boshqa uzunlikda — avval ularni olib tashlang",
+  "metroOn": "Halqa metronom bo'yicha",
+  "metroOff": "Erkin halqa",
+  "clickLeft": "Klik faqat chap quloqda",
+  "clickMid": "Klik o'rtada",
+  "clickLeftOn": "Halqa chalayotganda klik faqat chap quloqda",
+  "clickMidOn": "Klik o'rtada",
+  "takePrev": "Oldingi dubl",
+  "takeNext": "Keyingi dubl",
+  "takeDrop": "{n}-dublni o'chirish",
+  "part.play": "Asbobda chalishdan",
+  "capArm": "Keyingi aylanadan — pianino, pedlar, glayder, termenvoks yoki MIDI-klaviaturada chaling",
+  "capWait": "aylanani kutmoqda",
+  "capRec": "yozmoqda",
+  "capStop": "Chalishni yozishni to'xtatish",
+  "capNone": "Hech narsa chalinmadi",
+  "capName": "Chalingan",
+  "capDone": "Chalingan partiya: {n} nota"
 }

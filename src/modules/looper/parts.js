@@ -4,7 +4,8 @@
 // Касание строки — вкл/выкл с начала следующего такта; удержание — меню; «+» — новая партия или запись.
 // Правка партии — тот же редактор студии в шторке (studio/index.js: embedPart), петля при этом играет.
 // У каждой петли (слота) — свой проект; в хранилище лупера — parts: [id проекта × 4].
-import { newProject, newTrack, newClip, newData, normalizeProject, clipsOf, dataBeats, clipNotes, BARS_MAX, diatonicChords, setChord } from '../../music/project.js';
+import { newProject, newTrack, newClip, newData, normalizeProject, clipsOf, dataBeats, clipNotes, BARS_MAX, diatonicChords, setChord, addPlayedNote } from '../../music/project.js';
+import { after, cancel } from '../../audio/clock.js';
 import { createSequencer } from '../../audio/sequencer.js';
 
 export const BARS = [4, 8, 16, 32];
@@ -97,6 +98,14 @@ export function createParts(ctx, lp, hooks) {
     seq.start(0, { t0: c.t0 });
   }
 
+  // Доля петли: длина, с, и долей в такте (партии — точная доля проекта; без них — по метроному в длину петли)
+  function beat() {
+    const c = lp.clock, m = metro(), p = proj();
+    if (!c) return null;
+    if (p && p.spb) return { spb: p.spb, num: p.num, t0: c.t0, now: c.ctx.currentTime };
+    const bar = m.num * 60 / m.bpm, bars = Math.max(1, Math.round(c.len / bar));
+    return { spb: c.len / (bars * m.num), num: m.num, t0: c.t0, now: c.ctx.currentTime };
+  }
   // Начало следующего такта по часам петли (не играет — сейчас: 0)
   function nextBar() {
     const c = lp.clock, S = lp.state;
@@ -164,6 +173,57 @@ export function createParts(ctx, lp, hooks) {
   }
   let sheetEmb = null;
 
+  // Партия с игры (ответ автора 30.10: любой инструмент): с начала следующего круга всё, что сыграно на пианино, пэдах,
+  // глайдере, терменвоксе или MIDI-клавиатуре, ложится нотами в новую партию (по сетке шестнадцатых); один круг или до
+  // «стоп». Время — по тому, что музыкант слышит: момент игры минус задержка выхода. Звук партии — по инструменту
+  const INST = { piano: 'piano', drone: 'wair', glider: 'wflute', theremin: 'sine', midi: 'piano' };
+  let cap = null;
+  function capArm() {
+    if (cap) { capDone(); return; }
+    const c0 = lp.clock;
+    if (!c0 || !(lp.state.state === 'play' || lp.state.state === 'dub')) { hooks.play(); }
+    const c = lp.clock;
+    if (!c) return false;
+    const now = c.ctx.currentTime, k = Math.ceil((now - c.t0) / c.len - 1e-3);
+    cap = { start: c.t0 + k * c.len, len: c.len, held: new Map(), notes: [], tool: null, off: ctx.onPlay(capEv), tm: 0 };
+    cap.tm = after((cap.start + cap.len - now) * 1000 + 30, capDone);
+    after(Math.max(0, (cap.start - now) * 1000 + 20), () => hooks.render()); // «ждёт круга» → «пишет игру»
+    hooks.render();
+    return true;
+  }
+  const capNow = () => { const c = lp.clock; return c ? c.ctx.currentTime - (c.ctx.outputLatency || 0) : 0; };
+  function capEv(id, e) {
+    if (!cap) return;
+    const t = capNow() - cap.start;
+    if (e.k === 'on' && e.m != null) { if (t < -0.12) return; cap.tool = cap.tool || id; cap.held.set(e.id, { m: Math.round(e.m), v: e.v == null ? 0.8 : e.v, t: Math.max(0, t) }); }
+    else if (e.k === 'off') { const h = cap.held.get(e.id); if (!h) return; cap.held.delete(e.id); cap.notes.push({ ...h, d: Math.max(0.05, Math.min(cap.len, t) - h.t) }); }
+  }
+  function capDone() {
+    if (!cap) return;
+    const k = cap; cap = null;
+    cancel(k.tm); try { k.off(); } catch { /* */ }
+    const end = Math.min(k.len, capNow() - k.start);
+    k.held.forEach((h) => k.notes.push({ ...h, d: Math.max(0.05, end - h.t) }));
+    if (!k.notes.length) { ctx.ui.toast(ctx.t('capNone')); hooks.render(); return; }
+    const p = ensure(); fit(p);
+    const spb = p.spb, beats = p.region.b, bars = Math.max(1, Math.round(beats / p.num));
+    const tr = newTrack('notes', p.tracks.length, { inst: INST[k.tool] || 'piano', name: ctx.t('capName') });
+    const d = newData('notes', bars), total = bars * p.num;
+    k.notes.forEach((n) => { if (n.t < k.len) addPlayedNote(d, total, n.t / spb, n.d / spb, n.m, n.v, 0.25); });
+    p.tracks.push(tr);
+    const c = newClip(p, tr, 0, beats, d); c.loop = true; p.clips.push(c);
+    normalizeProject(p); ctx.projects.save(p);
+    key = ''; follow(); hooks.render();
+    ctx.ui.toast(ctx.t('capDone', { n: k.notes.length }));
+  }
+  // MIDI-клавиатура прямо в лупере: звук пианино и запись в партию с игры
+  function midi(e) {
+    const syn = ctx.audio.synth;
+    if (e.k === 'on' && e.m != null) syn.on(e.m, 'lpm' + e.id, { bus: 'piano', vel: e.v == null ? 0.8 : e.v });
+    else if (e.k === 'off') { if (e.id === '*') { (cap ? [...cap.held.keys()] : []).forEach((id) => syn.off('lpm' + id)); } else syn.off('lpm' + e.id); }
+    capEv('midi', e);
+  }
+
   // Кусок записи из медиатеки → слой
   async function addFile(rec, { start = 0, piece = 'loop', place = 'repeat' } = {}) {
     if (!rec || !rec.blob) throw new Error('nofile');
@@ -194,7 +254,8 @@ export function createParts(ctx, lp, hooks) {
   }
 
   return {
-    renderLoop,
+    renderLoop, beat, capArm, capDone, midi,
+    get cap() { return cap ? { wait: (lp.clock ? lp.clock.ctx.currentTime : 0) < cap.start } : null; },
     seq, proj, fit, follow, ensure, toggleTrack, toggleLayer, pending, addPart, removePart, dupPart, edit, addFile, name, notesOf, clipOf, nextBar,
     loopBars, byRec, lenSec, planSec,
     get kinds() { return KINDS; },
