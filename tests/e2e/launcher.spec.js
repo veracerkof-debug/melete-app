@@ -124,8 +124,13 @@ test('скрыть приложение: из «Всех приложений» 
   await expect(page.locator('.l-app .label', { hasText: 'Музыка' })).toHaveCount(0); // и с главного
   await hold(page, 60, 330);
   await page.locator('.l-set-tabs button', { hasText: 'Главный' }).click();
+  // скрытые — одна строка-папка с числом; внутри — открыть или вернуть
+  await expect(page.locator('.l-folder-row')).toContainText('1');
+  await page.locator('.l-folder-row').click();
   await expect(page.locator('.l-edit-row', { hasText: 'Музыка' })).toHaveCount(1);
   await page.locator('.l-edit-row', { hasText: 'Музыка' }).locator('.l-hide-back').click();
+  await expect(page.locator('.l-sheet .l-empty')).toContainText('Скрытых нет');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await page.keyboard.press('ArrowUp');
   await page.locator('.l-drawer .l-search').fill('муз');
@@ -214,6 +219,7 @@ test('папки: «Все» без приложений из папок; гал
   // папка «Связь» (первая): галочками убрать «Почту» — она появится во «Всех»
   const tab1 = page.locator('.l-d-tab.fold').first();
   await tab1.click();
+  await expect(page.locator('.l-d-app').nth(2)).toBeVisible(); // переход между папками — с движением
   const names = () => page.locator('.l-d-app span').allTextContents();
   const before = await names();
   expect(before.length).toBeGreaterThan(2);
@@ -234,6 +240,8 @@ test('папки: «Все» без приложений из папок; гал
   await expect(page.locator('.l-d-app', { hasText: before[0] })).toHaveCount(1);
   // порядок в папке: первое — вниз на одно место
   await tab1.click();
+  await expect(page.locator('.l-d-app').nth(1)).toBeVisible();
+  await page.waitForTimeout(400);
   const order = await names();
   const a0 = await page.locator('.l-d-app').nth(0).boundingBox();
   const a1 = await page.locator('.l-d-app').nth(1).boundingBox();
@@ -428,5 +436,50 @@ test('вкладки сверху без названий — только зн�
   await expect(tab).toHaveAttribute('aria-label', 'Связь');
   await tab.click();
   expect(await page.locator('.l-d-list').evaluate((e) => e.getAnimations().length)).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
+test('добавить на главный: «＋ Приложение» в правке — список с галочками и поиском; полный — подсказка', async ({ page, errors }) => {
+  await open(page);
+  const n0 = await page.locator('.l-app').count();
+  const clock = await page.locator('[data-blk="clock"]').boundingBox();
+  await hold(page, clock.x + clock.width / 2, clock.y + clock.height / 2);
+  await page.locator('.l-arr-bar .l-arr-chip', { hasText: 'Приложение' }).first().click();
+  await expect(page.locator('.l-check-k').first()).toHaveText('На главном');
+  await page.locator('.l-sheet .l-search').fill('почт');
+  await page.locator('.l-check:not(.on)', { hasText: 'Почта' }).click();
+  await expect(page.locator('.l-check.on', { hasText: 'Почта' })).toHaveCount(1);
+  await page.locator('.l-sheet .l-search').fill('');
+  // добить до семи и попробовать восьмое
+  for (let i = 0; i < 10; i++) { const c = page.locator('.l-check:not(.on)').first(); if (!(await c.count())) break; await c.click(); }
+  await expect(page.locator('.l-sheet .l-hint').first()).toContainText('7 из 7');
+  await expect(page.locator('.l-sheet .l-check.on')).toHaveCount(7);
+  await page.locator('.l-sheet .l-btn.primary').click();
+  await page.locator('.l-arr-done').click();
+  expect(await page.locator('.l-app').count()).toBe(7);
+  expect(n0).toBeLessThan(7);
+  await expect(page.locator('.l-app .label', { hasText: 'Почта' })).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('переход между папками: список идёт за пальцем, короткое движение — пружинит назад', async ({ page, errors }) => {
+  await open(page, { foldTabs: 'top' });
+  await page.keyboard.press('ArrowUp');
+  await page.locator('.l-d-tab.fold').first().click();
+  await expect(page.locator('.l-d-app').first()).toBeVisible();
+  const on = () => page.locator('.l-d-tab.on').getAttribute('data-id');
+  const was = await on();
+  const b = await page.locator('.l-d-list').boundingBox();
+  await page.mouse.move(b.x + b.width - 40, b.y + 80); await page.mouse.down();
+  await page.mouse.move(b.x + b.width - 140, b.y + 82, { steps: 5 });
+  expect(await page.locator('.l-d-list').evaluate((e) => e.style.transform)).toContain('translateX(-');
+  await page.mouse.move(b.x + b.width - 30, b.y + 82, { steps: 5 }); await page.mouse.up(); // вернул палец — остаёмся
+  await page.waitForTimeout(300);
+  expect(await on()).toBe(was);
+  await page.mouse.move(b.x + b.width - 40, b.y + 80); await page.mouse.down();
+  await page.mouse.move(b.x + 40, b.y + 85, { steps: 6 }); await page.mouse.up();
+  await expect.poll(on).not.toBe(was);
+  await page.waitForTimeout(400);
+  expect(await page.locator('.l-d-list').evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
   expect(errors).toEqual([]);
 });

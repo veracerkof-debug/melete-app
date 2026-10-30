@@ -445,3 +445,10 @@ export function t(key, vars, fallback) {
   return vars ? String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s;
 }
 export const STRINGS = S;
+// Главный — выбор галочками, скрытые — отдельной папкой в настройках (DECISIONS 2026-10-30)
+Object.assign(S.ru, { 'home.on': 'На главном', 'home.folders': 'Папки', 'home.apps': 'Приложения', 'home.pick': 'Выбрать, что на главном', 'fold.kicker': 'папка',
+  'hide.n': '{n}', 'hide.none': 'Скрытых нет', 'hide.sheetHint': 'Касание — открыть. «Вернуть» — приложение снова видно везде.' });
+Object.assign(S.uz, { 'home.on': 'Bosh ekranda', 'home.folders': 'Jildlar', 'home.apps': 'Ilovalar', 'home.pick': 'Bosh ekranga tanlash', 'fold.kicker': 'jild',
+  'hide.n': '{n}', 'hide.none': 'Yashirin ilova yoʻq', 'hide.sheetHint': 'Bosish — ochish. «Qaytarish» — ilova yana hamma joyda koʻrinadi.' });
+Object.assign(S.en, { 'home.on': 'On home', 'home.folders': 'Folders', 'home.apps': 'Apps', 'home.pick': 'Choose what is on home', 'fold.kicker': 'folder',
+  'hide.n': '{n}', 'hide.none': 'No hidden apps', 'hide.sheetHint': 'Tap to open. Unhide — the app shows everywhere again.' });

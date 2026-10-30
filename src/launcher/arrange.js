@@ -4,7 +4,7 @@
 //   щипок — размер (и − / + для точной донастройки); «Убрать» — блок прячется, вернуть — кнопкой внизу;
 //   касание приложения или значка — его правка (подпись, что открывает, убрать).
 // Выход — «Готово», «Назад», Esc или уход с экрана. Своя строка состояния и крест — не блоки (настройки «Вид»).
-import { prefs, save, HOME_MAX } from './data.js';
+import { prefs, save } from './data.js';
 import { layout, setLayout, BLOCKS } from './layout.js';
 import { homeItems, dockSlots } from './apps.js';
 import { t } from './i18n.js';
@@ -63,8 +63,9 @@ function drawBar() {
   if (selected) {
     const pct = L.scale[selected] || 100;
     const setPct = (v) => { setLayout({ scale: { ...L.scale, [selected]: Math.max(MIN, Math.min(MAX, v)) } }); redraw(); };
-    const add = selected === 'apps' && homeItems().length < HOME_MAX ? h('button', { class: 'l-arr-chip', onclick: () => deps.addApp(redraw) }, '＋ ' + t('arr.addApp'))
-      : selected === 'dock' && dockSlots().length < 6 ? h('button', { class: 'l-arr-chip', onclick: () => deps.addDock(redraw) }, '＋ ' + t('arr.addIcon')) : null;
+    // «＋ Приложение» — всегда под рукой (что на главном — галочками); у значков внизу — «＋ Значок»
+    const add = selected === 'dock' ? (dockSlots().length < 6 ? h('button', { class: 'l-arr-chip', onclick: () => deps.addDock(redraw) }, '＋ ' + t('arr.addIcon')) : null)
+      : h('button', { class: 'l-arr-chip', onclick: () => deps.addApp(redraw) }, '＋ ' + t('arr.addApp'));
     bar.replaceChildren(
       h('div', { class: 'l-arr-row' },
         h('span', { class: 'l-arr-name' }, name(selected)),
@@ -80,6 +81,7 @@ function drawBar() {
     bar.replaceChildren(
       h('p', { class: 'l-arr-hint' }, t('arr.hint')),
       h('div', { class: 'l-arr-row' },
+        h('button', { class: 'l-arr-chip', onclick: () => deps.addApp(redraw) }, '＋ ' + t('arr.addApp')),
         ...hidden.map((id) => h('button', { class: 'l-arr-chip', onclick: () => { setLayout({ hide: { ...L.hide, [id]: false } }); selected = id; redraw(); } }, '＋ ' + name(id))),
         done));
   }

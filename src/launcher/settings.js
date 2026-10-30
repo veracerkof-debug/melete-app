@@ -8,6 +8,7 @@ import { CROSS_IDS, CROSS_PLACES, crossSVG } from './cross.js';
 import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
+import { pickHome } from './homepick.js';
 import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp, systemName } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
@@ -93,13 +94,14 @@ export function openSettings(onChange, getGesture, tab) {
       // — Раскладка: главный экран и «Все приложения» —
       
       // — Скрытые приложения: нигде не видны; здесь — открыть или вернуть —
+      // одна строка-папка: внутри — список (открыть, вернуть) и «Скрыть приложение»
       const hid = hiddenApps();
       body.append(S('home', t('hide.title'),
-        h('p', { class: 'l-hint' }, t('hide.hint')),
-        h('div', { class: 'l-edit-list' }, hid.map((a) => h('div', { class: 'l-edit-row' },
-          h('button', { class: 'l-edit-main', onclick: () => openApp(a) }, h('span', {}, a.label), h('small', {}, t('hide.open'))),
-          h('button', { class: 'l-btn l-hide-back', onclick: keep(() => { setHidden(a.key, false); changed(); rerender(); }) }, t('hide.back'))))),
-        h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { setHidden(a.key, true); changed(); rerender(); toast(t('hide.done')); }, { appsOnly: true }) }, '＋ ' + t('hide.add')),
+        h('button', { class: 'l-folder-row', onclick: () => hiddenSheet(rerender) },
+          h('span', { class: 'l-folder-ico', html: iconSVG('lock') || iconSVG('folder') }),
+          h('span', { class: 'l-folder-t' }, hid.length ? hid.slice(0, 3).map((a) => a.label).join(', ') + (hid.length > 3 ? ' …' : '') : t('hide.none')),
+          hid.length ? h('span', { class: 'l-folder-n' }, t('hide.n', { n: hid.length })) : null,
+          h('span', { class: 'l-folder-go', 'aria-hidden': 'true' }, '›')),
       ));
 
       // — Главный экран: приложения —
@@ -110,12 +112,11 @@ export function openSettings(onChange, getGesture, tab) {
           h('button', { class: 'l-lay-btn', 'aria-label': t('set.up'), disabled: i === 0, onclick: keep(() => { move(ownHome(), i, -1); save(); changed(); rerender(); }) }, '↑'),
           h('button', { class: 'l-lay-btn', 'aria-label': t('set.down'), disabled: i === all.length - 1, onclick: keep(() => { move(ownHome(), i, 1); save(); changed(); rerender(); }) }, '↓')));
       });
-      const full = homeItems().length >= HOME_MAX;
       body.append(S('home', t('set.home'),
         h('p', { class: 'l-hint' }, t('set.homeHint'), ' ', t('home.count', { n: homeItems().length, max: HOME_MAX })),
         homeList,
         appIconsAvailable() ? toggle(t('set.appIcons'), prefs.appIcons, (v) => up({ appIcons: v }), t('set.appIconsHint')) : null,
-        full ? null : h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { if (ownHome().length < HOME_MAX) ownHome().push({ key: a.key, label: '' }); save(); changed(); rerender(); }, { appsOnly: true }) }, t('set.homeAdd')),
+        h('button', { class: 'l-btn', onclick: () => pickHome(() => { changed(); rerender(); }) }, '＋ ' + t('home.pick')),
       ));
 
       // — Значки внизу и плеер —
@@ -267,6 +268,31 @@ function scaleRow(label, key, min, max) {
 }
 
 // Подпись приложения на главном (удержание названия)
+// Скрытые приложения — своя папка: поиск, касание — открыть (скрытое не видно больше нигде), «Вернуть», «Скрыть ещё»
+function hiddenSheet(after) {
+  let q = '';
+  openSheet({
+    title: t('hide.title'), kicker: '', full: true,
+    render(body, close) {
+      const listEl = h('div', { class: 'l-edit-list' });
+      const draw = () => {
+        const ql = q.trim().toLowerCase();
+        const hid = hiddenApps().filter((a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql));
+        listEl.replaceChildren(...(hid.length ? hid.map((a) => h('div', { class: 'l-edit-row' },
+          h('button', { class: 'l-edit-main', onclick: () => { openApp(a); } }, h('span', {}, a.label), a.sys && a.sys !== a.label ? h('small', {}, a.sys) : null),
+          h('button', { class: 'l-btn l-hide-back', onclick: () => { setHidden(a.key, false); changed(); after(); draw(); } }, t('hide.back'))))
+          : [h('p', { class: 'l-empty' }, t('hide.none'))]));
+      };
+      body.append(...[
+        h('p', { class: 'l-hint' }, t('hide.sheetHint')),
+        hiddenApps().length > 6 ? h('input', { class: 'l-search', type: 'search', placeholder: t('drawer.search'), 'aria-label': t('drawer.search'), oninput: (e) => { q = e.target.value; draw(); } }) : null,
+        listEl,
+        h('button', { class: 'l-btn', onclick: () => pickAction(null, (a) => { setHidden(a.key, true); changed(); after(); draw(); toast(t('hide.done')); }, { appsOnly: true }) }, '＋ ' + t('hide.add'))].filter(Boolean));
+      draw();
+    },
+  });
+}
+
 export function editHomeItem(i, after, onChange = changed) {
   const item = homeItems()[i];
   if (!item) return;

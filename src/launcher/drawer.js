@@ -10,6 +10,7 @@ import { holdDrag, reordering } from './reorder.js';
 import { allApps as everyApp } from './apps.js';
 import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
+import { pickHome } from './homepick.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
 import { setCover } from './cover.js';
@@ -68,29 +69,49 @@ export function mountDrawer(container, { onChange }) {
   drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
   drawer.addEventListener('pointerup', endDrag);
   drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
-  // смахнуть влево-вправо по списку — соседняя вкладка. Чутко: от 36 px, или короткий быстрый взмах (от 20 px).
+  // смахнуть влево-вправо по списку — соседняя папка. Список идёт за пальцем; отпустил дальше 36 px или быстрым
+  // взмахом — уезжает, приходит соседняя папка с другой стороны; иначе — пружинит назад. На краях — тянется туго.
   // Пальцем — касания (touchend приходит, даже если браузер успел начать прокрутку), мышью — указатель.
   let sw = null;
-  const swStart = (x, y) => { sw = { x, y, t: performance.now() }; };
+  const neighbour = (dir) => { const ids = tabIds(), i = Math.max(0, ids.indexOf(tab)) + dir; return i >= 0 && i < ids.length ? ids[i] : null; };
+  const swStart = (x, y) => { sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null } : null; };
+  const swMove = (x, y) => {
+    if (!sw || reordering()) return;
+    const dx = x - sw.x, dy = y - sw.y;
+    if (!sw.lock) {
+      if (Math.hypot(dx, dy) < 10) return;
+      sw.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      if (sw.lock === 'x') list.style.transition = 'none';
+    }
+    if (sw.lock !== 'x') return;
+    const free = neighbour(dx < 0 ? 1 : -1);
+    const off = free ? dx : dx / 4; // края нет — туго
+    list.style.transform = `translateX(${off}px)`;
+    list.style.opacity = String(1 - Math.min(0.5, Math.abs(off) / list.clientWidth));
+    sw.off = off;
+  };
   const swEnd = (x, y) => {
     if (!sw) return;
-    const dx = x - sw.x, dy = y - sw.y, ms = Math.max(1, performance.now() - sw.t); sw = null;
-    if (reordering() || search.value) return;
+    const s0 = sw; sw = null;
+    const dx = x - s0.x, dy = y - s0.y, ms = Math.max(1, performance.now() - s0.t);
     const ax = Math.abs(dx);
-    const far = ax >= 36 && ax > Math.abs(dy) * 1.2;
-    const flick = ax >= 20 && ax / ms > 0.35 && ax > Math.abs(dy) * 1.5;
-    if (!far && !flick) return;
-    const ids = tabIds();
-    const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
-    if (i >= 0 && i < ids.length) { tab = ids[i]; list.dataset.swiped = '1'; fill(); slideIn(dx < 0 ? 1 : -1); setTimeout(() => delete list.dataset.swiped, 50); }
+    const go = !reordering() && s0.lock !== 'y' && ((ax >= 36 && ax > Math.abs(dy) * 1.2) || (ax >= 20 && ax / ms > 0.35 && ax > Math.abs(dy) * 1.5));
+    const id = go ? neighbour(dx < 0 ? 1 : -1) : null;
+    if (s0.lock === 'x') { list.dataset.swiped = '1'; setTimeout(() => delete list.dataset.swiped, 50); }
+    if (id) { switchTab(id, dx < 0 ? 1 : -1, s0.off || 0); }
+    else if (s0.off) settle();
   };
-  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else sw = null; }, { passive: true });
+  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else { sw = null; settle(); } }, { passive: true });
+  list.addEventListener('touchmove', (e) => { const c = e.touches[0]; if (c) swMove(c.clientX, c.clientY); }, { passive: true });
   list.addEventListener('touchend', (e) => { const c = e.changedTouches[0]; if (c) swEnd(c.clientX, c.clientY); }, { passive: true });
+  list.addEventListener('touchcancel', () => { sw = null; settle(); }, { passive: true });
   list.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') swStart(e.clientX, e.clientY); });
+  list.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch' && e.buttons) swMove(e.clientX, e.clientY); });
   list.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') swEnd(e.clientX, e.clientY); });
   drawer.addEventListener('wheel', (e) => { if (e.deltaY < -40 && list.scrollTop <= 0) closeDrawer(); }, { passive: true });
   // удержать и перетащить: приложение в папке — на новое место; удержать и отпустить — меню приложения
   holdDrag(list, '.l-d-app', {
+    canMove: () => !search.value.trim() && tab !== 'all',
     onHold: (el) => { const a = everyApp().find((x) => x.key === el.dataset.key); if (a) appMenu(a); },
     onMove: (from, to) => {
       const f = !search.value.trim() && tab !== 'all' ? folderById(tab) : null;
@@ -108,11 +129,37 @@ export function mountDrawer(container, { onChange }) {
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
 // вкладки по порядку: «Все» (если не убрана) и папки
-// переход между вкладками: список въезжает с той стороны, куда листаем (dir: 1 — следующая, −1 — предыдущая)
+// переход между папками: текущий список уезжает в сторону листания, новый приходит с другой стороны (dir: 1 — следующая,
+// −1 — предыдущая); from — где список сейчас (палец уже утащил). «Меньше движения» — сразу, без сдвига.
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-function slideIn(dir) {
-  if (!dir || calm() || !list.animate) return;
-  list.animate([{ opacity: 0, transform: `translateX(${dir * 32}px)` }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+const EASE = 'cubic-bezier(.2,.8,.2,1)';
+let paging = false;
+function settle() {
+  if (!list.style.transform) return;
+  list.style.transition = `transform .22s ${EASE}, opacity .22s ${EASE}`;
+  list.style.transform = ''; list.style.opacity = '';
+}
+function switchTab(id, dir, from = 0) {
+  if (id === tab) { settle(); return; }
+  if (!dir || calm() || !list.animate) {
+    tab = id; fill(); list.scrollTop = 0; list.style.transform = ''; list.style.opacity = ''; return;
+  }
+  paging = true;
+  const w = Math.min(list.clientWidth || 360, 420);
+  const o0 = list.style.opacity || '1';
+  list.style.transition = 'none';
+  const out = list.animate([{ transform: `translateX(${from}px)`, opacity: o0 }, { transform: `translateX(${-dir * w * 0.45}px)`, opacity: 0 }],
+    { duration: Math.max(70, 140 * (1 - Math.abs(from) / w)), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+  const done = () => {
+    tab = id; fill(); list.scrollTop = 0;
+    list.style.transform = ''; list.style.opacity = '';
+    out.oncancel = null; out.cancel();
+    list.animate([{ transform: `translateX(${dir * w * 0.45}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 240, easing: EASE });
+    tabs.querySelector('.on')?.animate([{ transform: 'scale(.9)' }, { transform: 'none' }], { duration: 200, easing: EASE });
+    paging = false;
+  };
+  out.onfinish = done;
+  out.oncancel = () => { if (paging) done(); };
 }
 const tabIds = () => [...(prefs.drawerAll !== false || !folders().length ? ['all'] : []), ...folders().map((f) => f.id)];
 
@@ -158,8 +205,9 @@ function renderTabs(searching) {
     b.addEventListener('click', () => {
       if (b.dataset.held) { delete b.dataset.held; return; }
       if (id === '+') return newFolder();
-      const ids = tabIds(), was = ids.indexOf(tab), dir = id === tab ? 0 : Math.sign(ids.indexOf(id) - was) || 1;
-      tab = id; search.value = ''; fill(); list.scrollTop = 0; slideIn(dir);
+      const ids = tabIds(), dir = Math.sign(ids.indexOf(id) - ids.indexOf(tab)) || 1;
+      if (search.value) { search.value = ''; tab = id; fill(); list.scrollTop = 0; return; }
+      switchTab(id, dir);
     });
     return b;
   };
@@ -332,7 +380,7 @@ function appMenu(a) {
       body.append(field(t('ren.name'), a.label === a.sys ? '' : a.label, (v) => { renameApp(a.key, v); fill(); changed(); }, { placeholder: a.sys || a.label, maxlength: 40 }));
       body.append(h('button', { class: 'l-pick', onclick: () => {
         const home = ownHome();
-        if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); return; }
+        if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); pickHome(() => { fill(); changed(); }); return; }
         if (there) home.splice(home.findIndex((x) => x.key === a.key), 1);
         else home.push({ key: a.key, label: '' });
         save(); fill(); changed(); close();
