@@ -157,7 +157,7 @@
   "stems.absent": "Not in the recording: {list}.",
   "stems.saved": "Done: stems are in the library",
   "stems.none": "No stems found: the recording is quiet or empty",
-  "stems.toStudio": "Open in studio",
+  "stems.toStudio": "To looper",
   "stemsN": [
     "{n} stem",
     "{n} stems"
@@ -177,7 +177,7 @@
   "notes.listen": "Listen",
   "notes.stop": "Stop",
   "notes.toTabs": "Open in Tabs",
-  "notes.toStudio": "Open in studio",
+  "notes.toStudio": "To looper",
   "notes.redo": "Transcribe again",
   "notes.sens": "Sensitivity",
   "notes.sensNormal": "Normal",
@@ -191,7 +191,7 @@
   "notes.goPro": "Transcribe · ≈ {t}",
   "notes.pcOnly": "Notes and tabs from a recording are made by the computer (Melete for Windows) — they arrive with sync.",
   "notes.hint": "Notes from the recording (.mid) go to the library next to it. Best with a single instrument or voice: separate a mix first and transcribe a stem.",
-  "notes.doneHint": "The .mid file is in the library next to the recording. In Tabs — as notation and tablature; in the studio — edit, change the sound and tempo.",
+  "notes.doneHint": "The .mid file is in the library next to the recording. In Tabs — as notes and tablature; in the Looper — as parts to edit, re-voice and play over.",
   "stems.hq": "Refined separation",
   "stems.hqHint": "Three passes instead of one: cleaner stem edges, 4.5× the time. The first version is kept.",
   "stems.improve": "Refine · ≈ {t}",
@@ -234,7 +234,10 @@
   "pv.chords": "Chords",
   "pv.click": "Click on the recording's beats",
   "pv.bar": "Bar {n}",
-  "pv.inBeats": ["in {n} beat", "in {n} beats"],
+  "pv.inBeats": [
+    "in {n} beat",
+    "in {n} beats"
+  ],
   "pv.sec": "s",
   "pv.chordsPc": "Chords of a recording are found by the computer (Melete for Windows) — they arrive with sync",
   "pv.noChords": "Chords could not be detected",

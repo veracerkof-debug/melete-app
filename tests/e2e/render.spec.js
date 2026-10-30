@@ -36,26 +36,26 @@ test('на бумаге: быстрее реального времени, ме�
   expect(errors).toEqual([]);
 });
 
-test('студия: «Свести в WAV» — на бумаге, файл в медиатеке', async ({ page, melete, errors }) => {
-  await melete.open({ settings: { feat: { studio: true } } });
+test('лупер: «В медиатеку» — партии сводятся на бумаге вместе со слоями', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { feat: { studio: true } }, tools: { looper: { metro: false, view: 'parts', bars: 4, parts: ['pjrd', null, null, null] } } });
   await page.evaluate(async (seedSrc) => {
-    const pr = await (0, eval)(seedSrc);
+    const pr = await (0, eval)(seedSrc); pr.id = 'pjrd'; pr.looper = true; pr.tracks = pr.tracks.filter((x) => x.kind !== 'audio'); pr.clips = pr.clips.filter((c) => pr.tracks.some((x) => x.id === c.tr));
     const s = JSON.parse(localStorage.getItem('practice.v1')); s.projects = [pr]; localStorage.setItem('practice.v1', JSON.stringify(s));
   }, seed.toString().replace(/^\(\) => /, ''));
   await page.reload(); await page.waitForTimeout(1200);
-  await melete.tab('studio');
-  await melete.click('[data-open]'); await page.waitForTimeout(700);
-  await melete.click('[data-x="settings"]'); await page.waitForTimeout(500);
-  await melete.click('[data-x2="export"]'); await page.waitForTimeout(700);
+  await melete.free('F', ['looper']);
+  await melete.click('[data-x="main"]'); await page.waitForTimeout(1200);
+  await melete.click('[data-x="stop"]'); await page.waitForTimeout(300);
   const t0 = Date.now();
-  await page.getByText('Свести в WAV').click();
+  await melete.click('[data-x="save"]');
   const f = await page.evaluate(async () => {
     const { createFiles } = await import('/src/core/files.js');
-    for (let i = 0; i < 150; i++) { const x = createFiles(); await x.ready; const r = x.list('audio').find((q) => /R — /.test(q.name)); if (r) return { dur: r.dur, name: r.name }; await new Promise((ok) => setTimeout(ok, 100)); }
-    return { dur: 0 };
+    for (let i = 0; i < 150; i++) { const x = createFiles(); await x.ready; const r = x.list('audio').find((q) => /^lp/.test(q.id)); if (r) { const ab = await r.blob.arrayBuffer(); const d = new DataView(ab); let peak = 0; for (let k = 44; k + 1 < ab.byteLength; k += 2) peak = Math.max(peak, Math.abs(d.getInt16(k, true))); return { dur: r.dur, peak }; } await new Promise((ok) => setTimeout(ok, 100)); }
+    return { dur: 0, peak: 0 };
   });
   const took = Date.now() - t0;
   expect(f.dur).toBeGreaterThan(4);
-  expect(took, 'быстрее, чем звучит песня с хвостом').toBeLessThan(f.dur * 1000 + 1500);
+  expect(f.peak, 'в файле звучат партии').toBeGreaterThan(500);
+  expect(took, 'быстрее, чем звучит петля').toBeLessThan(f.dur * 1000 + 1500);
   expect(errors).toEqual([]);
 });

@@ -27,6 +27,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
   let c = null, timer = null, t0 = 0, nextBeat = 0, playing = false, noise = null, click = false, seq = 0, focus = null;
   let mode = { once: false, whole: false, from: 0, onEnd: null, endTm: 0 }, lead = 0; // lead — отсчёт перед стартом, в долях
   const live = new Map(); // ключ голоса → таймер выключения
+  // Вкл/выкл дорожки с начала такта (лупер, вид «Партии»): trId → { mute, at, tm } — до at дорожка звучит как была
+  const pend = new Map();
   const gm = createGM({ after, cancel }); // звуки General MIDI (банк SONiVOX): ноты дорожек 'gm' и наборы ударных
   const usesGM = (p) => p.tracks.some((tr) => tr.inst === 'gm' || tr.gmKit != null);
   // звук дорожки синтезатором: свой пресет; 'gm', пока банк не загрузился, — похожий звук приложения
@@ -124,7 +126,9 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       for (const n of notes) {
         if (n.t < inLoop) continue;
         if (n.t >= inLoop + 1 || n.t >= loop.b) break;
-        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, out = trackOut(p, n.tr), g = n.gain || 1;
+        const at = beatT + (n.t - inLoop + swingOf(p, n.t)) * spb, g = n.gain || 1, pd = pend.get(n.tr.id);
+        if (pd && (pd.mute ? at >= pd.at - 1e-4 : at < pd.at - 1e-4)) continue;
+        const out = trackOut(p, n.tr);
         if (!context && at < c.currentTime - 0.003) onLate(c.currentTime - at); // громкость дорожки — узел vol в trackOut
         if (n.drum) { hit(n.tr, n.drum, out, at, n.v * g); continue; }
         if (n.tr.inst === 'sample') { const buf = n.tr.sample && n.tr.sample.fileId && readyBuf(n.tr.sample.fileId); if (buf) sampleNote(buf, out, n.tr, n.m, at, n.d * spb, n.v * g); continue; }
@@ -227,7 +231,8 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     },
     // opts: countIn — тактов отсчёта кликом до старта; once — один проход до конца петли (сведение), onEnd — по концу;
     //       whole — вся песня, петля не в счёт (сведение)
-    start(fromBeat = 0, { countIn = 0, once = false, whole = false, onEnd = null } = {}) {
+    // t0 — начало доли 0 по часам контекста (лупер: начало круга петли, может быть в прошлом); с ним — без отсчёта
+    start(fromBeat = 0, { countIn = 0, once = false, whole = false, onEnd = null, t0: at0 = null } = {}) {
       c = ctxOf();
       if (!c) return false;
       api.stop();
@@ -242,6 +247,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       mode.from = from;
       t0 = c.currentTime + 0.05 + lead * spb - from * spb;
       nextBeat = Math.floor(from);
+      if (at0 != null) { lead = 0; mode.from = 0; t0 = at0; nextBeat = Math.max(0, Math.ceil((c.currentTime + 0.01 - t0) / spb - 1e-6)); }
       playing = true;
       prime(p);
       if (lead) for (let i = 0; i < lead; i++) clickVoice(c, mixer.bus('metro'), t0 + (from - lead + i) * spb, i % p.num === 0 ? 3 : 1, 'click', noise || (noise = clickNoise(c)));
@@ -251,6 +257,7 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
       return true;
     },
     stop() {
+      pend.forEach((d, id) => { cancel(d.tm); const p = getProject(), tr = p && p.tracks.find((x) => x.id === id); if (tr) tr.mute = d.mute; }); pend.clear();
       cancel(timer); timer = null; cancel(audioTm); cancel(mode.endTm); mode.endTm = 0;
       if (mode.whole) { mode.whole = false; cache.key = ''; }
       playing = false;
@@ -299,7 +306,18 @@ export function createSequencer({ mixer, synth, getProject, getFile = () => null
     // громкость дорожки — сразу, на ходу (узел vol), и в проект
     setTrackVol(tr, v) { tr.vol = v; const p = getProject(); const x = chains.get(tr.id); if (x && p) x.vol.gain.setTargetAtTime(gainOf(p, tr), x.c.currentTime, 0.02); },
     // выключение и соло — на ходу: громкости всех дорожек узлами, новые ноты выключенных не планируются
-    setTrackMute(tr, on) { tr.mute = !!on; cache.key = ''; const p = getProject(); if (p && c) refreshGains(p); },
+    setTrackMute(tr, on, at = 0) {
+      const old = pend.get(tr.id); if (old) { cancel(old.tm); pend.delete(tr.id); }
+      const p = getProject();
+      if (!at || !c || !playing || at <= c.currentTime + 0.02) { tr.mute = !!on; cache.key = ''; if (p && c) refreshGains(p); return; }
+      // с начала такта: включение — ноты раньше at пропускаются; выключение — до at звучит, тишина с at
+      const x = chains.get(tr.id), d = { mute: !!on, at, tm: 0 };
+      pend.set(tr.id, d);
+      if (on) { if (x) x.vol.gain.setTargetAtTime(0, at, 0.006); }
+      else { tr.mute = false; cache.key = ''; if (p) refreshGains(p); }
+      d.tm = after(Math.max(0, (at - c.currentTime) * 1000 + 20), () => { if (pend.get(tr.id) !== d) return; pend.delete(tr.id); tr.mute = d.mute; cache.key = ''; const q = getProject(); if (q) refreshGains(q); });
+    },
+    pending: (trId) => pend.has(trId),
     setTrackSolo(tr, on) { tr.solo = !!on; cache.key = ''; const p = getProject(); if (p && c) refreshGains(p); },
     // клипы-записи изменились (выключение клипа, громкость, затухания, файл): перепланировать записи с того же места
     audioChanged() { const p = getProject(); if (!playing || !p) return; cache.key = ''; cancel(audioTm); stopAudio(); scheduleAudio(p); },

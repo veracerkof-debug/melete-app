@@ -98,7 +98,7 @@ export function homeEditAct(app, a) {
 // «Песни» — своя страница внизу. Порядок — settings.monoGrid (новое — в конец)
 export function monoItems(st) {
   const T = toolsTab(st), mods = (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id));
-  const tabMods2 = ['studio', 'bible'].filter((id) => isOn(st, id) && moduleById(id));
+  const tabMods2 = ['bible'].filter((id) => isOn(st, id) && moduleById(id));
   const all = [...new Set(['calendar', ...tabMods2, ...mods, ...T.shown])].filter((id) => id !== 'library');
   const ord = (st.monoGrid || []).filter((id) => all.includes(id));
   return ord.concat(all.filter((id) => !ord.includes(id)));

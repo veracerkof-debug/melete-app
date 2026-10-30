@@ -55,8 +55,11 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
     subs.forEach((fn) => fn(mx));
   };
 
+  let metroPan = null;
   const mixer = {
     state: mx,
+    // Панорама клика метронома: −1 — только левое ухо (лупер, «клик в левом ухе»), 0 — середина
+    setMetroPan(v) { mixer.bus('metro'); if (metroPan) metroPan.pan.setTargetAtTime(Math.max(-1, Math.min(1, +v || 0)), metroPan.context.currentTime, 0.02); },
     value,
 
     // GainNode шины. Клик метронома идёт мимо компрессора (минимальная задержка, как в прототипе)
@@ -70,7 +73,9 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       const fx = createFxChain(c, mixer.fx(name));
       g.connect(fx.input);
       chains[name] = fx;
-      if (name === 'metro') directOut(fx.output); else fx.output.connect(masterNode());
+      // клик — через свою панораму (создаётся раз): лупер может увести его в левое ухо, чтобы не мешал петле
+      if (name === 'metro') { const pn = c.createStereoPanner ? c.createStereoPanner() : null; if (pn) { fx.output.connect(pn); directOut(pn); metroPan = pn; } else directOut(fx.output); }
+      else fx.output.connect(masterNode());
       if (name === 'theory' || name === 'piano' || name === 'glider') {
         const rv = reverbNode();
         if (rv) {

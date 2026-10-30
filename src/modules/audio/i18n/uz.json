@@ -156,7 +156,7 @@
   "stems.absent": "Yozuvda yoʻq: {list}.",
   "stems.saved": "Tayyor: yoʻlaklar mediatekada",
   "stems.none": "Yoʻlaklar topilmadi: yozuv jim yoki boʻsh",
-  "stems.toStudio": "Studiyada ochish",
+  "stems.toStudio": "Luperga",
   "stemsN": [
     "{n} yoʻlak",
     "{n} yoʻlak"
@@ -176,7 +176,7 @@
   "notes.listen": "Tinglash",
   "notes.stop": "Toʻxtatish",
   "notes.toTabs": "«Tablar»da ochish",
-  "notes.toStudio": "Studiyada ochish",
+  "notes.toStudio": "Luperga",
   "notes.redo": "Qayta olish",
   "notes.sens": "Sezgirlik",
   "notes.sensNormal": "Oddiy",
@@ -190,7 +190,7 @@
   "notes.goPro": "Notalarni olish · ≈ {t}",
   "notes.pcOnly": "Yozuvdan nota va tablarni kompyuter oladi (Windows uchun Melete) — sinxronlash bilan keladi.",
   "notes.hint": "Yozuvdan notalar (.mid) — mediatekaga, uning yoniga. Eng aniq — bitta cholgʻu yoki ovoz: aralashmani avval ajratib, yoʻlakdan olish yaxshi.",
-  "notes.doneHint": ".mid fayli mediatekada yozuv yonida. «Tablar»da — nota va tabulatura, studiyada — tahrirlash, ovoz va tempni oʻzgartirish.",
+  "notes.doneHint": "MIDI fayl mediatekada yozuv yonida. «Tablar»da — nota va tabulatura, luperda — partiyalar: tahrirlash, tovushni almashtirish va ustidan chalish.",
   "stems.hq": "Takomillashgan ajratish",
   "stems.hqHint": "Bitta oʻrniga uch oʻtish: yoʻlak chetlari tozaroq, vaqt 4,5 barobar koʻp. Birinchi versiya saqlanadi.",
   "stems.improve": "Takomillashtirish · ≈ {t}",
@@ -233,7 +233,10 @@
   "pv.chords": "Akkordlar",
   "pv.click": "Yozuv zarblari boʻyicha chertish",
   "pv.bar": "{n}-takt",
-  "pv.inBeats": ["{n} zarbdan keyin", "{n} zarbdan keyin"],
+  "pv.inBeats": [
+    "{n} zarbdan keyin",
+    "{n} zarbdan keyin"
+  ],
   "pv.sec": "s",
   "pv.chordsPc": "Yozuv akkordlarini kompyuter aniqlaydi (Windows uchun Melete) — sinxronlash bilan keladi",
   "pv.noChords": "Akkordlar aniqlanmadi",

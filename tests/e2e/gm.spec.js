@@ -20,21 +20,21 @@ test('GM: банк, голос, ударные, отпускание', async ({ 
   expect(errors).toEqual([]);
 });
 
-test('GM: дорожка студии с инструментом GM и набором ударных играет', async ({ page, melete, errors }) => {
-  await melete.open({ settings: { feat: { studio: true } } });
+test('GM: партия лупера с инструментом GM и набором ударных играет', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { feat: { studio: true } }, tools: { looper: { metro: false, view: 'parts', bars: 4, parts: ['pjgm', null, null, null] } } });
   await page.evaluate(async () => {
     const { newProject, newTrack, newClip, newData } = await import('/src/music/project.js');
-    const pr = newProject({ name: 'G', bpm: 140 }); pr.tracks = [newTrack('notes', 0, { name: 'Bass', inst: 'gm', gm: 33 }), newTrack('drums', 1, { name: 'Dr', gmKit: 0 })]; pr.clips = [];
+    const pr = newProject({ name: 'G', bpm: 140, looper: true }); pr.id = 'pjgm'; pr.tracks = [newTrack('notes', 0, { name: 'Bass', inst: 'gm', gm: 33 }), newTrack('drums', 1, { name: 'Dr', gmKit: 0 })]; pr.clips = [];
     const d = newData('notes', 2); for (let i = 0; i < 8; i++) d.notes.push({ t: i, d: 0.5, m: 40 + (i % 3), v: 0.8 });
     pr.clips.push(newClip(pr, pr.tracks[0], 0, 8, d));
     const dr = newData('drums', 1); dr.steps = { kick: [0, 8], snare: [4, 12] }; pr.clips.push(newClip(pr, pr.tracks[1], 0, 8, dr));
     const s = JSON.parse(localStorage.getItem('practice.v1')); s.projects = [pr]; localStorage.setItem('practice.v1', JSON.stringify(s));
   });
   await page.reload(); await page.waitForTimeout(1200);
-  await melete.tab('studio');
-  await melete.click('[data-open]'); await page.waitForTimeout(700);
-  await melete.click('[data-x="play"]'); await page.waitForTimeout(3000);
-  expect(await page.evaluate(() => document.querySelector('#stpos')?.textContent)).not.toBe('1.1');
-  await melete.click('[data-x="play"]');
+  await melete.free('F', ['looper']);
+  expect(await melete.count('.lprow[data-tr]')).toBe(2);
+  await melete.click('[data-x="main"]'); await page.waitForTimeout(3000); // петля играет, партии — GM
+  expect(await page.evaluate(async () => (await import('/src/audio/gm.js')).gmReady())).toBe(true);
+  await melete.click('[data-x="stop"]');
   expect(errors).toEqual([]);
 });

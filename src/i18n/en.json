@@ -322,7 +322,7 @@
   "ens.aligning": "Aligning: {n} of {m}",
   "ens.cleaning": "Clean tracks: {n} of {m}",
   "ens.failed": "Could not assemble — details in the log",
-  "ens.done": "Project ready — in the studio.",
+  "ens.done": "Done — aligned tracks are in the library; in the looper use “+” → “Recording from the library” or “Project from the old studio”.",
   "ens.cleanDone": "Clean tracks — as a second project.",
   "ens.approx": "No signal, aligned by clock: {who}.",
   "ens.collecting": "Recordings received: {n} of {m}",
