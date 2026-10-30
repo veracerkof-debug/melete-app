@@ -109,5 +109,16 @@
   "capStop": "Stop recording playing",
   "capNone": "Nothing played",
   "capName": "Played",
-  "capDone": "Played part: {n} notes"
+  "capDone": "Played part: {n} notes",
+  "part.proj": "Project from the old studio",
+  "projHint": "Each track becomes a part: its first piece is taken, the loop is 4–32 bars at the project tempo.",
+  "inFull": "All four loops are taken — free one first",
+  "inEmpty": "Nothing to add: no notes",
+  "inDone": "Loop {n}: {what}",
+  "parts": [
+    "{n} part",
+    "{n} parts"
+  ],
+  "untitled": "Untitled",
+  "help.6": "Parts view: “+” adds drums, notes, chords, playing an instrument or a library recording; tap a row to switch it on/off from the next bar, hold to edit."
 }

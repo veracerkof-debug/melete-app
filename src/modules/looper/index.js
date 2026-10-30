@@ -51,7 +51,7 @@ const curView = () => (size === 'strip' ? 'ring' : st().view === 'tracks' ? 'par
 const reelsView = () => curView() === 'reels';
 const partsView = () => curView() === 'parts';
 const tracksView = () => false; // прежний вид «Дорожки» — теперь «Партии»
-let live = null, unswipe = null, frame = 0; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
+let live = null, unswipe = null, frame = 0, followN = 0; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
 const barSec = () => { const m = metro().cfg; return (60 / m.bpm) * Math.max(1, m.num); };
@@ -221,6 +221,7 @@ function tick() {
   if (btn) { let v = '0'; if ((S.state === 'play' || S.state === 'dub') && parts) { const b = parts.beat(); if (b) { const x = (b.now - b.t0) / b.spb, f = x - Math.floor(x); if (f >= 0 && f < 0.14) v = ((Math.floor(x) % b.num) + b.num) % b.num === 0 ? '2' : '1'; } } if (btn.dataset.beat !== v) btn.dataset.beat = v; }
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
   if ((reelsView() || tracksView() || partsView()) && ((frame++ & 1) === 0 || live)) drawAll(); // волны — через кадр (30 в секунду хватает глазу); при ведении — каждый
+  if (parts && (++followN & 31) === 0) parts.follow(); // сменили темп метронома — петля тактами следом
   if (S.state !== 'idle' || live) raf = requestAnimationFrame(tick);
 }
 
@@ -455,8 +456,26 @@ function addMenu(anchor) {
     } })),
     { icon: I.keys, label: t('part.play'), run: () => { if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; } if (parts.capArm()) ctx.ui.toast(t('capArm')); render(); } },
     { icon: I.file, label: t('part.file'), run: () => filePicker() },
+    ...(parts.oldProjects().length ? [{ icon: I.parts, label: t('part.proj'), run: () => projPicker() }] : []),
   ], t('add'));
 }
+// Проекты прежней студии и ансамбля — петлёй в свободную петлю
+function projPicker() {
+  const { t, ui } = ctx, L = parts.oldProjects();
+  ui.sheet(() => ui.snav(t('part.proj')) + '<div class="group">' + L.slice(0, 100).map((p) => '<button class="cell" data-pid="' + p.id + '"><span class="grow">' + ui.esc(p.name || t('untitled')) + '<span class="bksub">' + ui.esc(p.bpm + ' bpm · ' + ctx.tn('parts', p.tracks.filter((x) => x.kind !== 'audio').length)) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div><p class="ftr">' + ui.esc(t('projHint')) + '</p>',
+    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-pid]'); if (!b) return; sh.close(); takeInbox({ kind: 'proj', pid: b.dataset.pid }); }));
+}
+// Принять присланное (плеер, «Табы», ноты с игры, старые проекты): в свободную петлю, вид «Партии»
+async function takeInbox(box) {
+  const { t } = ctx;
+  let r;
+  try { r = await parts.inbox(box); } catch (e) { fail(e); return; }
+  if (!r) return;
+  if (r.err) { ctx.ui.toast(t(r.err === 'full' ? 'inFull' : 'inEmpty')); return; }
+  ctx.ui.toast(t('inDone', { n: r.slot + 1, what: r.parts != null ? ctx.tn('parts', r.parts) : ctx.tn('layers', r.layers) }));
+  render();
+}
+
 // Запись из медиатеки: выбрать файл → кусок (длиной в петлю, такт, долю или весь звук), откуда, повтор или один раз
 function filePicker() {
   const { t, ui } = ctx, L = ctx.files.list('audio').filter((r) => r.blob || r.size).sort((a, b) => (b.created || 0) - (a.created || 0));
@@ -533,6 +552,8 @@ export default {
     host = el; ctx = c; size = sz;
     if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); clickPan(); }, log: c.log });
     if (!parts) parts = createParts(c, lp, { render: () => render(), barSec: () => barSec(), play: () => { if (lp.state.state === 'idle') main(); } });
+    // присланное другим модулем (ctx.openIn('looper', { inbox })) — один раз
+    const box = st().inbox; if (box) { delete st().inbox; c.store.save(); setTimeout(() => takeInbox(box), 0); }
     lp.setShift(st().shift || 0);
     const on = (t, ev, fn, o) => { t.addEventListener(ev, fn, o); offs.push(() => t.removeEventListener(ev, fn, o)); };
     on(host, 'click', (e) => {

@@ -310,7 +310,7 @@
   "ens.aligning": "Tekislash: {n} / {m}",
   "ens.cleaning": "Toza yoʻlaklar: {n} / {m}",
   "ens.failed": "Yigʻib boʻlmadi — tafsilotlar jurnalda",
-  "ens.done": "Loyiha tayyor — studiyada.",
+  "ens.done": "Tayyor — tekislangan yo'laklar mediatekada; luperda — «+» → «Mediatekadan yozuv» yoki «Avvalgi studiya loyihasi».",
   "ens.cleanDone": "Toza yoʻlaklar — ikkinchi loyiha.",
   "ens.approx": "Signalsiz, soat boʻyicha: {who}.",
   "ens.collecting": "Olingan yozuvlar: {n} / {m}",

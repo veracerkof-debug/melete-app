@@ -107,5 +107,15 @@
   "capStop": "Chalishni yozishni to'xtatish",
   "capNone": "Hech narsa chalinmadi",
   "capName": "Chalingan",
-  "capDone": "Chalingan partiya: {n} nota"
+  "capDone": "Chalingan partiya: {n} nota",
+  "part.proj": "Avvalgi studiya loyihasi",
+  "projHint": "Har bir yo'lak partiyaga aylanadi: birinchi bo'lagi olinadi, halqa — loyiha tempida 4–32 takt.",
+  "inFull": "To'rtala halqa band — bittasini bo'shating",
+  "inEmpty": "Qo'shadigan narsa yo'q: nota yo'q",
+  "inDone": "{n}-halqa: {what}",
+  "parts": [
+    "{n} partiya"
+  ],
+  "untitled": "Nomsiz",
+  "help.6": "«Partiyalar» ko'rinishi: «+» — zarblar, notalar, akkordlar, asbobda chalish yoki mediatekadan yozuv; qatorga bosish — keyingi taktdan yoqish/o'chirish, ushlab turish — tahrirlash."
 }

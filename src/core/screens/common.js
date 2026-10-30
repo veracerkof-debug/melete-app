@@ -23,16 +23,16 @@ export const IC = {
   notes: '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>',
 };
 // Вкладки приложения (экраны ядра); порядок и видимость — settings.tabs / settings.tabsOff.
-// «Студия» — не инструмент, а своя вкладка (модуль studio на весь экран, как «Библия»)
-export const TAB_IDS = ['home', 'library', 'calendar', 'tools', 'studio'];
+// «Студии» как вкладки больше нет (30.10.2026): она — часть лупера (вид «Партии»), модуль studio — редактор партий внутри
+export const TAB_IDS = ['home', 'library', 'calendar', 'tools'];
 // В церковном режиме — ещё вкладка «Библия» (модуль bible на весь экран)
 // Любой инструмент можно сделать вкладкой (settings.tabMods — список id; удержание карточки → «Сделать вкладкой»,
 // удержание вкладки → «В инструменты»); вкладок — до TABS_MAX (settings.js)
-export const tabMods = (st) => (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id) && !TAB_IDS.includes(id) && id !== 'bible');
+export const tabMods = (st) => (st.tabMods || []).filter((id) => moduleById(id) && isOn(st, id) && !TAB_IDS.includes(id) && id !== 'bible' && !(moduleById(id) || {}).partOf);
 // Постоянные вкладки-модули («Студия», «Библия») — только пока модуль включён в «Модулях и функциях»
-export const tabIds = (st) => { const base = TAB_IDS.filter((id) => id !== 'studio' || isOn(st, 'studio')), extra = tabMods(st); if (isOn(st, 'bible')) base.push('bible'); return extra.length ? [...base, ...extra] : base; };
+export const tabIds = (st) => { const base = TAB_IDS.slice(), extra = tabMods(st); if (isOn(st, 'bible')) base.push('bible'); return extra.length ? [...base, ...extra] : base; };
 // Вкладки, за которыми стоит модуль на весь экран (постоянные — «Библия», «Студия»; остальные — по tabMods)
-export const TAB_MODULES = { bible: 'bible', studio: 'studio' };
+export const TAB_MODULES = { bible: 'bible' };
 export const tabModuleOf = (st, id) => TAB_MODULES[id] || (tabMods(st).includes(id) ? id : null);
 export const tabIcon = (id) => TAB_ICONS[id] || (moduleById(id) || {}).icon || '';
 // Вкладка-модуль («Студия», «Библия»), убранная с нижней панели, — карточкой во вкладке «Инструменты» (решение автора

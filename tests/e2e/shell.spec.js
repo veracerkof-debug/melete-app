@@ -31,10 +31,10 @@ test('первый запуск: стартовый экран, не главн�
   expect(errors).toEqual([]);
 });
 
-test('вкладки: инструмент вниз и обратно, студия — в инструменты', async ({ page, melete, errors }) => {
-  await melete.open({ settings: { feat: { studio: true } } });
+test('вкладки: инструмент вниз и обратно; студии вкладкой нет (часть лупера с 30.10.2026)', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { feat: { studio: true }, tabs: ['home', 'library', 'calendar', 'tools', 'studio'] } });
   const bar = () => page.evaluate(() => [...document.querySelectorAll('.tabbar .tab')].map((x) => x.dataset.tab));
-  expect(await bar()).toContain('studio'); // по умолчанию — как было
+  expect(await bar()).not.toContain('studio'); // и у тех, у кого она была внизу
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-pp="tabs"]'); await page.waitForTimeout(450);
   await melete.click('[data-tabmk="metro"]'); await page.waitForTimeout(300);
@@ -42,12 +42,10 @@ test('вкладки: инструмент вниз и обратно, студ�
   expect(await melete.count('[data-tabun="metro"]')).toBe(1);
   await melete.click('[data-tabun="metro"]'); await page.waitForTimeout(300);
   expect(await bar()).not.toContain('metro');
-  await melete.click('[data-tabmv="off"][data-tab-id="studio"]'); await page.waitForTimeout(300);
-  expect(await bar()).not.toContain('studio');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.evaluate(() => document.querySelector('#panelLayer [data-close], #panelLayer .close')?.click());
   await page.waitForTimeout(300);
   await melete.tab('tools'); await page.waitForTimeout(400);
-  expect(await melete.count('[data-open-tool="studio"]')).toBeGreaterThan(0);
+  expect(await melete.count('[data-open-tool="studio"]')).toBe(0);
   expect(errors).toEqual([]);
 });

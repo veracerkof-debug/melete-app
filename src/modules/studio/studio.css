@@ -166,3 +166,6 @@
 .stempty{display:flex;flex-direction:column;gap:4px;padding:28px 8px 6px;text-align:center}
 .stempty b{font-size:19px;font-weight:700}
 .stempty .l2{font-size:14px}
+/* Редактор партии в лупере (вид «Партии»): на узком экране шапка в две строки — название целиком сверху */
+@container (max-width: 520px){.stwrap.embed .sthead{flex-wrap:wrap;row-gap:4px}.stwrap.embed .sttitle{flex:1 1 calc(100% - 80px)}}
+.lpped{container-type:inline-size}

@@ -60,3 +60,34 @@ test('партии: запись с микрофона по кругам — д�
   await melete.click('[data-x="stop"]');
   expect(errors).toEqual([]);
 });
+
+test('«В лупер»: проект — партиями, дорожки записи — слоями, в свободную петлю', async ({ page, melete, errors }) => {
+  await melete.open({ tools: { looper: { metro: false, view: 'ring', inbox: { kind: 'proj', pid: 'pjin', temp: true } } } });
+  await page.evaluate(async () => {
+    const { newProject, newTrack, newClip, newData } = await import('/src/music/project.js');
+    const pr = newProject({ name: 'Из MIDI', bpm: 100 }); pr.id = 'pjin'; pr.tracks = [newTrack('notes', 0), newTrack('drums', 1)]; pr.clips = [];
+    const d = newData('notes', 2); d.notes.push({ t: 0, d: 1, m: 60, v: 0.8 }); pr.clips.push(newClip(pr, pr.tracks[0], 0, 8, d));
+    const dr = newData('drums', 1); dr.steps = { kick: [0, 8] }; pr.clips.push(newClip(pr, pr.tracks[1], 0, 4, dr));
+    const s = JSON.parse(localStorage.getItem('practice.v1')); s.projects = [pr]; localStorage.setItem('practice.v1', JSON.stringify(s));
+    // запись для «дорожек»: 3 с синуса в медиатеке
+    const sr = 44100, n = sr * 3, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf), w = (o, x) => [...x].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(i / sr * 2 * Math.PI * 220) * 8000), true);
+    const { createFiles } = await import('/src/core/files.js'); const F = createFiles(); await F.ready;
+    await F.add({ id: 'stemA', name: 'Вокал.wav', kind: 'audio', type: 'audio/wav', size: buf.byteLength, created: Date.now(), dur: 3, blob: new Blob([buf], { type: 'audio/wav' }) });
+  });
+  await page.reload(); await page.waitForTimeout(1200);
+  await melete.free('F', ['looper']); await page.waitForTimeout(800);
+  await expect(page.locator('.lpwrap.parts')).toHaveCount(1); // присланное открывает «Партии»
+  await expect(page.locator('.lprow[data-tr]')).toHaveCount(2);
+  const left = await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).projects.filter((p) => !p.deleted).map((p) => p.id + ':' + !!p.looper));
+  expect(left.some((x) => x === 'pjin:true')).toBe(false); // присланный — временный, в лупере — своя копия
+  // дорожки — в следующую свободную петлю
+  await page.evaluate(async () => { const m = (await import('/src/modules/looper/index.js')).default; void m; });
+  await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('practice.v1.tools')); d.looper.inbox = { kind: 'stems', ids: ['stemA'], bpm: 120, off: 0 }; localStorage.setItem('practice.v1.tools', JSON.stringify(d)); });
+  await page.reload(); await page.waitForTimeout(1200);
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click()); await page.waitForTimeout(2500);
+  await expect(page.locator('.lprow.layer')).toHaveCount(1);
+  await expect(page.locator('.lpslot.on')).toHaveText('2'); // в первой — партии (сохранены), дорожки — во вторую
+  expect(errors).toEqual([]);
+});

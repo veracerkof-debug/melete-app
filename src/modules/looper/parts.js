@@ -74,7 +74,8 @@ export function createParts(ctx, lp, hooks) {
   // Проект под петлю: доля — точно в длину петли (такт по метроному, тактов — сколько поместилось), клипы — на всю петлю
   function fit(p = proj()) {
     if (!p) return null;
-    const m = metro(), L = lenSec(), bar = m.num * 60 / m.bpm, bars = Math.max(1, Math.min(BARS_MAX, Math.round(L / bar))), beats = bars * m.num, spb = L / beats;
+    // тактов — как выбрано (4/8/16/32); по записи — сколько тактов метронома поместилось
+    const m = metro(), L = lenSec(), bar = m.num * 60 / m.bpm, bars = byRec() ? Math.max(1, Math.min(BARS_MAX, Math.round(L / bar))) : loopBars(), beats = bars * m.num, spb = L / beats;
     let ch = false;
     const set = (o, k, v) => { if (o[k] !== v) { o[k] = v; ch = true; } };
     set(p, 'num', m.num); set(p, 'den', m.den);
@@ -90,6 +91,8 @@ export function createParts(ctx, lp, hooks) {
   let key = '';
   function follow() {
     const S = lp.state, on = S.state === 'play' || S.state === 'dub', c = lp.clock, p = proj();
+    // петля тактами без слоёв: сменили темп или размер метронома — длина петли следом (фаза сохраняется)
+    if (c && !byRec() && lp.state.fixed && !lp.state.layers.length && lp.state.state === 'play' && Math.abs(planSec() - c.len) > 0.002) { lp.setLoop(planSec()); return; }
     if (!on || !c || !p || !p.tracks.length) { if (seq.playing) seq.stop(); key = ''; return; }
     fit(p);
     const k = p.id + ':' + c.t0.toFixed(4) + ':' + c.len.toFixed(5);
@@ -253,7 +256,67 @@ export function createParts(ctx, lp, hooks) {
     return out;
   }
 
+  /* ---------- «В лупер» из других мест: проект (из .mid, нот с игры, нот записи, старой студии) и дорожки записи ---------- */
+
+  // Свободная петля: текущая, если пуста, иначе первая пустая; все заняты — null
+  function freeSlot() {
+    const busy = (i) => { const id = (st().parts || [])[i], p = id && ctx.projects.get(id); return (lp.state.slots[i] > 0) || !!(p && p.tracks.length) || (i === slot() && lp.state.len > 0); };
+    if (!busy(slot())) return slot();
+    for (let i = 0; i < 4; i++) if (!busy(i)) return i;
+    return null;
+  }
+  const toSlot = (i) => { if (i !== slot()) lp.select(i); };
+  const barsFor = (n) => BARS.find((b) => b >= n) || 32;
+  // Проект → партии петли: у каждой дорожки — первый кусок; длина петли — ближайшие 4/8/16/32 такта; темп — проекта
+  function importProject(p0) {
+    const i = freeSlot();
+    if (i == null) return { err: 'full' };
+    toSlot(i);
+    const p = JSON.parse(JSON.stringify(p0));
+    p.id = 'pj' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    p.looper = true; p.name = p.name || ctx.t('loopN', { n: i + 1 });
+    p.tracks = p.tracks.filter((tr) => tr.kind !== 'audio');
+    const first = p.tracks.map((tr) => clipsOf(p, tr)[0]).filter(Boolean);
+    p.clips = first;
+    p.tracks = p.tracks.filter((tr) => first.some((c) => c.tr === tr.id));
+    if (!p.tracks.length) return { err: 'empty' };
+    const pieceBars = Math.max(1, ...first.map((c) => (c.data && c.data.bars) || 1)), bars = barsFor(Math.min(32, pieceBars));
+    delete p.spb; p.region = null;
+    first.forEach((c) => { c.at = 0; c.start = 0; c.loop = true; c.rate = 1; });
+    normalizeProject(p);
+    const m = metro(), sec = Math.min(90, bars * m.num * 60 / (p0.bpm || m.bpm));
+    st().bars = bars; st().lenMode = 'bars'; st().view = 'parts';
+    const L = (st().parts || [null, null, null, null]).slice(); L[i] = p.id; st().parts = L; ctx.store.save();
+    ctx.projects.save(p);
+    lp.setLoop(sec);
+    fit(p); key = ''; follow();
+    return { slot: i, parts: p.tracks.length, bars };
+  }
+  // Дорожки записи (WAV медиатеки) → слои петли с первой сильной доли; длина — 8 тактов по темпу записи (до 90 с)
+  async function importStems(ids, { bpm = 0, off = 0 } = {}) {
+    const i = freeSlot();
+    if (i == null) return { err: 'full' };
+    toSlot(i);
+    const m = metro(), tempo = bpm || m.bpm;
+    let bars = 8; while (bars > 4 && bars * m.num * 60 / tempo > 90) bars /= 2;
+    st().bars = bars; st().lenMode = 'bars'; st().view = 'parts'; ctx.store.save();
+    lp.setLoop(Math.min(90, bars * m.num * 60 / tempo));
+    let n = 0;
+    for (const id of ids) { const rec = ctx.files.get(id); if (!rec) continue; try { await addFile(rec, { start: off, piece: 'loop', place: 'repeat' }); n++; } catch (e) { ctx.logErr(e); } }
+    return { slot: i, layers: n, bars };
+  }
+  // Письмо от других модулей (ctx.openIn('looper', { inbox })): { kind: 'proj', pid } | { kind: 'stems', ids, bpm, off }
+  async function inbox(box) {
+    if (!box) return null;
+    if (box.kind === 'proj') { const p0 = ctx.projects.get(box.pid); if (!p0) return { err: 'empty' }; const r = importProject(p0); if (!r.err && box.temp) ctx.projects.remove(box.pid); return r; }
+    if (box.kind === 'stems') return importStems(box.ids || [], box);
+    return null;
+  }
+  // Старые проекты студии (до 30.10.2026) и ансамбля — открыть петлёй
+  const oldProjects = () => ctx.projects.list().filter((p) => !p.looper && p.tracks && p.tracks.some((tr) => tr.kind !== 'audio')).sort((a, b) => b.updatedAt - a.updatedAt);
+
   return {
+    importProject, importStems, inbox, oldProjects, freeSlot,
     renderLoop, beat, capArm, capDone, midi,
     get cap() { return cap ? { wait: (lp.clock ? lp.clock.ctx.currentTime : 0) < cap.start } : null; },
     seq, proj, fit, follow, ensure, toggleTrack, toggleLayer, pending, addPart, removePart, dupPart, edit, addFile, name, notesOf, clipOf, nextBar,
