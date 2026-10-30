@@ -11,6 +11,7 @@ import { createLooper, SLOTS, MAX_SEC } from '../../audio/looper.js';
 import { encodeWav } from '../../audio/voicefx.js';
 import { onHold, holdMenu, holdRepeat } from '../../ui/hold.js';
 import { swipe } from '../../ui/gestures.js';
+import { createParts, BARS, PIECES, PLACES } from './parts.js';
 
 import meta, { ICON } from './meta.js';
 const I = {
@@ -29,16 +30,26 @@ const I = {
   tracks: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M13 10v4M17 15v4" style="stroke-width:3"/></svg>',
   left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
+  parts: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3.5" rx="1.5"/><rect x="4" y="10.3" width="10" height="3.5" rx="1.5"/><rect x="4" y="15.5" width="13" height="3.5" rx="1.5"/></svg>',
+  drums: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="9" rx="7.5" ry="3"/><path d="M4.5 9v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V9"/></svg>',
+  notes: '<svg viewBox="0 0 24 24"><path d="M9 17V6l10-2v11"/><circle cx="6.5" cy="17" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/></svg>',
+  chords: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 9h7M8.5 12h7M8.5 15h4"/></svg>',
+  mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M6 11.5a6 6 0 0 0 12 0M12 17.5V21"/></svg>',
+  file: '<svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20.5H7z"/><path d="M14 3.5V8h4"/><path d="M10 16v-4l4-1v4" style="stroke-width:1.6"/></svg>',
+  pen: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4 9.5-9.5 3 3L9 18z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/></svg>',
+  wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>',
 };
 const REELS = 4, NUDGE = 1; // катушек на экране; шаг точной донастройки сдвига, мс (удержание — автоповтор)
-const VIEWS = ['ring', 'reels', 'tracks'];
+const VIEWS = ['ring', 'reels', 'parts']; // «Дорожки» (до 30.10.2026) заменены «Партиями» — студия стала частью лупера
 const R = 46, C = 2 * Math.PI * R;
 
-let host = null, ctx = null, size = 'full', lp = null, raf = 0, offs = [], arm = null, offBeat = null;
+let host = null, ctx = null, size = 'full', lp = null, raf = 0, offs = [], arm = null, offBeat = null, parts = null;
 const peaksCache = new Map(); // слой (номер:версия:точек) → огибающая
-const curView = () => (size === 'strip' ? 'ring' : VIEWS.includes(st().view) ? st().view : 'ring');
+const curView = () => (size === 'strip' ? 'ring' : st().view === 'tracks' ? 'parts' : VIEWS.includes(st().view) ? st().view : 'ring');
 const reelsView = () => curView() === 'reels';
-const tracksView = () => curView() === 'tracks';
+const partsView = () => curView() === 'parts';
+const tracksView = () => false; // прежний вид «Дорожки» — теперь «Партии»
 let live = null, unswipe = null, frame = 0; // ведение слоя пальцем: { i, shift } — живой показ до отпускания
 const st = () => ctx.store.all();
 const metro = () => ctx.audio.metro;
@@ -63,7 +74,7 @@ function view() {
     : '<div class="lphint l2">' + ui.esc(t(small ? 'hintShort' : s === 'idle' ? 'hint' : 'hintMore')) + '</div>';
   const slots = '<div class="lpslots" role="group" aria-label="' + ui.esc(t('loops')) + '">' + Array.from({ length: SLOTS }, (_, i) => '<button class="lpslot' + (i === S.slot ? ' on' : '') + (S.slots[i] ? ' has' : '') + '" data-x="slot" data-i="' + i + '" aria-pressed="' + (i === S.slot) + '" aria-label="' + ui.esc(t('loopN', { n: i + 1 })) + '">' + (i + 1) + '</button>').join('') + '</div>';
   const bar = '<div class="lpbar">' +
-    ui.icb('data-x="view"', reelsView() ? I.tracks : tracksView() ? I.ring : I.reels, t(reelsView() ? 'viewTracks' : tracksView() ? 'viewRing' : 'viewReels'), 'sm') +
+    ui.icb('data-x="view"', reelsView() ? I.parts : partsView() ? I.ring : I.reels, t(reelsView() ? 'viewParts' : partsView() ? 'viewRing' : 'viewReels'), 'sm') +
     ui.icb('data-x="metro"', I.metro, t('metro'), 'sm' + (withMetro() ? ' on' : '')) +
     ui.icb('data-x="mon"', I.ear, t('mon'), 'sm' + (S.mon ? ' on' : '')) +
     ui.icb('data-x="undo"', I.undo, t('undo'), 'sm') +
@@ -78,6 +89,7 @@ function view() {
       (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>');
     return '<div class="lpwrap reels ' + size + '">' + reels + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
   }
+  if (partsView()) return partsHTML(S, main, time, slots, bar);
   if (tracksView()) {
     // «Дорожки»: четыре слоя волной слева направо во всё окно. Вести дорожку — сдвиг, касание — окно слоя, стрелки — по миллисекунде
     const lanes = '<div class="lplanes big">' + Array.from({ length: REELS }, (_, i) => { const L = S.layers[i]; return '<div class="lplane' + (L ? (L.mute ? ' muted' : '') : ' lpnone') + '" data-li="' + i + '"><span class="lpnum num">' + (i + 1) + '</span><div class="lplanebox"><canvas class="lplanecv"' + (L ? ' data-x="edit" data-i="' + i + '" data-drag="' + i + '" role="button" aria-label="' + ui.esc(t('layerDrag', { n: i + 1 })) + '"' : '') + '></canvas><span class="lpbadge num" hidden></span></div>' + (L ? nudge(L, i, ' col') : '') + '</div>'; }).join('') +
@@ -85,6 +97,42 @@ function view() {
     return '<div class="lpwrap tracks ' + size + '">' + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
   }
   return '<div class="lpwrap ' + size + '"><div class="lpmain">' + main + time + '</div>' + layers + slots + bar + '</div>';
+}
+
+/* ---------- вид «Партии»: партии студии и слои одной петли ---------- */
+
+// Строка: значок вида, название, рисунок (ноты или волна) с ходом петли, громкость. Касание — вкл/выкл с начала такта
+function partsHTML(S, main, time, slots, bar) {
+  const { t, ui } = ctx, P = parts, p = P.proj(), m = metro().cfg;
+  const tempo = (p && p.spb ? Math.round(600 / p.spb) / 10 : m.bpm) + ' · ' + m.num + '/' + m.den;
+  const row = (cls, attrs, ic, name, cv, vol) => '<div class="lprow' + cls + '" ' + attrs + ' role="button"><span class="lpric">' + ic + '</span><span class="lprn"><b>' + ui.esc(name) + '</b></span>' + cv + vol + '</div>';
+  const rows = [];
+  (p ? p.tracks : []).forEach((tr) => rows.push(row((tr.mute ? ' off' : '') + (P.pending(tr.id) ? ' pend' : ''), 'data-tr="' + tr.id + '" style="--c:' + tr.color + '" aria-pressed="' + !tr.mute + '" aria-label="' + ui.esc(t('rowTap', { name: P.name(tr) })) + '"',
+    I[tr.kind] || I.notes, P.name(tr), '<canvas class="lprowcv" data-pv="t" data-id="' + tr.id + '"></canvas>',
+    '<input type="range" class="lprvol" min="0" max="1.5" step="0.01" value="' + (tr.vol == null ? 1 : tr.vol) + '" data-tvol="' + tr.id + '" aria-label="' + ui.esc(t('partVol', { name: P.name(tr) })) + '">')));
+  S.layers.forEach((L, i) => rows.push(row(' layer' + (L.mute ? ' off' : '') + (L.pend ? ' pend' : ''), 'data-li="' + i + '" aria-pressed="' + !L.mute + '" aria-label="' + ui.esc(t('rowTap', { name: L.name || t('layerN', { n: i + 1 }) })) + '"',
+    L.src === 'file' ? I.file : I.mic, L.name || t('layerN', { n: i + 1 }), '<canvas class="lprowcv lplanecv" data-pv="l" data-i="' + i + '"></canvas>',
+    '<input type="range" class="lprvol" min="0" max="1.5" step="0.01" value="' + L.gain + '" data-vol="' + i + '" aria-label="' + ui.esc(t('layerVol', { n: i + 1 })) + '">')));
+  const top = '<div class="lpptop">' + ui.seg('lpbars', [...BARS.map((b) => [String(b), String(b)]), ['rec', t('lenRec')]], P.byRec() ? 'rec' : String(P.loopBars()), t('loopLen')) +
+    '<span class="lptempo num" title="' + ui.esc(t('tempoHint')) + '">' + ui.esc(tempo) + '</span>' + ui.icb('data-x="padd"', I.plus, t('add'), 'sm') + '</div>';
+  const list = rows.length ? '<div class="lprows">' + rows.join('') + '</div>' : '<div class="lprows empty"><div class="lphint l2">' + ui.esc(t('partsHint')) + '</div></div>';
+  return '<div class="lpwrap parts ' + size + '">' + top + list + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
+}
+// Рисунок партии: ноты (или удары по рядам) в долях петли — готовой картинкой, в кадре — копия и линия хода
+function drawPart(cv, tr, pos) {
+  const [w, h] = fit(cv), g = cv.getContext('2d'), C = colors(), p = parts.proj();
+  if (!p) return;
+  const beats = (p.region && p.region.b) || p.num * 4;
+  const img = staticImg('p:' + tr.id + ':' + p.updatedAt + ':' + w + ':' + h + ':' + !!tr.mute, w, h, (q) => {
+    const ns = parts.notesOf(tr); if (!ns.length) return;
+    const drums = tr.kind === 'drums', lanes = ['kick', 'snare', 'hat', 'ohat', 'clap'];
+    let lo = 127, hi = 0; if (!drums) ns.forEach((n) => { lo = Math.min(lo, n.m); hi = Math.max(hi, n.m); });
+    const rows = drums ? lanes.length : Math.max(6, hi - lo + 1), rh = h / rows;
+    q.fillStyle = tr.color || C.tint; q.globalAlpha = tr.mute ? 0.3 : 0.9;
+    ns.forEach((n) => { const r = drums ? Math.max(0, lanes.indexOf(n.drum)) : hi - n.m + Math.floor((rows - (hi - lo + 1)) / 2); const x = (n.t / beats) * w; q.fillRect(x, r * rh + rh * 0.15, Math.max(2, (n.d / beats) * w - 1), Math.max(2, rh * 0.7)); });
+  });
+  g.clearRect(0, 0, w, h); g.drawImage(img, 0, 0);
+  if (pos >= 0) { g.fillStyle = C.ink; g.fillRect(pos * w - 1, 0, 2, h); }
 }
 
 /* ---------- катушки и дорожки: рисунок ---------- */
@@ -148,6 +196,7 @@ function drawAll() {
   const S = lp.state, pos = S.state === 'play' || S.state === 'dub' ? S.pos : -1;
   host.querySelectorAll('.lpreel').forEach((el, i) => drawReel(el.querySelector('canvas'), i, S.layers[i], Math.max(0, pos), S));
   host.querySelectorAll('.lplanecv').forEach((cv) => { const i = +cv.dataset.i; if (S.layers[i]) drawLane(cv, i, S.layers[i], pos, S); });
+  if (parts) { const p = parts.proj(); host.querySelectorAll('.lprowcv[data-pv="t"]').forEach((cv) => { const tr = p && p.tracks.find((x) => x.id === cv.dataset.id); if (tr) drawPart(cv, tr, pos); }); }
 }
 
 function render() {
@@ -155,6 +204,7 @@ function render() {
   const act = document.activeElement, keep = act && host.contains(act) && act.dataset.vol;
   host.innerHTML = view();
   if (keep) { const r = host.querySelector('[data-vol="' + keep + '"]'); if (r) r.focus(); }
+  if (partsView()) drawAll(); // на паузе — один раз (ход рисует tick)
   tick();
 }
 // кольцо хода петли — без перерисовки
@@ -164,7 +214,7 @@ function tick() {
   const S = lp.state, ring = host.querySelector('.lpring'), tm = host.querySelector('.lptime');
   if (ring) ring.setAttribute('stroke-dashoffset', (C * (1 - S.pos)).toFixed(1));
   if (tm && S.state === 'rec') tm.textContent = fmt(S.recSec) + ' / ' + fmt(MAX_SEC);
-  if ((reelsView() || tracksView()) && ((frame++ & 1) === 0 || live)) drawAll(); // волны — через кадр (30 в секунду хватает глазу); при ведении — каждый
+  if ((reelsView() || tracksView() || partsView()) && ((frame++ & 1) === 0 || live)) drawAll(); // волны — через кадр (30 в секунду хватает глазу); при ведении — каждый
   if (S.state !== 'idle' || live) raf = requestAnimationFrame(tick);
 }
 
@@ -294,6 +344,8 @@ async function main() {
   if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; }
   const S = lp.state;
   if (arm) { disarm(); render(); return; }
+  // «Партии»: петля тактами — первое касание запускает её (партии в такт), дальше — слои поверх, как обычно
+  if (partsView() && S.state === 'idle' && !S.len && !parts.byRec()) { lp.setLoop(parts.planSec()); lp.play(); render(); return; }
   if (S.state === 'idle' && withMetro() && !S.len) {
     try { await lp.openMic(); } catch (e) { fail(e); return; }
     const m = metro();
@@ -328,7 +380,11 @@ function stopAll() { disarm(); lp.stop(); if (withMetro() && metro().running) me
 async function save() {
   const m = lp && lp.mix();
   if (!m) { ctx.ui.toast(ctx.t('err.empty')); return; }
-  const wav = encodeWav([m.data], m.sr), at = Date.now(), song = ctx.session && ctx.session.songId;
+  // партии петли — в сведение вместе со слоями (стерео); не вышло — сохраняются хотя бы слои
+  let chans = [m.data];
+  try { const r = parts && await parts.renderLoop(m.data.length, m.sr); if (r) chans = r.map((ch) => { for (let i = 0; i < ch.length; i++) { const x = ch[i] + m.data[i]; ch[i] = Math.abs(x) > 0.95 ? Math.tanh(x) : x; } return ch; }); }
+  catch (e) { ctx.logErr(e); }
+  const wav = encodeWav(chans, m.sr), at = Date.now(), song = ctx.session && ctx.session.songId;
   let d;
   try { d = new Date(at).toLocaleString(ctx.lang() === 'uz' ? 'uz-Latn' : ctx.lang(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { d = new Date(at).toISOString().slice(0, 16); }
   try {
@@ -353,7 +409,80 @@ function act(x, el) {
     case 'slot': if (arm) disarm(); lp.select(i); render(); break;
     case 'view': st().view = VIEWS[(VIEWS.indexOf(curView()) + 1) % VIEWS.length]; ctx.store.save(); render(); break;
     case 'edit': layerSheet(i); break;
+    case 'padd': addMenu(el); break;
   }
+}
+
+/* ---------- «Партии»: добавить, меню строки, длина петли ---------- */
+
+// «+»: партия (ударные, ноты, аккорды) или запись из медиатеки
+function addMenu(anchor) {
+  const { t } = ctx;
+  holdMenu(anchor, [
+    ...parts.kinds.map((k) => ({ icon: I[k], label: t('part.' + k), run: () => {
+      const tr = parts.addPart(k);
+      if (!lp.state.len && !parts.byRec()) lp.setLoop(parts.planSec());
+      render(); parts.follow(); parts.edit(tr.id);
+    } })),
+    { icon: I.file, label: t('part.file'), run: () => filePicker() },
+  ], t('add'));
+}
+// Запись из медиатеки: выбрать файл → кусок (длиной в петлю, такт, долю или весь звук), откуда, повтор или один раз
+function filePicker() {
+  const { t, ui } = ctx, L = ctx.files.list('audio').filter((r) => r.blob || r.size).sort((a, b) => (b.created || 0) - (a.created || 0));
+  if (!L.length) { ui.toast(t('noFiles')); return; }
+  ui.sheet(() => ui.snav(t('part.file')) + '<div class="group">' + L.slice(0, 200).map((r) => '<button class="cell" data-fid="' + r.id + '"><span class="grow">' + ui.esc(r.name || '') + '<span class="bksub">' + (r.dur ? fmt(r.dur) : '') + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>',
+    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-fid]'); if (!b) return; sh.close(); setTimeout(() => pieceSheet(ctx.files.get(b.dataset.fid)), 200); }));
+}
+function pieceSheet(rec) {
+  if (!rec) return;
+  const { t, ui } = ctx, o = { start: 0, piece: st().piece && PIECES.includes(st().piece) ? st().piece : 'loop', place: st().place === 'once' ? 'once' : 'repeat' }, dur = rec.dur || 0;
+  ui.sheet(() => ui.snav(rec.name || t('part.file')) +
+    '<div class="hdr">' + ui.esc(t('piece')) + '</div><div class="group"><div class="cellcol">' + ui.seg('lppiece', PIECES.map((k) => [k, t('piece.' + k)]), o.piece, t('piece')) + '</div></div>' +
+    '<div class="hdr">' + ui.esc(t('place')) + '</div><div class="group"><div class="cellcol">' + ui.seg('lpplace', PLACES.map((k) => [k, t('place.' + k)]), o.place, t('place')) + '</div></div>' +
+    (dur > 0.2 ? '<div class="hdr">' + ui.esc(t('pieceFrom')) + ' <b class="num" data-fromv>' + fmtS(o.start) + '</b></div><div class="group"><div class="cell"><input type="range" class="strange" min="0" max="' + Math.max(0, dur - 0.05).toFixed(2) + '" step="0.01" value="' + o.start + '" data-from aria-label="' + ui.esc(t('pieceFrom')) + '"></div></div>' : '') +
+    '<p class="ftr">' + ui.esc(t('pieceHint')) + '</p><button class="btn fill block" data-addpiece>' + ui.esc(t('add')) + '</button>',
+  (el, sh) => {
+    el.addEventListener('input', (e) => { if (e.target.matches('[data-from]')) { o.start = +e.target.value; const v = el.querySelector('[data-fromv]'); if (v) v.textContent = fmtS(o.start); } });
+    el.addEventListener('click', (e) => {
+      let b;
+      if ((b = e.target.closest('[data-seg="lppiece"] [data-v]'))) { o.piece = b.dataset.v; st().piece = o.piece; ctx.store.save(); el.querySelectorAll('[data-seg="lppiece"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
+      if ((b = e.target.closest('[data-seg="lpplace"] [data-v]'))) { o.place = b.dataset.v; st().place = o.place; ctx.store.save(); el.querySelectorAll('[data-seg="lpplace"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === b)); return; }
+      if (e.target.closest('[data-addpiece]')) {
+        if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; }
+        sh.close();
+        parts.addFile(rec, o).then(() => { render(); parts.follow(); }).catch((er) => { if (er && er.message === 'loop') ctx.ui.toast(t('err.lenLayers')); else fail(er); });
+      }
+    });
+  });
+}
+const fmtS = (x) => { const m = Math.floor(x / 60), s = x - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2); };
+// Удержание строки: партия — править, копия, убрать; слой — окно слоя, убрать
+function rowMenu(row) {
+  const { t } = ctx;
+  if (row.dataset.tr) {
+    const id = row.dataset.tr, p = parts.proj(), tr = p && p.tracks.find((x) => x.id === id); if (!tr) return;
+    holdMenu(row, [
+      { icon: I.pen, label: t('part.edit'), run: () => parts.edit(id) },
+      { icon: I.copy, label: t('part.dup'), run: () => { parts.dupPart(id); render(); parts.follow(); } },
+      { icon: I.x, label: t('part.remove'), danger: true, run: () => { parts.removePart(id); render(); } },
+    ], parts.name(tr));
+    return;
+  }
+  const i = +row.dataset.li;
+  holdMenu(row, [
+    { icon: I.wave, label: t('layerEdit', { n: i + 1 }), run: () => layerSheet(i) },
+    { icon: I.x, label: t('removeLayer'), danger: true, run: () => { lp.removeLayer(i); render(); } },
+  ], t('layerN', { n: i + 1 }));
+}
+// Длина петли: такты (по метроному) или по первой записи
+function setLen(v) {
+  if (v === 'rec') { st().lenMode = 'rec'; ctx.store.save(); if (!lp.state.layers.length) { lp.unfix(); } render(); return; }
+  const was = { mode: st().lenMode, bars: st().bars };
+  st().lenMode = 'bars'; st().bars = +v; ctx.store.save();
+  const S = lp.state;
+  if ((S.len || S.state !== 'idle') && !lp.setLoop(parts.planSec())) { st().lenMode = was.mode; st().bars = was.bars; ctx.store.save(); ctx.ui.toast(ctx.t('err.lenLayers')); }
+  parts.follow(); render();
 }
 
 // Педаль Bluetooth (как для перелистывания): пробел, Enter, PageDown — кнопка; PageUp — стоп; стрелки — отмена
@@ -371,11 +500,21 @@ export default {
   status(c) { return c.t(c.store.get('metro') ? 'st.metro' : 'st.free'); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
-    if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => tick(), log: c.log });
+    if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); }, log: c.log });
+    if (!parts) parts = createParts(c, lp, { render: () => render(), barSec: () => barSec(), play: () => { if (lp.state.state === 'idle') main(); } });
     lp.setShift(st().shift || 0);
     const on = (t, ev, fn, o) => { t.addEventListener(ev, fn, o); offs.push(() => t.removeEventListener(ev, fn, o)); };
-    on(host, 'click', (e) => { const b = e.target.closest('[data-x]'); if (b) act(b.dataset.x, b); });
-    on(host, 'input', (e) => { if (e.target.dataset.vol != null) lp.setGain(+e.target.dataset.vol, +e.target.value); });
+    on(host, 'click', (e) => {
+      const b = e.target.closest('[data-x]'); if (b) { act(b.dataset.x, b); return; }
+      const sg = e.target.closest('[data-seg="lpbars"] [data-v]'); if (sg) { setLen(sg.dataset.v); return; }
+      const row = e.target.closest('.lprow'); // касание строки — вкл/выкл с начала такта
+      if (row && !e.target.closest('input, button')) { if (row.dataset.tr) parts.toggleTrack(row.dataset.tr); else parts.toggleLayer(+row.dataset.li); render(); }
+    });
+    on(host, 'input', (e) => {
+      if (e.target.dataset.vol != null) lp.setGain(+e.target.dataset.vol, +e.target.value);
+      else if (e.target.dataset.tvol != null) { const p = parts.proj(), tr = p && p.tracks.find((x) => x.id === e.target.dataset.tvol); if (tr) parts.seq.setTrackVol(tr, +e.target.value); }
+    });
+    on(host, 'change', (e) => { if (e.target.dataset.tvol != null) { const p = parts.proj(); if (p) c.projects.save(p); } });
     on(window, 'keydown', onKey);
     bindDrag(host); // вести катушку или дорожку — сдвиг слоя
     holdRepeat(host, '.lpwrap [data-nd]', nudgeAct);
@@ -384,6 +523,7 @@ export default {
     onHold(host, '[data-x="main"]', () => { const S = lp.state; if (S.state === 'play' && S.len) act('multiply'); else act('undo'); });
     // смахивание по кнопке: влево — отменить слой, вправо — вернуть снятый
     unswipe = swipe(host, { min: 50, left: () => act('undo'), right: () => act('redo'), ok: (ev) => !!ev.target.closest('[data-x="main"]') });
+    onHold(host, '.lprow', rowMenu);
     onHold(host, '.lplayer, .lplane:not(.lpnone), .lpreel:not(.lpnone)', (row) => holdMenu(row, [{ icon: I.x, label: c.t('removeLayer'), danger: true, run: () => { lp.removeLayer(+row.dataset.li); render(); } }], c.t('layerN', { n: +row.dataset.li + 1 })));
     render();
   },

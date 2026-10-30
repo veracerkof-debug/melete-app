@@ -97,7 +97,7 @@ function anchorAt(x, y) {
 /* ---------- разметка ---------- */
 
 function listHTML() {
-  const { t, ui } = ctx, L = ctx.projects.list().sort((a, b) => b.updatedAt - a.updatedAt);
+  const { t, ui } = ctx, L = ctx.projects.list().filter((p) => !p.looper).sort((a, b) => b.updatedAt - a.updatedAt); // петли лупера (вид «Партии») — в лупере
   return '<div class="stlist"><div class="sthdr"><h2>' + ui.esc(t('name')) + '</h2>' + ui.icb('data-x="help"', I.help, t('help.open'), 'sm') + '</div>' +
     (L.length ? '<div class="group">' + L.map((p) => '<button class="cell stproj" data-open="' + p.id + '"><span class="grow"><b>' + ui.esc(p.name || t('untitled')) + '</b><span class="bksub">' +
       ui.esc(p.bpm + ' bpm · ' + keyLabel(p.key) + ' · ' + ctx.tn('tracks', p.tracks.length) + ' · ' + ctx.tn('bars', songBars(p))) + '</span></span>' + ui.icons.chev + '</button>').join('') + '</div>' : '<div class="stempty"><b>' + ui.esc(t('empty')) + '</b><span class="l2">' + ui.esc(t('emptySub')) + '</span></div>') +
@@ -135,7 +135,7 @@ function view() {
       '<button class="cell" data-x="clipSheet"><span class="grow">' + ctx.ui.esc(ctx.t('clip.gain')) + '<span class="bksub">' + ctx.ui.esc(Math.round((c.gain == null ? 1 : c.gain) * 100) + '% · ' + ctx.t('clip.fades') + ' ' + (c.data.fadeIn || 0) + ' / ' + (c.data.fadeOut || 0)) + '</span></span>' + ctx.ui.icons.chev + '</button></div><p class="ftr">' + ctx.ui.esc(ctx.t('tr.audioHint')) + '</p></div>';
     const pad = tr.kind === 'chords' ? padHTML(ctx, p, tr, { bars: c.data.bars, grid: cpGrid(p), rec: V.live && seq && seq.playing }) : '';
     const strip = tr.kind === 'notes' && V.tool ? '<div class="sttool" id="sttool"></div>' : liveHTML(ctx, tr, m0()); // свой инструмент — вместо клавиш
-    return '<div class="stwrap">' + clipHeadHTML(p, c, tr) + body + strip + pad + transportHTML(p) + '</div>';
+    return '<div class="stwrap' + (V.embed ? ' embed' : '') + '">' + clipHeadHTML(p, c, tr) + body + strip + pad + (V.embed ? '' : transportHTML(p)) + '</div>';
   }
   if (V.view === 'mix') return '<div class="stwrap side">' + mixerHTML(ctx, p, trName) + transportHTML(p) + '</div>';
   return '<div class="stwrap side"><div class="stpl" id="stpl"><div class="stselbar" id="stsel" hidden></div></div>' + transportHTML(p) + '</div>';
@@ -153,7 +153,7 @@ function render() {
   host.innerHTML = view();
   toolPlace();
   const p = proj();
-  if (seq && !rec.busy) seq.focus = V.view === 'clip' && clip() ? V.cid : null;
+  if (seq && !rec.busy && !V.embed) seq.focus = V.view === 'clip' && clip() ? V.cid : null; // в лупере играет вся петля
   if (V.view === 'clip' && clip()) {
     offLive = liveBind(host, () => { const c = clip(); return { p, tr: ctrack(), d: c.data, total: dataBeats(p, c.data), grid: ctrack().kind === 'drums' ? 0.25 : grid(), rec: V.live && seq.playing, pos: () => { const b = seq.pos(); const per = dataBeats(p, c.data); return b >= 0 && per ? b % per : -1; } }; },
       { audition: (m, hold) => seq.audition(ctrack(), m, { hold }), release: (k) => seq.release(k), change: () => { save(); if (roll) roll.draw(); const rk = host.querySelector('.rack'); if (rk && ctrack().kind === 'drums') { const b = V.bar; host.querySelector('.rack').outerHTML = stepsHTML(ctx, p, clip().data, b, ctrack().color).replace(/^<div class="rack"/, '<div class="rack"'); if (offSteps) offSteps(); offSteps = stepsGestures(host.querySelector('.rack'), () => clip().data, { change: () => save(), audition: (lane) => seq.audition(ctrack(), lane) }); } },
@@ -684,7 +684,7 @@ function act(x, el) {
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
     case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
-    case 'toSong': V.view = 'song'; V.auto = null; render(); break;
+    case 'toSong': if (V.embed) { V.embed.close(); break; } V.view = 'song'; V.auto = null; render(); break;
     case 'play': { // пауза: стоп запоминает место, следующий старт — оттуда (в начало — кнопкой перемотки)
       if (rec.busy) { rec.stop(true); break; }
       if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('err.sound')); return; }
@@ -698,6 +698,11 @@ function act(x, el) {
     case 'redo': undoStep(true); break;
     case 'rec': if (rec.busy) rec.stop(true); else rec.sheet(); break;
     case 'live': {
+      if (V.embed) { // в лупере: запись идёт по кругу петли — петля сама задаёт время
+        V.live = !V.live;
+        if (V.live && !seq.playing) V.embed.play();
+        render(); break;
+      }
       V.live = !V.live;
       const chords = ctrack() && ctrack().kind === 'chords';
       if (V.live && (chords || !seq.playing)) { // аккорды: всегда с начала куска, клик и отсчёт такта (раз-два-три-четыре)
@@ -712,7 +717,7 @@ function act(x, el) {
     case 'settings': settingsSheet(); break;
     case 'mixer': V.view = V.view === 'mix' ? 'song' : 'mix'; V.auto = null; render(); break;
     case 'help': if (ctx.help) ctx.help(); break;
-    case 'trackMenu': trackMenu(el, ctrack()); break;
+    case 'trackMenu': if (V.embed) trackSheet(ctrack()); else trackMenu(el, ctrack()); break;
     case 'tool': toolMenu(el); break;
     case 'pickFile': { const c = clip(); if (c) filePicker(c); break; }
   }
@@ -741,6 +746,34 @@ function onClick(e) {
   }
   const c = clip(), tr = ctrack();
   if (c && tr && tr.kind === 'chords' && chordsAct(ctx, p, tr, c.data, e, () => { save(); render(); })) return;
+}
+
+// Редактор партии внутри лупера (вид «Партии», src/modules/looper/parts.js): тот же редактор клипа, но играет вся
+// петля лупера (её секвенсор), без транспорта студии. → { close, render }
+export function embedPart(el, c, { pid, cid, seq: extSeq, play = () => {}, close = () => {} }) {
+  const was = { host, ctx, size, seq, V: { ...V } };
+  host = el; ctx = c; size = 'full'; seq = extSeq;
+  Object.assign(V, { view: 'clip', pid, cid, bar: 0, live: false, tool: null, auto: null, sel: [], embed: { play, close } });
+  const offE = [], on = (t, ev, fn) => { t.addEventListener(ev, fn); offE.push(() => t.removeEventListener(ev, fn)); };
+  on(el, 'click', onClick);
+  onHold(el, '.rkname[data-lane]', (el2) => { const cl = clip(); if (!cl) return; const lane = el2.dataset.lane; if (!cl.data.steps[lane]) return; holdMenu(el2, [{ icon: I.del, label: c.t('drum.clear'), danger: true, run: () => { delete cl.data.steps[lane]; save(); render(); } }], c.t('drum.' + lane)); });
+  onHold(el, '.scch', (el2) => { const p = proj(), cl = clip(); if (cl) chordHold(ctx, p, cl.data, el2, () => { save(); render(); }); });
+  render();
+  let open = true;
+  return {
+    render: () => { if (open && host === el) render(); },
+    close() {
+      if (!open) return; open = false;
+      cancelAnimationFrame(raf);
+      if (roll) { roll.destroy(); roll = null; }
+      if (offSteps) { offSteps(); offSteps = null; }
+      if (offLive) { offLive(); offLive = null; }
+      if (offPad) { offPad(); offPad = null; }
+      toolDrop();
+      offE.forEach((f) => f());
+      if (host === el) { host = was.host; ctx = was.ctx || ctx; size = was.size; seq = was.seq; Object.assign(V, was.V); delete V.embed; if (!was.V.embed) delete V.embed; }
+    },
+  };
 }
 
 export default {
