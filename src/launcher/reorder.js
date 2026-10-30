@@ -6,20 +6,29 @@ const HOLD_MS = 450, SLOP = 8;
 let active = false;
 export const reordering = () => active;
 
-export function holdDrag(container, selector, { axis = 'y', onHold, onMove }) {
+// canMove() = false (переставлять нечего, например «Все» по алфавиту) — меню открывается сразу по удержанию, палец можно не держать
+export function holdDrag(container, selector, { axis: ax = 'y', onHold, onMove, canMove = () => true }) {
   let st = null;
+  let axis = 'y';
   const items = () => [...container.querySelectorAll(selector)].filter((x) => !x.hidden);
   const pos = (e) => (axis === 'y' ? e.clientY : e.clientX);
 
   container.addEventListener('pointerdown', (e) => {
     const el = e.target.closest(selector);
     if (!el || !container.contains(el) || e.button > 0) return;
+    axis = typeof ax === 'function' ? ax() : ax; // вкладки сверху — по горизонтали
     st = { el, id: e.pointerId, x: e.clientX, y: e.clientY, p0: pos(e), held: false, moved: false };
     st.timer = setTimeout(() => {
       if (!st) return;
+      navigator.vibrate?.(12);
+      if (!canMove()) {
+        st = null;
+        el.dataset.held = '1'; setTimeout(() => delete el.dataset.held, 600); // отпускание не откроет приложение
+        onHold?.(el);
+        return;
+      }
       st.held = true; active = true;
       el.classList.add('l-lifted');
-      navigator.vibrate?.(12);
       try { container.setPointerCapture(st.id); } catch { /* */ }
     }, HOLD_MS);
   });
@@ -31,7 +40,7 @@ export function holdDrag(container, selector, { axis = 'y', onHold, onMove }) {
       return;
     }
     const d = pos(e) - st.p0;
-    if (!st.moved && Math.abs(d) < 6) return;
+    if (!st.moved && Math.abs(d) < 12) return; // дрожь пальца — не перенос
     st.moved = true;
     st.el.style.transform = axis === 'y' ? `translateY(${d}px)` : `translateX(${d}px)`;
   });

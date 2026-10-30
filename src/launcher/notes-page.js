@@ -91,14 +91,15 @@ function renderList() {
       .sort((a, b) => (b.pin - a.pin) || (b.updated - a.updated));
     rows.replaceChildren(...(list.length ? list.map(row) : [h('div', { class: 'empty' }, notes.length ? 'Ничего не найдено' : 'Пока пусто. «+» — новая заметка')]));
   };
-  listV.replaceChildren(
+  // пустые места (нет меток) не превращаются в текст «null»
+  listV.replaceChildren(...[
     h('div', { class: 'bar' },
       parent !== window ? h('button', { class: 'ib', onclick: () => parent.postMessage('notes:close', '*'), 'aria-label': 'На главный экран' }, '‹') : null,
       h('h1', {}, 'Блокнот')),
     input, hint,
     allTags.length ? h('div', { class: 'tags' }, allTags.map((t) => h('button', { class: 'tag' + (S.tag === t ? ' on' : ''), onclick: () => { S.tag = S.tag === t ? null : t; renderList(); } }, '#' + t))) : null,
     rows,
-    h('button', { class: 'fab', onclick: () => openNote(create('').id, true), 'aria-label': 'Новая заметка' }, '+'));
+    h('button', { class: 'fab', onclick: () => openNote(create('').id, true), 'aria-label': 'Новая заметка' }, '+')].filter((x) => x != null));
   renderRows();
   void shown;
 }

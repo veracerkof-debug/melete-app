@@ -1,6 +1,7 @@
 // Ἐλάχιστον (Elachiston) — отдельное приложение главного экрана телефона (docs/launcher.md), своё имя, пакет и ключ;
 // живёт в репозитории Melete и берёт из него общий код (темы, чтение, статистику), с самим Melete связан мостом.
 // Минимальный главный экран: часы, дата, Melete, баланс, приложения и значки; жесты, панели, обновление из GitHub.
+import { pickHome } from './homepick.js';
 import './launcher.css';
 import { prefs, isChurch, HOME_MAX, save } from './data.js';
 import { initI18n, t } from './i18n.js';
@@ -88,11 +89,7 @@ mountArrange(home, {
   renderHome,
   editHomeItem: (i, after) => editHomeItem(i, after, after),
   editDockSlot: (i, after) => editDockSlot(i, after),
-  addApp: (after) => pickAction(null, (a) => {
-    prefs.home = prefs.home || homeItems().map((x) => ({ ...x }));
-    if (prefs.home.length < HOME_MAX) prefs.home.push({ key: a.key, label: '' });
-    save(); after();
-  }, { appsOnly: true }),
+  addApp: (after) => pickHome(after),
   addDock: (after) => {
     prefs.dock = prefs.dock || dockSlots().map((x) => ({ ...x, action: { ...x.action } }));
     prefs.dock.push({ icon: 'grid', action: { t: 'cmd', id: 'drawer' } });

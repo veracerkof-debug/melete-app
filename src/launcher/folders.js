@@ -27,6 +27,14 @@ function examples() {
 }
 
 export const folders = () => prefs.folders || examples();
+// правило автора (2026-10-29): одно приложение — в одной папке. Прежние данные, где приложение было в нескольких,
+// приводятся один раз: остаётся в первой
+if (Array.isArray(prefs.folders)) {
+  const seen = new Set();
+  let fixed = false;
+  prefs.folders.forEach((f) => { f.apps = f.apps.filter((k) => { if (seen.has(k)) { fixed = true; return false; } seen.add(k); return true; }); });
+  if (fixed) save();
+}
 export const folderById = (id) => folders().find((f) => f.id === id) || null;
 export const folderName = (f) => f.name || t('fold.' + f.id);
 export const folderIcon = (f) => f.icon || 'star';
@@ -54,20 +62,24 @@ export function deleteFolder(id) {
   if (prefs.home) prefs.home = prefs.home.filter((x) => x.key !== keyOf(id));
   save();
 }
+// в папку — из любой другой оно уходит (одно приложение — одна папка); уже там — убрать
 export function toggleInFolder(id, key) {
   const f = own().find((x) => x.id === id);
   if (!f) return false;
   const i = f.apps.indexOf(key);
-  if (i >= 0) f.apps.splice(i, 1); else f.apps.push(key);
+  if (i >= 0) { f.apps.splice(i, 1); save(); return false; }
+  own().forEach((x) => { x.apps = x.apps.filter((k) => k !== key); });
+  f.apps.push(key);
   save();
-  return i < 0;
+  return true;
 }
 export function setInFolder(id, key, on) {
   const f = own().find((x) => x.id === id);
   if (!f) return;
-  const i = f.apps.indexOf(key);
-  if (on && i < 0) f.apps.push(key);
-  if (!on && i >= 0) f.apps.splice(i, 1);
+  if (on) {
+    own().forEach((x) => { if (x !== f) x.apps = x.apps.filter((k) => k !== key); }); // одно приложение — одна папка
+    if (!f.apps.includes(key)) f.apps.push(key);
+  } else f.apps = f.apps.filter((k) => k !== key);
   save();
 }
 // переставить приложение в папке: from/to — места среди видимых (скрытые и удалённые остаются в конце)

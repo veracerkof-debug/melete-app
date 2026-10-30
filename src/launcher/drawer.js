@@ -10,6 +10,7 @@ import { holdDrag, reordering } from './reorder.js';
 import { allApps as everyApp } from './apps.js';
 import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
+import { pickHome } from './homepick.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
 import { setCover } from './cover.js';
@@ -68,22 +69,49 @@ export function mountDrawer(container, { onChange }) {
   drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
   drawer.addEventListener('pointerup', endDrag);
   drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
-  // смахнуть влево-вправо по списку — соседняя вкладка
-  let sx = null, sy = 0;
-  list.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
-  list.addEventListener('pointerup', (e) => {
-    if (sx == null) return;
-    const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
-    if (reordering()) return;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && !search.value) {
-      const ids = ['all', ...folders().map((f) => f.id)];
-      const i = Math.max(0, ids.indexOf(tab)) + (dx < 0 ? 1 : -1);
-      if (i >= 0 && i < ids.length) { tab = ids[i]; list.dataset.swiped = '1'; fill(); setTimeout(() => delete list.dataset.swiped, 50); }
+  // смахнуть влево-вправо по списку — соседняя папка. Список идёт за пальцем; отпустил дальше 36 px или быстрым
+  // взмахом — уезжает, приходит соседняя папка с другой стороны; иначе — пружинит назад. На краях — тянется туго.
+  // Пальцем — касания (touchend приходит, даже если браузер успел начать прокрутку), мышью — указатель.
+  let sw = null;
+  const neighbour = (dir) => { const ids = tabIds(), i = Math.max(0, ids.indexOf(tab)) + dir; return i >= 0 && i < ids.length ? ids[i] : null; };
+  const swStart = (x, y) => { sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null } : null; };
+  const swMove = (x, y) => {
+    if (!sw || reordering()) return;
+    const dx = x - sw.x, dy = y - sw.y;
+    if (!sw.lock) {
+      if (Math.hypot(dx, dy) < 10) return;
+      sw.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      if (sw.lock === 'x') list.style.transition = 'none';
     }
-  });
+    if (sw.lock !== 'x') return;
+    const free = neighbour(dx < 0 ? 1 : -1);
+    const off = free ? dx : dx / 4; // края нет — туго
+    list.style.transform = `translateX(${off}px)`;
+    list.style.opacity = String(1 - Math.min(0.5, Math.abs(off) / list.clientWidth));
+    sw.off = off;
+  };
+  const swEnd = (x, y) => {
+    if (!sw) return;
+    const s0 = sw; sw = null;
+    const dx = x - s0.x, dy = y - s0.y, ms = Math.max(1, performance.now() - s0.t);
+    const ax = Math.abs(dx);
+    const go = !reordering() && s0.lock !== 'y' && ((ax >= 36 && ax > Math.abs(dy) * 1.2) || (ax >= 20 && ax / ms > 0.35 && ax > Math.abs(dy) * 1.5));
+    const id = go ? neighbour(dx < 0 ? 1 : -1) : null;
+    if (s0.lock === 'x') { list.dataset.swiped = '1'; setTimeout(() => delete list.dataset.swiped, 50); }
+    if (id) { switchTab(id, dx < 0 ? 1 : -1, s0.off || 0); }
+    else if (s0.off) settle();
+  };
+  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else { sw = null; settle(); } }, { passive: true });
+  list.addEventListener('touchmove', (e) => { const c = e.touches[0]; if (c) swMove(c.clientX, c.clientY); }, { passive: true });
+  list.addEventListener('touchend', (e) => { const c = e.changedTouches[0]; if (c) swEnd(c.clientX, c.clientY); }, { passive: true });
+  list.addEventListener('touchcancel', () => { sw = null; settle(); }, { passive: true });
+  list.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') swStart(e.clientX, e.clientY); });
+  list.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch' && e.buttons) swMove(e.clientX, e.clientY); });
+  list.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') swEnd(e.clientX, e.clientY); });
   drawer.addEventListener('wheel', (e) => { if (e.deltaY < -40 && list.scrollTop <= 0) closeDrawer(); }, { passive: true });
   // удержать и перетащить: приложение в папке — на новое место; удержать и отпустить — меню приложения
   holdDrag(list, '.l-d-app', {
+    canMove: () => !search.value.trim() && tab !== 'all',
     onHold: (el) => { const a = everyApp().find((x) => x.key === el.dataset.key); if (a) appMenu(a); },
     onMove: (from, to) => {
       const f = !search.value.trim() && tab !== 'all' ? folderById(tab) : null;
@@ -93,16 +121,51 @@ export function mountDrawer(container, { onChange }) {
   });
   // папки справа: удержать и перетащить — порядок; удержать и отпустить — меню папки
   holdDrag(tabs, '.l-d-tab.fold', {
+    axis: () => (prefs.foldTabs === 'top' ? 'x' : 'y'),
     onHold: (el) => folderMenu(folderById(el.dataset.id)),
     onMove: (from, to) => { moveFolder(from, to); fill(); changed(); },
   });
 }
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
+// вкладки по порядку: «Все» (если не убрана) и папки
+// переход между папками: текущий список уезжает в сторону листания, новый приходит с другой стороны (dir: 1 — следующая,
+// −1 — предыдущая); from — где список сейчас (палец уже утащил). «Меньше движения» — сразу, без сдвига.
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EASE = 'cubic-bezier(.2,.8,.2,1)';
+let paging = false;
+function settle() {
+  if (!list.style.transform) return;
+  list.style.transition = `transform .22s ${EASE}, opacity .22s ${EASE}`;
+  list.style.transform = ''; list.style.opacity = '';
+}
+function switchTab(id, dir, from = 0) {
+  if (id === tab) { settle(); return; }
+  if (!dir || calm() || !list.animate) {
+    tab = id; fill(); list.scrollTop = 0; list.style.transform = ''; list.style.opacity = ''; return;
+  }
+  paging = true;
+  const w = Math.min(list.clientWidth || 360, 420);
+  const o0 = list.style.opacity || '1';
+  list.style.transition = 'none';
+  const out = list.animate([{ transform: `translateX(${from}px)`, opacity: o0 }, { transform: `translateX(${-dir * w * 0.45}px)`, opacity: 0 }],
+    { duration: Math.max(70, 140 * (1 - Math.abs(from) / w)), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+  const done = () => {
+    tab = id; fill(); list.scrollTop = 0;
+    list.style.transform = ''; list.style.opacity = '';
+    out.oncancel = null; out.cancel();
+    list.animate([{ transform: `translateX(${dir * w * 0.45}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 240, easing: EASE });
+    tabs.querySelector('.on')?.animate([{ transform: 'scale(.9)' }, { transform: 'none' }], { duration: 200, easing: EASE });
+    paging = false;
+  };
+  out.onfinish = done;
+  out.oncancel = () => { if (paging) done(); };
+}
+const tabIds = () => [...(prefs.drawerAll !== false || !folders().length ? ['all'] : []), ...folders().map((f) => f.id)];
 
 function fill() {
   const q = search.value.trim().toLowerCase();
-  if (tab !== 'all' && !folderById(tab)) tab = 'all';
+  if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
   const f = !q && tab !== 'all' ? folderById(tab) : null;
   // «Все» — без приложений из папок (они — в своих папках); поиск находит все
   const apps = f ? folderApps(f) : allApps().filter((a) => (q ? a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q) : !inAnyFolder(a.key)));
@@ -123,26 +186,46 @@ function fill() {
     list.append(btn);
   });
   if (!apps.length) list.append(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
-  // папка: выбрать приложения галочками
-  if (f) list.append(h('button', { class: 'l-btn l-fold-pickbtn', onclick: () => pickFolderApps(f) }, t('fold.choose')));
 }
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
 function renderTabs(searching) {
+  const top = prefs.foldTabs === 'top';
   const tb = (id, label, icon, cls = '') => {
+    const ico = icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
+    // сверху — вкладки с названием (или только значки, prefs.foldLabels); справа — значки
     const b = h('button', { class: `l-d-tab ${cls} ${id !== 'all' && id !== '+' ? 'fold' : ''} ${!searching && tab === id ? 'on' : ''}`, 'data-id': id, role: 'tab', 'aria-selected': String(tab === id), 'aria-label': label, title: label,
-      html: icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>' });
+      html: top && prefs.foldLabels !== false && id !== '+' ? `${ico}<span>${label.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))}</span>` : ico });
+    // «Все»: удержание — убрать вкладку (вернуть — Настройки → Главный)
+    if (id === 'all') {
+      let timer;
+      b.addEventListener('pointerdown', () => { timer = setTimeout(() => { b.dataset.held = '1'; navigator.vibrate?.(12); allMenu(); }, 450); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => clearTimeout(timer)));
+    }
     b.addEventListener('click', () => {
-      if (b.dataset.held) return;
+      if (b.dataset.held) { delete b.dataset.held; return; }
       if (id === '+') return newFolder();
-      tab = id; search.value = ''; fill(); list.scrollTop = 0;
+      const ids = tabIds(), dir = Math.sign(ids.indexOf(id) - ids.indexOf(tab)) || 1;
+      if (search.value) { search.value = ''; tab = id; fill(); list.scrollTop = 0; return; }
+      switchTab(id, dir);
     });
     return b;
   };
-  tabs.replaceChildren(tb('all', t('fold.all'), 'grid'), ...folders().map((f) => tb(f.id, folderName(f), folderIcon(f))), tb('+', t('fold.new'), null, 'add'));
+  tabs.replaceChildren(...[tabIds().includes('all') ? tb('all', t('fold.all'), 'grid') : null, ...folders().map((f) => tb(f.id, folderName(f), folderIcon(f))), tb('+', t('fold.new'), null, 'add')].filter(Boolean));
   tabs.querySelector('.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   const f = !searching && tab !== 'all' ? folderById(tab) : null;
   titleName.textContent = f ? folderName(f) : t('drawer.title');
+}
+
+// «Все» — убрать вкладку (приложения вне папок находит поиск; вернуть — Настройки → Главный → «Вкладка «Все»»)
+function allMenu() {
+  openSheet({
+    title: t('fold.all'), kicker: '',
+    render(body, close) {
+      body.append(h('p', { class: 'l-hint' }, t('fold.allHideHint')),
+        h('button', { class: 'l-pick', onclick: () => { prefs.drawerAll = false; save(); tab = tabIds()[0]; close(); fill(); changed(); } }, h('span', {}, t('fold.allHide'))));
+    },
+  });
 }
 
 function newFolder(withApp) {
@@ -173,7 +256,8 @@ function folderMenu(f) {
       let name = folderName(f);
       body.append(
         field(t('fold.rename'), name, (v) => { name = v; renameFolder(f.id, v); fill(); changed(); }, { maxlength: 24 }),
-        h('button', { class: 'l-pick', onclick: () => { close(); pickFolderApps(folderById(f.id)); } }, h('span', {}, t('fold.choose')), h('small', {}, String(folderApps(f).length))),
+        h('button', { class: 'l-pick l-pick-add', onclick: () => { close(); pickFolderApps(folderById(f.id)); } },
+          h('span', { class: 'l-pick-ico', html: PLUS }), h('span', {}, t('fold.choose')), h('small', {}, String(folderApps(f).length))),
         h('button', { class: 'l-pick', onclick: () => { close(); pickIcon(folderIcon(f), (icon) => { setFolderIcon(f.id, icon); fill(); }); } },
           h('span', { class: 'l-fold-ico', html: iconSVG(folderIcon(f)) }), h('span', {}, t('fold.icon'))),
         h('button', { class: 'l-pick', onclick: () => {
@@ -204,7 +288,6 @@ export function openFolder(id) {
       holdDrag(box, '.l-fold-app', { onMove: (from, to) => { moveInFolder(f.id, from, to); changed(); rerender(); } });
       body.append(box);
       if (!apps.length) body.append(h('p', { class: 'l-empty' }, t('fold.empty')));
-      body.append(h('button', { class: 'l-btn', onclick: () => { close(); pickFolderApps(folderById(id)); } }, t('fold.choose')));
       body.append(h('button', { class: 'l-btn', onclick: () => { close(); tab = f.id; openDrawer(); } }, t('drawer.title') + ' · ' + folderName(f)));
     },
   });
@@ -215,7 +298,7 @@ export function openDrawer(focus = false) {
   open = true;
   const L = layout();
   drawer.classList.remove('rail-right', 'rail-left', 'rail-top', 'rail-bottom', 'search-top', 'search-bottom');
-  drawer.classList.add('rail-' + L.rail, 'search-' + L.search);
+  drawer.classList.add('rail-' + (prefs.foldTabs === 'top' ? 'top' : 'right'), 'search-' + L.search);
   // поиск сверху (под заголовком) или внизу — под рукой
   if (L.search === 'bottom') drawer.append(search); else drawer.querySelector('.l-d-head').append(search);
   search.value = '';
@@ -249,7 +332,10 @@ export function typeIntoSearch(ch) {
   fill();
 }
 
-// Приложения папки — галочками: весь список, отмеченные — в папке (касание — отметить или снять); поиск сверху
+// Приложения папки — галочками (меню папки → «Добавить приложения»; новая папка — сразу). Сверху — уже в этой папке
+// (в её порядке), ниже — свободные по алфавиту; приложения из других папок не показываются (одно приложение — одна
+// папка). Своё название — крупно, системное — бледно рядом; поиск — по обоим
+const PLUS = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 function pickFolderApps(f) {
   if (!f) return;
   let q = '';
@@ -257,19 +343,24 @@ function pickFolderApps(f) {
     title: folderName(f), kicker: '', full: true,
     render(body, close) {
       const listEl = h('div', { class: 'l-check-list' });
+      const row = (a, on) => h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on),
+        onclick: () => { setInFolder(f.id, a.key, !on); draw(); fill(); changed(); } },
+        h('span', { class: 'l-check-box', 'aria-hidden': 'true' }),
+        h('span', { class: 'l-check-t' }, a.label, a.sys && a.sys !== a.label ? h('small', { class: 'l-check-sys' }, a.sys) : null));
       const draw = () => {
         const cur = folderById(f.id) || f;
         const ql = q.trim().toLowerCase();
-        const all = everyApp().filter((a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql));
-        listEl.replaceChildren(...all.map((a) => {
-          const on = cur.apps.includes(a.key);
-          const other = folders().filter((x) => x.id !== f.id && x.apps.includes(a.key)).map(folderName).join(', ');
-          return h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on),
-            onclick: () => { setInFolder(f.id, a.key, !on); draw(); fill(); changed(); } },
-            h('span', { class: 'l-check-box', 'aria-hidden': 'true' }), h('span', { class: 'l-check-t' }, a.label), other ? h('small', {}, other) : null);
-        }));
+        const match = (a) => !ql || a.label.toLowerCase().includes(ql) || (a.sys || '').toLowerCase().includes(ql);
+        const mine = cur.apps.map((k) => everyApp().find((a) => a.key === k)).filter((a) => a && match(a));
+        const free = everyApp().filter((a) => !inAnyFolder(a.key) && match(a));
+        listEl.replaceChildren(...[
+          mine.length ? h('div', { class: 'l-check-k' }, t('fold.inThis')) : null,
+          ...mine.map((a) => row(a, true)),
+          free.length ? h('div', { class: 'l-check-k' }, t('fold.free')) : null,
+          ...free.map((a) => row(a, false)),
+          !mine.length && !free.length ? h('p', { class: 'l-empty' }, t('drawer.none')) : null].filter(Boolean));
       };
-      body.append(h('p', { class: 'l-hint' }, t('fold.chooseHint')),
+      body.append(
         h('input', { class: 'l-search', type: 'search', placeholder: t('drawer.search'), 'aria-label': t('drawer.search'), oninput: (e) => { q = e.target.value; draw(); } }),
         listEl, h('button', { class: 'l-btn primary', onclick: close }, t('ui.done')));
       draw();
@@ -289,15 +380,17 @@ function appMenu(a) {
       body.append(field(t('ren.name'), a.label === a.sys ? '' : a.label, (v) => { renameApp(a.key, v); fill(); changed(); }, { placeholder: a.sys || a.label, maxlength: 40 }));
       body.append(h('button', { class: 'l-pick', onclick: () => {
         const home = ownHome();
-        if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); return; }
+        if (!there && home.length >= HOME_MAX) { close(); toast(t('home.full', { n: HOME_MAX })); pickHome(() => { fill(); changed(); }); return; }
         if (there) home.splice(home.findIndex((x) => x.key === a.key), 1);
         else home.push({ key: a.key, label: '' });
         save(); fill(); changed(); close();
         toast(there ? t('drawer.removed') : t('drawer.added'));
       } }, h('span', {}, there ? t('drawer.fromHome') : t('drawer.toHome'))));
       body.append(h('div', { class: 'l-fold-k' }, t('fold.toFolder')), h('div', { class: 'l-chips' },
+        // одна папка: выбрать другую — приложение переезжает; касание текущей — убрать из папки
         ...folders().map((f) => h('button', { class: `l-chip ${f.apps.includes(a.key) ? 'on' : ''}`, onclick: (e) => {
           const added = toggleInFolder(f.id, a.key);
+          e.currentTarget.parentElement.querySelectorAll('.l-chip').forEach((c) => c.classList.remove('on'));
           e.currentTarget.classList.toggle('on', added);
           fill(); changed(); toast(added ? t('fold.added') : t('fold.removed'));
         } }, folderName(f))),

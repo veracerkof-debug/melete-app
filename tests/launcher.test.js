@@ -125,6 +125,19 @@ describe('главный экран: минимальный', () => {
     expect(apps.allApps().some((a) => a.key === key)).toBe(true);
     data.prefs.hidden = []; data.prefs.home = null; data.prefs.dock = null;
   });
+  it('одно приложение — одна папка: добавили в другую — ушло из прежней', async () => {
+    vi.resetModules();
+    const data = await import('../src/launcher/data.js');
+    data.prefs.folders = [{ id: 'a', name: 'A', apps: ['x', 'y'] }, { id: 'b', name: 'B', apps: ['z'] }];
+    const f = await import('../src/launcher/folders.js');
+    f.setInFolder('b', 'x', true);
+    expect(f.folderById('a').apps).toEqual(['y']);
+    expect(f.folderById('b').apps).toEqual(['z', 'x']);
+    f.toggleInFolder('a', 'z');
+    expect(f.folderById('b').apps).toEqual(['x']);
+    expect(f.folderById('a').apps).toEqual(['y', 'z']);
+    data.prefs.folders = null;
+  });
   it('старые настройки переходят на минимальный экран: украшения убраны, приложения и жесты на месте', async () => {
     const old = { theme: 'paper', clock: 'codex', wallpaper: 'sun', ornament: 'wheel', style: 'rich', font: 'literata', church: true,
       home: Array.from({ length: 9 }, (_, i) => ({ key: 'k' + i, label: '' })), gestures: { swipeUp: { t: 'cmd', id: 'drawer' } } };
