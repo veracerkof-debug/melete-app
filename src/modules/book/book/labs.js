@@ -11,10 +11,12 @@ import { harmonyLabs } from './labs2.js';
 import { jazzLabs } from './labs3.js';
 import { playLabs } from './labs4.js';
 import { themeLabs, extraEx } from './labs5.js';
+import { lessonLabs } from './labs6.js';
+import { pieceLabs } from './labs7.js';
 
 IV['#1'] = [0, 1];
 
-export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} } }) {
+export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} }, tools = null }) {
   const LABS = {};
   const deg = (d) => degLabel(d);
   const ROOT_OPTS = MAJ_ROOTS.map((r) => [r, r]), MIN_OPTS = MIN_ROOTS.map((r) => [r, r]), ALL_OPTS = ALL12.map((r) => [r, r]);
@@ -191,7 +193,7 @@ export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} } }) {
     render(s) {
       const minor = s.mode !== 'major', r = rootN(s.root), h = harmonize(r, scaleById(MODE_SC[s.mode]));
       return '<div class="bkctl">' + rootSel('root', s.root, minor ? MIN_OPTS : ROOT_OPTS) + seg('mode', [['major', T('key.major')], ['natural', T('key.natural')], ['harmonic', T('key.harmonic')], ['melodic', T('key.melodic')]], s.mode) + '</div>' +
-        '<div class="dia">' + h.map((x, i) => { const f = funcOf(i, minor); return '<button class="dc f' + f + '" data-a="c:' + i + '"><small>' + roman(r, x.root, x.q) + '</small><b>' + nm(simp(x.root)) + x.q + '</b><span>' + T('fn.' + f) + '</span></button>'; }).join('') + '</div>' +
+        '<div class="bkdia">' + h.map((x, i) => { const f = funcOf(i, minor); return '<button class="dc f' + f + '" data-a="c:' + i + '"><small>' + roman(r, x.root, x.q) + '</small><b>' + nm(simp(x.root)) + x.q + '</b><span>' + T('fn.' + f) + '</span></button>'; }).join('') + '</div>' +
         '<h4>' + T('key.cad') + '</h4><div class="bkchips">' + ['auth', 'plag', 'dec', 'iivi', 'full'].map((k) => '<button class="chipc wide" data-a="k:' + k + '">' + T('cad.' + k) + '</button>').join('') + '</div>';
     },
     on(s, a) {
@@ -661,7 +663,7 @@ export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} } }) {
     render(s) {
       if (!s.q && s.on) this.next(s);
       const on = s.on.split(','), q = s.q;
-      return '<div class="extypes">' + Object.keys(EX).map((id) => '<button class="chk' + (on.includes(id) ? ' on' : '') + '" data-a="t:' + id + '" aria-pressed="' + on.includes(id) + '">' + T('ex.t.' + id) + '</button>').join('') + '</div>' +
+      return (s.fixed ? '' : '<div class="extypes">' + Object.keys(EX).map((id) => '<button class="chk' + (on.includes(id) ? ' on' : '') + '" data-a="t:' + id + '" aria-pressed="' + on.includes(id) + '">' + T('ex.t.' + id) + '</button>').join('') + '</div>') +
         (q ? '<div class="excard"><div class="exq">' + q.q + '</div>' + (q.show || '') + (q.play || q.prog || q.block || q.hits ? '<div class="bkrow">' + playBtn('data-a="hear"', T(q.ear ? 'ex.again' : 'ui.play')) + '</div>' : '') +
           '<div class="exo">' + q.o.map((o, i) => '<button class="eo' + (s.ans != null ? (o === q.a ? ' right' : i === s.ans ? ' wrong' : '') : '') + '" data-a="o:' + i + '"' + (s.ans != null ? ' disabled' : '') + '>' + o + '</button>').join('') + '</div>' +
           (s.ans != null ? '<div class="bkrow"><button class="primary" data-a="next">' + T('ex.next') + '</button></div>' : '') + '</div>' : '<p class="bkhint">' + T('ex.pick') + '</p>') +
@@ -721,6 +723,6 @@ export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} } }) {
   };
 
   // части учебника: схемы — в своих файлах, общие помощники — отсюда
-  Object.assign(LABS, grammarLabs({ T, L, snd, fact, sp, rootSel }), harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), jazzLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), playLabs({ T, L, snd, sp, rootSel, voiceSimple }), themeLabs({ T, L, snd, sp, mic, ui }));
+  Object.assign(LABS, grammarLabs({ T, L, snd, fact, sp, rootSel }), harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), jazzLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), playLabs({ T, L, snd, sp, rootSel, voiceSimple }), themeLabs({ T, L, snd, sp, mic, ui }), lessonLabs({ T, snd, mic, ui, tools }), pieceLabs({ T, snd, mic, ui }));
   return LABS;
 }

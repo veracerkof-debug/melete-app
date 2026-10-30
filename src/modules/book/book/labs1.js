@@ -15,7 +15,7 @@ const octIdx = (n, m) => Math.round((m - NAT[n.l] - n.a) / 12) - 1;
 
 // Мелодии схем — свои, учебные. [ноты через пробел: буква, знак, октава, длительность (w h q e s, точка — «.»)]
 // пример: 'G4q A4e B4e C5h' ; пауза — 'r q'
-function parseMel(str) {
+export function parseMel(str) {
   return str.trim().split(/\s+/).map((tok) => {
     if (tok === '|') return { bar: '|' };
     if (tok === '||') return { bar: '|.' };
@@ -28,7 +28,7 @@ function parseMel(str) {
   }).filter(Boolean);
 }
 // ребра: восьмые и шестнадцатые внутри одной четверти (доли) — в одну группу
-function beam(items, beat = 1) {
+export function beam(items, beat = 1) {
   let t = 0, g = 0;
   items.forEach((x) => {
     if (x.bar) { t = Math.ceil(t / beat - 1e-6) * beat; return; }
@@ -42,7 +42,7 @@ function beam(items, beat = 1) {
   return items;
 }
 // мелодия → события звука [время, midi, длит.] при темпе bpm (четверть — доля); лига складывает длительности
-function melEvents(items, bpm = 90) {
+export function melEvents(items, bpm = 90) {
   const q = 60 / bpm, out = []; let t = 0, hold = null;
   items.forEach((x) => {
     if (x.bar) return;

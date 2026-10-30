@@ -2,7 +2,9 @@
 // base.js — строки схем и оболочки, названия (интервалы, аккорды, гаммы) и общий словарь терминов; главы — в pN.js по частям.
 export default {
   S: {
-    'bk.title': 'Darslik', 'bk.lead': 'Notalardan jazgacha — yangraydigan misollar bilan. Matndagi atamalar havola: bosilganda taʼrif ochiladi.',
+    'bk.title': 'Darslik', 'bk.lead': 'Ikki boʻlim: musiqa maktabi dasturi boʻyicha akademik nazariya va jaz nazariyasi. Misollar yangraydi; matndagi atamalar havola: bosilganda taʼrif ochiladi.',
+    'bk.part6': 'Jaz asoslari', 'bk.sec.school': 'Akademik nazariya', 'bk.sec.jazz': 'Jaz nazariyasi', 'bk.secs': 'Darslik boʻlimi',
+    'bk.sub.school': 'Musiqa maktabi dasturi boʻyicha savod va garmoniya: notalar, ritm, lad, intervallar, akkordlar, tonalliklar.', 'bk.sub.jazz': 'Jaz garmoniyasi va tili: septakkordlar va ladlar, ii–V–I, joylashuvlar, reharmonizatsiya, improvizatsiya, shakllar, lotin musiqasi.',
     'bk.part0': 'Musiqa savodi', 'bk.part1': 'Garmoniya asoslari', 'bk.part2': 'Jaz garmoniyasi', 'bk.part3': 'Ijro', 'bk.part4': 'Mavzu', 'bk.part5': 'Mashq va maʼlumotnoma', 'bk.src': 'Kitoblar asosida:',
     'bk.toc': 'Mundarija', 'bk.ch': '{n}-bob', 'bk.prev': 'Orqaga', 'bk.next': 'Keyingi', 'bk.read': 'Bobni oʻqish', 'bk.terms': 'Atamalar',
     'bk.inBook': 'Darslikda: {t}', 'bk.find': 'Atama', 'bk.none': 'Hech narsa topilmadi', 'bk.of': '{n} dan', 'bk.kb': 'Klaviatura', 'bk.circle': 'Kvinta doirasi', 'bk.signs': 'belgi',

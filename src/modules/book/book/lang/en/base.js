@@ -2,7 +2,9 @@
 // base.js — строки схем и оболочки, названия (интервалы, аккорды, гаммы) и общий словарь терминов; главы — в pN.js по частям.
 export default {
   S: {
-    'bk.title': 'Textbook', 'bk.lead': 'From notes to jazz, with examples that sound. Terms in the text are links: a tap opens the definition.',
+    'bk.title': 'Textbook', 'bk.lead': 'Two sections: classical theory as taught at music school, and jazz theory. Examples sound; terms in the text are links: a tap opens the definition.',
+    'bk.part6': 'Jazz foundations', 'bk.sec.school': 'Classical theory', 'bk.sec.jazz': 'Jazz theory', 'bk.secs': 'Textbook section',
+    'bk.sub.school': 'Fundamentals and harmony as taught at music school: notes, rhythm, mode, intervals, chords, keys.', 'bk.sub.jazz': 'Jazz harmony and language: seventh chords and modes, ii–V–I, voicings, reharmonisation, improvisation, forms, Latin.',
     'bk.part0': 'Music fundamentals', 'bk.part1': 'Harmony basics', 'bk.part2': 'Jazz harmony', 'bk.part3': 'Playing', 'bk.part4': 'The tune', 'bk.part5': 'Practice and reference', 'bk.src': 'Based on:',
     'bk.toc': 'Contents', 'bk.ch': 'Chapter {n}', 'bk.prev': 'Back', 'bk.next': 'Next', 'bk.read': 'Read chapter', 'bk.terms': 'Terms',
     'bk.inBook': 'In the textbook: {t}', 'bk.find': 'Term', 'bk.none': 'Nothing found', 'bk.of': 'of {n}', 'bk.kb': 'Keyboard', 'bk.circle': 'Circle of fifths', 'bk.signs': 'accidentals',

@@ -1,21 +1,28 @@
-// «Теория» → «Учебник»: оглавление (шесть частей), глава со схемами, термин-ссылка → определение → глава; ссылка из
-// раздела «Гаммы»; грамота: нотная строка шрифтом нот, ритм-сетка и метр звучат; три языка
+// «Учебник» — отдельный инструмент: два раздела (академическая и джазовая теория), оглавление раздела, глава со схемами,
+// термин-ссылка → определение → глава; ссылка из «Теории» («Гаммы») открывает учебник; грамота: нотная строка шрифтом нот,
+// ритм-сетка и метр звучат; три языка
 import { test, expect, sleep } from './melete.js';
 
-// число глав и видимых частей оглавления (часть без глав не показывается)
-const CARDS = 32, PARTS_SHOWN = 6;
+// главы и видимые части в разделах (часть без глав не показывается); «Практика и справка» — в обоих
+const SCHOOL = { cards: 15, parts: 4 }, JAZZ = { cards: 20, parts: 5 };
 const open = async (melete, page, sec, extra = {}) => {
-  await melete.tools({ theory: { sec, ...extra } });
-  await melete.free('F', ['theory']);
+  if (sec === 'book') { await melete.tools({ book: { book: extra.book || {} } }); await melete.free('F', ['book']); }
+  else { await melete.tools({ theory: { sec, ...extra } }); await melete.free('F', ['theory']); }
   await page.waitForSelector('.pane .book, .pane .bklink', { timeout: 15_000 });
 };
 
 test('учебник: оглавление, глава, схемы, термины', async ({ page, melete, errors }) => {
   await melete.open();
   await open(melete, page, 'book');
-  await expect(page.locator('.book .bcard')).toHaveCount(CARDS);
-  await expect(page.locator('.book .bpart')).toHaveCount(PARTS_SHOWN);
+  await expect(page.locator('.book .bcard')).toHaveCount(SCHOOL.cards);
+  await expect(page.locator('.book .bpart')).toHaveCount(SCHOOL.parts);
+  // джазовый раздел
+  await page.locator('.book [data-bsec="jazz"]').click();
+  await expect(page.locator('.book .bcard')).toHaveCount(JAZZ.cards);
+  await expect(page.locator('.book .bpart')).toHaveCount(JAZZ.parts);
   await page.screenshot({ path: 'test-results/book-toc.png' });
+  await page.locator('.book [data-bsec="school"]').click();
+  await expect(page.locator('.book .bcard')).toHaveCount(SCHOOL.cards);
   // поиск термина
   await page.fill('.book [data-bq]', 'тритон');
   await expect(page.locator('.book .bfrow').first()).toBeVisible();
@@ -42,7 +49,8 @@ test('учебник: оглавление, глава, схемы, термин
   await expect(page.locator('.book .bkhead h2')).toHaveText('ii–V–I');
   // назад к оглавлению
   await page.locator('.book [data-btoc]').click();
-  await expect(page.locator('.book .bcard')).toHaveCount(CARDS);
+  await expect(page.locator('.book .bsec.jazz')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.book .bcard')).toHaveCount(JAZZ.cards);
   void errors;
 });
 
@@ -115,5 +123,30 @@ test('учебник: игра и тема — клаве, проверка ра
   await open(melete, page, 'book', { book: { ch: 'tune' } });
   await page.locator('.book [data-a="a:0:e"]').click();
   await expect(page.locator('.book .dtc.ok')).toHaveCount(1);
+  void errors;
+});
+
+test('учебник: уроки — начальный путь, инструмент, упражнения, «урок пройден»', async ({ page, melete, errors }) => {
+  await melete.open();
+  await open(melete, page, 'book');
+  await page.locator('.book [data-bpath]').click();
+  await expect(page.locator('.book .bplist li')).toHaveCount(20);
+  // первый урок пути — глава «Игра на инструменте», урок 1
+  await page.locator('.book .bpgo').click();
+  await expect(page.locator('.book .bkhead h2')).toHaveText('Игра на инструменте');
+  await expect(page.locator('.book .bkles')).toHaveCount(6);
+  const ex = page.locator('.book .bkles').first().locator('.bklex');
+  await expect(ex.locator('.xn')).toHaveCount(5); // пианино: до–соль
+  await ex.locator('[data-li="g"]').click();
+  await expect(page.locator('.book .bkles').first().locator('.bklex .xn')).toHaveCount(6); // гитара: открытые струны
+  await page.locator('.book .bkles').first().locator('[data-ldone]').click();
+  await expect(page.locator('.book .bklnav button.ok')).toHaveCount(1);
+  // ход пути в оглавлении
+  await page.locator('.book [data-btoc]').click();
+  await expect(page.locator('.book .bpath small')).toContainText('1');
+  // урок ритма: схема касаний рисуется
+  await open(melete, page, 'book', { book: { ch: 'rhythm', sec: 'school' } });
+  await expect(page.locator('.book .bkles')).toHaveCount(4);
+  await expect(page.locator('.book .bkles').first().locator('[data-lab="xtap"] .bkscore')).toHaveCount(1);
   void errors;
 });

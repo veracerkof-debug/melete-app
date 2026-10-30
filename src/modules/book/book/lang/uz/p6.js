@@ -113,6 +113,9 @@ ${lab('avoid')}
 <h3>Atamalar</h3>
 <p>Darslikning barcha atamalari — qidiruv bilan. Ansambl jargoni: [[tradefours|toʻrtliklar almashinuvi]], [[shout|shaut-xorus]], [[tag|teg]], [[interlude|interlyudiya]], [[intro|kirish]], [[cadenza|kadensiya]], [[breakT|breyk]], [[stoptime|stop-taym]], [[stroll|strol]], [[doubletime|dabl-taym]], [[straight8|tekis sakkizliklar]], [[pocket|choʻntakda]], [[outchorus|soʻnggi kvadrat]], [[chart|chart]], [[vampcue|belgigacha vamp]], [[trainwreck|«poyezd halokati»]], [[woodshed|vudshed]].</p>
 ${lab('gloss')}
+<h3>Asarlar</h3>
+<p>Jahon klassikasi va xalq kuylari — jamoat mulki; yozuv oʻzimizniki. Pianino uchun notalar, gitara va bas uchun notalar va tabulatura, akkompanement bilan tinglash va ijroni tekshirish.</p>
+${lab('pieces')}
 <h3>Nima oʻqish mumkin</h3>
 <p>Darslik tuzilgan kitoblar. Undagi sxemalar, misollar va kuylar — oʻziniki; kitoblar koʻproq beradi: nota misollari, yozuvlar tahlili va mashqlar.</p>
 ${lab('books')}

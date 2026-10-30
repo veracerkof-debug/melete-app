@@ -15,11 +15,11 @@ import { keyShift, keyTo, diatonic, transposeLine, capoOptions } from '../../mus
 import { tonicName, keyLabel } from '../../music/transpose.js';
 
 import meta, { ICON } from './meta.js';
-const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals', 'book'];
+const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals'];
 // Определитель — в «Минимале» по умолчанию, в обычном виде включается в «Модулях и функциях» (settings.theory.find)
 const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
 const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
-const curSec = () => { let s = TH().sec || 'circle'; if (s === 'jazz') s = 'book'; return secs().includes(s) ? s : 'circle'; };
+const curSec = () => { const s = TH().sec || 'circle'; return secs().includes(s) ? s : 'circle'; }; // «Учебник» и «Джаз» теперь — отдельный инструмент
 const I = {
   play: '<svg viewBox="0 0 24 24" class="f" style="width:18px"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/></svg>',
@@ -30,25 +30,11 @@ const I = {
   fret: '<svg viewBox="0 0 24 24"><path d="M3 6h18M3 10h18M3 14h18M3 18h18M8 4v16M14 4v16"/></svg>',
 };
 
-/* ---------- учебник (book/): грузится по требованию, язык — языка интерфейса ---------- */
+/* ---------- учебник — отдельный инструмент «Учебник» (src/modules/book) ---------- */
 
-let BK = null, bkLoading = null; // { lang, book }
-function bookReady() {
-  const lang = ctx.lang();
-  if (BK && BK.lang === lang) return BK.book;
-  if (!bkLoading) {
-    bkLoading = import('./book/index.js').then(async (m) => {
-      const L = await m.loadLang(lang);
-      if (BK) BK.book.stop();
-      BK = { lang, book: m.createBook(ctx, L, { save: () => { ctx.store.save(); render(); } }) };
-    }).catch((e) => { ctx.log('учебник не загрузился: ' + (e && e.message), 'w'); }).finally(() => { bkLoading = null; if (host) render(); });
-  }
-  return null;
-}
-function bookHTML() { const b = bookReady(); return b ? b.html(TH()) : '<div class="bkload" aria-busy="true"></div>'; }
-// Ссылка из раздела в главу учебника
+// Ссылка из раздела в главу учебника (если «Учебник» включён)
 const BOOKI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5v13c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>';
-const bookLink = (ch) => '<button class="bklink" data-x="bookgo" data-v="' + ch + '">' + BOOKI + '<span>' + ctx.t('bookMore') + '</span><b>›</b></button>';
+const bookLink = (ch) => !ctx.hasTool('book') ? '' : '<button class="bklink" data-x="bookgo" data-v="' + ch + '">' + BOOKI + '<span>' + ctx.t('bookMore') + '</span><b>›</b></button>';
 
 let host = null, ctx = null, size = 'full', onClick = null, onKey = null, onDown = null, onInput = null, lis = null;
 
@@ -396,7 +382,7 @@ function view() {
   const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
-  const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : s === 'book' ? bookHTML() : intervalsHTML();
+  const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
@@ -419,7 +405,6 @@ function render() {
   const nb = host.querySelector('.swrap, .cwrap.f');
   if (nb && y) nb.scrollTop = y;
   if (hy) host.scrollTop = hy;
-  if (sec === 'book' && BK) BK.book.mount(host);
   // выбранная вкладка не уходит за край полосы (вкладок пять — «Определитель» последний)
   const on = host.querySelector('.tswb.on'), bar = on && on.parentElement;
   if (bar && on.offsetLeft + on.offsetWidth > bar.clientWidth) bar.scrollLeft = on.offsetLeft + on.offsetWidth - bar.clientWidth + 4;
@@ -458,7 +443,7 @@ function droneOn(pc, note) {
 function act(a, el) {
   const th = TH(), A = ctx.audio, save = () => { ctx.store.save(); render(); };
   switch (a) {
-    case 'bookgo': th.sec = 'book'; th.book = { ch: el.dataset.v }; save(); break;
+    case 'bookgo': ctx.openIn('book', { book: { ch: el.dataset.v, sec: 'school' } }); break; // раздел уточнит сам учебник по главе
     case 'tsec': th.sec = el.dataset.v; save(); break;
     case 'kcfrom': KC().from.pc = +el.dataset.v; save(); break;
     case 'kcto': KC().to = +el.dataset.v; save(); break;
@@ -586,7 +571,6 @@ export default {
   resize(sz) { size = sz; render(); },
   unmount() {
     stopListen();
-    if (BK) BK.book.stop();
     if (host) {
       host.removeEventListener('input', onInput);
       host.removeEventListener('click', onClick);

@@ -113,6 +113,9 @@ ${lab('avoid')}
 <h3>Terms</h3>
 <p>All the terms of the textbook, with search. Ensemble jargon: [[tradefours|trading fours]], [[shout|shout chorus]], [[tag|tag]], [[interlude|interlude]], [[intro|intro]], [[cadenza|cadenza]], [[breakT|break]], [[stoptime|stop-time]], [[stroll|stroll]], [[doubletime|double time]], [[straight8|straight eighths]], [[pocket|in the pocket]], [[outchorus|out chorus]], [[chart|chart]], [[vampcue|vamp till cue]], [[trainwreck|train wreck]], [[woodshed|woodshed]].</p>
 ${lab('gloss')}
+<h3>Pieces</h3>
+<p>World classics and folk tunes in the public domain, in our own notation. Notation for piano, notation and tab for guitar and bass, playback with accompaniment and a check of playing.</p>
+${lab('pieces')}
 <h3>Further reading</h3>
 <p>The books the textbook is built on. Its diagrams, examples and melodies are its own; the books offer more: notated examples, analyses of recordings and exercises.</p>
 ${lab('books')}

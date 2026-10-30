@@ -18,6 +18,24 @@ const voice = (r, degs) => { const p = pcOf(rootN(r)); return [near(p, 36), ...p
 // Пение: один активный разбор микрофона на всё приложение; stopSing — при уходе из главы
 let active = null;
 export function stopSing() { if (active) { const a = active; active = null; cancelAnimationFrame(a.raf); try { a.mic.stop(); } catch { /* уже закрыт */ } } }
+// Слушать микрофон покадрово (для проверок уроков, labs6.js): frame({ m, dt, f, midi, cents }) на каждый кадр экрана;
+// вернуть false — остановиться. Один разбор на всё приложение: новый останавливает прежний (и пение)
+export function listen(micFn, frame, fail) {
+  stopSing();
+  micFn().then((m) => {
+    const me = { mic: m, raf: 0 }; active = me;
+    let last = performance.now();
+    const loop = () => {
+      if (active !== me) return;
+      const now = performance.now(), dt = (now - last) / 1000; last = now;
+      const buf = m.read(); let f = yin(buf, m.sampleRate, 0.01); if (f) f = refinePitch(buf, f, m.sampleRate);
+      const x = f ? freqToNote(f) : { midi: null, cents: 0 };
+      if (frame({ m, dt, f, midi: x.midi, cents: x.cents }) === false) { stopSing(); return; }
+      me.raf = requestAnimationFrame(loop);
+    };
+    me.raf = requestAnimationFrame(loop);
+  }).catch((e) => fail(e && e.reason === 'denied' ? 'denied' : 'none'));
+}
 
 /* ---------- Детектив листа (Левайн, гл. 19): верно / ошибка / по желанию ---------- */
 // sym — как в листе; mel — нота мелодии (буква, midi) или null; v — ok | err | opt; fix — исправленный символ
@@ -113,8 +131,8 @@ export function themeLabs({ T, L, snd, sp, mic, ui }) {
       if (!s.t) { s.t = task(s.kind); s.k = 0; s.done = false; }
       const t = s.t, bars = t.targets.map((_, i) => '<span class="sgt' + (i < s.k ? ' ok' : i === s.k && s.on ? ' cur' : '') + '">' + t.lbl[i] + '</span>').join('');
       const cents = s.on && s.note ? '<div class="sgm"><span style="left:' + (50 + Math.max(-50, Math.min(50, s.c))) + '%"></span></div>' : '';
-      return '<div class="bkctl">' + seg('kind', [['deg', T('sg.deg')], ['iv', T('sg.iv')], ['miss', T('sg.miss')], ['nine', T('sg.nine')]], s.kind) + '</div>' +
-        '<div class="excard"><div class="exq">' + t.q + '</div><div class="sgrow">' + bars + '</div>' +
+      return (s.fixed ? '' : '<div class="bkctl">' + seg('kind', [['deg', T('sg.deg')], ['iv', T('sg.iv')], ['miss', T('sg.miss')], ['nine', T('sg.nine')]], s.kind) + '</div>') +
+        '<div class="excard"><div class="exq">' + t.q + '</div><div class="sgnrow">' + bars + '</div>' +
         '<div class="sgnow">' + (s.done ? T('sg.done') : s.on ? (s.note ? s.note : T('sg.listen')) : '') + '</div>' + cents +
         (s.err ? '<p class="bkhint">' + T('sg.err.' + s.err) + '</p>' : '') +
         '<div class="bkrow">' + playBtn('data-a="hear"', T('sg.hear')) + (s.on ? '<button class="chipc on" data-a="stop">' + T('sg.stop') + '</button>' : '<button class="chipc" data-a="sing">' + T('sg.sing') + '</button>') + '<button class="chipc" data-a="new">' + T('sg.new') + '</button></div></div>' +
