@@ -129,7 +129,7 @@ test('учебник: игра и тема — клаве, проверка ра
 test('учебник: уроки — начальный путь, инструмент, упражнения, «урок пройден»', async ({ page, melete, errors }) => {
   await melete.open();
   await open(melete, page, 'book');
-  await page.locator('.book [data-bpath]').click();
+  await page.locator('.book [data-bpath="start"]').click();
   await expect(page.locator('.book .bplist li')).toHaveCount(20);
   // первый урок пути — глава «Игра на инструменте», урок 1
   await page.locator('.book .bpgo').click();
@@ -143,7 +143,7 @@ test('учебник: уроки — начальный путь, инструм
   await expect(page.locator('.book .bklnav button.ok')).toHaveCount(1);
   // ход пути в оглавлении
   await page.locator('.book [data-btoc]').click();
-  await expect(page.locator('.book .bpath small')).toContainText('1');
+  await expect(page.locator('.book .bpath.start small')).toContainText('1');
   // урок ритма: схема касаний рисуется
   await open(melete, page, 'book', { book: { ch: 'rhythm', sec: 'school' } });
   await expect(page.locator('.book .bkles')).toHaveCount(4);
