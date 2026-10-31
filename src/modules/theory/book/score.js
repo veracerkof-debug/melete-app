@@ -5,7 +5,7 @@
 //           t: подпись снизу, top: подпись сверху }; без n — удар на одной линии (ключ 'perc')
 //   пауза { d, dot, rest: true }
 //   черта { bar: '|' | '||' | '|:' | ':|' | '|.' }
-// opts: { clef: 'treble'|'bass'|'alto'|'perc'|null, time: [4, 4], sig: число знаков (+ диезы, − бемоли), w, unit, from }
+// opts: { clef: 'treble'|'bass'|'alto'|'perc'|null, line: одна линия без ключа (ячейки ритма), up: штили вверх, time: [4, 4], sig: число знаков (+ диезы, − бемоли), w, unit, from }
 // Ширина нот пропорциональна длительности. Без DOM.
 import { NAT } from './engine.js';
 
@@ -30,10 +30,10 @@ const MID = { treble: 34, bass: 22, alto: 28, tenor: 26, perc: 34 };
 const SIG_SH = [38, 35, 39, 36, 33, 37, 34], SIG_FL = [34, 37, 33, 36, 32, 35, 31];
 const DI = (n, m) => (Math.round((m - NAT[n.l] - n.a) / 12) - 1) * 7 + n.l;
 
-export function scoreSVG(items, { clef = 'treble', time = null, sig = 0, w = 0, unit = 26, label = 'Notes' } = {}) {
-  const mid = MID[clef] || 34, top = 30;
+export function scoreSVG(items, { clef = 'treble', line = false, up = false, time = null, sig = 0, w = 0, unit = 26, label = 'Notes' } = {}) {
+  const mid = MID[clef] || 34, top = 30, pc = clef === 'perc' || line;
   const y = (d) => top + 2 * SP + (mid - d) * (SP / 2);
-  const lines = clef === 'perc' ? [0] : [-4, -2, 0, 2, 4];
+  const lines = pc ? [0] : [-4, -2, 0, 2, 4];
   // разметка по x
   let x = 8;
   const head = [];
@@ -82,13 +82,13 @@ export function scoreSVG(items, { clef = 'treble', time = null, sig = 0, w = 0, 
   const stemDir = {};
   for (const [, idx] of Object.entries(groups)) {
     const avg = idx.reduce((a, i) => a + (pos[i].it.n ? DI(pos[i].it.n, pos[i].it.m) : mid), 0) / idx.length;
-    idx.forEach((i) => { stemDir[i] = avg < mid ? 1 : -1; });
+    idx.forEach((i) => { stemDir[i] = up || avg < mid ? 1 : -1; });
   }
   const stemEnds = {};
   pos.forEach((p, i) => {
     const it = p.it;
     if (it.bar) {
-      const yt = y(mid + (clef === 'perc' ? 2 : 4)), yb = y(mid - (clef === 'perc' ? 2 : 4));
+      const yt = y(mid + (pc ? 2 : 4)), yb = y(mid - (pc ? 2 : 4));
       if (it.bar === '|') s += '<line class="bar" x1="' + p.x + '" x2="' + p.x + '" y1="' + yt + '" y2="' + yb + '"/>';
       else {
         const thick = it.bar === '|.' || it.bar === '|:' || it.bar === ':|';
@@ -109,21 +109,21 @@ export function scoreSVG(items, { clef = 'treble', time = null, sig = 0, w = 0, 
     }
     const d = it.n ? DI(it.n, it.m) : mid, yy = y(d), sc = it.grace ? 0.65 : 1;
     // добавочные линии
-    if (clef !== 'perc') {
+    if (!pc) {
       for (let L = mid + 6; L <= d; L += 2) s += '<line class="ldg" x1="' + (p.x - 4) + '" x2="' + (p.x + 15) + '" y1="' + y(L) + '" y2="' + y(L) + '"/>';
       for (let L = mid - 6; L >= d; L -= 2) s += '<line class="ldg" x1="' + (p.x - 4) + '" x2="' + (p.x + 15) + '" y1="' + y(L) + '" y2="' + y(L) + '"/>';
     }
     if (it.n && it.n.a && !it.noAcc) s += txt(ACCG[it.n.a], p.x - 12, yy, 'smf');
     if (it.n && it.n.a === 0 && it.natural) s += txt(G.nat, p.x - 11, yy, 'smf');
     if (it.chord && p.head) { const prevD = p.head.it.n ? DI(p.head.it.n, p.head.it.m) : mid; const prev = pos[i - 1]; const pd = prev && prev.it.n ? DI(prev.it.n, prev.it.m) : -99; if (Math.abs(d - pd) === 1 && !prev.shifted) { p.x += 11; p.shifted = true; } void prevD; }
-    const hg = !it.n && clef === 'perc' ? (it.d === 'w' || it.d === 'h' ? G.hH : G.hB) : it.d === 'w' ? G.hW : it.d === 'h' ? G.hH : G.hB;
+    const hg = !it.n && pc ? (it.d === 'w' || it.d === 'h' ? G.hH : G.hB) : it.d === 'w' ? G.hW : it.d === 'h' ? G.hH : G.hB;
     s += txt(hg, p.x, yy, 'smf nh' + (it.c ? ' ' + it.c : ''), it.grace ? FS * sc : 0);
     if (it.dot) s += txt(G.dot, p.x + 15, d % 2 === 0 ? yy - SP / 2 : yy, 'smf');
     // столбец аккорда: ноты с chord после этой; штиль один — от крайней ноты
     const col = [p, ...pos.slice(i + 1).filter((z, k, arr) => z.it.chord && arr.slice(0, k).every((w) => w.it.chord))];
     if (it.chord) { /* штиль и украшения — у первой ноты столбца */ } else if (it.d !== 'w') {
       const ds = col.map((z) => (z.it.n ? DI(z.it.n, z.it.m) : mid)), lo = Math.min(...ds), hi = Math.max(...ds);
-      const dir0 = stemDir[i] || (it.grace ? 1 : (lo + hi) / 2 < mid ? 1 : -1);
+      const dir0 = stemDir[i] || (it.grace || up ? 1 : (lo + hi) / 2 < mid ? 1 : -1);
       const len = (it.grace ? 2.6 : 3.5) * SP, sx = dir0 > 0 ? p.x + 11.6 * sc : p.x + 0.6, dir = dir0;
       const yy0 = dir > 0 ? y(lo) : y(hi), yy1 = dir > 0 ? y(hi) : y(lo);
       const ye = dir > 0 ? yy1 - len : yy1 + len;
