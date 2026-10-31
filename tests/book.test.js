@@ -121,3 +121,19 @@ describe('учебник: произведения и пути', () => {
   });
 });
 
+describe('учебник: простые версии глав (средний уровень)', () => {
+  for (const [code, L] of Object.entries(LANGS)) {
+    it(code + ': те же подзаголовки и схемы, ссылки на термины существуют', () => {
+      expect(Object.keys(L.CHM).sort(), code).toEqual(Object.keys(ru.CHM).sort());
+      for (const [id, h] of Object.entries(L.CHM)) {
+        const c = L.CH.find((x) => x.id === id); expect(c, id).toBeTruthy();
+        const h3 = (x) => (x.match(/<h3>/g) || []).length, labs = (x) => [...x.matchAll(/\{\{lab:([a-z0-9]+)\}\}/g)].map((m) => m[1]);
+        expect(h3(h), code + ' ' + id + ' подзаголовки').toBe(h3(c.h));
+        // схемы — те же и в тех же кусках текста (уроки делят главу по подзаголовкам)
+        expect(h.split('<h3>').map(labs), code + ' ' + id + ' схемы').toEqual(c.h.split('<h3>').map(labs));
+        for (const m of h.matchAll(/\[\[([a-zA-Z0-9]+)\|/g)) expect(L.TERMS[m[1]], code + ' ' + id + ' термин ' + m[1]).toBeTruthy();
+      }
+    });
+  }
+});
+

@@ -5,7 +5,7 @@
 // Состояние: глава — в настройках модуля (th.book), схемы — в памяти до закрытия окна.
 import { createLabs } from './labs.js';
 import { stopSing } from './labs5.js';
-import { LESSONS, PATHS, SEC_PATHS, lessonById, INSTS } from './lessons.js';
+import { LESSONS, PATHS, SEC_PATHS, LEVELS, LEVEL_PATHS, lessonLevel, lessonById, INSTS } from './lessons.js';
 import { createSound, setLabels, esc } from './draw.js';
 import './book.css';
 // Шрифт нот (SMuFL) — файл проекта alphaTab, без сети; грузится один раз при открытии учебника
@@ -28,10 +28,12 @@ export const PARTS = [
   ['practice', 'ref'],
   ['slash', 'melmin'],
   ['play'],
+  Array.from({ length: 24 }, (_, i) => 'f' + (i + 1)),
 ];
 // Два раздела учебника (решение автора 30.10.2026): академическая теория (программа музыкальной школы) и джазовая;
 // «Практика и справка» — общая, в конце обоих
-export const SECTIONS = { school: [0, 1, 7, 5], jazz: [6, 2, 3, 4, 5] };
+// «Первые шаги» (first) — книга новичка: короткие главы-уроки простым языком (решение автора 31.10.2026)
+export const SECTIONS = { first: [8], school: [0, 1, 7, 5], jazz: [6, 2, 3, 4, 5] };
 const SECS = Object.keys(SECTIONS);
 // Главы в порядке частей (все разделы)
 export const ordered = (L) => PARTS.flat().map((id) => L.CH.find((c) => c.id === id)).filter(Boolean);
@@ -67,16 +69,28 @@ export function createBook(ctx, L, { save }) {
   const states = new Map();
   const all = ordered(L), byId = (id) => all.find((c) => c.id === id);
   // раздел: сохранённый; открыта глава только другого раздела (ссылка из «Теории», термин) — её раздел
-  const curSec = () => { const b = ctx.store.all().book || {}, sec = SECTIONS[b.sec] ? b.sec : 'school'; return b.ch ? sectionOf(b.ch, sec) : sec; };
+  // Уровень учебника: свой (переключатель вверху) или из профиля; новичку — «Первые шаги», остальным — оба раздела
+  const lvl = () => { const b = ctx.store.all().book || {}, pr = ctx.profile; return LEVELS.includes(b.lvl) ? b.lvl : pr && LEVELS.includes(pr.level) ? pr.level : 'amateur'; };
+  const lvlI = () => LEVELS.indexOf(lvl());
+  const secsShown = () => (lvl() === 'beginner' ? ['first'] : ['school', 'jazz']);
+  const curSec = () => { const b = ctx.store.all().book || {}, sh = secsShown(), sec = sh.includes(b.sec) ? b.sec : sh[0]; return b.ch ? sectionOf(b.ch, sec) : sec; };
+  const PATH_LVL = { first: 0, start: 1, mid: 1, jazz: 2, pro: 3 };
+  // пути раздела по уровню: свои — первыми, выше уровня больше чем на ступень — не показываются
+  const pathsFor = (sec) => { const own = LEVEL_PATHS[lvl()] || []; return SEC_PATHS[sec].filter((x) => PATH_LVL[x] <= lvlI() + 1).sort((a, b) => (own.includes(b) ? 1 : 0) - (own.includes(a) ? 1 : 0)); };
+  const lvlSeg = () => '<div class="bklvl" role="group" aria-label="' + T('bk.lvl') + '"><span>' + T('bk.lvl') + '</span>' + LEVELS.map((k) => '<button data-blvl="' + k + '" aria-pressed="' + (k === lvl()) + '"' + (k === lvl() ? ' class="on"' : '') + '>' + T('bk.lvl.' + k) + '</button>').join('') + '</div>';
   // уроки: инструмент (p пианино, g гитара, b бас), пройденные уроки, страница «Начальный путь»
   const BS = () => (ctx.store.all().book ||= {});
-  const curInst = () => (INSTS.includes(BS().inst) ? BS().inst : 'p');
+  // инструмент упражнений: свой или первый подходящий из профиля
+  const PROF_INST = { piano: 'p', guitar: 'g', egtr: 'g', uke: 'g', mando: 'g', banjo: 'g', bass: 'b', dbass: 'b' };
+  const curInst = () => { if (INSTS.includes(BS().inst)) return BS().inst; const pr = ctx.profile, x = pr && (pr.instruments || []).find((i) => PROF_INST[i]); return x ? PROF_INST[x] : 'p'; };
   const doneMap = () => (BS().done ||= {});
   // вид: «Уроки» (по умолчанию — пути, главы уроками с упражнениями) или «Учебник» (оглавление и сплошной текст главы)
   const lesMode = () => BS().mode !== 'book';
   const modeSeg = (cls = '') => '<div class="seg bkmode ' + cls + '" role="group" aria-label="' + T('bk.mode') + '">' + [['les', T('bk.mode.les')], ['book', T('bk.mode.book')]].map(([k, l]) => '<button data-bmode="' + k + '" aria-pressed="' + ((k === 'les') === lesMode()) + '"' + ((k === 'les') === lesMode() ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div>';
   const lsTitle = (id) => T('ls.' + id);
   const instSeg = () => '<div class="seg bklinst" role="group" aria-label="' + T('lx.inst') + '">' + INSTS.map((k) => '<button data-li="' + k + '" aria-pressed="' + (k === curInst()) + '"' + (k === curInst() ? ' class="on"' : '') + '>' + T('lx.i.' + k) + '</button>').join('') + '</div>';
+  // текст главы по уровню: среднему — простая версия (CHM: те же подзаголовки и схемы), если она есть
+  const textOf = (c) => (lvl() === 'amateur' && L.CHM && L.CHM[c.id] ? { ...c, h: L.CHM[c.id] } : c);
   // главы раздела по порядку; номер главы и «назад/дальше» — внутри раздела
   const secChs = (sec) => SECTIONS[sec].flatMap((p) => PARTS[p]).map(byId).filter(Boolean);
   const num = (id, sec = curSec()) => secChs(sec).findIndex((c) => c.id === id) + 1;
@@ -85,11 +99,11 @@ export function createBook(ctx, L, { save }) {
   function tocHTML() {
     const sec = curSec(), found = q.trim() ? Object.entries(L.TERMS).filter(([, [a, b]]) => (a + ' ' + b).toLowerCase().includes(q.trim().toLowerCase())).slice(0, 12) : null;
     return '<div class="bhero"><div class="bhicon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5v13c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg></div>' +
-      '<h2>' + T('bk.title') + '</h2><p>' + T('bk.lead') + '</p>' +
+      '<h2>' + T('bk.title') + '</h2><p>' + T(lvl() === 'beginner' ? 'bk.lead.first' : 'bk.lead') + '</p>' + lvlSeg() +
       '<input class="bsearch" data-bq value="' + esc(q) + '" placeholder="' + T('bk.find') + '" aria-label="' + T('bk.find') + '"></div>' +
       (found ? '<div class="bfound">' + (found.length ? found.map(([id, [a, b]]) => '<button class="bfrow" data-term="' + id + '"><b>' + a + '</b><span>' + b + '</span></button>').join('') : '<p class="hint">' + T('bk.none') + '</p>') + '</div>' : '') +
-      '<div class="bsecs" role="tablist" aria-label="' + T('bk.secs') + '">' + SECS.map((k) => '<button class="bsec ' + k + (k === sec ? ' on' : '') + '" data-bsec="' + k + '" role="tab" aria-selected="' + (k === sec) + '"><b>' + T('bk.sec.' + k) + '</b><span>' + T('bk.sub.' + k) + '</span></button>').join('') + '</div>' +
-      modeSeg() + (lesMode() ? '<div class="bpaths">' + SEC_PATHS[sec].map(pathCard).join('') + '</div>' : '') +
+      (secsShown().length < 2 ? '' : '<div class="bsecs" role="tablist" aria-label="' + T('bk.secs') + '">' + secsShown().map((k) => '<button class="bsec ' + k + (k === sec ? ' on' : '') + '" data-bsec="' + k + '" role="tab" aria-selected="' + (k === sec) + '"><b>' + T('bk.sec.' + k) + '</b><span>' + T('bk.sub.' + k) + '</span></button>').join('') + '</div>') +
+      modeSeg() + (lesMode() ? '<div class="bpaths">' + pathsFor(sec).map(pathCard).join('') + '</div>' : '') +
       SECTIONS[sec].map((p, i) => { const ids = PARTS[p]; return !ids.some(byId) ? '' : '<section class="bpart"><h3><span>' + (i + 1) + '</span>' + T('bk.part' + p) + '</h3><div class="bcards">' +
         ids.map((id) => { const c = byId(id); return c ? '<button class="bcard p' + p + '" data-bch="' + id + '"><i class="num">' + num(id) + '</i><b>' + c.t + '</b><span>' + c.s + '</span></button>' : ''; }).join('') + '</div></section>'; }).join('');
   }
@@ -97,14 +111,17 @@ export function createBook(ctx, L, { save }) {
     const sec = curSec(), list = secChs(sec), c = byId(id), i = num(id), prev = list[i - 2], next = list[i];
     return '<div class="bkhbar"><button class="bback" data-btoc aria-label="' + T('bk.toc') + '">‹ ' + T('bk.toc') + '</button><span class="num">' + T('bk.sec.' + sec) + ' · ' + i + ' ' + T('bk.of', { n: list.length }) + '</span></div>' +
       '<header class="bkhead"><small>' + T('bk.ch', { n: i }) + '</small><h2>' + c.t + '</h2><p>' + c.s + '</p></header>' + (LESSONS[c.id] ? modeSeg('sm') : '') +
-      (lesMode() ? lessonNav(c) : '') + '<article class="bktext">' + (LESSONS[c.id] && lesMode() ? lessonsHTML(c) : chapterHTML(c, L.TERMS)) + '</article>' + srcHTML(c) +
+      (lesMode() ? lessonNav(c) : '') + '<article class="bktext">' + (LESSONS[c.id] && lesMode() ? lessonsHTML(c) : chapterHTML(textOf(c), L.TERMS)) + '</article>' + srcHTML(c) +
       '<nav class="bpn">' + (prev ? '<button data-bch="' + prev.id + '">‹ ' + prev.t + '</button>' : '<span></span>') + (next ? '<button data-bch="' + next.id + '">' + next.t + ' ›</button>' : '<span></span>') + '</nav>';
   }
   // Глава уроками: куски текста (по подзаголовкам) собираются в уроки, после каждого — упражнения и «Урок пройден»
   function lessonsHTML(c) {
-    const html = chapterHTML(c, L.TERMS), segs = html.split(/(?=<h3>)/);
+    const html = chapterHTML(textOf(c), L.TERMS), segs = html.split(/(?=<h3>)/);
     if (/^\s*<h3>/.test(html)) segs.unshift('');
-    return LESSONS[c.id].map((l, i) => '<section class="bkles" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b>' + (doneMap()[l.id] ? '<i class="bkldok" aria-label="' + T('lx.isDone') + '">✓</i>' : '') + '</div>' +
+    const opened = BS().opened || {};
+    return LESSONS[c.id].map((l, i) => lessonLevel(l.id) > lvlI() && !opened[l.id] && !doneMap()[l.id]
+      ? '<section class="bkles locked" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b></div><button class="bklopen" data-lopen="' + l.id + '">' + T('bk.lvlMore', { l: T('bk.lvl.' + LEVELS[lessonLevel(l.id)]) }) + '</button></section>'
+      : '<section class="bkles" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b>' + (doneMap()[l.id] ? '<i class="bkldok" aria-label="' + T('lx.isDone') + '">✓</i>' : '') + '</div>' +
       l.secs.map((k) => segs[k] || '').join('') + exHTML(l) + '</section>').join('');
   }
   function exHTML(l) {
@@ -113,6 +130,8 @@ export function createBook(ctx, L, { save }) {
     return '<div class="bklex"><div class="bklexh"><b>' + T('lx.title') + '</b>' + instSeg() + '</div>' +
       (has('lx.' + l.id + '.' + inst) ? '<div class="bklext">' + T('lx.' + l.id + '.' + inst) + '</div>' : '') + checks +
       (has('lx.' + l.id + '.t') ? '<div class="bklphone"><b>' + T('lx.phone') + '</b><div>' + T('lx.' + l.id + '.t') + '</div></div>' : '') +
+      // без учителя: то же другими словами и частые ошибки — по касанию
+      ['easy', 'fix'].map((k) => (has('lx.' + l.id + '.' + k) ? '<details class="bkhelp ' + k + '"><summary>' + T('lx.' + k) + '</summary><div>' + T('lx.' + l.id + '.' + k) + '</div></details>' : '')).join('') +
       '<button class="bkldone' + (done ? ' on' : '') + '" data-ldone="' + l.id + '" aria-pressed="' + done + '">' + (done ? '✓ ' + T('lx.isDone') : T('lx.markDone')) + '</button></div>';
   }
   // Полоса уроков главы под заголовком: касание — к уроку
@@ -123,7 +142,7 @@ export function createBook(ctx, L, { save }) {
   const pathCard = (id) => '<button class="bpath ' + id + '" data-bpath="' + id + '"><span class="bpk">' + T('lp.' + id + '.kicker') + '</span><b>' + T('lp.' + id + '.title') + '</b><span>' + T('lp.' + id + '.sub') + '</span>' +
     '<span class="bpbar"><i style="width:' + Math.round((pathDone(id) / PATHS[id].length) * 100) + '%"></i></span><small>' + T('lp.prog', { d: pathDone(id), n: PATHS[id].length }) + '</small></button>';
   function pathHTML(id) {
-    const P = PATHS[id], next = pathNext(id), sec = SEC_PATHS.jazz.includes(id) ? 'jazz' : 'school';
+    const P = PATHS[id], next = pathNext(id), sec = Object.keys(SEC_PATHS).find((k) => SEC_PATHS[k].includes(id)) || 'school';
     return '<div class="bkhbar"><button class="bback" data-btoc aria-label="' + T('bk.toc') + '">‹ ' + T('bk.toc') + '</button><span class="num">' + T('lp.prog', { d: pathDone(id), n: P.length }) + '</span></div>' +
       '<header class="bkhead"><small>' + T('bk.sec.' + sec) + '</small><h2>' + T('lp.' + id + '.title') + '</h2><p>' + T('lp.' + id + '.lead') + '</p></header>' +
       '<div class="bklexh"><b>' + T('lx.inst') + '</b>' + instSeg() + '</div>' +
@@ -152,7 +171,7 @@ export function createBook(ctx, L, { save }) {
   }
   function open(ch, term = null, lesson = null) { const b = BS(), sec = ch ? sectionOf(ch, curSec()) : curSec(); Object.assign(b, { ch, sec, view: null }); jumpTerm = term; jumpLesson = lesson; toTop = true; snd.stop(); stopSing(); save(); }
   function setSec(sec) { Object.assign(BS(), { ch: null, sec, view: null }); snd.stop(); stopSing(); save(); }
-  function openPath(id) { Object.assign(BS(), { ch: null, sec: SEC_PATHS.jazz.includes(id) ? 'jazz' : 'school', view: 'path', path: id }); toTop = true; snd.stop(); stopSing(); save(); }
+  function openPath(id) { Object.assign(BS(), { ch: null, sec: Object.keys(SEC_PATHS).find((k) => SEC_PATHS[k].includes(id)) || 'school', view: 'path', path: id }); toTop = true; snd.stop(); stopSing(); save(); }
   function goLesson(id) { const l = lessonById(id); if (l) open(l.ch, null, id); }
 
   return {
@@ -174,6 +193,8 @@ export function createBook(ctx, L, { save }) {
         const bp = t.closest('[data-bpath]'); if (bp) { openPath(PATHS[bp.dataset.bpath] ? bp.dataset.bpath : 'start'); return; }
         const lg = t.closest('[data-lgo]'); if (lg) { goLesson(lg.dataset.lgo); return; }
         const lj = t.closest('[data-ljump]'); if (lj) { const x = box.querySelector('#les-' + lj.dataset.ljump); if (x) x.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+        const bl = t.closest('[data-blvl]'); if (bl) { Object.assign(BS(), { lvl: bl.dataset.blvl, ch: null, view: null, sec: null }); snd.stop(); stopSing(); save(); return; }
+        const lo = t.closest('[data-lopen]'); if (lo) { (BS().opened ||= {})[lo.dataset.lopen] = 1; save(); return; }
         const bm = t.closest('[data-bmode]'); if (bm) { BS().mode = bm.dataset.bmode; snd.stop(); stopSing(); save(); return; }
         const li = t.closest('[data-li]'); if (li) { BS().inst = li.dataset.li; snd.stop(); stopSing(); save(); return; }
         const ld = t.closest('[data-ldone]'); if (ld) { const d = doneMap(), id = ld.dataset.ldone; if (d[id]) delete d[id]; else d[id] = 1; stopSing(); save(); return; }

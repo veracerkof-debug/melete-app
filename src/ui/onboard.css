@@ -96,3 +96,14 @@
 .anbtns{display:flex;justify-content:flex-end;gap:12px;align-items:center}
 @keyframes anin{from{opacity:0;transform:translateY(16px)}}
 .anmain .inp{width:100%;box-sizing:border-box;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--sep);background:var(--fill);color:var(--ink);font-size:17px}
+/* уровень: четыре карточки (решение автора 31.10.2026) */
+.oblv{gap:14px}
+.lvcards{display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
+.lvc{display:flex;flex-direction:column;gap:6px;text-align:left;padding:12px 14px;border-radius:16px;background:var(--cell);border:2px solid transparent;min-height:44px}
+.lvc.on{border-color:var(--tint);background:color-mix(in srgb,var(--tint) 8%,var(--cell))}
+.lvhd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.lvhd b{font-size:17px}.lvh{font-size:13px;color:var(--l2)}
+.lvt{font-size:13px;color:var(--l2);line-height:1.35}
+.lvc .whtools{justify-content:flex-start;min-height:0;gap:5px;max-width:none}
+.lvc .whtool{width:26px;height:26px;border-radius:8px;animation:none}
+.lvc .whtool svg{width:15px;height:15px}

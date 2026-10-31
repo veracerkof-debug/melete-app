@@ -398,3 +398,18 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 /* вид: «Уроки» или «Учебник» */
 .bkmode{margin:2px 0 8px}
 .bkmode.sm{max-width:260px;margin:0 0 10px}
+/* уровень учебника; уроки выше уровня — свёрнуты; «Проще» и «Если не получается» */
+.bklvl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 2px}
+.bklvl span{font-size:12px;color:var(--l2);margin-right:2px}
+.bklvl button{min-height:40px;padding:6px 12px;border-radius:20px;background:var(--fill);font-size:13px}
+.bklvl button.on{background:var(--tint);color:var(--on-tint);font-weight:600}
+.bkles.locked{opacity:.75}
+.bklopen{min-height:44px;width:100%;border-radius:12px;background:var(--fill);color:var(--tint-text);font-size:14px;margin-top:4px}
+.bkhelp{border-radius:12px;background:var(--fill);padding:0 12px}
+.bkhelp summary{min-height:44px;display:flex;align-items:center;font-weight:600;cursor:pointer;list-style:none}
+.bkhelp summary::-webkit-details-marker{display:none}
+.bkhelp summary::before{content:'›';display:inline-block;margin-right:8px;transition:transform .15s}
+.bkhelp[open] summary::before{transform:rotate(90deg)}
+.bkhelp>div{padding:0 0 12px;font-size:15px;line-height:1.5}
+.bkhelp.fix summary{color:var(--bk-D)}
+.bcard.p8{--pc:var(--bk-T)}

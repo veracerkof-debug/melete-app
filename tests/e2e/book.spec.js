@@ -27,7 +27,8 @@ test('учебник: оглавление, глава, схемы, термин
   await page.fill('.book [data-bq]', 'тритон');
   await expect(page.locator('.book .bfrow').first()).toBeVisible();
   await page.fill('.book [data-bq]', '');
-  // глава «Аккорды»: схемы нарисованы, кнопки отвечают
+  // глава «Аккорды» на уровне «Профи» (верхние структуры — урок профи; на среднем он свёрнут): схемы нарисованы, кнопки отвечают
+  await page.locator('.book .bklvl [data-blvl="pro"]').click();
   await page.locator('.book [data-bch="chords"]').click();
   await sleep(page, 400);
   await expect(page.locator('.book .bkhead h2')).toHaveText('Аккорды');
@@ -102,7 +103,7 @@ for (const [lang, title] of [['en', 'Intervals'], ['uz', 'Intervallar']]) {
 
 test('учебник: игра и тема — клаве, проверка расположения, детектив листа', async ({ page, melete, errors }) => {
   await melete.open();
-  await open(melete, page, 'book', { book: { ch: 'latin' } });
+  await open(melete, page, 'book', { book: { ch: 'latin', lvl: 'pro' } });
   await expect(page.locator('.book .bkhead h2')).toHaveText('Латина: клаве');
   await page.locator('.book [data-seg="mode"] [data-v="m"]').click();
   const cell = page.locator('.book .clrow button.rgc').nth(1);
@@ -112,7 +113,7 @@ test('учебник: игра и тема — клаве, проверка ра
   await expect(page.locator('.book .clres')).toHaveCount(2);
   await page.locator('.book .blab .bkplay').first().click();
   // аранжировка: звуки кладутся касанием клавиш, правила проверяются
-  await open(melete, page, 'book', { book: { ch: 'arr' } });
+  await open(melete, page, 'book', { book: { ch: 'arr', lvl: 'pro' } });
   const vc = page.locator('.book .blab').filter({ has: page.locator('.vkl') });
   await vc.locator('[data-a="clr"]').click();
   await expect(vc.locator('.vk')).toHaveCount(0);
@@ -120,7 +121,7 @@ test('учебник: игра и тема — клаве, проверка ра
   await vc.locator('[data-midi="58"]').click();
   expect(await vc.locator('.vk').count()).toBeGreaterThan(3);
   // тема: ответ в детективе листа
-  await open(melete, page, 'book', { book: { ch: 'tune' } });
+  await open(melete, page, 'book', { book: { ch: 'tune', lvl: 'pro' } });
   await page.locator('.book [data-a="a:0:e"]').click();
   await expect(page.locator('.book .dtc.ok')).toHaveCount(1);
   void errors;
@@ -136,8 +137,9 @@ test('учебник: уроки — начальный путь, инструм
   await expect(page.locator('.book .bkhead h2')).toHaveText('Игра на инструменте');
   await expect(page.locator('.book .bkles')).toHaveCount(6);
   const ex = page.locator('.book .bkles').first().locator('.bklex');
-  await expect(ex.locator('.xn')).toHaveCount(5); // пианино: до–соль
-  await ex.locator('[data-li="g"]').click();
+  await ex.locator('[data-li="p"]').click(); // инструмент по умолчанию — из профиля (гитара); пианино
+  await expect(page.locator('.book .bkles').first().locator('.bklex .xn')).toHaveCount(5); // пианино: до–соль
+  await page.locator('.book .bkles').first().locator('[data-li="g"]').click();
   await expect(page.locator('.book .bkles').first().locator('.bklex .xn')).toHaveCount(6); // гитара: открытые струны
   await page.locator('.book .bkles').first().locator('[data-ldone]').click();
   await expect(page.locator('.book .bklnav button.ok')).toHaveCount(1);
@@ -169,3 +171,30 @@ test('учебник: вид «Уроки» по умолчанию, «Учеб�
   await expect(page.locator('.book .bkles')).toHaveCount(4);
   void errors;
 });
+
+test('учебник: уровни — новичку «Первые шаги», уроки выше уровня свёрнуты', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { profile: { name: 'A', instruments: ['piano'], level: 'beginner', priorHours: 0, createdAt: 1760000000000 } } });
+  await open(melete, page, 'book');
+  await expect(page.locator('.book .bklvl [data-blvl="beginner"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.book .bsecs')).toHaveCount(0);
+  await expect(page.locator('.book .bcard')).toHaveCount(24);
+  await page.locator('.book [data-bpath="first"]').click();
+  await page.locator('.book .bpgo').click();
+  await expect(page.locator('.book .bkhead h2')).toHaveText('Музыка из звуков');
+  await expect(page.locator('.book .bkhelp')).toHaveCount(2);
+  // средний: оба раздела; джазовые уроки свёрнуты, открываются по кнопке
+  await page.locator('.book [data-btoc]').click();
+  await page.locator('.book .bklvl [data-blvl="amateur"]').click();
+  await expect(page.locator('.book .bsecs .bsec')).toHaveCount(2);
+  await open(melete, page, 'book', { book: { ch: 'iivi', lvl: 'amateur' } });
+  await expect(page.locator('.book .bkles.locked')).toHaveCount(3);
+  await page.locator('.book [data-lopen]').first().click();
+  await expect(page.locator('.book .bkles.locked')).toHaveCount(2);
+  // текст главы по уровню: среднему — простая версия, продвинутому — полная
+  await open(melete, page, 'book', { book: { ch: 'iv', lvl: 'amateur', mode: 'book' } });
+  await expect(page.locator('.book .bktext h3', { hasText: 'Одинаковый звук — разные имена' })).toHaveCount(1);
+  await open(melete, page, 'book', { book: { ch: 'iv', lvl: 'advanced', mode: 'book' } });
+  await expect(page.locator('.book .bktext h3', { hasText: 'Одинаковый звук — разные имена' })).toHaveCount(0);
+  void errors;
+});
+

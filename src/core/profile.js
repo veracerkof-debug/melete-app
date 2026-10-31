@@ -17,8 +17,8 @@ export const levelByHours = (h) => (LEVEL_FROM.find(([min]) => (+h || 0) >= min)
 // Инструменты (модули) при регистрации — по уровню и инструментам (решение автора). Новичку — самое нужное,
 // остальное включается потом в «Настройки → Функции». all — id всех модулей; возвращает id включённых
 const BY_LEVEL = {
-  beginner: ['metro', 'tuner', 'notes', 'audio'],
-  amateur: ['metro', 'tuner', 'notes', 'audio', 'piano', 'drone', 'theory', 'timer', 'theremin'],
+  beginner: ['metro', 'tuner', 'notes', 'audio', 'book'], // учебник — по уровню (решение автора 31.10.2026)
+  amateur: ['metro', 'tuner', 'notes', 'audio', 'piano', 'drone', 'theory', 'book', 'timer', 'theremin'],
 };
 export function toolsFor(level, instruments = [], all = []) {
   const on = new Set(BY_LEVEL[level] || all); // продвинутым — всё; терменвокс — у всех, кроме новичков (решение автора)

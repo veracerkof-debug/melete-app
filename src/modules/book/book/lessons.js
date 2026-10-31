@@ -16,6 +16,31 @@ const sing = (kind) => ({ lab: 'sing', cfg: { kind, fixed: true } });
 const piece = (id) => ({ lab: 'piece', cfg: { id } }); // произведение (pieces.js): ноты, табы, проверка игры
 
 export const LESSONS = {
+  // «Первые шаги» — книга новичка (решение автора 31.10.2026): глава = один короткий урок простым языком
+  f1: [{ id: 'f1', secs: [0], ex: [play({ p: 'C3 C6', g: 'E2 E4', b: 'E1 G2' })] }],
+  f2: [{ id: 'f2', secs: [0], ex: [play({ p: 'C4 C#4 D4', g: 'E2 A2 D3 G3 B3 E4', b: 'E1 A1 D2 G2' })] }],
+  f3: [{ id: 'f3', secs: [0], ex: [] }],
+  f4: [{ id: 'f4', secs: [0], ex: [tool('tuner'), play({ p: 'A4', g: 'E2 A2 D3 G3 B3 E4', b: 'E1 A1 D2 G2' })] }],
+  f5: [{ id: 'f5', secs: [0], ex: [play({ p: 'C4 D4 E4', g: 'C3 D3 E3', b: 'C2 D2 E2' }), quiz('staff')] }],
+  f6: [{ id: 'f6', secs: [0], ex: [play({ p: 'C4 D4 E4 F4 G4', g: 'E4 F4 G4', b: 'E1 F1 G1' })] }],
+  f7: [{ id: 'f7', secs: [0], ex: [tool('metro', 60), tap('1010101010101010', 60)] }],
+  f8: [{ id: 'f8', secs: [0], ex: [tap('1000100010101010', 66)] }],
+  f9: [{ id: 'f9', secs: [0], ex: [piece('lightly')] }],
+  f10: [{ id: 'f10', secs: [0], ex: [tap('1010101010101010', 72), piece('jacques')] }],
+  f11: [{ id: 'f11', secs: [0], ex: [tap('1111101011111010', 66)] }],
+  f12: [{ id: 'f12', secs: [0], ex: [tap('1010001010100000', 72)] }],
+  f13: [{ id: 'f13', secs: [0], ex: [piece('ode')] }],
+  f14: [{ id: 'f14', secs: [0], ex: [play({ p: 'C4 E4 G4', g: 'C3 E3 G3', b: 'C2 E2 G2' }), chord({ p: 'C', g: 'C' }, 'pg')] }],
+  f15: [{ id: 'f15', secs: [0], ex: [chord({ p: 'C F G', g: 'Em A D' }, 'pg'), play({ b: 'E1 A1 D2' }, 'b')] }],
+  f16: [{ id: 'f16', secs: [0], ex: [tool('metro', 60), chord({ p: 'C G C G', g: 'A D A D' }, 'pg'), play({ b: 'A1 D2 A1 D2' }, 'b')] }],
+  f17: [{ id: 'f17', secs: [0], ex: [piece('saints')] }],
+  f18: [{ id: 'f18', secs: [0], ex: [quiz('triear'), chord({ p: 'C Cm', g: 'A Am' }, 'pg'), play({ b: 'A1 C2 E2 A1 C#2 E2' }, 'b')] }],
+  f19: [{ id: 'f19', secs: [0], ex: [play({ p: 'C4 D4 E4 F4 G4 A4 B4 C5', g: 'C3 D3 E3 F3 G3 A3 B3 C4', b: 'C2 D2 E2 F2 G2 A2 B2 C3' }), sing('deg')] }],
+  f20: [{ id: 'f20', secs: [0], ex: [play({ p: 'C4 C#4 D4 D#4 E4', g: 'E4 F4 F#4 G4 G#4', b: 'E1 F1 F#1 G1 G#1' })] }],
+  f21: [{ id: 'f21', secs: [0], ex: [tap('101010101010', 84, 2, 3), piece('amazing')] }],
+  f22: [{ id: 'f22', secs: [0], ex: [quiz('staff')] }],
+  f23: [{ id: 'f23', secs: [0], ex: [play({ p: 'A4 C5 D5 E5 G5', g: 'A2 C3 D3 E3 G3', b: 'A1 C2 D2 E2 G2' }), tool('metro', 80)] }],
+  f24: [{ id: 'f24', secs: [0], ex: [tool('metro', 80), tool('audio')] }],
   play: [
     { id: 'play1', secs: [0, 1, 2], ex: [tool('tuner'), play({ p: 'C4 D4 E4 F4 G4', g: 'E2 A2 D3 G3 B3 E4', b: 'E1 A1 D2 G2' })] },
     { id: 'play2', secs: [3], ex: [chord({ p: 'C F G C', g: 'A D E A' }, 'pg'), play({ b: 'A1 E2 D2 A2 E1 B1' }, 'b'), tool('metro', 60), piece('rising')] },
@@ -170,6 +195,7 @@ export const LESSONS = {
 // (грамота и гармония школы до конца, классика), jazz — «Джазовый путь» (от ii–V–I до игры «снаружи»), pro — «Мастерство»
 // (всё остальное: напряжения, расположения, реармонизация, аранжировка, формы, тема)
 export const PATHS = {
+  first: Array.from({ length: 24 }, (_, i) => 'f' + (i + 1)),
   start: ['play1', 'rhythm1', 'sound2', 'rhythm2', 'meter1', 'pitch1', 'mode1', 'chords1', 'play2', 'play3',
     'iv1', 'keys1', 'keys2', 'key1', 'mode3', 'play4', 'meter2', 'meter3', 'play5', 'play6'],
   mid: ['sound1', 'sound3', 'rhythm3', 'rhythm4', 'pitch2', 'mode2', 'keys3', 'melody1', 'melody2', 'perform1',
@@ -182,7 +208,13 @@ export const PATHS = {
 };
 export const PATH = PATHS.start;
 // какие пути показывать в разделе учебника
-export const SEC_PATHS = { school: ['start', 'mid'], jazz: ['jazz', 'pro'] };
+export const SEC_PATHS = { first: ['first'], school: ['start', 'mid'], jazz: ['jazz', 'pro'] };
+// Уровень учебника — как в профиле (beginner, amateur — «средний», advanced, pro); у урока — с какого уровня он открыт
+export const LEVELS = ['beginner', 'amateur', 'advanced', 'pro'];
+export const lessonLevel = (id) => (id[0] === 'f' && /^f\d+$/.test(id) ? 0 : PATHS.pro.includes(id) ? 3 : JAZZ_CH.has(lessonById(id) && lessonById(id).ch) || PATHS.jazz.includes(id) ? 2 : 1);
+const JAZZ_CH = new Set(['slash', 'melmin', 'iivi', 'ana', 'voice', 'hands', 'mod', 'reharm', 'centers', 'comp', 'latin', 'forms', 'arr', 'impro', 'lines', 'outside', 'trad', 'tune']);
+// Какие пути показывать на уровне (первый — главный)
+export const LEVEL_PATHS = { beginner: ['first'], amateur: ['mid', 'start'], advanced: ['jazz', 'mid'], pro: ['pro', 'jazz'] };
 
 export const lessonById = (id) => { for (const [ch, ls] of Object.entries(LESSONS)) { const i = ls.findIndex((l) => l.id === id); if (i >= 0) return { ...ls[i], ch, n: i + 1 }; } return null; };
 export const INSTS = ['p', 'g', 'b'];
