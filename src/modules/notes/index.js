@@ -274,12 +274,13 @@ async function openDaw(rec) {
     AT.api.renderScore(sc);
   } catch (e) { ctx.logErr(e); AT.state = 'error'; render(); ctx.ui.toast(ctx.t('dawFail')); }
 }
-// «В студию»: прочитанный проект сохраняется и открывается в студии (там — паттерны, дорожки, правка)
+// «В лупер» (до 30.10.2026 — «В студию»): прочитанный проект — партиями в свободную петлю лупера (первые такты)
 function toStudio() {
   if (!AT.proj) return;
-  ctx.projects.save(AT.proj);
+  const p = JSON.parse(JSON.stringify(AT.proj));
+  ctx.projects.save(p);
   ctx.ui.toast(ctx.t('dawOpened'));
-  if (ctx.openTool) ctx.openTool('studio');
+  ctx.openIn('looper', { inbox: { kind: 'proj', pid: p.id, temp: true } });
 }
 
 function restyle() {
@@ -465,7 +466,7 @@ function scoreView() {
       : '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>') +
     icb('data-x="tzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="tzoom" data-d="1"', I.plus, t('bigger'), 'sm') +
     '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button>' +
-    (daw && AT.proj && ctx.hasTool('studio') ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
+    (daw && AT.proj && ctx.hasTool('looper') ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
     (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('beat', AT.cur.name) + '</div>' : '') + '</div>';
 }
 

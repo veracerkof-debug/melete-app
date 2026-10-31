@@ -20,7 +20,7 @@ import { estimateLyricsSec, lineAt, lyricsText, toLrc } from '../../audio/lyrics
 import { stemsOf, notesOf, denoisedOf } from '../../core/jobs.js';
 import { estimateDenoiseSec } from '../../audio/denoise.js';
 import { estimateYmtSec } from '../../audio/ymt.js';
-import { projectFromStems, projectFromSong, isEmptyProject } from '../../music/project.js';
+import { projectFromSong, isEmptyProject } from '../../music/project.js';
 import { readMidiSong } from '../../music/daw.js';
 import { after, cancel } from '../../audio/clock.js';
 import { voice } from '../../audio/metronome.js';
@@ -390,7 +390,7 @@ function stemsSheet() {
     if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
     else if (set.length) {
       h += stemRowsHTML(tr, set) +
-        '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>' : '');
+        '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button>' + (ctx.hasTool('looper') ? '<button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>' : '');
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
     else if (jobs.pack && jobs.pack() && ctx.packs) h += ctx.packs.row(jobs.pack()); // модель — в пакете, ещё не скачана
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
@@ -408,7 +408,7 @@ function stemsSheet() {
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');
     else if (notes) h += '<button class="cell act" data-nlisten aria-pressed="' + !!LN + '"><span class="grow">' + ui.esc(t('notes.n', { n: notes.notes || 0 })) + (notes.score && notes.score.parts ? '<span class="bksub">' + ui.esc(notes.score.parts.map((p) => t('ymt.part.' + p.key)).join(' · ')) + '</span>' : '') + '</span><span class="val">' + ui.esc(t(LN ? 'notes.stop' : 'notes.listen')) + '</span></button>' +
-      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('studio') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + (jobs.notesSupported() ? '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>' : '');
+      '<button class="cell act" data-ntabs>' + ui.esc(t('notes.toTabs')) + '</button>' + (ctx.hasTool('looper') ? '<button class="cell act" data-nstudio>' + ui.esc(t('notes.toStudio')) + '</button>' : '') + (jobs.notesSupported() ? '<button class="cell act" data-ngo>' + ui.esc(t('notes.redo')) + '</button>' : '');
     else if (!jobs.notesSupported()) h += '<div class="cellcol"><span class="l2">' + ui.esc(t('notes.pcOnly')) + '</span></div>'; // телефон: ноты снимает компьютер
     else if (jobs.notesPro && jobs.notesPro()) h += '<div class="cellcol"><span class="l2">' + ui.esc(t('notes.proHint')) + '</span></div>' +
       '<button class="cell act center b" data-ngo>' + ui.esc(t('notes.goPro', { t: fmtT(estimateYmtSec(tr.dur || 60)) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
@@ -468,9 +468,9 @@ function stemsSheet() {
       if (b.hasAttribute('data-shq')) { if (ctx.auto) ctx.auto.setHq(!hq()); sh.update(); return; }
       if (b.hasAttribute('data-sgo')) { setMode(m); jobs.separate(tr, m, { hq: hq() }).then((r) => { ctx.ui.toast(t(r.stems.length ? 'stems.saved' : 'stems.none')); }).catch(jobErr); sh.update(); return; }
       if (b.hasAttribute('data-ngo')) { jobs.notes(tr, { sens: st().nsens || 'normal', bends: !!st().nbends }).then((r) => { ctx.ui.toast(r.notes ? t('notes.saved', { n: r.notes }) : t('notes.none')); }).catch(jobErr); sh.update(); return; }
-      if (b.hasAttribute('data-sstudio')) {
-        const set = stemsFor(tr, m), p = projectFromStems(tr.name.replace(/\.[a-z0-9]+$/i, ''), set.map((r) => ({ part: r.stem.part, name: t('part.' + r.stem.part), fileId: r.id, dur: r.dur })), { songId: (tr.songs || [])[0] || null, bpm: (tr.ana && tr.ana.bpm) || 90 });
-        ctx.projects.save(p); ctx.ui.toast(t('job.studioMade')); return;
+      if (b.hasAttribute('data-sstudio')) { // «В лупер»: дорожки — слоями петли с первой сильной доли, длина — по темпу записи
+        const set = stemsFor(tr, m), a = tr.ana || {};
+        sh.close(); ctx.openIn('looper', { inbox: { kind: 'stems', ids: set.map((r) => r.id), bpm: a.bpm || 0, off: (a.downbeats && a.downbeats[0]) || 0 } }); return;
       }
       const notes = notesOf(ctx.files, tr.id);
       if (!notes) return;
@@ -484,7 +484,7 @@ function stemsSheet() {
           const p = projectFromSong(song);
           if (isEmptyProject(p)) { ctx.ui.toast(t('notes.none')); return; }
           if (notes.score && notes.score.inst) p.tracks.forEach((x) => { if (x.kind === 'notes') x.inst = notes.score.inst; }); // звук по характеру нот (долгие — пэд, низкие — бас)
-          ctx.projects.save(p); ctx.ui.toast(t('job.studioMade'));
+          ctx.projects.save(p); sh.close(); ctx.openIn('looper', { inbox: { kind: 'proj', pid: p.id, temp: true } }); // партиями в лупер
         } catch (err) { jobErr(err); }
       }
     });

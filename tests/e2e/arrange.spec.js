@@ -23,7 +23,7 @@ test('правка вкладок: календарь в инструменты 
   const lib = await page.locator('.tab[data-tab="library"]').boundingBox();
   await page.mouse.move(c.x + 30, c.y + 30); await page.mouse.down(); await page.mouse.move(c.x + 50, c.y + 50, { steps: 4 });
   await page.mouse.move(lib.x + 5, lib.y + lib.height / 2, { steps: 12 }); await page.mouse.up(); await page.waitForTimeout(500);
-  expect(await tabs(page)).toBe('home,calendar,library,tools,studio');
+  expect(await tabs(page)).toBe('home,calendar,library,tools');
   // «+» у метронома — вкладкой; «−» — обратно
   await page.locator('.tgrid [data-open-tool="metro"] .arrb').click({ force: true }); await page.waitForTimeout(400);
   expect(await tabs(page)).toContain('metro');

@@ -398,7 +398,7 @@ export function createLive(env) {
   function shareSheet() {
     const { ui } = C(), p = L.part, name = (L.rec && L.rec.name) || t('live.title');
     ui.sheet(() => ui.snav(t('live.export')) + '<div class="group"><button class="cell act" data-k="xml">MusicXML</button><button class="cell act" data-k="mid">MIDI</button>' +
-      (C().hasTool('studio') ? '<button class="cell act" data-k="studio">' + esc(t('toStudio')) + '</button>' : '') + '</div><p class="ftr">' + esc(t('live.exportFtr')) + '</p>',
+      (C().hasTool('looper') ? '<button class="cell act" data-k="studio">' + esc(t('toStudio')) + '</button>' : '') + '</div><p class="ftr">' + esc(t('live.exportFtr')) + '</p>',
     (el, sh) => el.addEventListener('click', async (e) => {
       const k = e.target.closest('[data-k]');
       if (!k) return;
@@ -406,7 +406,7 @@ export function createLive(env) {
       const fn = name.replace(/[\\/:*?"<>|]/g, '-');
       if (k.dataset.k === 'xml') C().sendFile(new TextEncoder().encode(xml()), fn + '.musicxml', fn, 'application/vnd.recordare.musicxml+xml');
       else if (k.dataset.k === 'mid') C().sendFile(writeMidi(partEvents(p), { name: fn }), fn + '.mid', fn, 'audio/midi');
-      else { const pj = projectFromSong(partSong(p, name)); C().projects.save(pj); C().ui.toast(t('dawOpened')); C().openTool('studio'); }
+      else { const pj = projectFromSong(partSong(p, name)); C().projects.save(pj); C().ui.toast(t('dawOpened')); C().openIn('looper', { inbox: { kind: 'proj', pid: pj.id, temp: true } }); } // в лупер: партией в свободную петлю
     }));
   }
 

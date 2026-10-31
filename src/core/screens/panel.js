@@ -49,7 +49,7 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
-import { pcOf, pair, syncNow, forgetPc } from '../sync.js';
+import { pcOf, pair, syncNow, forgetPc, PORT } from '../sync.js';
 import { setlistsOf } from '../guest.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
@@ -381,7 +381,14 @@ function linkHTML(app) {
 
 // Связь с компьютером (src/core/sync.js): на компьютере — включить и показать адрес с кодом, на телефоне — ввести их
 // и синхронизировать по кнопке. Ход синхронизации на телефоне — строкой под кнопкой
-let syncMsg = '', syncBusy = false;
+let syncMsg = '', syncBusy = false, syncAddr = '';
+// адрес компьютера: порт виден, если он не тот, что телефон подставит сам (у DEV и обычной версии порты разные)
+const hostPort = (st) => (st.port && st.port !== PORT ? ':' + st.port : '');
+// «Компьютер забыл этот телефон»: старый ключ не поможет — сразу форма подключения с прежним адресом, нужен только код
+function onSyncErr(e) {
+  if (e && e.reason === 'key') { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); } }
+  return syncErr(e);
+}
 const ago = (ts) => { if (!ts) return t('sy.never'); const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('sy.just') : m < 60 ? t('sy.min', { n: m }) : new Date(ts).toLocaleString(); };
 function syncHTML(app) {
   const S = app.syncSrv;
@@ -392,12 +399,12 @@ function syncHTML(app) {
         '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b></div>' : '') +
       peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
       '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
-      '</div><p class="ftr">' + t('sy.pcHint') + '</p>';
+      '</div><p class="ftr">' + (st.err === 'port' && !st.on ? '<b class="danger">' + t('sy.err.port2') + '</b><br>' : '') + t('sy.pcHint') + '</p>';
   }
   if (!Capacitor.isNativePlatform()) return '';
   const pc = pcOf();
   if (!pc) return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group">' +
-    '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
+    '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" value="' + esc(syncAddr) + '" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
     '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
@@ -474,7 +481,7 @@ function featHTML(app) {
       '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' : '') + '</div>' +
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
-    modules.filter((m) => !CHURCH_MODULES.includes(m.id) || st.church).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
     // определитель аккордов и гамм в «Теории»: в «Минимале» включён по умолчанию, в обычном виде — здесь
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
       t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
@@ -726,7 +733,7 @@ export function createPanel(app, onChange) {
         const setMsg = (s) => { syncMsg = s.stage === 'data' ? t('sy.step.data') : t('sy.step.' + s.stage, { n: s.done + 1, total: s.total, name: s.name || '' }); render(); };
         (app.syncCli ? app.syncCli.run(setMsg) : syncNow(app, setMsg))
           .then((r) => { syncMsg = t('sy.done', { songs: r.songs, sessions: r.sessions, up: r.up, down: r.down }); toast(syncMsg); onChange(); })
-          .catch((e) => { syncMsg = syncErr(e); toast(syncMsg); })
+          .catch((e) => { syncMsg = onSyncErr(e); toast(syncMsg); })
           .finally(() => { syncBusy = false; render(); });
         return;
       }

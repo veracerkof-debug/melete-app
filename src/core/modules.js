@@ -174,6 +174,8 @@ export function makeCtx(app, mod) {
     keyLabel: (m) => (isDesk() && app.midi ? keyLabel(m, app.midi.qwerty.base) : ''),
     hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
     // Другой инструмент внутри своего окна (студия: пианино, глайдер, терменвокс под плейлистом) → { resize, unmount } или null
+    // ctx другого модуля (его строки и хранилище): лупер открывает редактор партии студии (вид «Партии»)
+    ctxOf: (id) => { const m = moduleById(id); return m ? makeCtx(app, m) : null; },
     mountTool: (id, el, size = 'half') => { const m = moduleById(id); return m && isOn(app.store.state.settings, id) ? mountModule(app, m, el, size) : null; },
     // Игра любого инструмента (события midi.ev: on / mv / off / ped): fn(id, e); → отписка
     onPlay: (fn) => { (app.playTaps || (app.playTaps = new Set())).add(fn); return () => app.playTaps.delete(fn); },

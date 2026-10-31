@@ -65,7 +65,8 @@ export function newProject(patch = {}) {
   delete p.bars;
   return p;
 }
-export const secPerBeat = (p) => 60 / p.bpm;
+// spb — точная длина доли, с (петля лупера: такты ровно в длину петли, темп не обязательно целый)
+export const secPerBeat = (p) => (p.spb > 0 ? p.spb : 60 / p.bpm);
 // Длина куска содержимого в долях (у записи — не задана: 0)
 export const dataBeats = (p, d) => (d && d.bars ? d.bars * p.num : 0);
 export const clipsOf = (p, tr) => p.clips.filter((c) => c.tr === tr.id).sort((a, b) => a.at - b.at);
