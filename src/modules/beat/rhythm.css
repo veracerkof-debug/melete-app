@@ -119,3 +119,8 @@
   .ryhead .mlback{font-size:14px}
   .rybtns{gap:6px}
 }
+.ryhtop{display:flex;justify-content:center}
+.ryhtop .seg{width:100%;max-width:360px}
+.rybtns.one{grid-template-columns:1fr}
+.rywk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;padding:6px 0}
+.rywk b{display:block;font-size:20px}.rywk span{font-size:12px;color:var(--l2)}

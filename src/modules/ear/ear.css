@@ -98,3 +98,20 @@
 .tvhost .edash{background:var(--bg)}
 .eslot.cur{outline:2px solid var(--c,var(--tint));outline-offset:-2px}
 .ecard,.egrid,.eslots{touch-action:pan-y} /* смахивание влево-вправо по карточке «Ступеней» — вид вопроса; вертикаль остаётся прокрутке */
+/* режимы «Тренажёр / Уроки», неделя столбиками, точность по неделям */
+.ehtop{display:flex;justify-content:center}
+.ehtop .seg{width:100%;max-width:360px}
+.ewbars{display:flex;align-items:flex-end;gap:4px;height:44px;flex:none}
+.ewbars i{width:8px;border-radius:3px;height:calc(6px + var(--h) * 38px);background:color-mix(in srgb,#34C759 calc(var(--q) * 100%),var(--fill2,var(--sep)))}
+.ewk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;padding:6px 0}
+.ewk b{display:block;font-size:20px}.ewk span{font-size:12px;color:var(--l2)}
+/* малые окна занятия: только вопрос и ответы */
+@container (max-height:420px){
+  .eq2,.edash,.ntinfo{display:none}
+  .eplay{width:56px;height:56px;margin:0}
+  .ecard{padding:8px 10px;flex-direction:row;gap:10px}
+  .eq1{font-size:16px}
+  .egrid{grid-auto-rows:minmax(40px,1fr)}
+  .edgrid{grid-auto-rows:minmax(64px,1fr)}
+  .edn{margin-top:0;font-size:15px}.eds,.edic{display:none}
+}

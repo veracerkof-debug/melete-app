@@ -1,0 +1,45 @@
+/* Уроки тренажёров (src/ui/course.js) */
+.crsmode{flex:none}
+.crs{display:flex;flex-direction:column;gap:10px}
+.crsplace{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:color-mix(in srgb,var(--tint) 10%,var(--cell));box-shadow:inset 0 0 0 1px var(--sep)}
+.crsplace span{font-size:14px;color:var(--l2)}
+.crsrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.crsrow .btn{min-height:44px;font-size:15px;padding:6px 8px;line-height:1.2}
+.crshead{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--l2)}
+.crsbar{flex:1;height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.crsbar i{display:block;height:100%;background:var(--tint);border-radius:3px}
+.crsgo{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:14px 16px;border-radius:20px;background:var(--tint);color:var(--on-tint,#fff);min-height:64px}
+.crsgo small{font-size:13px;opacity:.85}
+.crsgo b{font-size:19px;letter-spacing:-.01em}
+.crsgo .crsch{font-size:13px;opacity:.85}
+.crsgo.all{background:var(--fill);color:var(--ink)}
+.crsgo:active,.crsl:active,.crsrev:active{transform:scale(.98)}
+.crsrev{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:var(--fill);min-height:48px}
+.crsrev span{font-size:14px;color:var(--l2)}
+.crschap{display:flex;flex-direction:column;gap:2px}
+.crschh{display:flex;align-items:center;gap:8px;margin:8px 2px 4px}
+.crschh b{flex:1;font-size:15px}
+.crsnum{width:24px;height:24px;border-radius:12px;background:var(--fill2,var(--fill));display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.crsbook svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.crsl{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border-radius:12px;text-align:left;background:none}
+.crsl.cur{background:color-mix(in srgb,var(--tint) 12%,transparent)}
+.crsmk{width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--fill);font-size:12px}
+.crsmk i{font-style:normal;color:var(--l2)}
+.crsl.ok .crsmk{background:#34C759}
+.crsmk svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.crst{flex:1;min-width:0;font-size:15px}
+.crsp{font-size:13px;color:var(--l2)}
+.crslb{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 2px 6px}
+.crslbn{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crslb .num{font-size:14px;color:var(--l2)}
+.crsx svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.crslbbar{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:2px;background:var(--fill)}
+.crslbbar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:calc(var(--p) * 100%);background:var(--tint);border-radius:2px;transition:width .3s}
+.crsres{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px;max-width:420px;margin:0 auto;width:100%}
+.crsres span{color:var(--l2);font-size:15px}
+.crsbig{font-size:clamp(48px,18cqmin,88px);font-weight:300;letter-spacing:-.03em;line-height:1}
+.crsres.ok .crsbig{color:#1f9d45}.crsres.bad .crsbig{color:var(--l2)}
+.crsres .crsbig svg{width:72px;height:72px;fill:none;stroke:#1f9d45;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.crsres .btn{min-height:46px;display:flex;align-items:center;justify-content:center;gap:6px}
+.crsres .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.crsres .link{min-height:40px}

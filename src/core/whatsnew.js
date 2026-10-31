@@ -42,6 +42,9 @@ export const NEWS = [
   { n: 13, d: '2026-10-31', ru: ['Новый инструмент «Ритм»: повторить услышанное, сыграть с листа, собрать диктант из длительностей, держать темп без щелчков, полиритмы. Касание, клавиша, MIDI или хлопок в микрофон; итог — в миллисекундах'],
     en: ['New tool “Rhythm”: play back what you hear, sight-read, build a dictation from note values, keep the tempo without clicks, polyrhythms. Tap, key, MIDI or a clap into the microphone; results in milliseconds'],
     uz: ['Yangi asbob «Ritm»: eshitilganini takrorlash, varaqdan chalish, cho‘zimlardan diktant yig‘ish, chertishsiz tempni ushlash, poliritmlar. Bosish, klavish, MIDI yoki mikrofonga qarsak; natija — millisoniyalarda'] },
+  { n: 14, d: '2026-10-31', ru: ['«Слух» и «Ритм»: режим «Уроки» — путь от простого к сложному (40 уроков слуха, 36 ритма), урок сдан на 80 %, пройденное само возвращается на повторение, проверка уровня за 2–3 минуты, ссылка на главу учебника', '«Слух»: счёт за неделю вместо цели на день, «Часто путается» и точность по неделям в статистике; открывается в окнах занятия'],
+    en: ['Ear and Rhythm: a Lessons mode — a path from simple to advanced (40 ear lessons, 36 rhythm), a lesson passes at 80%, earlier lessons come back for review, a 2–3 minute level test, a link to the textbook chapter', 'Ear: a weekly count instead of a daily goal, “Often mixed up” and accuracy by week in statistics; opens in session windows'],
+    uz: ['«Eshitish» va «Ritm»: «Darslar» rejimi — oddiydan murakkabga yo‘l (eshitishga 40 dars, ritmga 36), dars 80 % da o‘tiladi, o‘tilgani o‘zi takrorlashga qaytadi, 2–3 daqiqalik daraja tekshiruvi, darslik bobiga havola', '«Eshitish»: kunlik maqsad o‘rniga haftalik hisob, statistikada «Ko‘p adashtiriladi» va haftalar bo‘yicha aniqlik; mashg‘ulot oynalarida ochiladi'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

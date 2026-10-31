@@ -2,6 +2,7 @@
 // «Диктант» (услышать и собрать из длительностей), «Держи темп» (щелчки пропадают), «Полиритм».
 // Удары — касание площадки (несколько пальцев), любая клавиша, MIDI-клавиатура или хлопок в микрофон.
 // Логика — src/music/rhythm.js, хлопки — src/audio/claps.js, ноты — нотная строка учебника (score.js).
+// Два режима: «Тренажёр» (свои настройки) и «Уроки» (путь — ./course.js, сдача и повторение — src/music/course.js).
 import './rhythm.css';
 import meta from './meta.js';
 import {
@@ -13,6 +14,9 @@ import { perc } from '../book/book/perc.js';
 import { createClaps } from '../../audio/claps.js';
 import { after, cancel } from '../../audio/clock.js';
 import { swipe } from '../../ui/gestures.js';
+import { BEAT_COURSE, lessonConf, lessonN } from './course.js';
+import { normalizeProg, findLesson, chapterOf, nextLesson, dueReviews, recordLesson, recordReview, placementPlan, applyPlacement, PASS } from '../../music/course.js';
+import { courseHTML, lessonBarHTML, resultHTML, modeSeg } from '../../ui/course.js';
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 
 let fontOn = null;
@@ -46,7 +50,9 @@ const weekKeys = () => Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - i
 const R = { r: null, res: null, run: null, dict: [], sess: { c: 0, t: 0 }, src: 'tap', beat: null, flash: 0, calib: null };
 let host = null, ctx = null, size = 'full', claps = null, raf = 0, unswipe = null, onKey = null, onDown = null, onClick = null, untempo = null;
 
-const EC = () => normalizeConf(ctx.store.all());
+// Идущий урок, проверка уровня или повторение: { kind, id, q: [{ lid, rev, ch, conf, score, ans, skip }], i, done }
+let L = null;
+const EC = () => (L && L.cur) || normalizeConf(ctx.store.all());
 const D = () => normalizeData(ctx.data());
 const esc = (s) => ctx.ui.esc(s);
 const ac = () => { ctx.audio.unlock(); const b = ctx.audio.bus('theory'); return b ? b.context : null; };
@@ -208,7 +214,7 @@ function tap(src, ev) {
   } else t = heardAt(c, ev && ev.timeStamp) - (+e.lat[src] || 0) / 1000;
   if (t >= run.win[0] && t <= run.win[1]) run.taps.push(t);
 }
-const padIdle = () => { const d = EC().drill; return d !== 'dict' && d !== 'home'; };
+const padIdle = () => { const d = EC().drill; return d !== 'dict' && d !== 'home' && !(L && (R.res || L.done)); };
 
 function flash() {
   const p = host && host.querySelector('.rypad');
@@ -232,6 +238,7 @@ function finish(run) {
   res.win = run.win; res.spb = run.spb; res.phases = run.phases.filter((p) => p.label !== 'count' && p.label !== 'listen');
   R.res = res;
   R.sess.t++; if (res.pass) R.sess.c++;
+  lt(res.score);
   recordRun(D(), { drill: run.kind, res, cells: run.cells.length ? run.cells : null, beats: run.beats, day: dayKey(Date.now()) });
   ctx.saveData();
   stopRun();
@@ -263,6 +270,7 @@ function dictCheck() {
   const res = { kind: 'dict', hits, extra, pass: ok, score: exp.length ? marks.filter((m) => m === 'ok').length / (exp.length + extra.length) : 0, ok: marks.filter((m) => m === 'ok').length, miss: marks.filter((m) => m === 'miss').length, mean: 0, abs: 0, marks, userMarks: got.map((o) => (es.has(key(o)) ? 'ok' : 'off')) };
   R.res = res;
   R.sess.t++; if (ok) R.sess.c++;
+  lt(res.score);
   recordRun(D(), { drill: 'dict', res, cells: exp.map((o) => cellAt(o.cell)), day: dayKey(Date.now()) });
   ctx.saveData();
   render();
@@ -378,10 +386,89 @@ function verdict(res) {
   return s;
 }
 
+/* ---------- уроки ---------- */
+
+function prog() { const d = D(); return normalizeProg(d.course || (d.course = {})); }
+const lname = (id) => ctx.t('ls.' + id), cname = (id) => ctx.t('lch.' + id);
+const confOf = (l) => lessonConf(normalizeConf(ctx.store.all()), l);
+
+// Оценка попытки урока (одна на вопрос)
+function lt(score) { if (!L || L.done) return; const x = L.q[L.i]; if (x && x.score == null) { x.score = score; x.ans = score >= PASS; } }
+
+function setQ() {
+  L.cur = L.q[L.i].conf;
+  stopRun(); fresh(); render();
+  if (L.cur.drill === 'dict') start('dict');
+}
+function begin(kind, id, q) { stopRun(); L = { kind, id, q, i: 0, done: null }; setQ(); }
+
+function startLesson(id) {
+  const l = findLesson(BEAT_COURSE, id);
+  if (!l) return;
+  const conf = confOf(l), q = [];
+  dueReviews(BEAT_COURSE, prog(), Date.now(), id).slice(0, 1).forEach((r) => q.push({ lid: r.id, rev: true, conf: confOf(r) }));
+  for (let k = 0; k < lessonN(l); k++) q.push({ lid: id, conf });
+  begin('lesson', id, q);
+}
+function startReview() {
+  const q = dueReviews(BEAT_COURSE, prog(), Date.now()).slice(0, 5).map((r) => ({ lid: r.id, rev: true, conf: confOf(r) }));
+  if (q.length) begin('review', null, q);
+}
+// Проверка уровня: по одной попытке из первого, среднего и последнего урока глав; главы идут по нарастающей — не
+// справились с первым уроком главы — дальше не проверяем, ошибка в середине главы — переходим к следующей
+function startPlacement() {
+  const course = BEAT_COURSE.filter((c) => c.id !== 'poly' && c.id !== 'hold');
+  begin('place', null, placementPlan(course, 1).map((x) => ({ lid: x.id, ch: x.ch, first: x.i === 0, conf: confOf(findLesson(BEAT_COURSE, x.id)) })));
+}
+
+function advance() {
+  if (!L || L.done) return;
+  const x = L.q[L.i];
+  if (x.score == null) { x.score = 0; x.ans = false; }
+  if (L.kind === 'place' && !x.ans) L.q.forEach((y, k) => { if (k > L.i && (y.ch === x.ch || x.first)) y.skip = true; });
+  let j = L.i + 1;
+  while (j < L.q.length && L.q[j].skip) j++;
+  if (j < L.q.length) { L.i = j; setQ(); return; }
+  finishL();
+}
+
+function finishL() {
+  stopRun();
+  const p = prog(), now = Date.now(), by = {};
+  L.q.forEach((x) => { if (!x.skip) (by[x.lid] = by[x.lid] || []).push(!!x.ans); });
+  if (L.kind === 'place') L.done = { placement: { n: applyPlacement(BEAT_COURSE, p, by, now).length } };
+  else {
+    Object.entries(by).forEach(([id, oks]) => { if (L.kind === 'review' || id !== L.id) recordReview(p, id, oks.every(Boolean), now); });
+    const all = L.kind === 'review' ? L.q : L.q.filter((x) => !x.rev);
+    const score = all.length ? all.reduce((sum, x) => sum + (x.score || 0), 0) / all.length : 0;
+    if (L.kind === 'lesson') recordLesson(p, L.id, score, now);
+    L.done = { score };
+  }
+  ctx.saveData();
+  render();
+}
+
+function stopLesson() {
+  stopRun();
+  L = null; R.r = null; R.res = null;
+  const e = normalizeConf(ctx.store.all());
+  e.drill = 'home'; e.view = 'course';
+  ctx.store.save();
+  render();
+}
+
+function lessonResult() {
+  const { t } = ctx, nx = nextLesson(BEAT_COURSE, prog()), ch = L.id ? chapterOf(BEAT_COURSE, L.id) : null;
+  return '<div class="rywrap">' + resultHTML({ t, esc, name: L.kind === 'review' ? t('crs.review') : lname(L.id), score: L.done.score ?? 1, next: nx && nx.id, nextName: nx ? lname(nx.id) : '',
+    book: ch && ch.book, placement: L.done.placement }) + '</div>';
+}
+
 function homeHTML() {
-  const { t, ui } = ctx, e = EC(), d = D(), w = weekOf(d, weekKeys());
+  const { t, ui } = ctx, e = EC(), d = D(), w = weekOf(d, weekKeys()), view = e.view === 'course' ? 'course' : 'free';
+  const top = '<div class="ryhtop">' + modeSeg(t, view) + '</div>';
+  if (view === 'course') return '<div class="rywrap ryhome">' + top + courseHTML({ course: BEAT_COURSE, p: prog(), t, esc, title: lname, chTitle: cname, now: Date.now() }) + '</div>';
   const lv = e.custom && e.custom.length ? t('lvCustom') : t('lv.' + e.level);
-  return '<div class="rywrap ryhome"><div class="rydash"><div class="rydtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.n + ' <small class="l2">' +
+  return '<div class="rywrap ryhome">' + top + '<div class="rydash"><div class="rydtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.n + ' <small class="l2">' +
     ctx.tn('exN', w.n) + '</small></div><div class="l2" style="font-size:14px">' + (w.n ? t('weekAcc', { p: Math.round(w.acc * 100), ms: w.abs }) : t('noRuns')) + '</div></div>' +
     '<div class="rydbtns">' + ui.icb('data-x="stats"', I.stats, t('statsBtn'), 'sm') + ui.icb('data-x="set"', ui.icons.gear, t('settings'), 'sm') + '</div></div>' +
     '<button class="ryconf" data-x="set"><span>' + esc(lv) + '</span><span class="num">' + e.meter + '</span><span class="num">♩ = ' + e.bpm + '</span><span>' + t('strict.' + e.strict) + '</span></button>' +
@@ -394,6 +481,11 @@ function homeHTML() {
 
 function headHTML() {
   const { t, ui } = ctx, e = EC(), d = e.drill;
+  if (L) {
+    return lessonBarHTML({ t, esc, name: L.kind === 'place' ? t('crs.place') : L.kind === 'review' ? t('crs.review') : lname(L.id), i: L.i, n: L.q.length, review: L.kind === 'lesson' && L.q[L.i].rev }) +
+      '<div class="ryhead" style="--c:' + DCOLOR[d] + '"><b class="ryhn">' + t('d.' + d) + '</b><span class="rytempo num">♩ ' + e.bpm + '</span>' +
+      (d === 'dict' ? '' : '<button class="ic sm rymic' + (claps ? ' on' : '') + '" data-x="mic" aria-pressed="' + !!claps + '" aria-label="' + t(claps ? 'micOff' : 'micOn') + '" title="' + t(claps ? 'micOff' : 'micOn') + '">' + ui.icons.mic + '</button>') + '</div>';
+  }
   return '<div class="ryhead" style="--c:' + DCOLOR[d] + '"><button class="mlback" data-x="drill" data-v="home" aria-label="' + t('backAria') + '">' + t('back') + '</button><b class="ryhn">' + t('d.' + d) +
     '</b><span class="rysc num" aria-label="' + t('sessAria', { c: R.sess.c, t: R.sess.t }) + '"><b>' + R.sess.c + '</b>/' + R.sess.t + '</span>' +
     '<button class="rytempo num" data-x="tempo" data-tempo aria-label="' + t('tempoAria', { n: e.bpm }) + '">♩ ' + e.bpm + '</button>' +
@@ -410,12 +502,13 @@ function padHTML(stateKey, sub = '') {
 function drillHTML() {
   const { t } = ctx, e = EC(), d = e.drill, res = R.res, run = R.run;
   if (!R.r && d !== 'pulse' && d !== 'poly') fresh();
-  const next = res ? '<div class="rybtns"><button class="btn ebtn" data-x="again">' + t('again') + '</button><button class="btn fill ebtn" data-x="next">' + t('next') + '</button></div>' : '';
+  const next = res ? (L ? '<div class="rybtns one"><button class="btn fill ebtn" data-x="lnext">' + t('next') + '</button></div>'
+    : '<div class="rybtns"><button class="btn ebtn" data-x="again">' + t('again') + '</button><button class="btn fill ebtn" data-x="next">' + t('next') + '</button></div>') : '';
   const fb = res ? '<div class="ryfb ' + (res.pass ? 'ok' : 'bad') + '" aria-live="polite">' + verdict(res) + '</div>' : '';
   const inputs = t('inputs' + (claps ? 'Mic' : ''));
   if (d === 'dict') {
     const pool = poolOf(R.r.meter, e.level, e.custom), full = dictFull(R.dict, R.r.meter, R.r.bars.length);
-    const user = R.dict.length ? score({ meter: R.r.meter, bars: R.dict }, res ? res.userMarks : null, { label: t('yourAnswer') }) : '<div class="ryempty">' + t('dictEmpty', { n: R.r.bars.length }) + '</div>';
+    const user = R.dict.length ? score({ meter: R.r.meter, bars: R.dict }, res ? res.userMarks : null, { label: t('yourAnswer') }) : '<div class="ryempty">' + t('dictEmpty', { n: ctx.tn('barsN', R.r.bars.length) }) + '</div>';
     return '<div class="rywrap ryh">' + headHTML() + '<div class="rycard"><button class="ryplay' + (run ? ' playing' : '') + '" data-x="listen" aria-label="' + t('listen') + '" style="--c:' + DCOLOR.dict + '">' + I.play + '</button>' +
       '<div class="ryscore">' + user + '</div>' + (res && !res.pass ? '<div class="rysol"><small>' + t('solution') + '</small><div class="ryscore">' + score(R.r, res.marks) + '</div></div>' : '') + fb + '</div>' +
       (res ? next : '<div class="rypal">' + pool.map((c) => '<button class="rycell" data-x="cell" data-v="' + c.id + '" aria-label="' + esc(t('cell.' + c.id.replace('c.', 'c_'))) + '">' +
@@ -449,7 +542,7 @@ function render() {
   if (!host) return;
   loadFont();
   const e = EC();
-  host.innerHTML = e.drill === 'home' ? homeHTML() : drillHTML();
+  host.innerHTML = L && L.done ? lessonResult() : e.drill === 'home' ? homeHTML() : drillHTML();
 }
 
 // Показ доли и фазы, пока идёт упражнение
@@ -534,6 +627,9 @@ function statsSheet() {
   ui.sheet(() => ui.snav(t('st.title')) +
     '<div class="tiles num"><div class="tile"><b>' + w.n + '</b><span>' + t('st.week') + '</span></div><div class="tile"><b>' + (w.n ? Math.round(w.acc * 100) + '%' : '—') + '</b><span>' + t('st.acc') +
     '</span></div><div class="tile"><b>' + (w.abs ? '±' + w.abs : '—') + '</b><span>' + t('st.ms') + '</span></div></div>' +
+    (() => { const ws = [3, 2, 1, 0].map((k) => weekOf(d, Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - (k * 7 + i) * DAY)))); return ws.some((x) => x.n) ?
+      '<div class="card"><div class="ch"><span>' + t('st.weeks') + '</span><span></span></div><div class="rywk">' + ws.map((x, i) => '<div><b class="num">' + (x.n ? Math.round(x.acc * 100) + '%' : '—') + '</b><span>' +
+        t(i === 3 ? 'st.thisWeek' : 'st.weeksAgo', { n: 3 - i }) + '</span></div>').join('') + '</div></div>' : ''; })() +
     '<div class="card"><div class="ch"><span>' + t('st.drills') + '</span><span></span></div>' + DRILLS.map((id) => {
       const s = d.drills[id]; if (!s || !s.t) return '';
       const p = Math.round((s.c / s.t) * 100);
@@ -582,6 +678,14 @@ function act(a, el) {
   const e = EC();
   switch (a) {
     case 'drill': stopRun(); e.drill = el.dataset.v; ctx.store.save(); fresh(); render(); break;
+    case 'lnext': advance(); break;
+    case 'lgo': startLesson(el.dataset.v); break;
+    case 'lagain': if (L && L.kind === 'lesson') startLesson(L.id); else if (L && L.kind === 'review') startReview(); break;
+    case 'lhome': stopLesson(); break;
+    case 'lplace': startPlacement(); break;
+    case 'lskip': { const p = prog(); p.pl = -1; ctx.saveData(); render(); break; }
+    case 'lrev': startReview(); break;
+    case 'lbook': ctx.openIn('book', { book: { ch: el.dataset.v, sec: 'school' } }); break;
     case 'again': R.res = null; R.dict = []; render(); if (e.drill !== 'dict') start(); else start('dict'); break;
     case 'next': stopRun(); fresh(); render(); if (e.drill === 'dict') start('dict'); break;
     case 'listen': start(e.drill === 'dict' ? 'dict' : e.drill, { listenOnly: e.drill !== 'dict' }); break;
@@ -599,6 +703,8 @@ function act(a, el) {
 function bind() {
   onClick = (ev) => {
     if (ev.target.closest('[data-pad]')) return; // площадка — по pointerdown
+    const md = ev.target.closest('[data-seg="xmode"] [data-v]');
+    if (md) { const e = normalizeConf(ctx.store.all()); e.view = md.dataset.v; ctx.store.save(); render(); return; }
     const x = ev.target.closest('[data-x]');
     if (x && !x.disabled) act(x.dataset.x, x);
   };
@@ -626,7 +732,7 @@ function bind() {
   unswipe = swipe(host, {
     left: () => { if (EC().drill !== 'home') act('next'); },
     right: () => { if (EC().drill !== 'home') act('again'); },
-    ok: (ev) => !!ev.target.closest('.rycard') && !R.run,
+    ok: (ev) => !!ev.target.closest('.rycard') && !R.run && !L,
   });
 }
 
@@ -653,6 +759,7 @@ export default {
     if (unswipe) { unswipe(); unswipe = null; }
     if (untempo) { untempo(); untempo = null; }
     R.calib = null;
+    L = null;
     host = null;
   },
 };
