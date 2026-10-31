@@ -1,0 +1,5 @@
+/* «Учебник»: окно модуля — книга занимает его целиком и прокручивается сама (стили книги — book/book.css) */
+.bkmod{flex:1;display:flex;flex-direction:column;min-height:0;height:100%}
+.bkmod .bkwrap{flex:1;overflow-y:auto;min-height:0;scrollbar-width:none;display:flex;flex-direction:column}
+.bkmod .bkwrap::-webkit-scrollbar{display:none}
+.bkmod .bkload{flex:1;min-height:120px}

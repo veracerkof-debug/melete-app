@@ -5,7 +5,7 @@ import {
   matchTaps, drift, polyBeats, echoDelay, normalizeData, recordRun, weekOf, weakSpots, normalizeConf,
 } from '../src/music/rhythm.js';
 import { createOnsetDetector } from '../src/audio/claps.js';
-import { scoreSVG, durOf } from '../src/modules/theory/book/score.js';
+import { scoreSVG, durOf } from '../src/modules/book/book/score.js';
 
 const seq = (seed) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
 

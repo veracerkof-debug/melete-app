@@ -8,8 +8,8 @@ import {
   CELLS, LEVELS, METERS, BARS, STRICT, SOUNDS, POLY, GAPS, DRILLS, parseMeter, poolOf, genRhythm, onsets, rhythmBeats, notation, cellNotation,
   sameRhythm, dictPush, dictFull, matchTaps, drift, polyBeats, echoDelay, normalizeData, recordRun, weekOf, weakSpots, normalizeConf,
 } from '../../music/rhythm.js';
-import { scoreSVG } from '../theory/book/score.js';
-import { perc } from '../theory/book/perc.js';
+import { scoreSVG } from '../book/book/score.js';
+import { perc } from '../book/book/perc.js';
 import { createClaps } from '../../audio/claps.js';
 import { after, cancel } from '../../audio/clock.js';
 import { swipe } from '../../ui/gestures.js';

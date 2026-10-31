@@ -231,7 +231,7 @@ export const CORE = {
 };
 // Инструменты (по id модуля) и строки помодоро и секундомера
 export const MODS = { bible: 'lk24_27', metro: 'lk6_38', tuner: 'lk15_25', piano: 'ps150_3', glider: 'co1_14_7', theremin: 'ps89_17', drone: 'rev14_2',
-  theory: 'col3_16', audio: 'ps150_3', ear: 'rom10_17', notes: 'ps44_2', spectrum: 'ps150_5', timer: 'ps89_4', voice: 'deut31_19', looper: 'eccl1_6', studio: 'eph2_10', beat: 'ps150_4',
+  theory: 'col3_16', book: 'ps110_10', audio: 'ps150_3', ear: 'rom10_17', notes: 'ps44_2', spectrum: 'ps150_5', timer: 'ps89_4', voice: 'deut31_19', looper: 'eccl1_6', studio: 'eph2_10', beat: 'ps150_4',
   }; // дорожки и ноты из записи — в плеере медиатеки (audio), своих стихов нет
 export const TIMER = { 'set.title': 'ps89_4', 'mode.pomo': 'ps89_4', 'mode.watch': 'num1_2', 'w.label': 'ps89_12',
   'ph.work': 'ps89_17', 'ph.short': 'mt11_29', 'ph.long': 'heb4_9' };
