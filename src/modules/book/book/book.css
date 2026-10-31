@@ -395,3 +395,6 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 .bpath.jazz{background:linear-gradient(135deg,color-mix(in srgb,var(--bk-b) 24%,var(--cell)),color-mix(in srgb,var(--tint) 12%,var(--cell)))}
 .bpath.pro{background:linear-gradient(135deg,color-mix(in srgb,var(--bk-D) 20%,var(--cell)),color-mix(in srgb,var(--bk-b) 14%,var(--cell)))}
 @container (min-width:560px){.bpaths{grid-template-columns:1fr 1fr}}
+/* вид: «Уроки» или «Учебник» */
+.bkmode{margin:2px 0 8px}
+.bkmode.sm{max-width:260px;margin:0 0 10px}

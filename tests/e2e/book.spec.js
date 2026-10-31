@@ -150,3 +150,22 @@ test('учебник: уроки — начальный путь, инструм
   await expect(page.locator('.book .bkles').first().locator('[data-lab="xtap"] .bkscore')).toHaveCount(1);
   void errors;
 });
+
+test('учебник: вид «Уроки» по умолчанию, «Учебник» — сплошной текст главы', async ({ page, melete, errors }) => {
+  await melete.open();
+  await open(melete, page, 'book');
+  await expect(page.locator('.book .bkmode [data-bmode="les"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.book .bpath').first()).toBeVisible();
+  // «Учебник»: без путей; глава — без уроков и упражнений, схемы на месте
+  await page.locator('.book .bkmode [data-bmode="book"]').click();
+  await expect(page.locator('.book .bpath')).toHaveCount(0);
+  await page.locator('.book [data-bch="rhythm"]').click();
+  await expect(page.locator('.book .bkhead h2')).toHaveText('Длительности и паузы');
+  await expect(page.locator('.book .bkles')).toHaveCount(0);
+  await expect(page.locator('.book .bklex')).toHaveCount(0);
+  expect(await page.locator('.book .blab').count()).toBeGreaterThan(1);
+  // в главе — обратно в «Уроки»
+  await page.locator('.book .bkmode [data-bmode="les"]').click();
+  await expect(page.locator('.book .bkles')).toHaveCount(4);
+  void errors;
+});

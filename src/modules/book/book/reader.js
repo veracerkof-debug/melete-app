@@ -72,6 +72,9 @@ export function createBook(ctx, L, { save }) {
   const BS = () => (ctx.store.all().book ||= {});
   const curInst = () => (INSTS.includes(BS().inst) ? BS().inst : 'p');
   const doneMap = () => (BS().done ||= {});
+  // вид: «Уроки» (по умолчанию — пути, главы уроками с упражнениями) или «Учебник» (оглавление и сплошной текст главы)
+  const lesMode = () => BS().mode !== 'book';
+  const modeSeg = (cls = '') => '<div class="seg bkmode ' + cls + '" role="group" aria-label="' + T('bk.mode') + '">' + [['les', T('bk.mode.les')], ['book', T('bk.mode.book')]].map(([k, l]) => '<button data-bmode="' + k + '" aria-pressed="' + ((k === 'les') === lesMode()) + '"' + ((k === 'les') === lesMode() ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div>';
   const lsTitle = (id) => T('ls.' + id);
   const instSeg = () => '<div class="seg bklinst" role="group" aria-label="' + T('lx.inst') + '">' + INSTS.map((k) => '<button data-li="' + k + '" aria-pressed="' + (k === curInst()) + '"' + (k === curInst() ? ' class="on"' : '') + '>' + T('lx.i.' + k) + '</button>').join('') + '</div>';
   // главы раздела по порядку; номер главы и «назад/дальше» — внутри раздела
@@ -86,14 +89,15 @@ export function createBook(ctx, L, { save }) {
       '<input class="bsearch" data-bq value="' + esc(q) + '" placeholder="' + T('bk.find') + '" aria-label="' + T('bk.find') + '"></div>' +
       (found ? '<div class="bfound">' + (found.length ? found.map(([id, [a, b]]) => '<button class="bfrow" data-term="' + id + '"><b>' + a + '</b><span>' + b + '</span></button>').join('') : '<p class="hint">' + T('bk.none') + '</p>') + '</div>' : '') +
       '<div class="bsecs" role="tablist" aria-label="' + T('bk.secs') + '">' + SECS.map((k) => '<button class="bsec ' + k + (k === sec ? ' on' : '') + '" data-bsec="' + k + '" role="tab" aria-selected="' + (k === sec) + '"><b>' + T('bk.sec.' + k) + '</b><span>' + T('bk.sub.' + k) + '</span></button>').join('') + '</div>' +
-      '<div class="bpaths">' + SEC_PATHS[sec].map(pathCard).join('') + '</div>' +
+      modeSeg() + (lesMode() ? '<div class="bpaths">' + SEC_PATHS[sec].map(pathCard).join('') + '</div>' : '') +
       SECTIONS[sec].map((p, i) => { const ids = PARTS[p]; return !ids.some(byId) ? '' : '<section class="bpart"><h3><span>' + (i + 1) + '</span>' + T('bk.part' + p) + '</h3><div class="bcards">' +
         ids.map((id) => { const c = byId(id); return c ? '<button class="bcard p' + p + '" data-bch="' + id + '"><i class="num">' + num(id) + '</i><b>' + c.t + '</b><span>' + c.s + '</span></button>' : ''; }).join('') + '</div></section>'; }).join('');
   }
   function readerHTML(id) {
     const sec = curSec(), list = secChs(sec), c = byId(id), i = num(id), prev = list[i - 2], next = list[i];
     return '<div class="bkhbar"><button class="bback" data-btoc aria-label="' + T('bk.toc') + '">‹ ' + T('bk.toc') + '</button><span class="num">' + T('bk.sec.' + sec) + ' · ' + i + ' ' + T('bk.of', { n: list.length }) + '</span></div>' +
-      '<header class="bkhead"><small>' + T('bk.ch', { n: i }) + '</small><h2>' + c.t + '</h2><p>' + c.s + '</p></header>' + lessonNav(c) + '<article class="bktext">' + (LESSONS[c.id] ? lessonsHTML(c) : chapterHTML(c, L.TERMS)) + '</article>' + srcHTML(c) +
+      '<header class="bkhead"><small>' + T('bk.ch', { n: i }) + '</small><h2>' + c.t + '</h2><p>' + c.s + '</p></header>' + (LESSONS[c.id] ? modeSeg('sm') : '') +
+      (lesMode() ? lessonNav(c) : '') + '<article class="bktext">' + (LESSONS[c.id] && lesMode() ? lessonsHTML(c) : chapterHTML(c, L.TERMS)) + '</article>' + srcHTML(c) +
       '<nav class="bpn">' + (prev ? '<button data-bch="' + prev.id + '">‹ ' + prev.t + '</button>' : '<span></span>') + (next ? '<button data-bch="' + next.id + '">' + next.t + ' ›</button>' : '<span></span>') + '</nav>';
   }
   // Глава уроками: куски текста (по подзаголовкам) собираются в уроки, после каждого — упражнения и «Урок пройден»
@@ -170,6 +174,7 @@ export function createBook(ctx, L, { save }) {
         const bp = t.closest('[data-bpath]'); if (bp) { openPath(PATHS[bp.dataset.bpath] ? bp.dataset.bpath : 'start'); return; }
         const lg = t.closest('[data-lgo]'); if (lg) { goLesson(lg.dataset.lgo); return; }
         const lj = t.closest('[data-ljump]'); if (lj) { const x = box.querySelector('#les-' + lj.dataset.ljump); if (x) x.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+        const bm = t.closest('[data-bmode]'); if (bm) { BS().mode = bm.dataset.bmode; snd.stop(); stopSing(); save(); return; }
         const li = t.closest('[data-li]'); if (li) { BS().inst = li.dataset.li; snd.stop(); stopSing(); save(); return; }
         const ld = t.closest('[data-ldone]'); if (ld) { const d = doneMap(), id = ld.dataset.ldone; if (d[id]) delete d[id]; else d[id] = 1; stopSing(); save(); return; }
         const el = t.closest('.blab'); if (!el) return;
