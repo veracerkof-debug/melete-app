@@ -452,3 +452,6 @@ Object.assign(S.uz, { 'home.on': 'Bosh ekranda', 'home.folders': 'Jildlar', 'hom
   'hide.n': '{n}', 'hide.none': 'Yashirin ilova yoʻq', 'hide.sheetHint': 'Bosish — ochish. «Qaytarish» — ilova yana hamma joyda koʻrinadi.' });
 Object.assign(S.en, { 'home.on': 'On home', 'home.folders': 'Folders', 'home.apps': 'Apps', 'home.pick': 'Choose what is on home', 'fold.kicker': 'folder',
   'hide.n': '{n}', 'hide.none': 'No hidden apps', 'hide.sheetHint': 'Tap to open. Unhide — the app shows everywhere again.' });
+Object.assign(S.ru, { 'home.blockOff': 'Список приложений на главном убран', 'home.blockOn': 'Показать' });
+Object.assign(S.uz, { 'home.blockOff': 'Bosh ekrandagi ilovalar roʻyxati olib tashlangan', 'home.blockOn': 'Koʻrsatish' });
+Object.assign(S.en, { 'home.blockOff': 'The app list is removed from home', 'home.blockOn': 'Show' });

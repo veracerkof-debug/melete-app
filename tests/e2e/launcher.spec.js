@@ -483,3 +483,17 @@ test('переход между папками: список идёт за па�
   expect(await page.locator('.l-d-list').evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
   expect(errors).toEqual([]);
 });
+
+test('блок приложений убран: настройки говорят об этом, выбор приложений возвращает его', async ({ page, errors }) => {
+  await open(page, { layout: { hide: { apps: true } } });
+  await expect(page.locator('.l-apps')).toHaveCount(0);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Главный' }).click();
+  await expect(page.locator('.l-warn')).toContainText('убран');
+  await page.locator('.l-btn', { hasText: 'Выбрать, что на главном' }).click();
+  await page.locator('.l-sheet .l-search').last().fill('почт');
+  await page.locator('.l-check:not(.on)', { hasText: 'Почта' }).click();
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await expect(page.locator('.l-app .label', { hasText: 'Почта' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
