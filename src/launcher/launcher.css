@@ -87,10 +87,8 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .l-cross.at-date { width: 11px; height: 15px; flex: none; opacity: min(1, calc(.8 * var(--l-co, 1))); }
 .l-home > .l-cross.at-bottom { align-self: center; width: 12px; height: 16px; margin: 6px 0 2px; opacity: min(1, calc(.6 * var(--l-co, 1))); }
 .l-home .l-spacer { position: relative; }
-/* посередине: крупно, тонкой ровной линией (толщина не растёт с размером) и с тёплым светом за ним */
+/* посередине: крупно, тонкой ровной линией (толщина не растёт с размером), без подсветки */
 .l-cross.at-center { position: absolute; inset: 6% 0; display: grid; place-items: center; }
-.l-cross.at-center::before { content: ''; position: absolute; left: 50%; top: 50%; width: min(78%, 340px); aspect-ratio: 1; transform: translate(-50%, -50%);
-  border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 16%, transparent), transparent); }
 .l-cross.at-center svg { position: relative; width: auto; height: min(100%, 300px); max-width: 80%; color: var(--ink); opacity: min(1, calc(.9 * var(--l-co, 1))); }
 .l-cross.at-center svg * { vector-effect: non-scaling-stroke; stroke-width: calc(1.6px * var(--l-cw, 1)); }
 .l-home > .l-cross.at-back {
@@ -481,3 +479,4 @@ img.app-ico { filter: grayscale(1) contrast(1.05); object-fit: contain; display:
 .l-folder-t { flex: 1; min-width: 0; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .l-folder-n { color: var(--l3); font-size: 15px; }
 .l-folder-go { color: var(--l3); font-size: 22px; line-height: 1; }
+.l-warn { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; margin: 6px 0 10px; border-radius: 14px; border: 1px solid var(--ink); font-size: 15px; }

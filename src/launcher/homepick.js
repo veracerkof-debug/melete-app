@@ -4,6 +4,7 @@
 import { prefs, save, HOME_MAX } from './data.js';
 import { allApps, homeItems } from './apps.js';
 import { folders, folderName, folderKey, folderOfKey } from './folders.js';
+import { layout, setLayout } from './layout.js';
 import { t } from './i18n.js';
 import { h, openSheet, toast } from './ui.js';
 
@@ -21,6 +22,7 @@ export function pickHome(onChange = () => {}) {
         if (on) home.splice(home.findIndex((x) => x.key === key), 1);
         else if (home.length >= HOME_MAX) { toast(t('home.full', { n: HOME_MAX })); return; }
         else home.push({ key, label: '' });
+        if (layout().hide.apps) setLayout({ hide: { ...layout().hide, apps: false } }); // блок был убран — показать
         save(); onChange(); draw();
       };
       const row = (key, label, sys, on) => h('button', { class: 'l-check' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': String(on), onclick: () => toggle(key, on) },

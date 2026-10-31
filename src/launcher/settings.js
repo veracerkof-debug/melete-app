@@ -13,6 +13,7 @@ import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp,
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
 import { applyLook } from './look.js';
+import { layout, setLayout } from './layout.js';
 import { meleteLive } from './melete.js';
 import { saveFile, pickFile, restore, summary, localCopies } from './backup.js';
 import { meleteBridge, connectMelete, refreshMelete, disconnectMelete } from './melete.js';
@@ -114,6 +115,7 @@ export function openSettings(onChange, getGesture, tab) {
       });
       body.append(S('home', t('set.home'),
         h('p', { class: 'l-hint' }, t('set.homeHint'), ' ', t('home.count', { n: homeItems().length, max: HOME_MAX })),
+        layout().hide.apps ? h('div', { class: 'l-warn' }, h('span', {}, t('home.blockOff')), h('button', { class: 'l-btn primary', onclick: () => { setLayout({ hide: { ...layout().hide, apps: false } }); changed(); rerender(); } }, t('home.blockOn'))) : null,
         homeList,
         appIconsAvailable() ? toggle(t('set.appIcons'), prefs.appIcons, (v) => up({ appIcons: v }), t('set.appIconsHint')) : null,
         h('button', { class: 'l-btn', onclick: () => pickHome(() => { changed(); rerender(); }) }, '＋ ' + t('home.pick')),

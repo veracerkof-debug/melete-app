@@ -81,7 +81,7 @@ function drawBar() {
     bar.replaceChildren(
       h('p', { class: 'l-arr-hint' }, t('arr.hint')),
       h('div', { class: 'l-arr-row' },
-        h('button', { class: 'l-arr-chip', onclick: () => deps.addApp(redraw) }, '＋ ' + t('arr.addApp')),
+        L.hide.apps ? null : h('button', { class: 'l-arr-chip', onclick: () => deps.addApp(redraw) }, '＋ ' + t('arr.addApp')),
         ...hidden.map((id) => h('button', { class: 'l-arr-chip', onclick: () => { setLayout({ hide: { ...L.hide, [id]: false } }); selected = id; redraw(); } }, '＋ ' + name(id))),
         done));
   }
