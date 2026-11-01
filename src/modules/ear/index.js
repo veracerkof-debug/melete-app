@@ -1,5 +1,6 @@
-// Тренажёр слуха: главный экран с целью на день и 7 упражнений — интервалы, аккорды, гаммы и лады,
-// ступени, абсолютный слух (ноты), диктант, пение нот. Логика — src/music/ear.js.
+// Тренажёр слуха: два режима — «Тренажёр» (7 упражнений по своим настройкам: интервалы, аккорды, гаммы и лады,
+// ступени, абсолютный слух, диктант, пение; счёт — за неделю, без серий) и «Уроки» (путь из глав, src/modules/ear/course.js;
+// сдача, повторение, проверка уровня — src/music/course.js, вид — src/ui/course.js). Логика упражнений — src/music/ear.js.
 // Перенесено из legacy/practice.html (earHome, earHTML, earSettings, earStatsSheet, earGoalSheet, nt*, earPitch).
 import './ear.css';
 import ru from './i18n/ru.json';
@@ -10,12 +11,14 @@ import { SH, MAJI, MAJ_NAMES, MIN_NAMES, spell, mName } from '../../music/notes.
 import { SCALES } from '../../music/theory.js';
 import {
   DRILLS, EIV, ECH, EDG, RANGES, NT_COLORS, NT_TIMBRES, NT_GOAL, LEVELS, TEMPOS, EAR_TIMBRES, normalizeEar, setLevel, toggleInSet, ntSet, generate, playPlan, comparePlan,
-  normalizeEarData, record, accuracy, earStreak, ntProgress, dictationStep, pitchCents, pitchTol, DG_KINDS, DG_MODES, romanOf, dgScale,
+  normalizeEarData, record, accuracy, ntProgress, dictationStep, pitchCents, pitchTol, DG_KINDS, DG_MODES, romanOf, dgScale,
 } from '../../music/ear.js';
 import { swipe } from '../../ui/gestures.js';
 import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { noiseBuf } from '../../audio/waves.js';
-import { goalRing, FLAME } from '../../ui/cards.js';
+import { EAR_COURSE, lessonConf, lessonN } from './course.js';
+import { normalizeProg, findLesson, chapterOf, nextLesson, dueReviews, recordLesson, recordReview, placementPlan, applyPlacement } from '../../music/course.js';
+import { courseHTML, lessonBarHTML, resultHTML, modeSeg } from '../../ui/course.js';
 
 import meta, { ICON } from './meta.js';
 const DICON = {
@@ -40,10 +43,12 @@ const DAY = 86400000;
 
 // Состояние занятия (не сохраняется): вопросы, ответы, серии, таймеры звука
 const EAR = { q: {}, res: {}, sess: {}, timers: [], playing: false, hold: 0, reveal: false, ntPlayed: false, listen: false, mixTim: 'piano', chain: [] };
+// Идущий урок, проверка уровня или повторение: { kind: 'lesson'|'place'|'review', id, q: [{ lid, rev, conf, ans }], i, done }
+let L = null;
 let host = null, ctx = null, size = 'full', onClick = null, onDown = null, unswipe = null;
 let mic = null, micTimer = 0, smooth = null, lastT = 0;
 
-const EC = () => normalizeEar(ctx.store.all());
+const EC = () => (L && L.cur) || normalizeEar(ctx.store.all());
 const EST = () => normalizeEarData(ctx.data());
 const esc = (s) => ctx.ui.esc(s);
 const drill = (id) => DRILLS.find((d) => d[0] === id);
@@ -117,6 +122,14 @@ function compare(sec, v) {
 
 /* ---------- ответы ---------- */
 
+// Что с чем путается: E.cf[упражнение]['верный>выбранный'] — для статистики «Часто путается»
+function confuse(sec, ans, v) {
+  if (!['iv', 'ch', 'sc', 'dg'].includes(sec) || String(ans).includes(',')) return;
+  const E = EST(), cf = E.cf || (E.cf = {}), m = cf[sec] || (cf[sec] = {}), k = ans + '>' + v;
+  m[k] = (m[k] || 0) + 1;
+  ctx.saveData();
+}
+
 function rec(sec, key, ok) {
   record(EST(), EAR.sess, sec, key, ok, dayKey(Date.now()));
   ctx.saveData();
@@ -125,6 +138,7 @@ function rec(sec, key, ok) {
 // После верного ответа — следующий вопрос сам (если включено)
 function autoNext(sec, delay = 950, gap = 250) {
   if (!EC().auto) return;
+  if (L) { at(delay, advance); return; }
   at(delay, () => { gen(sec); render(); at(gap, () => play(sec)); });
 }
 
@@ -139,12 +153,15 @@ function answer(sec, v) {
     let all = true;
     q.degs.forEach((d, i) => { const o = EAR.chain[i] === String(d); if (!o) all = false; rec(sec, d, o); });
     EAR.res[sec] = { ok: all, picked: EAR.chain.join(',') };
+    lt(all);
     if (all) autoNext(sec);
     return;
   }
   const ok = String(v) === String(q.ans);
   EAR.res[sec] = { ok, picked: String(v) };
   rec(sec, q.ans, ok);
+  lt(ok);
+  if (!ok) confuse(sec, q.ans, v);
   if (ok) autoNext(sec);
 }
 
@@ -153,6 +170,7 @@ function ntAnswer(m) {
   if (!q || EAR.res.nt) return;
   const pc = m % 12, ok = pc === q.ans;
   EAR.res.nt = { ok, picked: String(pc) };
+  lt(ok);
   rec('nt', SH[q.ans], ok);
   if (!ok) {
     const E = EST();
@@ -178,10 +196,12 @@ function dcKey(m) {
   if (r === 'wrong') {
     EAR.res.dc = { ok: false };
     rec('dc', key, false);
+    lt(false);
     at(500, () => ctx.audio.playSeq(q.notes, { step: 0.45 }));
   } else if (r === 'done') {
     EAR.res.dc = { ok: true };
     rec('dc', key, true);
+    lt(true);
     autoNext('dc', 1100, 250);
   }
   render();
@@ -210,6 +230,7 @@ function pitch(f) {
     if (pr >= 1) { // держал ноту 0,8 с
       EAR.res.pt = { ok: true, picked: String(q.m) };
       rec('pt', mName(q.m).replace(/\d/, ''), true);
+      lt(true);
       render();
       autoNext('pt', 1000, 200);
     }
@@ -260,6 +281,97 @@ function label(sec, key) {
   return isNaN(+key) ? key : mName(+key);
 }
 
+/* ---------- уроки ---------- */
+
+function prog() { const E = EST(); return normalizeProg(E.course || (E.course = {})); }
+const lname = (id) => ctx.t('ls.' + id), cname = (id) => ctx.t('lch.' + id);
+
+// Ответ на вопрос урока (один раз на вопрос)
+function lt(ok) { if (!L || L.done) return; const x = L.q[L.i]; if (x && x.ans == null) x.ans = !!ok; }
+
+// Вопрос i: свои настройки, новый вопрос, звучание
+function setQ() {
+  const x = L.q[L.i];
+  L.cur = x.conf;
+  const sec = x.conf.sec;
+  EAR.q[sec] = null; EAR.res[sec] = null; EAR.reveal = false;
+  if (sec !== 'pt') micStop();
+  gen(sec);
+  render();
+  at(300, () => play(sec));
+}
+
+function begin(kind, id, q) {
+  clearTimers(); micStop();
+  L = { kind, id, q, i: 0, done: null };
+  setQ();
+}
+
+// Урок: до двух вопросов повторения из уроков, которым пора, затем вопросы урока
+function startLesson(id) {
+  const l = findLesson(EAR_COURSE, id);
+  if (!l) return;
+  const base = normalizeEar(ctx.store.all()), conf = lessonConf(base, l), q = [];
+  dueReviews(EAR_COURSE, prog(), Date.now(), id).filter((r) => r.sec !== 'pt').slice(0, 2).forEach((r) => q.push({ lid: r.id, rev: true, conf: lessonConf(base, r) }));
+  for (let k = 0; k < lessonN(l); k++) q.push({ lid: id, conf });
+  begin('lesson', id, q);
+}
+
+// Повторение: по два вопроса из уроков, которым пора (до пяти уроков)
+function startReview() {
+  const base = normalizeEar(ctx.store.all()), q = [];
+  dueReviews(EAR_COURSE, prog(), Date.now()).filter((r) => r.sec !== 'pt').slice(0, 5).forEach((r) => { const c = lessonConf(base, r); q.push({ lid: r.id, rev: true, conf: c }, { lid: r.id, rev: true, conf: c }); });
+  if (q.length) begin('review', null, q);
+}
+
+// Проверка уровня: первый, средний и последний урок каждой главы по два вопроса (без пения — нужен микрофон)
+function startPlacement() {
+  const base = normalizeEar(ctx.store.all()), course = EAR_COURSE.filter((c) => c.id !== 'pt');
+  begin('place', null, placementPlan(course, 2).map((x) => ({ lid: x.id, conf: lessonConf(base, findLesson(EAR_COURSE, x.id)) })));
+}
+
+function advance() {
+  if (!L || L.done) return;
+  const x = L.q[L.i];
+  if (x && x.ans == null) x.ans = false; // пропущенный вопрос — не засчитан
+  if (L.i + 1 < L.q.length) { L.i++; setQ(); return; }
+  finishL();
+}
+
+function finishL() {
+  clearTimers(); micStop();
+  const p = prog(), now = Date.now();
+  const by = {};
+  L.q.forEach((x) => { (by[x.lid] = by[x.lid] || []).push(!!x.ans); });
+  if (L.kind === 'place') {
+    const marked = applyPlacement(EAR_COURSE, p, by, now);
+    L.done = { placement: { n: marked.length } };
+  } else {
+    Object.entries(by).forEach(([id, oks]) => { if (L.kind === 'review' || id !== L.id) recordReview(p, id, oks.every(Boolean), now); });
+    const own = L.q.filter((x) => !x.rev), all = L.kind === 'review' ? L.q : own;
+    const score = all.length ? all.filter((x) => x.ans).length / all.length : 0;
+    if (L.kind === 'lesson') recordLesson(p, L.id, score, now);
+    L.done = { score };
+  }
+  ctx.saveData();
+  render();
+}
+
+function lessonResult() {
+  const { t } = ctx, nx = nextLesson(EAR_COURSE, prog()), ch = L.id ? chapterOf(EAR_COURSE, L.id) : null;
+  return '<div class="ewrap">' + resultHTML({ t, esc, name: L.kind === 'review' ? t('crs.review') : lname(L.id), score: L.done.score ?? 1, next: nx && nx.id, nextName: nx ? lname(nx.id) : '',
+    book: ch && ch.book, placement: L.done.placement }) + '</div>';
+}
+
+function stopLesson() {
+  clearTimers(); micStop();
+  L = null;
+  const e = normalizeEar(ctx.store.all());
+  e.sec = 'home'; e.view = 'course';
+  ctx.store.save();
+  render();
+}
+
 /* ---------- главный экран ---------- */
 
 function miniRing(p, col) {
@@ -268,14 +380,21 @@ function miniRing(p, col) {
     '" stroke="' + col + '" stroke-dasharray="' + C * p + ' ' + C + '" transform="rotate(-90 18 18)"/></svg>';
 }
 
+const weekDays = () => Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - (6 - i) * DAY));
+function weekOf(E, keys) { let c = 0, t = 0; keys.forEach((k) => { const d = E.days[k]; if (d) { c += d.c; t += d.t; } }); return { c, t }; }
+
 function homeHTML() {
-  const { t, tn, ui } = ctx, e = EC(), E = EST(), d = E.days[dayKey(Date.now())] || { c: 0, t: 0 }, p = d.t / e.goal;
-  const streak = earStreak(E, (i) => dayKey(Date.now() - i * DAY));
-  return '<div class="ewrap ehome"><div class="edash">' + goalRing(p, 1, t('goalRing', { p: Math.round(p * 100) })) + '<div class="edtxt"><div class="l2" style="font-size:14px">' + t('today') +
-    '</div><div class="big num">' + d.t + ' <small class="l2">' + t('ofGoal', { goal: e.goal }) + '</small></div><div class="l2" style="font-size:14px">' +
-    (d.t ? t('accToday', { p: Math.round((d.c / d.t) * 100) }) : t('noAnswers')) + '</div>' +
-    (streak ? '<span class="spill">' + FLAME + '<b class="num">' + streak + '</b><span>' + tn('streakWord', streak) + '</span></span>' : '') +
-    '</div><div class="edbtns">' + ui.icb('data-x="estats"', I.stats, t('statsBtn'), 'sm') + ui.icb('data-x="egoal"', ui.icons.gear, t('goalBtn'), 'sm') + '</div></div>' +
+  const { t, tn, ui } = ctx, e = EC(), E = EST(), view = e.view === 'course' ? 'course' : 'free';
+  const top = '<div class="ehtop">' + modeSeg(t, view) + '</div>';
+  if (view === 'course') {
+    return '<div class="ewrap ehome">' + top + courseHTML({ course: EAR_COURSE, p: prog(), t, esc, title: lname, chTitle: cname, now: Date.now() }) + '</div>';
+  }
+  // неделя: ответы, точность и столбики по дням — без цели на день и без серий
+  const days = weekDays(), w = weekOf(E, days), mx = Math.max(1, ...days.map((k) => (E.days[k] || { t: 0 }).t));
+  const bars = '<div class="ewbars" aria-hidden="true">' + days.map((k) => { const d = E.days[k] || { c: 0, t: 0 }; return '<i style="--h:' + (d.t / mx) + ';--q:' + (d.t ? d.c / d.t : 0) + '"></i>'; }).join('') + '</div>';
+  return '<div class="ewrap ehome">' + top + '<div class="edash"><div class="edtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.t + ' <small class="l2">' + tn('answersN', w.t) +
+    '</small></div><div class="l2" style="font-size:14px">' + (w.t ? t('accWeek', { p: Math.round((w.c / w.t) * 100) }) : t('noAnswers')) + '</div></div>' + bars +
+    '<div class="edbtns">' + ui.icb('data-x="estats"', I.stats, t('statsBtn'), 'sm') + '</div></div>' +
     '<div class="edgrid">' + DRILLS.map(([id, c]) => {
       const a = accuracy(E, id);
       return '<button class="edcard" data-x="esec" data-v="' + id + '" style="--c:' + c + '"><span class="edic">' + DICON[id] + '</span><span class="edr">' + miniRing(a.p, c) +
@@ -316,10 +435,10 @@ function ntKB(mk) {
 
 function drillHTML(sec) {
   const { t, tn, ui } = ctx, e = EC(), [, color] = drill(sec), q = EAR.q[sec] || gen(sec), res = EAR.res[sec], ss = EAR.sess[sec] || { c: 0, t: 0, st: 0 };
-  const head = '<div class="ehead" style="--c:' + color + '"><button class="mlback" data-x="esec" data-v="home" aria-label="' + t('backAria') + '">' + t('back') + '</button><b class="ehn">' +
-    t('sec.' + sec) + '</b><span class="estat num" aria-label="' + t('sessCorrect', { c: ss.c, t: ss.t }) + '"><b>' + ss.c + '</b>/' + ss.t + '</span><span class="estat num est" aria-label="' +
-    t('sessStreak', { n: ss.st }) + '">' + FLAME + ss.st + '</span>' + ui.icb('data-x="eset"', ui.icons.gear, t('settings'), 'sm') + '</div>';
-  const lvl = t('lvl.' + e.level);
+  const head = L ? lessonBarHTML({ t, esc, name: L.kind === 'place' ? t('crs.place') : L.kind === 'review' ? t('crs.review') : lname(L.id), i: L.i, n: L.q.length, review: L.kind === 'lesson' && L.q[L.i].rev }) :
+    '<div class="ehead" style="--c:' + color + '"><button class="mlback" data-x="esec" data-v="home" aria-label="' + t('backAria') + '">' + t('back') + '</button><b class="ehn">' +
+    t('sec.' + sec) + '</b><span class="estat num" aria-label="' + t('sessCorrect', { c: ss.c, t: ss.t }) + '"><b>' + ss.c + '</b>/' + ss.t + '</span>' + ui.icb('data-x="eset"', ui.icons.gear, t('settings'), 'sm') + '</div>';
+  const lvl = L ? '' : t('lvl.' + e.level);
   const playBtn = (lab) => '<button class="eplay" id="eplay" data-x="eplay" aria-label="' + (lab || t('replay')) + '" style="--c:' + color + '">' + (sec === 'pt' ? I.speaker : I.play) + '<i></i><i></i></button>';
   // «Дальше» — всегда после ответа: сравнение вариантов на слух отменяет автопереход (на телефоне упражнение застревало)
   const next = res ? '<button class="btn fill block enext" data-x="enext">' + t('next') + '</button>' : '';
@@ -342,7 +461,7 @@ function drillHTML(sec) {
     dc: [t('q.dc'), t('p.dc')],
   };
   const [pq, ps] = prompts[sec];
-  const card = '<div class="ecard" style="--c:' + color + '">' + playBtn() + '<div class="eq1">' + pq + '</div><div class="eq2">' + ps + ' · ' + lvl +
+  const card = '<div class="ecard" style="--c:' + color + '">' + playBtn() + '<div class="eq1">' + pq + '</div><div class="eq2">' + ps + (lvl ? ' · ' + lvl : '') +
     (sec === 'dg' && res ? ' · ' + (q.mode && q.mode !== 'major' && q.mode !== 'minor' ? MAJ_NAMES[q.pc] + ' ' + t('md.' + q.mode) : t(q.minor ? 'key.min' : 'key.maj', { root: (q.minor ? MIN_NAMES : MAJ_NAMES)[q.pc] })) : '') + '</div>' + (sec === 'dc' ? '' : fb()) + '</div>';
 
   if (sec === 'nt') {
@@ -384,7 +503,7 @@ function drillHTML(sec) {
 function render() {
   if (!host) return;
   const sec = EC().sec;
-  host.innerHTML = sec === 'home' || !drill(sec) ? homeHTML() : drillHTML(sec);
+  host.innerHTML = L && L.done ? lessonResult() : L ? drillHTML(L.cur.sec) : sec === 'home' || !drill(sec) ? homeHTML() : drillHTML(sec);
 }
 
 /* ---------- шторки ---------- */
@@ -470,27 +589,22 @@ function statsSheet() {
     }).join('') + '</div>';
   };
   const conf = Object.entries(E.ntc || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  // часто путается: пары «верный → выбранный» по всем упражнениям
+  const cfs = Object.entries(E.cf || {}).flatMap(([sec, m]) => Object.entries(m).map(([k, n]) => { const [a, b] = k.split('>'); return { sec, a, b, n }; }))
+    .filter((x) => x.n >= 2).sort((x, y) => y.n - x.n).slice(0, 6);
+  // точность по неделям: четыре последние недели
+  const weeks = [3, 2, 1, 0].map((w) => weekOf(E, Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - (w * 7 + i) * DAY))));
   ui.sheet(() => ui.snav(t('st.title')) +
     '<div class="tiles num"><div class="tile"><b>' + tt + '</b><span>' + t('st.week') + '</span></div><div class="tile"><b>' + (tt ? Math.round((tc / tt) * 100) + '%' : '—') +
     '</b><span>' + t('st.acc') + '</span></div><div class="tile"><b>' + best + '</b><span>' + t('st.best') + '</span></div></div>' +
+    (weeks.some((w) => w.t) ? '<div class="card"><div class="ch"><span>' + t('st.weeks') + '</span><span></span></div><div class="ewk">' + weeks.map((w, i) =>
+      '<div><b class="num">' + (w.t ? Math.round((w.c / w.t) * 100) + '%' : '—') + '</b><span>' + t(i === 3 ? 'st.thisWeek' : 'st.weeksAgo', { n: 3 - i }) + '</span></div>').join('') + '</div></div>' : '') +
+    (cfs.length ? '<div class="card"><div class="ch"><span>' + t('st.mixups') + '</span><span></span></div>' + cfs.map((x) => '<div class="hrow"><span class="n">' + esc(label(x.sec, x.a)) + ' → ' + esc(label(x.sec, x.b)) +
+      '</span><span class="hb"></span><span class="num l2" style="font-size:13px">' + x.n + '×</span></div>').join('') + '</div>' : '') +
     DRILLS.map((d) => sect(d[0])).join('') +
     (conf.length ? '<div class="card"><div class="ch"><span>' + t('st.confused') + '</span><span>' + t('st.notes') + '</span></div>' + conf.map(([k, v]) => '<div class="hrow"><span class="n">' + esc(k) +
       '</span><span class="hb"></span><span class="num l2" style="font-size:13px">' + v + '×</span></div>').join('') + '</div>' : '') +
     '<p class="ftr">' + t('st.ftr') + '</p>');
-}
-
-function goalSheet() {
-  const { t, ui } = ctx, e = EC();
-  ui.sheet(() => ui.snav(t('goal.title')) + '<div style="text-align:center;font-size:56px;font-weight:300;margin:8px 0" class="num">' + e.goal + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('goal', [10, 20, 30, 50, 100].map((v) => [v, v]), e.goal, t('goal.title')) + '</div></div><p class="ftr">' + t('goal.ftr') + '</p>',
-  (el, sh) => el.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-seg="goal"] [data-v]');
-    if (!b) return;
-    e.goal = +b.dataset.v;
-    ctx.store.save();
-    sh.update();
-    render();
-  }));
 }
 
 // Послушать все ноты набора по очереди с подсветкой клавиш
@@ -520,16 +634,23 @@ function act(a, el) {
     case 'esec': e.sec = el.dataset.v; ctx.store.save(); clearTimers(); if (e.sec !== 'pt') micStop(); render(); break;
     case 'eplay': if (!EAR.q[sec]) gen(sec); play(sec); break;
     case 'eans': answer(sec, el.dataset.v); render(); break;
-    case 'enext': gen(sec); render(); at(150, () => play(sec)); break;
+    case 'enext': if (L) { advance(); break; } gen(sec); render(); at(150, () => play(sec)); break;
     case 'eskip':
-      if (!EAR.res.pt && EAR.q.pt) rec('pt', mName(EAR.q.pt.m).replace(/\d/, ''), false);
+      if (!EAR.res.pt && EAR.q.pt) { rec('pt', mName(EAR.q.pt.m).replace(/\d/, ''), false); lt(false); }
+      if (L) { advance(); break; }
       EAR.reveal = false; gen('pt'); render(); at(150, () => play('pt'));
       break;
+    case 'lgo': startLesson(el.dataset.v); break;
+    case 'lagain': if (L && L.kind === 'lesson') startLesson(L.id); else if (L && L.kind === 'review') startReview(); break;
+    case 'lhome': stopLesson(); break;
+    case 'lplace': startPlacement(); break;
+    case 'lskip': { const p = prog(); p.pl = -1; ctx.saveData(); render(); break; }
+    case 'lrev': startReview(); break;
+    case 'lbook': ctx.openIn('book', { book: { ch: el.dataset.v, sec: 'school' } }); break;
     case 'ereveal': EAR.reveal = !EAR.reveal; render(); break;
     case 'tmic': if (mic) { micStop(); render(); } else micStart(); break;
     case 'eset': settingsSheet(); break;
     case 'estats': statsSheet(); break;
-    case 'egoal': goalSheet(); break;
     case 'ntlearn': ntLearn(); break;
   }
 }
@@ -538,6 +659,8 @@ function bind() {
   onClick = (ev) => {
     const k = ev.target.closest('.ekb [data-m]');
     if (k) { const sec = EC().sec; if (sec === 'nt') { if (!EAR.listen) ntAnswer(+k.dataset.m); } else if (sec === 'dc') dcKey(+k.dataset.m); return; }
+    const md = ev.target.closest('[data-seg="xmode"] [data-v]');
+    if (md) { const e = normalizeEar(ctx.store.all()); e.view = md.dataset.v; ctx.store.save(); render(); return; }
     const lb = ev.target.closest('[data-seg="ntlisten"] [data-v]');
     if (lb) { EAR.listen = lb.dataset.v === 'listen'; render(); return; }
     const x = ev.target.closest('[data-x]');
@@ -553,15 +676,15 @@ function bind() {
   host.addEventListener('click', onClick);
   host.addEventListener('pointerdown', onDown);
   // «Ступени»: смахивание по карточке или кнопкам влево — следующий вид вопроса (нота → аккорд → цепочка), вправо — предыдущий
-  const kindStep = (d) => { const e = EC(); if (e.sec !== 'dg') return; const i = DG_KINDS.indexOf(e.dgKind); e.dgKind = DG_KINDS[(i + d + DG_KINDS.length) % DG_KINDS.length]; ctx.store.save(); clearTimers(); gen('dg'); render(); ctx.ui.toast(ctx.t('kd.' + e.dgKind)); };
+  const kindStep = (d) => { const e = EC(); if (L || e.sec !== 'dg') return; const i = DG_KINDS.indexOf(e.dgKind); e.dgKind = DG_KINDS[(i + d + DG_KINDS.length) % DG_KINDS.length]; ctx.store.save(); clearTimers(); gen('dg'); render(); ctx.ui.toast(ctx.t('kd.' + e.dgKind)); };
   unswipe = swipe(host, { left: () => kindStep(1), right: () => kindStep(-1), ok: (ev) => EC().sec === 'dg' && !!ev.target.closest('.ecard, .egrid, .eslots') });
 }
 
 export default {
   ...meta,
   status(c) {
-    const d = (normalizeEarData(c.data()).days || {})[dayKey(Date.now())];
-    return d && d.t ? c.tn('statusToday', d.t, { p: Math.round((d.c / d.t) * 100) }) : c.t('statusIdle');
+    const E = normalizeEarData(c.data()), w = weekOf(E, Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - i * DAY)));
+    return w.t ? c.tn('statusWeek', w.t, { p: Math.round((w.c / w.t) * 100) }) : c.t('statusIdle');
   },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
@@ -572,6 +695,7 @@ export default {
   unmount() {
     clearTimers();
     micStop();
+    L = null;
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); }
     if (unswipe) { unswipe(); unswipe = null; }
     host = null;
