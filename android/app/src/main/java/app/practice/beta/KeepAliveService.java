@@ -127,8 +127,14 @@ public class KeepAliveService extends Service {
         Notification note = build(this, title, text, icon);
         ui.removeCallbacks(blinker);
         if (!icon.isEmpty()) ui.postDelayed(blinker, BLINK_EVERY);
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-        else startForeground(NOTE_ID, note);
+        // идёт запись — служба и для микрофона (Android 11+), иначе при погашенном экране запись — тишина
+        boolean mic = intent != null && intent.getBooleanExtra("mic", false) && Build.VERSION.SDK_INT >= 30
+            && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        if (Build.VERSION.SDK_INT >= 29) {
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK;
+            try { startForeground(NOTE_ID, note, mic ? type | ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE : type); }
+            catch (Exception e) { startForeground(NOTE_ID, note, type); } // Android не дал микрофон (из фона) — хотя бы звук
+        } else startForeground(NOTE_ID, note);
         // процессор не засыпает при погасшем экране, пока идёт занятие (не дольше 6 часов на всякий случай)
         if (lock == null) {
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);

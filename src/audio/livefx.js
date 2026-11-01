@@ -1,23 +1,30 @@
-// Обработка в реальном времени (диктофон до записи и мониторинг): общая цепочка эффектов приложения (fx.js) и
-// усиление — те же узлы, что при обработке записи (voicefx.processVoice → renderFx), поэтому вживую и в файле звучит
-// одинаково. Шумоподавление, гейт и нормализация — только при обработке записи. Контекст у диктофона свой (малая
-// задержка), пространства реверберации строятся в нём (localSpaces).
+// Обработка в реальном времени (диктофон до записи и мониторинг): голосовая цепочка (vocal.js — срез, экспандер,
+// де-эссер, тембр, компрессор), общая цепочка эффектов приложения (fx.js), усиление и лимитер — тот же код, что при
+// обработке записи (voicefx.processVoice), поэтому вживую и в файле звучит одинаково. Шумоподавление и подъём до
+// цели громкости — только в файле. Контекст у диктофона свой (малая задержка), пространства реверберации строятся в
+// нём (localSpaces). Без AudioWorklet голосовая цепочка вживую пропускается (звук идёт как есть, в файле — полностью).
 // Вход и выход — свои: открыть вход (deviceId, где браузер умеет выбирать), выход — setSinkId, где он есть.
 import { createFxChain, localSpaces } from './fx.js';
+import { createVocalNode, normalizeVoiceSet } from './vocal.js';
 
-// Цепочка: in → эффекты (fx.js) → усиление → out; update({ chain, gain }) — настройки диктофона
-export function createLiveFx(c, fx = {}) {
+// Цепочка: in → голос (pre) → эффекты (fx.js) → усиление → лимитер → out; update({ chain, gain, voice })
+export async function createLiveFx(c, fx = {}) {
   const input = c.createGain(), gain = c.createGain(), output = c.createGain();
+  const v = normalizeVoiceSet(fx.voice), pre = await createVocalNode(c, 'pre', v.p), lim = await createVocalNode(c, 'lim', v.p);
   const chain = createFxChain(c, fx.chain, { space: localSpaces(c, gain) });
-  input.connect(chain.input); chain.output.connect(gain).connect(output);
+  input.connect(pre.node).connect(chain.input); chain.output.connect(gain).connect(lim.node).connect(output);
   function update(o = {}) {
     chain.set(o.chain);
     gain.gain.setTargetAtTime(Math.pow(10, (+o.gain || 0) / 20), c.currentTime, 0.02);
+    if (o.voice) { const p = normalizeVoiceSet(o.voice).p; pre.set(p); lim.set(p); }
   }
   update(fx);
   return {
     input, output, update,
-    disconnect() { chain.dispose(); [input, gain, output].forEach((n) => { try { n.disconnect(); } catch { /* уже */ } }); },
+    live: pre.live,
+    // сокращение усиления по ступеням, дБ: { exp, ds, comp, lim }
+    gr: () => ({ ...pre.gr(), lim: lim.gr().lim }),
+    disconnect() { chain.dispose(); pre.dispose(); lim.dispose(); [input, gain, output].forEach((n) => { try { n.disconnect(); } catch { /* уже */ } }); },
   };
 }
 // Открыть вход: deviceId — для браузера (на Android вход выбирает система — см. engine.route)

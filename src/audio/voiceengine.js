@@ -4,6 +4,7 @@
 // петличек); веб — getUserMedia с deviceId и setSinkId, где браузер умеет. Записи — WAV, только на устройстве.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { encodeWav } from './voicefx.js';
+import { REC } from './recstate.js';
 
 const V = Capacitor.isNativePlatform() ? registerPlugin('Voice') : null;
 const CHUNK = 768 * 1024;
@@ -20,17 +21,17 @@ export const devKind = (d) => KIND[d && d.type] || 'other';
 /* ---------- Android ---------- */
 
 function nativeEngine() {
-  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set() };
+  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set() };
   // уровень: кусочек сигнала для спектра (int16, моно) → Float32Array
   const toF = (e) => { if (e && e.pcm) { const u = unb64(e.pcm), n = u.length >> 1, x = new Float32Array(n); for (let i = 0; i < n; i++) { const v = u[2 * i] | (u[2 * i + 1] << 8); x[i] = (v > 32767 ? v - 65536 : v) / 32768; } e.samples = x; } return e; };
-  ['level', 'pos', 'end', 'devices'].forEach((k) => V.addListener(k, (e) => { if (k === 'level') toF(e); subs[k].forEach((fn) => fn(e)); }));
+  ['level', 'pos', 'end', 'devices', 'lost'].forEach((k) => V.addListener(k, (e) => { if (k === 'level') toF(e); subs[k].forEach((fn) => fn(e)); }));
   return {
     native: true,
     on: (k, fn) => { subs[k].add(fn); return () => subs[k].delete(fn); },
     devices: async () => { const r = await V.devices(); return { inputs: r.inputs || [], outputs: r.outputs || [] }; },
-    start: (o) => V.start(o),
+    start: (o) => V.start(o).then((r) => { REC.voice = !o.monitor; return r; }),
     pause: (on) => V.pause({ on }),
-    stop: () => V.stop(),
+    stop: () => V.stop().finally(() => { REC.voice = false; }),
     async read(path) {
       const parts = []; let off = 0, size = Infinity;
       while (off < size) { const r = await V.read({ path, offset: off, length: CHUNK }); size = r.size; const u = unb64(r.data || ''); if (!u.length) break; parts.push(u); off += u.length; }
@@ -48,67 +49,176 @@ function nativeEngine() {
   };
 }
 
-/* ---------- браузер ---------- */
+/* ---------- браузер, Windows, Linux ---------- */
+
+// Записи — в IndexedDB кусками по ~2 с, пока идёт запись: закрыли окно, сбой, выключился компьютер — записанное
+// остаётся и открывается из «Записей в памяти» (list/read собирают WAV из кусков). Исходник — 32 бит с плавающей точкой,
+// как отдаёт браузер. Нет IndexedDB — в памяти страницы, как раньше.
+const DB = 'melete-voice';
+let dbp = null;
+function db() {
+  if (dbp) return dbp;
+  dbp = new Promise((res) => {
+    try {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('files'); d.createObjectStore('chunks'); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(null);
+    } catch { res(null); }
+  });
+  return dbp;
+}
+const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function tx(store, mode, fn) {
+  const d = await db();
+  if (!d) return null;
+  const t = d.transaction(store, mode), out = await fn(t.objectStore(store));
+  await new Promise((res, rej) => { t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); });
+  return out;
+}
+const range = (path) => IDBKeyRange.bound([path, 0], [path, Infinity]);
+// куски записи (+ куски, которые IndexedDB не приняла — место кончилось) → WAV (32f)
+async function assemble(path, extra = []) {
+  const keys = (await tx('chunks', 'readonly', (s) => req(s.getAllKeys(range(path)))).catch(() => null)) || [];
+  const vals = (await tx('chunks', 'readonly', (s) => req(s.getAll(range(path)))).catch(() => null)) || [];
+  const parts = vals.map((v, i) => ({ ...v, seq: keys[i] ? keys[i][1] : i })).concat(extra).sort((a, b) => a.seq - b.seq);
+  if (!parts.length) return null;
+  const { sr, nc } = parts[0], n = parts.reduce((a, p) => a + p.data.length / nc, 0), ch = Array.from({ length: nc }, () => new Float32Array(n));
+  let o = 0;
+  parts.forEach((p) => { const m = p.data.length / nc; for (let i = 0; i < m; i++) for (let c = 0; c < nc; c++) ch[c][o + i] = p.data[i * nc + c]; o += m; });
+  return { wav: encodeWav(ch, sr, 32), sec: n / sr, sr, nc, at: parts[parts.length - 1].at || Date.now() };
+}
 
 function webEngine() {
-  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set() };
+  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set() };
   const emit = (k, e) => subs[k].forEach((fn) => fn(e));
-  const mem = new Map(); // путь → WAV
+  const mem = new Map(); // путь → WAV, если IndexedDB нет
   let rec = null, audio = null;
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', () => emit('devices', {}));
   const typeOf = (d) => (/bluetooth|bt|airpods|buds/i.test(d.label) ? 'bt' : /usb/i.test(d.label) ? 'usb_device' : /head|гарнитур|наушник/i.test(d.label) ? 'wired_headset' : d.kind === 'audiooutput' ? 'speaker' : 'builtin_mic');
+  const putFile = async (path, u8, meta = {}) => { const ok = await tx('files', 'readwrite', (s) => req(s.put({ u8, at: Date.now(), ...meta }, path))).then(() => true, () => false); if (!ok) mem.set(path, u8); };
+  // открыть вход: устройство (deviceId) или звук экрана/вкладки (getDisplayMedia: звук компьютера, урок в браузере)
+  async function openStream(deviceId, nc, raw) {
+    const dsp = { echoCancellation: !raw, noiseSuppression: !raw, autoGainControl: !raw };
+    if (deviceId === 'display') {
+      const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, systemAudio: 'include' });
+      s.getVideoTracks().forEach((t) => { t.stop(); s.removeTrack(t); });
+      if (!s.getAudioTracks().length) throw Object.assign(new Error('noaudio'), { name: 'NoAudio' });
+      return s;
+    }
+    return navigator.mediaDevices.getUserMedia({ audio: { ...(deviceId && deviceId !== -1 ? { deviceId: { exact: deviceId } } : {}), channelCount: nc, ...dsp } });
+  }
   return {
     native: false,
     on: (k, fn) => { subs[k].add(fn); return () => subs[k].delete(fn); },
+    canDisplay: () => !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia),
     async devices() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return { inputs: [], outputs: [] };
       const list = await navigator.mediaDevices.enumerateDevices();
-      const map = (k) => list.filter((d) => d.kind === k && d.deviceId !== 'communications').map((d, i) => ({ id: d.deviceId, type: d.deviceId === 'default' ? (k === 'audioinput' ? 'builtin_mic' : 'speaker') : typeOf(d), name: d.label || (k === 'audioinput' ? 'Mic ' : 'Out ') + (i + 1), channels: 1 }));
-      return { inputs: map('audioinput'), outputs: 'setSinkId' in HTMLMediaElement.prototype ? map('audiooutput') : [] };
+      const map = (k) => list.filter((d) => d.kind === k && d.deviceId !== 'communications').map((d, i) => ({ id: d.deviceId, type: d.deviceId === 'default' ? (k === 'audioinput' ? 'builtin_mic' : 'speaker') : typeOf(d), name: d.label || (k === 'audioinput' ? 'Mic ' : 'Out ') + (i + 1), channels: 2 }));
+      const inputs = map('audioinput');
+      if (this.canDisplay()) inputs.push({ id: 'display', type: 'display', name: '', channels: 2 });
+      return { inputs, outputs: 'setSinkId' in HTMLMediaElement.prototype ? map('audiooutput') : [] };
     },
     async start({ deviceId, stereo, raw, monitor }) {
-      const c = new (window.AudioContext || window.webkitAudioContext)();
+      const c = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' }), nc = stereo || deviceId === 'display' ? 2 : 1;
       let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { ...(deviceId && deviceId !== -1 ? { deviceId: { exact: deviceId } } : {}), channelCount: stereo ? 2 : 1, echoCancellation: !raw, noiseSuppression: !raw, autoGainControl: !raw } });
-      } catch (e) { c.close(); throw Object.assign(new Error('mic'), { message: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' }); }
-      const nc = stereo ? 2 : 1, src = c.createMediaStreamSource(stream), sp = c.createScriptProcessor(4096, nc, nc), bufs = Array.from({ length: nc }, () => []);
-      let frames = 0, paused = false;
-      sp.onaudioprocess = (e) => {
-        let peak = 0, sum = 0;
-        for (let k = 0; k < nc; k++) {
-          const x = e.inputBuffer.getChannelData(Math.min(k, e.inputBuffer.numberOfChannels - 1));
-          if (!paused && !monitor) bufs[k].push(Float32Array.from(x));
-          for (let i = 0; i < x.length; i++) { const v = Math.abs(x[i]); if (v > peak) peak = v; sum += x[i] * x[i]; }
-        }
-        if (!paused && !monitor) frames += e.inputBuffer.length;
-        const x0 = e.inputBuffer.getChannelData(0);
-        emit('level', { peak, rms: Math.sqrt(sum / (e.inputBuffer.length * nc)), sec: frames / c.sampleRate, paused, samples: x0.slice(-1024), rate: c.sampleRate });
+      try { stream = await openStream(deviceId, nc, raw); }
+      catch (e) { c.close(); throw Object.assign(new Error('mic'), { message: e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : 'unavailable' }); }
+      if (c.state !== 'running') { try { await c.resume(); } catch { /* попробуем так */ } }
+      const src = c.createMediaStreamSource(stream), path = 'rec-' + Date.now() + '.wav', sr = c.sampleRate;
+      let frames = 0, paused = false, seq = 0, pend = [], pendN = 0, lastFlush = 0, node = null, sp = null, ended = false;
+      const memParts = [];
+      let rec0done = null;
+      const drained = () => new Promise((res) => { rec0done = res; setTimeout(res, 400); });
+      const flush = async (force) => {
+        if (!pendN || (!force && performance.now() - lastFlush < 2000)) return;
+        lastFlush = performance.now();
+        const data = new Float32Array(pendN * nc);
+        let o = 0;
+        pend.forEach((b) => { const m = b[0].length; for (let i = 0; i < m; i++) for (let k = 0; k < nc; k++) data[(o + i) * nc + k] = b[Math.min(k, b.length - 1)][i]; o += m; });
+        pend = []; pendN = 0;
+        const q = seq++, rec0 = { data, sr, nc, at: Date.now() };
+        const ok = await tx('chunks', 'readwrite', (s) => req(s.put(rec0, [path, q]))).then(() => true, () => false);
+        if (!ok) memParts.push({ ...rec0, seq: q });
       };
-      src.connect(sp); sp.connect(c.destination);
-      rec = { c, stream, src, sp, bufs, get frames() { return frames; }, setPaused: (v) => { paused = v; } };
-      return { rate: c.sampleRate, channels: nc };
+      const onChunk = (bufs) => {
+        let peak = 0, sum = 0;
+        const x0 = bufs[0];
+        for (let k = 0; k < bufs.length; k++) { const x = bufs[k]; for (let i = 0; i < x.length; i++) { const v = Math.abs(x[i]); if (v > peak) peak = v; sum += x[i] * x[i]; } }
+        if (!paused && !monitor) { pend.push(bufs); pendN += x0.length; frames += x0.length; flush(false); }
+        emit('level', { peak, rms: Math.sqrt(sum / (x0.length * bufs.length)), sec: frames / sr, paused, samples: x0.slice(-1024), rate: sr });
+      };
+      try {
+        await c.audioWorklet.addModule(new URL('./wl/rec.worklet.js', import.meta.url));
+        node = new AudioWorkletNode(c, 'melete-rec', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: nc, channelCountMode: 'explicit', processorOptions: { nc } });
+        node.port.onmessage = (e) => { if (e.data === 'done') { if (rec0done) rec0done(); } else onChunk(e.data); };
+        const mute = c.createGain(); mute.gain.value = 0; // узел должен тянуться выходом, звук — в тишину
+        src.connect(node).connect(mute).connect(c.destination);
+      } catch {
+        // запасной путь: ScriptProcessor (старые движки без AudioWorklet)
+        sp = c.createScriptProcessor(4096, nc, nc);
+        sp.onaudioprocess = (e) => onChunk(Array.from({ length: nc }, (_, k) => Float32Array.from(e.inputBuffer.getChannelData(Math.min(k, e.inputBuffer.numberOfChannels - 1)))));
+        src.connect(sp); sp.connect(c.destination);
+      }
+      // вход пропал (выдернули USB, Bluetooth отключился, закрыли вкладку-источник) — записанное сохраняется
+      stream.getAudioTracks().forEach((t) => { t.onended = () => { if (rec && !ended) { ended = true; emit('lost', { reason: 'device' }); } }; });
+      rec = { c, stream, src, node, sp, path, sr, nc, memParts, flush, drained, get frames() { return frames; }, setPaused: (v) => { paused = v; } };
+      if (!monitor) REC.voice = true;
+      return { rate: sr, channels: nc };
     },
     async pause(on) { if (rec) rec.setPaused(on); },
     async stop() {
-      const r = rec; rec = null;
+      const r = rec; rec = null; REC.voice = false;
       if (!r) throw new Error('idle');
-      r.sp.disconnect(); r.src.disconnect(); r.stream.getTracks().forEach((t) => t.stop());
-      const ch = r.bufs.map((parts) => { const out = new Float32Array(parts.reduce((s, p) => s + p.length, 0)); let o = 0; parts.forEach((p) => { out.set(p, o); o += p.length; }); return out; });
-      const sr = r.c.sampleRate; r.c.close();
-      const path = 'rec-' + Date.now() + '.wav', wav = encodeWav(ch, sr);
-      mem.set(path, wav);
-      return { path, size: wav.length, sec: ch[0].length / sr, rate: sr, channels: ch.length };
+      // дождаться последних отсчётов из потока звука (недописанный кусок)
+      if (r.node) { const d = r.drained(); r.node.port.postMessage('stop'); await d; r.node.port.onmessage = null; }
+      else await new Promise((res) => setTimeout(res, 120));
+      try { r.src.disconnect(); } catch { /* уже */ }
+      if (r.sp) { try { r.sp.disconnect(); } catch { /* уже */ } }
+      r.stream.getTracks().forEach((t) => t.stop());
+      await r.flush(true);
+      try { await r.c.close(); } catch { /* уже */ }
+      const out = await assemble(r.path, r.memParts).catch(() => null);
+      if (!out) throw new Error('empty');
+      await putFile(r.path, out.wav);
+      await tx('chunks', 'readwrite', (s) => req(s.delete(range(r.path)))).catch(() => {});
+      return { path: r.path, size: out.wav.length, sec: out.sec, rate: r.sr, channels: r.nc };
     },
-    read: async (path) => mem.get(path),
-    write: async (path, u8) => { mem.set(path, u8); },
-    remove: async (path) => { mem.delete(path); },
-    list: async () => [], // в браузере запись живёт в памяти страницы — после закрытия её нет
+    async read(path) {
+      if (mem.has(path)) return mem.get(path);
+      const f = await tx('files', 'readonly', (s) => req(s.get(path))).catch(() => null);
+      if (f) return f.u8;
+      const a = await assemble(path).catch(() => null); // запись оборвалась — собрать из кусков
+      if (!a) return undefined;
+      await putFile(path, a.wav);
+      await tx('chunks', 'readwrite', (s) => req(s.delete(range(path)))).catch(() => {});
+      return a.wav;
+    },
+    write: async (path, u8) => { if (path.startsWith('proc-')) mem.set(path, u8); else await putFile(path, u8); },
+    remove: async (path) => { mem.delete(path); await tx('files', 'readwrite', (s) => req(s.delete(path))).catch(() => {}); await tx('chunks', 'readwrite', (s) => req(s.delete(range(path)))).catch(() => {}); },
+    // исходники записей: готовые и оборванные (куски без WAV)
+    async list() {
+      const out = [];
+      await tx('files', 'readonly', (s) => new Promise((res) => {
+        const r = s.openCursor();
+        r.onsuccess = () => { const cu = r.result; if (!cu) return res(); if (String(cu.key).startsWith('rec-')) out.push({ path: cu.key, size: cu.value.u8.length, at: cu.value.at }); cu.continue(); };
+        r.onerror = () => res();
+      })).catch(() => {});
+      const open = new Map();
+      await tx('chunks', 'readonly', (s) => new Promise((res) => {
+        const r = s.openCursor();
+        r.onsuccess = () => { const cu = r.result; if (!cu) return res(); const [p] = cu.key, v = cu.value, o = open.get(p) || { path: p, size: 44, at: 0 }; o.size += v.data.length * 4; o.at = Math.max(o.at, v.at || 0); open.set(p, o); cu.continue(); };
+        r.onerror = () => res();
+      })).catch(() => {});
+      open.forEach((o, p) => { if (!(rec && rec.path === p) && !out.some((f) => f.path === p)) out.push({ ...o, cut: true }); });
+      return out;
+    },
     async play(path, deviceId, from = 0) {
       this.stopPlay();
-      const url = URL.createObjectURL(new Blob([mem.get(path)], { type: 'audio/wav' }));
+      const u8 = await this.read(path), url = URL.createObjectURL(new Blob([u8], { type: 'audio/wav' }));
       audio = new Audio(url);
-      if (deviceId && audio.setSinkId) { try { await audio.setSinkId(deviceId); } catch { /* выход по умолчанию */ } }
+      if (deviceId && deviceId !== -1 && audio.setSinkId) { try { await audio.setSinkId(deviceId); } catch { /* выход по умолчанию */ } }
       audio.currentTime = from;
       audio.ontimeupdate = () => emit('pos', { sec: audio.currentTime });
       audio.onended = () => { emit('end', { done: true }); URL.revokeObjectURL(url); };
