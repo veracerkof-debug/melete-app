@@ -5,7 +5,7 @@ vi.mock('../src/core/desktop.js', () => ({ isDesktop: () => true }));
 vi.mock('../src/core/log.js', () => ({ log: () => {}, logErr: () => {} }));
 const { createUpdater } = await import('../src/core/update.js');
 const app = { store: { state: { settings: {} } } };
-const rel = { assets: [{ name: 'Melete-Dev-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'x' }, { name: 'windows-90.ver', state: 'uploaded' }] };
+const rel = { assets: [{ name: 'Melete-Dev-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'x' }, { name: 'windows-1.ver', state: 'uploaded' }] }; // номер 1 — не новее сборки CI (BUILD_NUMBER ≥ 1)
 
 describe('update: сеть', () => {
   it('сбой сети (Wi-Fi ↔ мобильная) — повтор, проверка проходит', async () => {

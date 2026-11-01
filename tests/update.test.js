@@ -13,6 +13,10 @@ describe('update: релиз канала', () => {
     expect(r.build).toBe(251);
     expect(r.url).toMatch(/Melete-PreRelease\.apk$/);
     expect(parseRelease({ assets: [asset('Melete-Setup.exe'), asset('windows-90.ver')] }, 'windows', 'pre').build).toBe(90);
+    // Linux: свой AppImage и своя метка — чужие метки не путаются
+    const lx = parseRelease({ assets: [asset('Melete-Dev.AppImage'), asset('linux-7.ver'), asset('windows-90.ver'), asset('Melete-Dev-Setup.exe')] }, 'linux', 'dev');
+    expect(lx.build).toBe(7);
+    expect(lx.url).toMatch(/Melete-Dev\.AppImage$/);
   });
   it('файл ещё грузится или метки нет → обновления нет', () => {
     expect(parseRelease({ assets: [asset('Melete-PreRelease.apk', 'starter'), asset('android-251.ver')] }, 'android', 'pre')).toBe(null);

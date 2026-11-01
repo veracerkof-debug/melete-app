@@ -115,6 +115,18 @@
         "description": "Проект студии (FL Studio, Ableton Live, Reaper)",
         "role": "Viewer"
       }
-    ]
+    ],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": [
+          "gstreamer1.0-plugins-base",
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-libav"
+        ]
+      }
+    }
   }
 }

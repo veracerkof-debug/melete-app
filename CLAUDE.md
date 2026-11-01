@@ -7,7 +7,7 @@
 Приложение для практики музыкантов: учёт занятий и статистика (ядро) плюс набор инструментов-модулей
 (метроном, тюнер, пианино, глайдер, терменвокс (руки перед камерой), пэды/дрон, лупер, теория, тренажёр слуха и тренажёр ритма (`src/modules/beat`; у обоих режим «Уроки» — `course.js` модуля, движок `src/music/course.js`, вид `src/ui/course.js`), помодоро, медиатека — продвинутый плеер с дорожками записи (вокал, ударные, бас…), нотами из записи, тональностью и темпом, табы и тексты, диктофон, спектр и шумомер).
 Без рекламы, без трекинга, без давления «ежедневными сериями» — ритм недельный.
-Бесплатное, с открытым кодом (GPL-3.0). Платформы: Android (Google Play, F-Droid), веб, Windows.
+Бесплатное, с открытым кодом (GPL-3.0). Платформы: Android (Google Play, F-Droid), веб, Windows, Linux.
 
 ## Основной принцип: пространство работает на функцию
 Каждый инструмент использует всё пространство экрана по максимуму — стильно и красиво, но прежде всего
@@ -205,6 +205,7 @@
 - `npx cap sync android` / `npx cap run android -l --external` — Android с живой перезагрузкой
 - Веб-версия (отдельная от APK, для знакомства; память — в браузере: постоянное хранилище и service worker, `src/core/webmemory.js`, `public/sw.js`) собирается GitHub Actions (`.github/workflows/web.yml`) → ветка `gh-pages` → https://veracerkof-debug.github.io/melete-app/
 - Ἐλάχιστον (Elachiston) — **отдельное приложение** главного экрана телефона в этом же репозитории: `launcher/` + `src/launcher/`, своё имя, пакет (`app.elachiston`), ключ и релизы (`launcher-dev`/`launcher-pre`, `.github/workflows/launcher.yml`); с Melete — только мосты (`docs/launcher.md`). `npm run launcher:dev`, `npm run launcher:build`
+- Linux собирает GitHub Actions (`.github/workflows/linux.yml`, Tauri, WebKitGTK): `main` → релиз «dev», `Melete-Dev.AppImage` (обновляется сам) и `melete-dev.deb`; ветка `pre` → `Melete.AppImage`, `melete.deb`; микрофон в WebKitGTK включает `lib.rs: linux_media`
 - Windows-установщик собирает GitHub Actions (`.github/workflows/windows.yml`, Tauri): `main` → релиз «dev», `Melete-Dev-Setup.exe` («Melete DEV», `src-tauri/tauri.dev.conf.json`); ветка `pre` → релиз «pre», `Melete-Setup.exe`; локально — `npm run win` (нужны Rust и Windows), `npm run win:dev` — окно с живой перезагрузкой
 - Откат pre: каждая сборка pre помечена `pre-<N>`; «откати pre на N» — `git push --force origin pre-N:pre` (та же программа с бóльшим номером приходит обновлением, данные остаются). Перед выкладкой APK проверяется на эмуляторе (`build/apk-smoke.sh`); данные прошлых версий — `tests/compat.test.js`
 - Ключ подписи APK — только в секретах GitHub (`BETA_KEYSTORE_B64`, `BETA_STORE_PASSWORD`), в репозитории его нет (репозиторий открытый)

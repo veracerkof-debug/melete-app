@@ -207,6 +207,25 @@ fn stems_clean(app: AppHandle, st: State<'_, Stems>) {
     let _ = std::fs::remove_dir_all(out_dir(&app));
 }
 
+// Linux: в WebKitGTK микрофон (getUserMedia) и MediaSource по умолчанию выключены — включить в окне; звук без жеста.
+// Разрешение на сам микрофон даёт on_permission_request (как на Windows)
+#[cfg(target_os = "linux")]
+fn linux_media(app: &tauri::App) {
+    use tauri::Manager;
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.with_webview(|wv| {
+            use webkit2gtk::{SettingsExt, WebViewExt};
+            if let Some(s) = wv.inner().settings() {
+                s.set_enable_media_stream(true);
+                s.set_enable_mediasource(true);
+                s.set_media_playback_requires_user_gesture(false);
+            }
+        });
+    }
+}
+#[cfg(not(target_os = "linux"))]
+fn linux_media(_app: &tauri::App) {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -223,6 +242,7 @@ pub fn run() {
         .manage(update::Upd::default())
         // «автоматически»: скачанное обновление ставится, когда окно закрыто (update.rs)
         .on_window_event(|w, e| { if let tauri::WindowEvent::Destroyed = e { update::on_exit(&w.state::<update::Upd>()); } })
+        .setup(|app| { linux_media(app); Ok(()) })
         .on_permission_request(|_, kind| match kind {
             PermissionKind::Microphone | PermissionKind::Camera => PermissionResponse::Allow,
             _ => PermissionResponse::Default,
@@ -233,7 +253,7 @@ pub fn run() {
             localsend::localsend_start, localsend::localsend_stop, localsend::localsend_status, localsend::localsend_answer,
             sync::sync_start, sync::sync_stop, sync::sync_status, sync::sync_body, sync::sync_reply,
             guest::guest_start, guest::guest_stop, guest::guest_status, guest::guest_allow, guest::guest_live, guest::guest_drop_audio, guest::guest_reply,
-            update::update_download, update::update_pending, update::update_install,
+            update::update_download, update::update_pending, update::update_install, update::update_ok,
             denoise::denoise_begin, denoise::denoise_push, denoise::denoise_run, denoise::denoise_read, denoise::denoise_cancel, denoise::denoise_clean])
         .run(tauri::generate_context!())
         .expect("Melete: не удалось запустить окно");
