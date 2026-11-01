@@ -1,7 +1,9 @@
 // Обновление из GitHub (веб-часть — src/core/update.js): установщик своего канала скачивается во временную папку
 // (ход — событием update-progress), ставится молча (NSIS /S) — сразу по кнопке с перезапуском или, в режиме
 // «автоматически», при закрытии окна: звук, запись и занятие не обрываются. Тот же идентификатор приложения —
-// данные остаются. Качать можно только из релизов Melete на GitHub
+// данные остаются. Качать можно только из релизов Melete на GitHub.
+// Linux: обновляется только AppImage — новый файл встаёт на место запущенного ($APPIMAGE); пакет .deb ставит
+// система (нужны права), там обновление — новым пакетом вручную (update_ok → false).
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -14,7 +16,19 @@ const ALLOWED: &str = "https://github.com/veracerkof-debug/";
 #[derive(Default)]
 pub struct Upd { pub pending: Mutex<Option<PathBuf>> }
 
+#[cfg(windows)]
 fn setup_path() -> PathBuf { std::env::temp_dir().join("Melete-Update-Setup.exe") }
+#[cfg(not(windows))]
+fn setup_path() -> PathBuf { std::env::temp_dir().join("Melete-Update.AppImage") }
+
+// Можно ли обновляться самой: Windows — да; Linux — только запущенная из AppImage
+#[tauri::command]
+pub fn update_ok() -> bool {
+    #[cfg(windows)]
+    { true }
+    #[cfg(not(windows))]
+    { std::env::var_os("APPIMAGE").map(|p| PathBuf::from(p).is_file()).unwrap_or(false) }
+}
 
 // Скачать по ссылке в файл; progress(доля) — не чаще чем раз в полпроцента
 pub fn fetch(url: &str, to: &PathBuf, mut progress: impl FnMut(f64)) -> Result<(), String> {
@@ -75,6 +89,7 @@ pub fn on_exit(st: &Upd) {
 
 // Пакетный файл рядом: подождать, пока окно закроется, поставить молча, по желанию — запустить снова, удалить себя.
 // Через .cmd, а не строкой в cmd /C: кавычки путей с пробелами (имя пользователя) cmd разбирает по своим правилам
+#[cfg(windows)]
 fn run_setup(setup: &PathBuf, relaunch: bool) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let bat = std::env::temp_dir().join("melete-update.cmd");
@@ -91,5 +106,16 @@ fn run_setup(setup: &PathBuf, relaunch: bool) -> Result<(), String> {
         cmd.creation_flags(0x0800_0000 | 0x0000_0008); // без окна консоли, отдельно от Melete
     }
     cmd.spawn().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// Linux (AppImage): через sh подождать закрытия, положить новый файл на место запущенного, сделать исполняемым,
+// по желанию — запустить снова. Пути — отдельными аргументами ($1, $2): пробелы и кавычки в путях не мешают
+#[cfg(not(windows))]
+fn run_setup(setup: &PathBuf, relaunch: bool) -> Result<(), String> {
+    let target = std::env::var_os("APPIMAGE").ok_or("not an AppImage")?;
+    let script = "sleep 2; mv -f \"$1\" \"$2\" && chmod +x \"$2\" && if [ \"$3\" = 1 ]; then nohup \"$2\" >/dev/null 2>&1 & fi";
+    std::process::Command::new("sh").arg("-c").arg(script).arg("melete-update").arg(setup).arg(&target).arg(if relaunch { "1" } else { "0" })
+        .spawn().map_err(|e| e.to_string())?;
     Ok(())
 }

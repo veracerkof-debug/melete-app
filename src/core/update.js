@@ -9,6 +9,7 @@
 // кнопка «Установить» (молча ставить себя вне Play система не даёт); «только по кнопке» — ничего само, всё из
 // Профиль → Обновления. Данные остаются: тот же пакет и ключ подписи (Android), тот же идентификатор (Windows).
 // После обновления — «Что нового» (whatsnew.js). Веб-версия обновляется сама (service worker); Mac — позже.
+// Linux — AppImage заменяет себя сам (update.rs); пакет .deb обновляется вручную новым пакетом (update_ok → false).
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isDesktop } from './desktop.js';
 import { log, logErr, markUpdateQuit } from './log.js';
@@ -20,11 +21,14 @@ export const BUILD = typeof __BUILD__ !== 'undefined' ? +__BUILD__ || 0 : 0; // 
 export const FILES = {
   android: { pre: 'Melete-PreRelease.apk', dev: 'Melete-Dev.apk' },
   windows: { pre: 'Melete-Setup.exe', dev: 'Melete-Dev-Setup.exe' },
+  linux: { pre: 'Melete.AppImage', dev: 'Melete-Dev.AppImage' },
 };
 const KEY = 'melete.upd'; // { at — последняя проверка, skip — номер сборки, от которой отказались }
 const DAY = 864e5;
 
-export const platformOf = () => (Capacitor.isNativePlatform() ? 'android' : isDesktop() ? 'windows' : null);
+// Компьютерная версия на Linux — WebKitGTK: в строке браузера «Linux» (и нет «Android»)
+export const isLinux = () => typeof navigator !== 'undefined' && /Linux/.test(navigator.userAgent || '') && !/Android/.test(navigator.userAgent || '');
+export const platformOf = () => (Capacitor.isNativePlatform() ? 'android' : isDesktop() ? (isLinux() ? 'linux' : 'windows') : null);
 
 // Ответ GitHub (релиз канала) → { build, url, size } или null: метка сборки и сам файл загружены полностью
 export function parseRelease(rel, platform, channel) {
@@ -44,7 +48,9 @@ const readMem = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}
 const writeMem = (m) => { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch { /* память недоступна */ } };
 
 export function createUpdater(app) {
-  const platform = platformOf();
+  let platform = platformOf();
+  // Linux из пакета .deb (не AppImage) сама не обновляется — обновления не ищем
+  if (platform === 'linux') import('@tauri-apps/api/core').then(({ invoke }) => invoke('update_ok')).then((ok) => { if (!ok) platform = null; }).catch(() => { platform = null; });
   const Native = platform === 'android' ? registerPlugin('Update') : null;
   const subs = new Set();
   // st: idle | checking | none | avail | down | ready | err; f — доля скачанного; wait — ждёт Wi-Fi

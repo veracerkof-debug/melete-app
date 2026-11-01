@@ -1,4 +1,4 @@
-# Melete для Windows (Tauri 2): окно с веб-версией приложения (dist/), системный WebView2.
+# Melete для Windows и Linux (Tauri 2): окно с веб-версией приложения (dist/), системный WebView2 / WebKitGTK.
 # Сборка — GitHub Actions (.github/workflows/windows.yml); локально: npx tauri build (нужны Rust и WebView2).
 [package]
 name = "melete"
@@ -37,6 +37,10 @@ deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "978576
 ndarray = "0.15"
 # обновление из GitHub (src/update.rs): скачать установщик своего канала — HTTPS, rustls
 ureq = "2"
+
+# Linux: WebKitGTK — включить микрофон и медиа в окне (lib.rs: linux_media), та же версия, что у wry
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2.0", features = ["v2_40"] }
 
 [profile.release]
 codegen-units = 1
