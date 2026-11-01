@@ -42,6 +42,8 @@ export function applyLook(de = document.documentElement) {
   const st = styleOf();
   if (st.id === 'classic') delete de.dataset.style; else de.dataset.style = st.id;
   de.style.setProperty('--l-acc', st.accent && prefs.mono === false ? st.accent : 'var(--ink)');
+  // акцент стиля — и общий акцент (кошелёк, блокнот, точки, полосы), если не «Чёрно-белый»
+  if (st.accent && prefs.mono === false) ['--tint', '--tint-text'].forEach((k) => de.style.setProperty(k, st.accent));
   // шрифт часов (clockfonts.js): выбран свой — он; не выбран — шрифт стиля
   const cf = clockFont(prefs.clockFont && prefs.clockFont !== 'onest' ? prefs.clockFont : st.clock || 'onest');
   de.style.setProperty('--l-clock-font', cf.family);

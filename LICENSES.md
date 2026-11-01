@@ -28,6 +28,7 @@
 | Cormorant (вариативный) — © The Cormorant Project Authors, пакет `@fontsource-variable/cormorant` 5.3.0 | Шрифт часов Ἐλάχιστον «Антиква» (только латинский набор) | SIL OFL 1.1 |
 | JetBrains Mono (вариативный) — © The JetBrains Mono Project Authors, пакет `@fontsource-variable/jetbrains-mono` 5.3.0 | Шрифт часов Ἐλάχιστον «Моно» (только латинский набор) | SIL OFL 1.1 |
 | Sofia Sans Extra Condensed (вариативный) — © The Sofia Sans Project Authors, пакет `@fontsource-variable/sofia-sans-extra-condensed` 5.3.0 | Шрифт часов Ἐλάχιστον «Узкий» (только латинский набор) | SIL OFL 1.1 |
+| PT Mono — © ParaType Inc., пакет `@fontsource/pt-mono` 5.3.0 | Шрифт стиля «Дневник» в Ἐλάχιστον (латиница и кириллица) | SIL OFL 1.1 |
 | AndroidX Biometric 1.1.0 — © The Android Open Source Project | Вход в кошелёк Ἐλάχιστον по отпечатку пальца или лицу (Android) | Apache 2.0 |
 | Библия, Синодальный перевод (1876), 66 книг — из архива [eBible.org](https://ebible.org/find/details.php?id=russyn) (russyn) | Текст Библии в церковном режиме, файлы `public/bible/synodal/*.json` (разбивка по книгам и главам — `build/bible-import.mjs`), текст без изменений | Общественное достояние |
 | [Ponomar](https://github.com/slavonic/Ponomar) — © 2025 The Ponomar Project Authors | Шрифт церковнославянских цитат у названий разделов; урезан до букв цитат (`src/styles/fonts/ponomar-verses.woff2`, текст лицензии — `Ponomar-OFL.txt` рядом) | SIL OFL 1.1 |

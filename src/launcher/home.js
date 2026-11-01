@@ -14,15 +14,16 @@ import { hasLock } from './lock.js';
 import { t, getLang } from './i18n.js';
 import { h } from './ui.js';
 import { isNative, Launcher } from './native.js';
-import { styleId, alignOf } from './styles.js';
-import { styledMake, asciiClock } from './styled.js';
+import { styleId, alignOf, DOTTED } from './styles.js';
+import { styledMake, asciiClock, sevenSeg } from './styled.js';
 import { renderWheel } from './wheel.js';
 import { renderBulge } from './bulge.js';
 
 let root;
 let handlers = {};
 let lastSig = null;
-let curMake = {}; // блоки, которые стиль рисует по-своему (styled.js) — и при обновлении на месте
+let curMake = {};
+let lastStyle = null, enterTimer = 0, entering = false; // блоки, которые стиль рисует по-своему (styled.js) — и при обновлении на месте
 let battery = null;
 let sys = null; // Android: { battery, charging, net: wifi|cell|other|none, wifi: 0–4, cell: 0–4 } — из системы (LauncherPlugin.status)
 const askStatus = () => Launcher.status().then((x) => { sys = x; renderStatus(); }).catch(() => {});
@@ -69,10 +70,13 @@ function updateClock(now, force = false) {
   const [hh, mm] = clockText(now);
   const sig = `${hh}:${mm}|${getLang()}|${now.toDateString()}`;
   if (!force && sig === lastSig) return;
+  // новый день: стили с датой в своих блоках (рамка с числом, записи недели) — собрать заново
+  if (lastSig && sig.split('|')[2] !== lastSig.split('|')[2] && styleId() !== 'classic') { lastSig = sig; renderHome(); return; }
   root.querySelectorAll('[data-live]').forEach((x) => { x.textContent = liveText(+x.dataset.live); });
   const el = root.querySelector('.clock');
   if (el) {
     if (styleId() === 'cli') asciiClock(el, hh, mm);
+    else if (styleId() === 'inst') sevenSeg(el, hh, mm);
     else el.replaceChildren(h('span', {}, hh), h('i', {}, ':'), h('span', {}, mm));
     el.setAttribute('aria-label', `${hh}:${mm}`);
     fitClock(el);
@@ -96,6 +100,7 @@ const offIcon = () => SVG('0 0 24 18', '<path d="M2.5 6.5a14 14 0 0 1 19 0M6 10a
 
 function renderStatus() {
   if (prefs.bulge) refreshBulge(); // кольцо заряда
+  if (['inst', 'panel', 'tele'].includes(styleId())) queueMicrotask(refreshTracker); // плитки заряда в стилях
   const el = root?.querySelector('.l-status');
   if (!el) return;
   let net, level, charging, label;
@@ -218,7 +223,12 @@ const crossAt = (place) => isChurch() && prefs.cross !== 'none' && (prefs.crossA
 export function renderHome() {
   if (!root) return;
   const L = layout();
-  root.className = `l-home align-${alignOf()}` + (handlers.editing?.() ? ' editing' : '');
+  // появление: при первом показе и при смене стиля (возврат на главный — мгновенный, без движения)
+  const enter = !handlers.editing?.() && lastStyle !== styleId();
+  lastStyle = styleId();
+  if (enter) { entering = true; clearTimeout(enterTimer); enterTimer = setTimeout(() => { entering = false; root.classList.remove('enter'); }, 900); }
+  // при запуске главный собирается несколько раз подряд — появление держится, пока идёт
+  root.className = `l-home align-${alignOf()}` + (handlers.editing?.() ? ' editing' : '') + (entering && !handlers.editing?.() ? ' enter' : '');
   // блоки в порядке раскладки; размер блока — множитель к общему размеру (часы — к размеру часов)
   const make = {
     clock: () => h('div', { class: 'clock-wrap', onclick: tapAction('clockTap') }, h('div', { class: 'clock' })),
@@ -226,12 +236,18 @@ export function renderHome() {
     balance: renderBalance,
     apps: renderList,
     // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
-    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null),
+    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: dotted(crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100)) }) : null),
     tracker: renderTracker,
     dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
   };
   // стиль подменяет вид отдельных блоков (styled.js); значки внизу у креста — остаются
-  const own = styledMake(styleId(), { handlers, renderList, renderDock, items: homeItems(), rerender: renderHome, openApp: (a) => openApp(a) });
+  const own = styledMake(styleId(), {
+    handlers, renderList, renderDock, items: homeItems(), rerender: renderHome, openApp: (a) => openApp(a),
+    battery: () => (sys ? { level: sys.battery != null ? sys.battery / 100 : null, charging: !!sys.charging } : { level: battery ? battery.level : null, charging: !!battery?.charging }),
+    weekday: (d) => weekdayOf(d, getLang()), dayMonth: (d) => dayMonthOf(d, getLang()),
+    monthOf: (d) => (getLang() === 'uz' ? UZ_MONTHS[d.getMonth()] : new Intl.DateTimeFormat(LOCALES[getLang()] || 'ru-RU', { month: 'long' }).format(d)),
+    monthYear: (d) => (getLang() === 'uz' ? `${UZ_MONTHS[d.getMonth()]} ${d.getFullYear()}` : new Intl.DateTimeFormat(LOCALES[getLang()] || 'ru-RU', { month: 'long', year: 'numeric' }).format(d).replace(/\s*г\.?$/, '')),
+  });
   if (own.dock) { const d0 = own.dock; own.dock = () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, d0()]; }
   Object.assign(make, own);
   curMake = own;
@@ -367,4 +383,16 @@ export function refreshBulge() {
   const el = root?.querySelector('.l-bulge');
   if (!el) return;
   el.replaceWith(renderBulge(bulgeCtx()));
+}
+
+// крест точками — в тёмных «цифровых» стилях (styles.js: DOTTED), как рисунок из точек
+function dotted(svg) {
+  if (!DOTTED.includes(styleId())) return svg;
+  const vb = /viewBox="([^"]+)"/.exec(svg)?.[1].split(/\s+/).map(Number) || [0, 0, 24, 32];
+  // у креста с голубем контур внутри группы с scale(.1) — узор считается в её единицах (в 10 раз крупнее)
+  const k = /scale\(\.1/.test(svg) ? 10 : 1;
+  const step = (vb[2] / 26) * k, r = step * 0.34;
+  const body = svg.replace(/fill="currentColor"/g, 'fill="url(#ldot)"').replace(/stroke="currentColor"/g, 'stroke="url(#ldot)"');
+  const defs = `<defs><pattern id="ldot" width="${step}" height="${step}" patternUnits="userSpaceOnUse"><circle cx="${step / 2}" cy="${step / 2}" r="${r}" fill="currentColor"/></pattern></defs>`;
+  return body.replace(/(<svg[^>]*>)/, `$1${defs}`);
 }

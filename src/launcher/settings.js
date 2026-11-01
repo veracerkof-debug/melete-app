@@ -82,6 +82,7 @@ export function openSettings(onChange, getGesture, tab) {
             h('small', {}, t('style.' + st.id))))),
         styleOf().accent && prefs.mono !== false ? h('p', { class: 'l-hint' }, t('style.monoHint')) : null,
         toggle(t('set.wheel'), prefs.homeWheel, (v) => up({ homeWheel: v }), t('set.wheelHint')),
+        prefs.homeWheel ? segmented([{ value: 'arc', label: t('wheel.arc') }, { value: 'dial', label: t('wheel.dial') }], prefs.wheelShape === 'dial' ? 'dial' : 'arc', (v) => up({ wheelShape: v }), t('set.wheel')) : null,
         toggle(t('set.bulge'), prefs.bulge, (v) => up({ bulge: v }), t('set.bulgeHint')),
         toggle(t('set.scrub'), prefs.scrub, (v) => up({ scrub: v }), t('set.scrubHint')),
         // шрифт часов: каждая плитка — часы этим шрифтом
@@ -318,6 +319,16 @@ const PREVIEW = {
     + T('left:6px;right:6px;top:48px;height:36px;border:1px solid #262626;border-radius:6px;background:#151515') + [...Array(14)].map((_, i) => T(`left:${12 + (i % 7) * 9}px;top:${56 + Math.floor(i / 7) * 9}px;width:6px;height:6px;background:${i % 3 ? '#ECECEC' : '#333'}`)).join('')),
   menu: PV('#E7E7EA', T('left:5px;top:6px;bottom:6px;width:16px;border-radius:8px;background:#F7F7F8') + T('left:25px;right:5px;top:6px;bottom:6px;border-radius:10px;background:#F7F7F8')
     + T('left:31px;top:28px;width:44px;height:9px;border-radius:5px;background:#1E1E22') + [0, 1, 2].map((i) => T(`left:31px;top:${44 + i * 11}px;width:${34 - i * 5}px;height:4px;background:#A9A9B0`)).join('')),
+  inst: PV('#E9E8E4', T('left:7px;right:7px;top:8px;height:40px;border-radius:9px;background:#F3F2EF;box-shadow:0 2px 6px rgba(0,0,0,.1)') + T('left:13px;top:15px;padding:3px 5px;border-radius:4px;background:#D3D6CC;font:700 13px/1 monospace;color:#1C1C1B', '10:00')
+    + T('right:12px;top:14px;width:18px;height:26px;background-image:radial-gradient(circle,rgba(0,0,0,.3) 1px,transparent 1.3px);background-size:4px 4px') + T('left:7px;top:54px;width:30px;height:30px;border-radius:50%;background:#161616') + T('left:42px;top:62px;width:14px;height:14px;border-radius:50%;background:#F26A1B') + T('right:7px;top:54px;width:30px;height:30px;border-radius:7px;background:#F3F2EF;box-shadow:0 2px 5px rgba(0,0,0,.1)')),
+  panel: PV('#000', [0, 1, 2].map((i) => T(`left:5px;right:5px;top:${6 + i * 28}px;height:24px;border-radius:5px;background:#D9D9D6`)).join('') + T('left:10px;top:9px;font:600 14px/1 var(--l-display);color:#111', '19:53')
+    + T('right:10px;top:40px;width:26px;height:10px;border-radius:2px;background:#C0602E') + [...Array(8)].map((_, i) => T(`right:${10 + i * 4}px;top:66px;width:2px;height:12px;background:${i < 2 ? '#888' : '#111'}`)).join('')),
+  tele: PV('#000', T('left:8px;top:10px;font:700 15px/1 var(--l-display);color:#fff', '67%') + [...Array(6)].map((_, i) => T(`left:${8 + i * 7}px;top:30px;width:5px;height:3px;background:${i < 4 ? '#E10600' : '#333'}`)).join('')
+    + T('right:8px;top:8px;width:30px;height:30px;border-radius:50%;border:2px dashed #E10600') + T('left:6px;right:6px;bottom:10px;height:30px;background:linear-gradient(180deg,rgba(225,6,0,.5),transparent);clip-path:polygon(0 70%,20% 40%,40% 55%,60% 20%,80% 35%,100% 10%,100% 100%,0 100%)')),
+  cont: PV('#DDE3DC', T('left:6px;right:6px;top:8px;height:24px;border:1.5px solid #161816;border-radius:12px') + T('left:13px;top:13px;font:400 12px/1 monospace;color:#161816', '19.0') + T('right:11px;top:12px;width:14px;height:14px;border-radius:50%;border:2px solid #161816;border-left-color:transparent')
+    + T('right:6px;top:38px;width:26px;height:26px;border:1.5px solid #161816;border-radius:7px;font:700 13px/26px var(--l-display);text-align:center;color:#161816', '23') + [0, 1].map((i) => T(`left:6px;right:38px;top:${44 + i * 14}px;height:1.5px;background:#161816;opacity:.4`)).join('')),
+  diary: PV('#EEECE5', T('left:0;right:0;top:9px;text-align:center;font:400 7px/1 monospace;letter-spacing:.12em;color:#2E3A55', 'НОЯБРЬ 2026') + T('left:0;right:0;top:20px;text-align:center;font:400 16px/1 monospace;color:#2E3A55', '18:46')
+    + [0, 1, 2].map((i) => T(`left:10px;top:${46 + i * 14}px;width:3px;height:10px;background:linear-gradient(#3b3550,#e3a37f)`) + T(`left:17px;top:${48 + i * 14}px;width:${40 - i * 8}px;height:3px;background:#2E3A55;opacity:.5`) + T(`right:10px;top:${49 + i * 14}px;width:4px;height:4px;border-radius:50%;background:#C9826B`)).join('')),
   cli: PV('#000', T('left:7px;top:10px;font:400 9px/1.5 monospace;color:#8A8A8A;white-space:pre', '<span style="color:#3CF27A">~$</span> date\n<span style="color:#3CF27A">█ █ ███</span>\n<span style="color:#3CF27A">~$</span> ls\n./notes\n<span style="color:#3CF27A">~$ █</span>')),
 };
 

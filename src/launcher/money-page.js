@@ -136,7 +136,7 @@ function renderEntry() {
   entry.replaceChildren(...[
     h('div', { class: 'top' },
       parent !== window ? h('button', { class: 'back', onclick: () => parent.postMessage('money:close', '*'), 'aria-label': 'На главный экран' }, '‹') : null,
-      h('button', { onclick: openOver, 'aria-label': 'Обзор месяца' }, MONTHS[m.getMonth()][0].toUpperCase() + MONTHS[m.getMonth()].slice(1) + ': ', h('b', { class: 'num' }, '−' + fmt(spent))),
+      h('button', { onclick: openOver, 'aria-label': 'Обзор месяца' }, MONTHS[m.getMonth()][0].toUpperCase() + MONTHS[m.getMonth()].slice(1) + ': ', h('b', { class: 'num' }, (spent ? '−' : '') + fmt(spent))),
       left != null ? h('button', { onclick: openOver }, 'остаток ', h('b', { class: 'num' + (left < 0 ? ' neg' : '') }, fmt(left))) : null,
       parent !== window ? h('button', { class: 'lockbtn', onclick: () => parent.postMessage('money:lock', '*'), 'aria-label': 'Код и отпечаток',
         html: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>' }) : null),

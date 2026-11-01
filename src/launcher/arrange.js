@@ -37,6 +37,7 @@ export function enterArrange(id) {
 export function exitArrange() {
   if (!editing) return false;
   editing = false; selected = null;
+  home.style.removeProperty('--l-arr-h');
   bar?.remove(); bar = null;
   deps.renderHome();
   return true;
@@ -45,6 +46,10 @@ export function exitArrange() {
 const ownHome = () => (prefs.home = prefs.home || homeItems().map((x) => ({ ...x })));
 const ownDock = () => (prefs.dock = prefs.dock || dockSlots().map((x) => ({ ...x, action: { ...x.action } })));
 const blocksInDom = () => [...home.querySelectorAll('[data-blk]')].filter((e) => !e.hidden);
+// блоки в общем столбце (стоящие отдельно — полоса значков сбоку в «Полосе» и «Меню» — порядок не делят)
+const flowBlocks = () => blocksInDom().filter((e) => getComputedStyle(e).position !== 'absolute');
+// увеличение элемента (zoom складывается по предкам): палец сдвинул на dy — элементу нужно dy / zoom
+function zoomOf(el) { let z = 1; for (let e = el; e && e !== document.body; e = e.parentElement) z *= parseFloat(getComputedStyle(e).zoom) || 1; return z; }
 const name = (id) => t('blk.' + id);
 
 // перерисовать главный и отметить блоки
@@ -60,6 +65,8 @@ function drawBar() {
   const L = layout();
   if (!bar) { bar = h('div', { class: 'l-arr-bar', role: 'toolbar', 'aria-label': t('arr.title') }); document.getElementById('l').append(bar); }
   const done = h('button', { class: 'l-arr-done', onclick: () => exitArrange() }, t('arr.done'));
+  // полоса правки внизу не закрывает значки и приложения: главный поднимается над ней
+  requestAnimationFrame(() => { if (bar) home.style.setProperty('--l-arr-h', bar.offsetHeight + 'px'); });
   if (selected) {
     const pct = L.scale[selected] || 100;
     const setPct = (v) => { setLayout({ scale: { ...L.scale, [selected]: Math.max(MIN, Math.min(MAX, v)) } }); redraw(); };
@@ -115,6 +122,7 @@ function move(e) {
     else if (g.blk) startBlockDrag();
     else { g = null; return; }
   }
+  g.px = e.clientX; g.py = e.clientY; // место — по пальцу
   if (g.kind === 'block') blockMove(dy);
   else if (g.kind === 'item') itemMove(dx, dy);
 }
@@ -127,7 +135,7 @@ function up(e) {
   if (cur?.kind === 'pinch') { if (!pts.size) { endPinch(); g = null; } return; }
   g = null;
   if (!cur) return;
-  if (cur.kind === 'block') return blockEnd();
+  if (cur.kind === 'block') return blockEnd(cur);
   if (cur.kind === 'item') return itemEnd(cur);
   // касание: приложение или значок — его правка; блок — выбрать; пустое место — снять выбор
   if (cur.item) {
@@ -159,15 +167,17 @@ function startBlockDrag() {
   drawBar();
 }
 function blockMove(dy) {
-  g.el.style.transform = `translateY(${dy}px)`;
+  if (getComputedStyle(g.el).position === 'absolute') return; // стоит отдельно — двигать некуда, только размер
+  g.el.style.transform = `translateY(${dy / (g.z || (g.z = zoomOf(g.el)))}px)`;
   g.dy = dy;
 }
-function blockEnd() {
-  const el = g?.el || home.querySelector('.l-arr-blk.dragging');
+function blockEnd(cur) {
+  const el = cur?.el || home.querySelector('.l-arr-blk.dragging');
   const L = layout();
   const r = el.getBoundingClientRect();
-  const mid = r.top + r.height / 2;
-  const others = blocksInDom().filter((b) => b !== el);
+  const mid = cur?.py ?? r.top + r.height / 2; // блок встаёт туда, где палец
+  if (getComputedStyle(el).position === 'absolute') { redraw(); return; }
+  const others = flowBlocks().filter((b) => b !== el);
   let at = others.findIndex((b) => { const q = b.getBoundingClientRect(); return mid < q.top + q.height / 2; });
   if (at < 0) at = others.length;
   const vis = others.map((b) => b.dataset.blk);
@@ -187,15 +197,17 @@ function startItemDrag() {
   g.el.classList.add('dragging');
 }
 function itemMove(dx, dy) {
-  g.el.style.transform = g.dock ? `translateX(${dx}px)` : `translateY(${dy}px)`;
+  const z = g.z || (g.z = zoomOf(g.el));
+  g.el.style.transform = g.dock && getComputedStyle(g.el.parentElement).flexDirection !== 'column' ? `translateX(${dx / z}px)` : `translateY(${dy / z}px)`;
 }
 function itemEnd(cur) {
   const el = cur.el;
   const sibs = [...el.parentElement.querySelectorAll(cur.dock ? '.l-dock-btn' : '.l-app')].filter((x) => !x.hidden);
   const r = el.getBoundingClientRect();
-  const mid = cur.dock ? r.left + r.width / 2 : r.top + r.height / 2;
+  const across = cur.dock && getComputedStyle(el.parentElement).flexDirection !== 'column';
+  const mid = across ? cur.px ?? r.left + r.width / 2 : cur.py ?? r.top + r.height / 2;
   const others = sibs.filter((x) => x !== el);
-  let at = others.findIndex((x) => { const q = x.getBoundingClientRect(); return mid < (cur.dock ? q.left + q.width / 2 : q.top + q.height / 2); });
+  let at = others.findIndex((x) => { const q = x.getBoundingClientRect(); return mid < (across ? q.left + q.width / 2 : q.top + q.height / 2); });
   if (at < 0) at = others.length;
   const from = sibs.indexOf(el);
   const list = cur.dock ? ownDock() : ownHome();
@@ -224,8 +236,16 @@ function pinchMove() {
   const p = Math.round(Math.max(MIN, Math.min(MAX, g.p0 * Math.hypot(a.x - b.x, a.y - b.y) / g.d0)) / STEP) * STEP;
   if (p === g.p) return;
   g.p = p;
-  const L = layout();
-  setLayout({ scale: { ...L.scale, [g.id]: p } });
+  const el = home.querySelector(`[data-blk="${g.id}"]`);
+  if (el) {
+    if (g.id === 'dock') el.style.setProperty('--l-blk', String(p / 100));
+    else el.style.zoom = g.id === 'clock' ? `calc(var(--l-ck, 1) * ${p / 100})` : `calc(var(--l-ui, 1) * ${p / 100})`;
+  }
+  const v = bar?.querySelector('.l-arr-v');
+  if (v) v.textContent = p + ' %';
+  navigator.vibrate?.(3);
+}
+function endPinch() {
+  if (g?.kind === 'pinch' && g.p !== g.p0) { const L = layout(); setLayout({ scale: { ...L.scale, [g.id]: g.p } }); }
   redraw();
 }
-function endPinch() { redraw(); }

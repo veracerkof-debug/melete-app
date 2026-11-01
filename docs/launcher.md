@@ -140,3 +140,10 @@ Melete для мостов не меняется.
 ## Сбои и журнал (2026-11-01)
 `Diag.java` (журнал в памяти приложения, `diag.log`), `LauncherPlugin`: `diag`, `shown`, `diagRead`, `diagShare`, `diagClear`, `appsChanged`; страница — `src/launcher/diag.js`.
 Настройки → Данные → «Сбои и журнал». В отчёте: сборка, телефон, Android, WebView, память и сам журнал — без приложений, заметок и кошелька.
+
+## Стили (2026-11-01)
+`styles.js` — список (11: classic, strip, soft, term, menu, cli, inst, panel, tele, cont, diary), акцент, сторона, шрифт часов;
+`styled.js` — свой вид блоков стиля (ЖК-часы, ручки, шкалы, клетки, лепестки, записи, командная строка); палитры, формы,
+элементы управления и движение — `launcher.css` по `html[data-style]`. Приёмы: `wheel.js` (дуга и циферблат), `bulge.js`, `scrub.js`.
+Новый стиль: строка в `STYLES`, палитра и формы в CSS, при нужде — блоки в `styledMake`, образец в `settings.js: PREVIEW`,
+название в `i18n.js`, допустимое значение в `data.js`; e2e «все стили» проверит край, высоту и правку.

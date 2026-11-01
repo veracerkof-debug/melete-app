@@ -15,7 +15,19 @@ export const STYLES = [
   { id: 'menu', accent: '#C94F92', align: 'left', clock: 'onest', clockW: 300 },
   // командная строка: только текст и символы, курсор мигает, часы и графика — знаками
   { id: 'cli', accent: '#3CF27A', align: 'left', mono: true, text: true },
+  // светло-серый корпус, оранжевые кнопки, часы ЖК-индикатором, чёрные ручки со стрелкой (Braun, приборные плитки)
+  { id: 'inst', accent: '#F26A1B', align: 'left' },
+  // светлые панели на чёрном: крупная цифра слева, график справа
+  { id: 'panel', accent: '#C0602E', align: 'left', clock: 'onest', clockW: 500 },
+  // чёрный и красный: кольцо с делениями, полосы из сегментов, линия по дням
+  { id: 'tele', accent: '#E10600', align: 'left', clock: 'onest', clockW: 600 },
+  // мятно-серый, толстые контуры, дата в рамке, приложения таблицей
+  { id: 'cont', accent: '#2F7D5B', align: 'left', clock: 'mono', clockW: 300 },
+  // бумага и пишущая машинка: неделя записями
+  { id: 'diary', accent: '#C9826B', align: 'center' },
 ];
+// стили, где крест рисуется точками (тёмные, «цифровые»)
+export const DOTTED = ['cli', 'term', 'tele'];
 
 export const styleOf = (id = prefs.style) => STYLES.find((s) => s.id === id) || STYLES[0];
 export const styleId = () => styleOf().id;

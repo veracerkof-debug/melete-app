@@ -530,13 +530,13 @@ test('стили: выбор в настройках меняет вид; ком
   await open(page);
   await hold(page, 60, 330);
   await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
-  await expect(page.locator('.l-style')).toHaveCount(6);
+  await expect(page.locator('.l-style')).toHaveCount(11);
   await page.locator('.l-style', { hasText: 'Командная строка' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-style', 'cli');
   await page.keyboard.press('Escape');
   await expect(page.locator('.clock .l-ascii')).toBeVisible();
   await expect(page.locator('.l-cli-cur')).toBeVisible();
-  for (const s of ['strip', 'soft', 'term', 'menu']) {
+  for (const s of ['strip', 'soft', 'term', 'menu', 'inst', 'panel', 'tele', 'cont', 'diary']) {
     await open(page, { style: s });
     await expect(page.locator('html')).toHaveAttribute('data-style', s);
     await expect(page.locator('.l-app').first()).toBeVisible();
@@ -571,5 +571,36 @@ test('шкала в списке: повести пальцем — список
   await expect(page.locator('.l-scrub-big')).not.toHaveText('');
   await page.mouse.up();
   await expect(page.locator('.l-scrub')).not.toHaveClass(/on/);
+  expect(errors).toEqual([]);
+});
+
+test('колесо циферблатом: середина — текущее, повести по кругу — следующее', async ({ page, errors }) => {
+  await open(page, { homeWheel: true, wheelShape: 'dial' });
+  const mid = () => page.locator('.l-dial-c b').textContent();
+  await expect(page.locator('.l-dial-c b')).not.toHaveText('');
+  const first = await mid();
+  // касание соседнего названия — подкатить к нему
+  await page.locator('.l-dial-i').nth(1).click();
+  await expect.poll(mid).not.toBe(first);
+  expect(errors).toEqual([]);
+});
+
+test('все стили: без ошибок, ничего не выходит за край, правка и настройки открываются', async ({ page, errors }) => {
+  test.setTimeout(240000);
+  await page.setViewportSize({ width: 360, height: 740 });
+  for (const s of ['classic', 'strip', 'soft', 'term', 'menu', 'cli', 'inst', 'panel', 'tele', 'cont', 'diary']) {
+    await open(page, { style: s, mono: false, homeWheel: s === 'tele', bulge: s === 'soft' });
+    const over = await page.evaluate(() => [...document.querySelectorAll('.l-home *')].filter((e) => {
+      const r = e.getBoundingClientRect();
+      return r.width && e.textContent.trim() && !e.closest('.l-wheel, svg') && (r.right > innerWidth + 2 || r.left < -2);
+    }).map((e) => e.className));
+    expect(over, s).toEqual([]);
+    const low = await page.evaluate(() => [...document.querySelectorAll('.l-home > [data-blk]')].filter((b) => !b.hidden && b.getBoundingClientRect().bottom > innerHeight + 2).map((b) => b.dataset.blk));
+    expect(low, s).toEqual([]);
+    const c = await page.locator('[data-blk="clock"]').boundingBox();
+    await hold(page, c.x + c.width / 2, c.y + c.height / 2);
+    await expect(page.locator('.l-home.editing'), s).toHaveCount(1);
+    await page.locator('.l-arr-done').click();
+  }
   expect(errors).toEqual([]);
 });

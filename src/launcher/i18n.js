@@ -497,3 +497,16 @@ Object.assign(S.en, { 'set.style': 'Style', 'style.classic': 'Classic', 'style.s
   'set.scrub': 'List scale', 'set.scrubHint': 'In All apps at the edge: drag for letters, the list jumps there',
   'cap.tracker': 'Melete · week', 'cap.balance': 'Wallet', 'cap.apps': 'Apps', 'cap.clock': 'Time',
   'heat.days': 'mo,tu,we,th,fr,sa,su', 'ring.title': 'Battery and progress', 'ring.bat': 'Battery', 'ring.practice': 'Weekly practice', 'ring.reading': 'Reading' });
+// Стили, вторая волна (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'style.inst': 'Приборы', 'style.panel': 'Панели', 'style.tele': 'Телеметрия', 'style.cont': 'Контур', 'style.diary': 'Дневник',
+  'cont.today': 'Сегодня', 'diary.sessions': 'занятий: {n}', 'cli.hint': '[касание] открыть · [удержание] меню · [вбок] папки · [вниз] назад',
+  'wheel.arc': 'Дугой', 'wheel.dial': 'Циферблатом' });
+Object.assign(S.uz, { 'style.inst': 'Asboblar', 'style.panel': 'Panellar', 'style.tele': 'Telemetriya', 'style.cont': 'Kontur', 'style.diary': 'Kundalik',
+  'cont.today': 'Bugun', 'diary.sessions': 'mashgʻulot: {n}', 'cli.hint': '[bosish] ochish · [bosib turish] menyu · [yonga] jildlar · [pastga] orqaga',
+  'wheel.arc': 'Yoy', 'wheel.dial': 'Siferblat' });
+Object.assign(S.en, { 'style.inst': 'Instruments', 'style.panel': 'Panels', 'style.tele': 'Telemetry', 'style.cont': 'Outline', 'style.diary': 'Diary',
+  'cont.today': 'Today', 'diary.sessions': 'sessions: {n}', 'cli.hint': '[tap] open · [hold] menu · [sideways] folders · [down] back',
+  'wheel.arc': 'Arc', 'wheel.dial': 'Dial' });
+Object.assign(S.ru, { 'tl.practice': 'Практика' });
+Object.assign(S.uz, { 'tl.practice': 'Mashq' });
+Object.assign(S.en, { 'tl.practice': 'Practice' });

@@ -43,7 +43,8 @@ export function mountDrawer(container, { onChange }) {
   // закрыть: потянуть вниз, когда список в начале (или за заголовок) — панель идёт за пальцем; колесо вверх
   let st = null;
   drawer.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('input, .l-d-tab')) { st = null; return; }
+    if (e.target.closest('input')) { st = null; return; }
+    // вкладки тоже «заголовок»: потянуть вниз — закрыть (вбок — листать вкладки)
     st = { y: e.clientY, x: e.clientX, can: list.scrollTop <= 0 || !list.contains(e.target), drag: false, vel: [] };
   });
   drawer.addEventListener('pointermove', (e) => {
@@ -225,6 +226,7 @@ function fill(keepTabScroll = false) {
   if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
   renderTabs(!!q, keepTabScroll);
   list.replaceChildren(...items(tab, q));
+  list.dataset.hint = t('cli.hint'); // строка подсказки внизу (видна в «Командной строке»)
   if (prefs.scrub) requestAnimationFrame(refreshScrub); else refreshScrub();
 }
 
