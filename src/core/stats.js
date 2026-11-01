@@ -32,6 +32,22 @@ export function songStats(sessions, songId) {
   };
 }
 
+// То же для всех песен за один проход по занятиям: Map id → { total, count, last, tempo } (как songStats).
+// Списки песен (главная, «Песни», статистика) раньше звали songStats на каждую песню — песни × занятия
+// (1500 × 3000 = 4,5 млн шагов на каждую отрисовку, на слабом телефоне — полсекунды)
+const EMPTY = Object.freeze({ total: 0, count: 0, last: 0, tempo: Object.freeze([]) });
+export function songStatsMap(sessions) {
+  const by = new Map();
+  for (const x of sessions) { if (!x.songId) continue; let a = by.get(x.songId); if (!a) by.set(x.songId, (a = [])); a.push(x); }
+  const out = new Map();
+  by.forEach((ss, id) => {
+    ss.sort((a, b) => a.start - b.start);
+    out.set(id, { total: sum(ss), count: ss.length, last: ss[ss.length - 1].start, tempo: ss.filter((x) => x.bpm).map((x) => ({ t: x.start, bpm: x.bpm })) });
+  });
+  out.of = (id) => out.get(id) || EMPTY;
+  return out;
+}
+
 // Цель на один день практики (для линии на графике недели)
 export const goalPerDay = (settings) =>
   (settings.goalMin * 60) / Math.max(1, settings.days.filter(Boolean).length);
@@ -135,8 +151,9 @@ export function byTool(sessions) {
 
 // Топ-8 песен по времени: [{ n: id песни, v }]
 export function bySong(sessions, songs) {
+  const m = songStatsMap(sessions);
   return songs
-    .map((s) => ({ n: s.id, v: songStats(sessions, s.id).total }))
+    .map((s) => ({ n: s.id, v: m.of(s.id).total }))
     .filter((x) => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 8);
 }
 

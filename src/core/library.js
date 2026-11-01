@@ -1,7 +1,7 @@
 // Библиотека: песни, категории, жанры, теги; шкала выученности; сортировка и фильтры.
 import { forcedText } from './palettes.js';
 import { uid } from './time.js';
-import { songStats } from './stats.js';
+import { songStatsMap } from './stats.js';
 import { parseKey } from './songinfo.js';
 
 export const PALETTE = ['#A75750', '#9C7242', '#AE934D', '#5F8568', '#4A8681', '#548591', '#567198',
@@ -143,7 +143,8 @@ export const SORTS = ['recent', 'title', 'mastery', 'difficulty', 'time', 'forgo
 
 // Список песен с фильтрами экрана «Песни». f: { cat ('' | '_none' | id), q, genre, tag, sort }
 export function listSongs(songs, sessions, L, f = {}, locale = 'ru') {
-  let list = songs.map((s) => ({ s, st: songStats(sessions, s.id) }));
+  const m = songStatsMap(sessions);
+  let list = songs.map((s) => ({ s, st: m.of(s.id) }));
   if (f.cat) list = list.filter((x) => (f.cat === '_none' ? !x.s.cat : x.s.cat === f.cat));
   if (f.q) {
     const q = f.q.toLowerCase();
