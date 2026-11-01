@@ -7,7 +7,7 @@ import { crossSVG } from './cross.js';
 import { homeItems, dockSlots, appOf, apps } from './apps.js';
 import { openApp, runAction } from './actions.js';
 import { trackerData, fmtDur } from './tracker.js';
-import { folderOfKey, folderName, folderApps, folderIcon } from './folders.js';
+import { folderOfKey, folderName, folderIcon } from './folders.js';
 import { layout, homeOrder } from './layout.js';
 import { walletBalance } from './wallet.js';
 import { hasLock } from './lock.js';
@@ -252,8 +252,7 @@ function renderList() {
     const ico = item.icon ? iconSVG(item.icon) : prefs.appIcons ? (fold ? iconSVG(folderIcon(fold)) : app?.pkg ? appIconHTML(app.pkg) : null) : null;
     const btn = h('button', { class: 'l-app' + (fold ? ' folder' : ''), 'data-i': i, style: { '--d': `${i * 55}ms` } },
       ico ? h('span', { class: 'l-app-ico', html: ico }) : null,
-      h('span', { class: 'label' }, label),
-      fold ? h('span', { class: 'l-fold-n', 'aria-label': t('fold.n', { n: folderApps(fold).length }) }, String(folderApps(fold).length)) : null);
+      h('span', { class: 'label' }, label));
     btn.addEventListener('click', () => {
       if (btn.dataset.suppress) return;
       btn.classList.add('pressed');

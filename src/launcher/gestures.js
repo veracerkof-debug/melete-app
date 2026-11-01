@@ -23,7 +23,7 @@ export function attachGestures(el, { onGesture, isBlocked, onDragStart, onDrag, 
     if (!halo) return;
     const hEl = halo;
     hEl.classList.add('out');
-    setTimeout(() => hEl.remove(), 300);
+    setTimeout(() => hEl.remove(), 140);
     halo = null;
   };
 

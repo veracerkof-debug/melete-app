@@ -74,7 +74,8 @@ export function mountDrawer(container, { onChange }) {
   // Пальцем — касания (touchend приходит, даже если браузер успел начать прокрутку), мышью — указатель.
   let sw = null;
   const neighbour = (dir) => { const ids = tabIds(), i = Math.max(0, ids.indexOf(tab)) + dir; return i >= 0 && i < ids.length ? ids[i] : null; };
-  const swStart = (x, y) => { sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null } : null; };
+  // касание во время прихода папки — доводка снимается, палец сразу берёт список; в первые 90 мс (старая уезжает) — не берёт
+  const swStart = (x, y) => { if (!paging) list.getAnimations().forEach((a) => a.cancel()); sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null } : null; };
   const swMove = (x, y) => {
     if (!sw || reordering()) return;
     const dx = x - sw.x, dy = y - sw.y;
@@ -106,7 +107,12 @@ export function mountDrawer(container, { onChange }) {
   list.addEventListener('touchend', (e) => { const c = e.changedTouches[0]; if (c) swEnd(c.clientX, c.clientY); }, { passive: true });
   list.addEventListener('touchcancel', () => { sw = null; settle(); }, { passive: true });
   list.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') swStart(e.clientX, e.clientY); });
-  list.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch' && e.buttons) swMove(e.clientX, e.clientY); });
+  // мышью: список уехал из-под указателя — события всё равно ему (пальцем касания и так идут туда, где начались)
+  list.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch' || !e.buttons) return;
+    swMove(e.clientX, e.clientY);
+    if (sw?.lock === 'x' && !list.hasPointerCapture(e.pointerId)) { try { list.setPointerCapture(e.pointerId); } catch { /* */ } }
+  });
   list.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') swEnd(e.clientX, e.clientY); });
   drawer.addEventListener('wheel', (e) => { if (e.deltaY < -40 && list.scrollTop <= 0) closeDrawer(); }, { passive: true });
   // удержать и перетащить: приложение в папке — на новое место; удержать и отпустить — меню приложения
@@ -148,14 +154,13 @@ function switchTab(id, dir, from = 0) {
   const w = Math.min(list.clientWidth || 360, 420);
   const o0 = list.style.opacity || '1';
   list.style.transition = 'none';
-  const out = list.animate([{ transform: `translateX(${from}px)`, opacity: o0 }, { transform: `translateX(${-dir * w * 0.45}px)`, opacity: 0 }],
-    { duration: Math.max(70, 140 * (1 - Math.abs(from) / w)), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+  const out = list.animate([{ transform: `translateX(${from}px)`, opacity: o0 }, { transform: `translateX(${-dir * w * 0.3}px)`, opacity: 0 }],
+    { duration: Math.max(50, 90 * (1 - Math.abs(from) / w)), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
   const done = () => {
     tab = id; fill(); list.scrollTop = 0;
     list.style.transform = ''; list.style.opacity = '';
     out.oncancel = null; out.cancel();
-    list.animate([{ transform: `translateX(${dir * w * 0.45}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 240, easing: EASE });
-    tabs.querySelector('.on')?.animate([{ transform: 'scale(.9)' }, { transform: 'none' }], { duration: 200, easing: EASE });
+    list.animate([{ transform: `translateX(${dir * w * 0.22}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: EASE });
     paging = false;
   };
   out.onfinish = done;
@@ -288,7 +293,6 @@ export function openFolder(id) {
       holdDrag(box, '.l-fold-app', { onMove: (from, to) => { moveInFolder(f.id, from, to); changed(); rerender(); } });
       body.append(box);
       if (!apps.length) body.append(h('p', { class: 'l-empty' }, t('fold.empty')));
-      body.append(h('button', { class: 'l-btn', onclick: () => { close(); tab = f.id; openDrawer(); } }, t('drawer.title') + ' · ' + folderName(f)));
     },
   });
 }

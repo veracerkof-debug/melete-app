@@ -467,6 +467,7 @@ test('переход между папками: список идёт за па�
   await page.keyboard.press('ArrowUp');
   await page.locator('.l-d-tab.fold').first().click();
   await expect(page.locator('.l-d-app').first()).toBeVisible();
+  await expect.poll(() => page.locator('.l-d-list').evaluate((e) => e.getAnimations().length)).toBe(0); // папка доехала
   const on = () => page.locator('.l-d-tab.on').getAttribute('data-id');
   const was = await on();
   const b = await page.locator('.l-d-list').boundingBox();

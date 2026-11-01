@@ -53,9 +53,9 @@ export function openSheet({ title, kicker, render, full = false, onClose, onSwip
     closed = true;
     stack.splice(stack.indexOf(entry), 1);
     panel.style.transition = ''; panel.style.transform = '';
-    wrap.classList.remove('open');
+    wrap.classList.add('closing'); wrap.classList.remove('open');
     if (!stack.length) setCover('sheet', false);
-    setTimeout(() => wrap.remove(), 320);
+    setTimeout(() => wrap.remove(), 200);
     onClose?.();
   };
   entry.close = close;
