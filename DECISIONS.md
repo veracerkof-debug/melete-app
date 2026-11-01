@@ -2231,7 +2231,7 @@ Android (полный рояль, вокал телефона); установщ
 
 ## 2026-11-01 · Версия для Linux (решение автора: «давай делать версию для линукса»)
 - Та же компьютерная версия на Tauri 2, окно — WebKitGTK. Сборка — GitHub Actions `.github/workflows/linux.yml`
-  (ubuntu-22.04, как у Windows: `main` → релиз «dev», `pre` → «pre»): **AppImage** (один файл, без установки,
+  (ubuntu-24.04 — ONNX Runtime крейта ort требует glibc 2.38+; как у Windows: `main` → релиз «dev», `pre` → «pre»): **AppImage** (один файл, без установки,
   обновляется сам — новый файл встаёт на место `$APPIMAGE`, `src-tauri/src/update.rs`) и **.deb** (Ubuntu, Debian, Mint;
   ставит система, обновление — новым пакетом, `update_ok` → false). Имена: dev — `Melete-Dev.AppImage`, `melete-dev.deb`;
   pre — `Melete.AppImage`, `melete.deb`; метка сборки — `linux-<N>.ver` (`src/core/update.js: FILES.linux`).
