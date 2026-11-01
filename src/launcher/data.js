@@ -31,6 +31,11 @@ export const DEFAULTS = {
   gestures: {},         // id жеста → действие; пустые — по умолчанию
   usage: {},            // ключ приложения → сколько раз открывали с главного экрана
   foldTabs: 'side',     // папки во «Всех приложениях»: side — значками справа | top — вкладками сверху (листаются)
+  style: 'classic',     // стиль главного: classic | strip | soft | term | menu | cli (styles.js)
+  homeWheel: false,     // приложения на главном — колесом (wheel.js)
+  bulge: false,         // изгиб у края с кольцами: заряд, практика, чтение (bulge.js)
+  scrub: false,         // шкала у края во «Всех приложениях»: буквы под пальцем (scrub.js)
+  clockFont: 'onest',   // шрифт часов: onest | jost | cormorant | mono | tall (clockfonts.js)
   foldLabels: true,     // вкладки сверху: значок и название | только значок
   drawerAll: true,      // вкладка «Все»; убрана — открываются папки, приложения вне папок находит поиск
   appIcons: false,      // родные значки у названий на главном и во «Всех приложениях» (Android; всегда ч/б)
@@ -54,6 +59,8 @@ const saved = readJSON(KEY);
 export const prefs = Object.assign(clone(DEFAULTS), saved || {});
 // Переход на минимальный экран (v2): убранные настройки удаляются, раскладка — новая по умолчанию (приложения справа
 // внизу), «Бумага» — светлая; приложения, значки, жесты, язык, церковный режим и обновление остаются
+// стиль из прежних версий (там «style» значил другое) — «Классика»
+if (!['classic', 'strip', 'soft', 'term', 'menu', 'cli'].includes(prefs.style)) prefs.style = 'classic';
 if (saved && saved.v !== 2) {
   Object.keys(prefs).forEach((k) => { if (!(k in DEFAULTS)) delete prefs[k]; });
   if (prefs.theme === 'paper') prefs.theme = 'light';

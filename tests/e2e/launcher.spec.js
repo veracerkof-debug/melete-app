@@ -310,6 +310,7 @@ test('папки вкладками сверху: листаются смахи�
   await page.mouse.move(b.x + b.width - 40, b.y + 80); await page.mouse.down();
   await page.mouse.move(b.x + 40, b.y + 90, { steps: 6 }); await page.mouse.up();
   await expect(page.locator('.l-d-tab.fold.on')).not.toContainText('Связь');
+  await page.waitForTimeout(600); // строка вкладок плавно доехала до новой
   // порядок вкладок — удержать и перетащить вправо
   const ids = () => page.locator('.l-d-tab.fold').evaluateAll((els) => els.map((e) => e.dataset.id));
   const was = await ids();
@@ -496,5 +497,79 @@ test('блок приложений убран: настройки говоря�
   await page.locator('.l-check:not(.on)', { hasText: 'Почта' }).click();
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await expect(page.locator('.l-app .label', { hasText: 'Почта' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('сбои и журнал: ошибка страницы попадает в журнал, сводка и журнал в настройках', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => setTimeout(() => { throw new Error('проверка журнала'); }, 0));
+  await page.waitForTimeout(1800); // строки дописываются пачкой
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Данные' }).click();
+  const sec = page.locator('section.l-sec', { hasText: 'Сбои и журнал' });
+  await expect(sec).toContainText('За 7 дней');
+  await expect(sec).toContainText('ошибок: 1');
+  await sec.locator('.l-btn', { hasText: 'Журнал' }).click();
+  await expect(page.locator('.l-diag')).toContainText('проверка журнала');
+  await expect(page.locator('.l-diag')).toContainText('page start');
+});
+
+test('шрифт часов: выбор в настройках «Вид» меняет часы на главном', async ({ page, errors }) => {
+  await open(page);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
+  await expect(page.locator('.l-clockfont')).toHaveCount(5);
+  await page.locator('.l-clockfont', { hasText: 'Моно' }).click();
+  await expect(page.locator('.l-clockfont.on')).toContainText('Моно');
+  await page.keyboard.press('Escape');
+  expect(await page.locator('.clock').evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Clock Mono');
+  expect(errors).toEqual([]);
+});
+
+test('стили: выбор в настройках меняет вид; командная строка — часы знаками и мигающий курсор', async ({ page, errors }) => {
+  await open(page);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
+  await expect(page.locator('.l-style')).toHaveCount(6);
+  await page.locator('.l-style', { hasText: 'Командная строка' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-style', 'cli');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.clock .l-ascii')).toBeVisible();
+  await expect(page.locator('.l-cli-cur')).toBeVisible();
+  for (const s of ['strip', 'soft', 'term', 'menu']) {
+    await open(page, { style: s });
+    await expect(page.locator('html')).toHaveAttribute('data-style', s);
+    await expect(page.locator('.l-app').first()).toBeVisible();
+  }
+  await open(page, { style: 'classic' });
+  expect(await page.locator('html').getAttribute('data-style')).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+test('колесо приложений крутится пальцем, изгиб у края — кольца', async ({ page, errors }) => {
+  await open(page, { homeWheel: true, bulge: true });
+  const cur = () => page.locator('.l-wh-i.cur .label').textContent();
+  await expect(page.locator('.l-wh-i.cur')).toHaveCount(1);
+  const first = await cur();
+  const b = await page.locator('.l-wheel').boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.7); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.35, { steps: 8 }); await page.mouse.up();
+  await expect.poll(cur).not.toBe(first);
+  await expect(page.locator('.l-bulge .l-ring').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('шкала в списке: повести пальцем — список встаёт на букву', async ({ page, errors }) => {
+  await open(page, { scrub: true, foldTabs: 'top' });
+  await page.keyboard.press('ArrowUp');
+  await page.locator('.l-d-tab.fold').first().click();
+  await expect(page.locator('.l-d-app').first()).toBeVisible();
+  await page.waitForTimeout(400);
+  const s = await page.locator('.l-scrub').boundingBox();
+  await page.mouse.move(s.x + s.width / 2, s.y + s.height - 20); await page.mouse.down();
+  await expect(page.locator('.l-scrub')).toHaveClass(/on/);
+  await expect(page.locator('.l-scrub-big')).not.toHaveText('');
+  await page.mouse.up();
+  await expect(page.locator('.l-scrub')).not.toHaveClass(/on/);
   expect(errors).toEqual([]);
 });

@@ -11,6 +11,7 @@ import { allApps as everyApp } from './apps.js';
 import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { pickHome } from './homepick.js';
+import { mountScrub, refreshScrub } from './scrub.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
 import { setCover } from './cover.js';
@@ -38,6 +39,7 @@ export function mountDrawer(container, { onChange }) {
     // папки — значками справа, низ свободен: список идёт до самого низа
     h('div', { class: 'l-d-body' }, list, tabs = h('div', { class: 'l-d-rail', role: 'tablist', 'aria-orientation': 'vertical' })));
   container.append(drawer);
+  mountScrub(drawer.querySelector('.l-d-body'), list); // шкала у края (prefs.scrub)
   // закрыть: потянуть вниз, когда список в начале (или за заголовок) — панель идёт за пальцем; колесо вверх
   let st = null;
   drawer.addEventListener('pointerdown', (e) => {
@@ -69,27 +71,24 @@ export function mountDrawer(container, { onChange }) {
   drawer.addEventListener('touchmove', (e) => { if (st?.drag || (st?.can && e.touches[0] && e.touches[0].clientY - st.y > 0)) e.preventDefault(); }, { passive: false });
   drawer.addEventListener('pointerup', endDrag);
   drawer.addEventListener('pointercancel', () => { if (st?.drag) drawerPanel.cancel(); st = null; });
-  // смахнуть влево-вправо по списку — соседняя папка. Список идёт за пальцем; отпустил дальше 36 px или быстрым
-  // взмахом — уезжает, приходит соседняя папка с другой стороны; иначе — пружинит назад. На краях — тянется туго.
-  // Пальцем — касания (touchend приходит, даже если браузер успел начать прокрутку), мышью — указатель.
+  // смахнуть влево-вправо по списку — соседняя папка, как страницы: текущий список идёт за пальцем, соседний
+  // въезжает рядом с ним (видно, куда листаешь); отпустил дальше 36 px или взмахом — доезжает со скоростью пальца,
+  // иначе — пружинит назад. На краях — тянется туго. Пальцем — касания, мышью — указатель.
   let sw = null;
   const neighbour = (dir) => { const ids = tabIds(), i = Math.max(0, ids.indexOf(tab)) + dir; return i >= 0 && i < ids.length ? ids[i] : null; };
-  // касание во время прихода папки — доводка снимается, палец сразу берёт список; в первые 90 мс (старая уезжает) — не берёт
-  const swStart = (x, y) => { if (!paging) list.getAnimations().forEach((a) => a.cancel()); sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null } : null; };
+  const swStart = (x, y) => { sw = !search.value && !paging ? { x, y, t: performance.now(), lock: null, vx: 0, lx: x, lt: performance.now() } : null; };
   const swMove = (x, y) => {
     if (!sw || reordering()) return;
-    const dx = x - sw.x, dy = y - sw.y;
+    const dx = x - sw.x, dy = y - sw.y, now = performance.now();
+    if (now > sw.lt) { sw.vx = (x - sw.lx) / (now - sw.lt); sw.lx = x; sw.lt = now; }
     if (!sw.lock) {
       if (Math.hypot(dx, dy) < 10) return;
       sw.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
-      if (sw.lock === 'x') list.style.transition = 'none';
     }
     if (sw.lock !== 'x') return;
-    const free = neighbour(dx < 0 ? 1 : -1);
-    const off = free ? dx : dx / 4; // края нет — туго
-    list.style.transform = `translateX(${off}px)`;
-    list.style.opacity = String(1 - Math.min(0.5, Math.abs(off) / list.clientWidth));
-    sw.off = off;
+    const dir = dx < 0 ? 1 : -1, id = neighbour(dir);
+    if (id) peek(id, dir, dx); else { dropGhost(); place(dx / 4); } // края нет — туго
+    sw.off = id ? dx : dx / 4;
   };
   const swEnd = (x, y) => {
     if (!sw) return;
@@ -97,15 +96,15 @@ export function mountDrawer(container, { onChange }) {
     const dx = x - s0.x, dy = y - s0.y, ms = Math.max(1, performance.now() - s0.t);
     const ax = Math.abs(dx);
     const go = !reordering() && s0.lock !== 'y' && ((ax >= 36 && ax > Math.abs(dy) * 1.2) || (ax >= 20 && ax / ms > 0.35 && ax > Math.abs(dy) * 1.5));
-    const id = go ? neighbour(dx < 0 ? 1 : -1) : null;
+    const dir = dx < 0 ? 1 : -1, id = go ? neighbour(dir) : null;
     if (s0.lock === 'x') { list.dataset.swiped = '1'; setTimeout(() => delete list.dataset.swiped, 50); }
-    if (id) { switchTab(id, dx < 0 ? 1 : -1, s0.off || 0); }
+    if (id) slideTo(id, dir, s0.off || 0, Math.abs(s0.vx));
     else if (s0.off) settle();
   };
-  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else { sw = null; settle(); } }, { passive: true });
+  list.addEventListener('touchstart', (e) => { if (e.touches.length === 1) swStart(e.touches[0].clientX, e.touches[0].clientY); else if (sw) { sw = null; settle(); } }, { passive: true });
   list.addEventListener('touchmove', (e) => { const c = e.touches[0]; if (c) swMove(c.clientX, c.clientY); }, { passive: true });
   list.addEventListener('touchend', (e) => { const c = e.changedTouches[0]; if (c) swEnd(c.clientX, c.clientY); }, { passive: true });
-  list.addEventListener('touchcancel', () => { sw = null; settle(); }, { passive: true });
+  list.addEventListener('touchcancel', () => { if (sw) { sw = null; settle(); } }, { passive: true });
   list.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') swStart(e.clientX, e.clientY); });
   // мышью: список уехал из-под указателя — события всё равно ему (пальцем касания и так идут туда, где начались)
   list.addEventListener('pointermove', (e) => {
@@ -135,52 +134,79 @@ export function mountDrawer(container, { onChange }) {
 
 const onHome = (key) => homeItems().some((x) => x.key === key);
 // вкладки по порядку: «Все» (если не убрана) и папки
-// переход между папками: текущий список уезжает в сторону листания, новый приходит с другой стороны (dir: 1 — следующая,
-// −1 — предыдущая); from — где список сейчас (палец уже утащил). «Меньше движения» — сразу, без сдвига.
+// Переход между папками — страницами: рядом со списком стоит соседняя папка (ghost — её копия без касаний),
+// оба едут вместе; доехали — список становится новой папкой, копия убирается. dir: 1 — следующая, −1 — предыдущая.
+// Время — по оставшемуся пути и скорости пальца (120–260 мс). «Меньше движения» — сразу, без сдвига.
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const EASE = 'cubic-bezier(.2,.8,.2,1)';
-let paging = false;
-function settle() {
-  if (!list.style.transform) return;
-  list.style.transition = `transform .22s ${EASE}, opacity .22s ${EASE}`;
-  list.style.transform = ''; list.style.opacity = '';
-}
-function switchTab(id, dir, from = 0) {
-  if (id === tab) { settle(); return; }
-  if (!dir || calm() || !list.animate) {
-    tab = id; fill(); list.scrollTop = 0; list.style.transform = ''; list.style.opacity = ''; return;
-  }
-  paging = true;
-  const w = Math.min(list.clientWidth || 360, 420);
-  const o0 = list.style.opacity || '1';
+const GAP = 24;
+let paging = false, ghost = null, ghostKey = '';
+const span = () => list.offsetWidth + GAP;
+function place(off, g = null) {
   list.style.transition = 'none';
-  const out = list.animate([{ transform: `translateX(${from}px)`, opacity: o0 }, { transform: `translateX(${-dir * w * 0.3}px)`, opacity: 0 }],
-    { duration: Math.max(50, 90 * (1 - Math.abs(from) / w)), easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
-  const done = () => {
-    tab = id; fill(); list.scrollTop = 0;
-    list.style.transform = ''; list.style.opacity = '';
-    out.oncancel = null; out.cancel();
-    list.animate([{ transform: `translateX(${dir * w * 0.22}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: EASE });
-    paging = false;
-  };
-  out.onfinish = done;
-  out.oncancel = () => { if (paging) done(); };
+  list.style.transform = off ? `translateX(${off}px)` : '';
+  list.style.opacity = off ? String(1 - Math.min(0.35, Math.abs(off) / span() * 0.5)) : '';
+  if (ghost && g != null) { ghost.style.transition = 'none'; ghost.style.transform = `translateX(${g}px)`; }
+}
+function dropGhost() { ghost?.remove(); ghost = null; ghostKey = ''; }
+function makeGhost(id, dir) {
+  const key = id + dir;
+  if (ghost && ghostKey === key) return;
+  dropGhost();
+  // копия — своим классом (не второй список); отступы и масштаб — как у списка
+  ghost = document.createElement('div');
+  ghost.className = 'l-d-ghost';
+  const cs = getComputedStyle(list);
+  ghost.style.padding = cs.padding;
+  ghost.style.zoom = cs.zoom;
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.append(...items(id, ''));
+  Object.assign(ghost.style, { position: 'absolute', left: list.offsetLeft + 'px', top: list.offsetTop + 'px', width: list.offsetWidth + 'px', height: list.offsetHeight + 'px', pointerEvents: 'none', transform: `translateX(${dir * span()}px)`, opacity: '', transition: 'none' });
+  list.after(ghost);
+  ghostKey = key;
+}
+// палец тянет: список на dx, соседняя — рядом
+function peek(id, dir, dx) { makeGhost(id, dir); place(dx, dir * span() + dx); }
+function settle() {
+  const g = ghost, key = ghostKey;
+  const t = `transform .24s ${EASE}, opacity .24s ${EASE}`;
+  list.style.transition = t; list.style.transform = ''; list.style.opacity = '';
+  if (g) { g.style.transition = t; g.style.transform = `translateX(${(key.endsWith('-1') ? -1 : 1) * span()}px)`; setTimeout(() => { if (ghost === g) dropGhost(); }, 260); }
+}
+function switchTab(id, dir) { slideTo(id, dir, 0, 0); }
+function slideTo(id, dir, from = 0, v = 0) {
+  if (id === tab) { settle(); return; }
+  if (calm() || paging) { dropGhost(); tab = id; fill(); list.scrollTop = 0; place(0); return; }
+  paging = true;
+  makeGhost(id, dir);
+  const W = span(), rest = Math.max(0, W - Math.abs(from));
+  const ms = Math.round(Math.max(120, Math.min(260, v > 0.4 ? rest / v : 60 + 200 * rest / W)));
+  // вкладка — сразу на новую и плавно в виду
+  tabs.querySelectorAll('.l-d-tab').forEach((b) => { const on = b.dataset.id === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  tabs.querySelector(`.l-d-tab[data-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  place(from, dir * W + from);
+  list.getBoundingClientRect(); // начальное положение — в кадр, дальше переход
+  const t = `transform ${ms}ms ${EASE}, opacity ${ms}ms ${EASE}`;
+  list.style.transition = t; ghost.style.transition = t;
+  list.style.transform = `translateX(${-dir * W}px)`; list.style.opacity = '0.65';
+  ghost.style.transform = 'translateX(0)';
+  setTimeout(() => {
+    tab = id; fill(true); list.scrollTop = 0; place(0);
+    dropGhost(); paging = false;
+  }, ms + 16);
 }
 const tabIds = () => [...(prefs.drawerAll !== false || !folders().length ? ['all'] : []), ...folders().map((f) => f.id)];
 
-function fill() {
-  const q = search.value.trim().toLowerCase();
-  if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
-  const f = !q && tab !== 'all' ? folderById(tab) : null;
-  // «Все» — без приложений из папок (они — в своих папках); поиск находит все
+// строки списка для вкладки id (и поиска q): «Все» — без приложений из папок, поиск — по всем
+function items(id, q) {
+  const f = !q && id !== 'all' ? folderById(id) : null;
   const apps = f ? folderApps(f) : allApps().filter((a) => (q ? a.label.toLowerCase().includes(q) || (a.sys || '').toLowerCase().includes(q) || (a.pkg || '').includes(q) : !inAnyFolder(a.key)));
-  renderTabs(!!q);
-  list.replaceChildren();
+  const out = [];
   let letter = '';
-  apps.forEach((a, i) => {
+  apps.forEach((a) => {
     const L = (a.label[0] || '#').toUpperCase();
-    if (L !== letter && !q && !f) { letter = L; list.append(h('div', { class: 'l-d-letter' }, L)); }
-    const btn = h('button', { class: 'l-d-app', 'data-key': a.key, style: { '--d': `${Math.min(i, 14) * 18}ms` } },
+    if (L !== letter && !q && !f) { letter = L; out.push(h('div', { class: 'l-d-letter' }, L)); }
+    const btn = h('button', { class: 'l-d-app', 'data-key': a.key },
       prefs.appIcons && a.pkg ? h('span', { class: 'l-app-ico', html: appIconHTML(a.pkg) }) : null, h('span', {}, a.label), onHome(a.key) ? h('i', { class: 'l-d-dot', 'aria-label': t('drawer.onHome') }) : null);
     btn.addEventListener('click', () => {
       if (btn.dataset.held) return;
@@ -188,13 +214,22 @@ function fill() {
       openApp(a);
       closeDrawer();
     });
-    list.append(btn);
+    out.push(btn);
   });
-  if (!apps.length) list.append(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
+  if (!apps.length) out.push(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
+  return out;
+}
+
+function fill(keepTabScroll = false) {
+  const q = search.value.trim().toLowerCase();
+  if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
+  renderTabs(!!q, keepTabScroll);
+  list.replaceChildren(...items(tab, q));
+  if (prefs.scrub) requestAnimationFrame(refreshScrub); else refreshScrub();
 }
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
-function renderTabs(searching) {
+function renderTabs(searching, keepScroll = false) {
   const top = prefs.foldTabs === 'top';
   const tb = (id, label, icon, cls = '') => {
     const ico = icon ? iconSVG(icon) : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
@@ -217,7 +252,8 @@ function renderTabs(searching) {
     return b;
   };
   tabs.replaceChildren(...[tabIds().includes('all') ? tb('all', t('fold.all'), 'grid') : null, ...folders().map((f) => tb(f.id, folderName(f), folderIcon(f))), tb('+', t('fold.new'), null, 'add')].filter(Boolean));
-  tabs.querySelector('.on')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  // после перелистывания — доплыть до новой вкладки (плавно, с того места, где строка сейчас)
+  tabs.querySelector('.on')?.scrollIntoView(keepScroll ? { behavior: 'smooth', inline: 'center', block: 'nearest' } : { inline: 'nearest', block: 'nearest' });
   const f = !searching && tab !== 'all' ? folderById(tab) : null;
   titleName.textContent = f ? folderName(f) : t('drawer.title');
 }

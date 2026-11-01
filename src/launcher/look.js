@@ -1,5 +1,7 @@
 // Оформление Elachiston — на токенах Melete (styles/tokens.css): темы светлая, тёмная, OLED и системная.
 // Один шрифт (Onest) и один акцент — дизайн единый, без декоративных настроек (DECISIONS 2026-10-28).
+import { clockFont } from './clockfonts.js';
+import { styleOf } from './styles.js';
 import { accentVars } from '../core/palettes.js';
 import { prefs } from './data.js';
 import { isNative, Launcher } from './native.js';
@@ -36,6 +38,16 @@ export function applyLook(de = document.documentElement) {
   de.style.setProperty('--l-auto', String(auto));
   de.style.setProperty('--l-ck', String(auto * ((prefs.clockScale || 100) / 100)));
   const ui = (prefs.uiScale || 100) / 100;
+  // стиль (styles.js): палитра и форма — в CSS по data-style, акцент — здесь (в «Чёрно-белом» — цветом текста)
+  const st = styleOf();
+  if (st.id === 'classic') delete de.dataset.style; else de.dataset.style = st.id;
+  de.style.setProperty('--l-acc', st.accent && prefs.mono === false ? st.accent : 'var(--ink)');
+  // шрифт часов (clockfonts.js): выбран свой — он; не выбран — шрифт стиля
+  const cf = clockFont(prefs.clockFont && prefs.clockFont !== 'onest' ? prefs.clockFont : st.clock || 'onest');
+  de.style.setProperty('--l-clock-font', cf.family);
+  de.style.setProperty('--l-clock-w', String(prefs.clockFont && prefs.clockFont !== 'onest' ? cf.weight : st.clockW || cf.weight));
+  de.style.setProperty('--l-clock-track', cf.track);
+  de.style.setProperty('--l-clock-num', cf.num || 'tabular-nums');
   // крест: толщина и непрозрачность (настройки «Вид» → крест)
   de.style.setProperty('--l-cw', String((prefs.crossWeight || 100) / 100));
   de.style.setProperty('--l-co', String((prefs.crossOpacity || 100) / 100));

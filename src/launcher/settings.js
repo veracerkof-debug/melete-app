@@ -9,6 +9,9 @@ import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
 import { pickHome } from './homepick.js';
+import { CLOCK_FONTS, clockFont } from './clockfonts.js';
+import { STYLES, styleOf } from './styles.js';
+import { readDiag, summarize, shareDiag, clearDiag } from './diag.js';
 import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp, systemName } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
@@ -71,6 +74,22 @@ export function openSettings(onChange, getGesture, tab) {
         segmented([{ value: '', label: t('set.lang.sys') }, { value: 'ru', label: 'Русский' }, { value: 'uz', label: 'Oʻzbekcha' }, { value: 'en', label: 'English' }], prefs.lang || '', (v) => up({ lang: v }), t('set.lang')),
         h('div', { class: 'l-label' }, t('set.align')),
         segmented([{ value: 'left', label: t('set.left') }, { value: 'center', label: t('set.center') }, { value: 'right', label: t('set.right') }], prefs.align, (v) => up({ align: v }), t('set.align')),
+        // стиль главного: плитка — маленький образец; «Классика» — по умолчанию
+        h('div', { class: 'l-label' }, t('set.style')),
+        h('div', { class: 'l-styles', role: 'radiogroup', 'aria-label': t('set.style') },
+          ...STYLES.map((st) => h('button', { class: 'l-style' + (styleOf().id === st.id ? ' on' : ''), role: 'radio', 'aria-checked': String(styleOf().id === st.id), onclick: () => up({ style: st.id }) },
+            h('span', { class: 'l-pv', 'aria-hidden': 'true', html: PREVIEW[st.id] }),
+            h('small', {}, t('style.' + st.id))))),
+        styleOf().accent && prefs.mono !== false ? h('p', { class: 'l-hint' }, t('style.monoHint')) : null,
+        toggle(t('set.wheel'), prefs.homeWheel, (v) => up({ homeWheel: v }), t('set.wheelHint')),
+        toggle(t('set.bulge'), prefs.bulge, (v) => up({ bulge: v }), t('set.bulgeHint')),
+        toggle(t('set.scrub'), prefs.scrub, (v) => up({ scrub: v }), t('set.scrubHint')),
+        // шрифт часов: каждая плитка — часы этим шрифтом
+        h('div', { class: 'l-label' }, t('set.clockFont')),
+        h('div', { class: 'l-clockfonts', role: 'radiogroup', 'aria-label': t('set.clockFont') },
+          ...CLOCK_FONTS.map((f) => h('button', { class: 'l-clockfont' + (clockFont(prefs.clockFont).id === f.id ? ' on' : ''), role: 'radio', 'aria-checked': String(clockFont(prefs.clockFont).id === f.id), onclick: () => up({ clockFont: f.id }) },
+            h('span', { class: 'l-clockfont-n', style: { fontFamily: f.family + ', var(--l-display)', fontWeight: String(f.weight), letterSpacing: f.track, fontVariantNumeric: f.num || 'tabular-nums' } }, prefs.hour12 ? '9:41' : '21:41'),
+            h('small', {}, t('cf.' + f.id))))),
         scaleRow(t('set.clockScale'), 'clockScale', 60, 140),
         scaleRow(t('set.uiScale'), 'uiScale', 60, 130),
         toggle(t('set.hour12'), prefs.hour12, (v) => up({ hour12: v })),
@@ -226,6 +245,22 @@ export function openSettings(onChange, getGesture, tab) {
             h('button', { class: 'l-btn', onclick: () => Launcher.openHomeSettings() }, t('set.sys.choose')));
         }).catch(() => {});
       }
+      // — Сбои и журнал: сводка за неделю, отчёт файлом, сам журнал —
+      const diagInfo = h('p', { class: 'l-hint' }, t('diag.reading'));
+      readDiag().then(({ text }) => {
+        const d = summarize(text);
+        diagInfo.textContent = diagLine(d);
+      });
+      body.append(S('data', t('diag.title'),
+        h('p', { class: 'l-hint' }, t('diag.hint')),
+        diagInfo,
+        h('div', { class: 'l-btn-row' },
+          h('button', { class: 'l-btn primary', onclick: async () => {
+            const { text } = await readDiag();
+            try { await shareDiag(diagLine(summarize(text))); } catch { toast(t('diag.fail')); }
+          } }, t('diag.send')),
+          h('button', { class: 'l-btn', onclick: () => diagSheet() }, t('diag.show')))));
+
       body.append(S('data', t('set.sys'),
         sys,
         h('div', { class: 'l-btn-row' },
@@ -270,6 +305,48 @@ function scaleRow(label, key, min, max) {
 }
 
 // Подпись приложения на главном (удержание названия)
+// образцы стилей для выбора — маленькие схемы, без картинок
+const PV = (bg, body) => `<span style="position:absolute;inset:0;background:${bg}">${body}</span>`;
+const T = (css, txt = '') => `<span style="position:absolute;${css}">${txt}</span>`;
+const PREVIEW = {
+  classic: PV('#F3F2EE', T('right:8px;top:12px;font:300 22px/1 var(--l-display);color:#161514', '21:41') + T('right:8px;top:38px;width:36px;height:3px;background:#C6C3BC') + [0, 1, 2].map((i) => T(`right:8px;bottom:${12 + i * 11}px;width:${30 - i * 6}px;height:4px;background:#161514`)).join('')),
+  strip: PV('#232323', T('right:0;top:0;bottom:0;width:22%;background:#B5474F') + [0, 1, 2, 3].map((i) => T(`right:7%;top:${24 + i * 14}px;width:7px;height:7px;border:1px solid #fff;border-radius:2px`)).join('')
+    + T('left:8px;top:16px;width:2px;height:16px;background:#B5474F') + T('left:13px;top:16px;font:600 13px/1 var(--l-display);color:#F1EFEC', '06:03') + T('left:8px;top:46px;width:2px;height:16px;background:#B5474F') + T('left:13px;top:48px;font:600 12px/1 var(--l-display);color:#F1EFEC', '26%')),
+  soft: PV('#E6E8EE', T('left:50%;top:14px;transform:translateX(-50%);padding:6px 10px;border-radius:12px;background:#E6E8EE;box-shadow:4px 4px 8px rgba(163,170,190,.6),-4px -4px 8px #fff;font:200 20px/1 var(--l-display);color:#3B4256', '60')
+    + T('left:50%;bottom:12px;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:#E6E8EE;box-shadow:3px 3px 6px rgba(163,170,190,.6),-3px -3px 6px #fff')),
+  term: PV('#0A0A0A', T('left:6px;right:6px;top:8px;height:34px;border:1px solid #262626;border-radius:6px;background:#151515') + T('left:12px;top:15px;font:400 9px/1 monospace;color:#3DDC84', '+15,256')
+    + T('left:6px;right:6px;top:48px;height:36px;border:1px solid #262626;border-radius:6px;background:#151515') + [...Array(14)].map((_, i) => T(`left:${12 + (i % 7) * 9}px;top:${56 + Math.floor(i / 7) * 9}px;width:6px;height:6px;background:${i % 3 ? '#ECECEC' : '#333'}`)).join('')),
+  menu: PV('#E7E7EA', T('left:5px;top:6px;bottom:6px;width:16px;border-radius:8px;background:#F7F7F8') + T('left:25px;right:5px;top:6px;bottom:6px;border-radius:10px;background:#F7F7F8')
+    + T('left:31px;top:28px;width:44px;height:9px;border-radius:5px;background:#1E1E22') + [0, 1, 2].map((i) => T(`left:31px;top:${44 + i * 11}px;width:${34 - i * 5}px;height:4px;background:#A9A9B0`)).join('')),
+  cli: PV('#000', T('left:7px;top:10px;font:400 9px/1.5 monospace;color:#8A8A8A;white-space:pre', '<span style="color:#3CF27A">~$</span> date\n<span style="color:#3CF27A">█ █ ███</span>\n<span style="color:#3CF27A">~$</span> ls\n./notes\n<span style="color:#3CF27A">~$ █</span>')),
+};
+
+// сводка журнала одной строкой (и в начало отчёта)
+function diagLine(d) {
+  const parts = [t('diag.week')];
+  parts.push(d.crash ? t('diag.crash', { n: d.crash }) : t('diag.noCrash'));
+  if (d.killed) parts.push(t('diag.killed', { n: d.killed }));
+  if (d.gone) parts.push(t('diag.gone', { n: d.gone }));
+  if (d.median != null) parts.push(t('diag.return', { ms: d.median, worst: d.worst }));
+  if (d.slow) parts.push(t('diag.slow', { n: d.slow }));
+  if (d.long) parts.push(t('diag.long', { n: d.long }));
+  if (d.err) parts.push(t('diag.err', { n: d.err }));
+  return parts.join(' · ');
+}
+
+// журнал целиком — свежее сверху
+function diagSheet() {
+  openSheet({
+    title: t('diag.log'), kicker: '', full: true,
+    render(body, close) {
+      const pre = h('pre', { class: 'l-diag' }, t('diag.reading'));
+      readDiag().then(({ head, text }) => { pre.textContent = head + '\n' + text.trim().split('\n').reverse().slice(0, 600).join('\n'); });
+      body.append(pre, h('div', { class: 'l-btn-row' },
+        h('button', { class: 'l-btn', onclick: async () => { await clearDiag(); close(); toast(t('diag.cleared')); } }, t('diag.clear'))));
+    },
+  });
+}
+
 // Скрытые приложения — своя папка: поиск, касание — открыть (скрытое не видно больше нигде), «Вернуть», «Скрыть ещё»
 function hiddenSheet(after) {
   let q = '';

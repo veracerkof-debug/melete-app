@@ -458,3 +458,42 @@ Object.assign(S.en, { 'home.on': 'On home', 'home.folders': 'Folders', 'home.app
 Object.assign(S.ru, { 'home.blockOff': 'Список приложений на главном убран', 'home.blockOn': 'Показать' });
 Object.assign(S.uz, { 'home.blockOff': 'Bosh ekrandagi ilovalar roʻyxati olib tashlangan', 'home.blockOn': 'Koʻrsatish' });
 Object.assign(S.en, { 'home.blockOff': 'The app list is removed from home', 'home.blockOn': 'Show' });
+// Сбои и журнал (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'diag.title': 'Сбои и журнал', 'diag.hint': 'Главный экран сам записывает запуски, возвращения, нехватку памяти, сбои и подвисания. Только техника: без приложений, заметок и кошелька. Наружу — только по кнопке.',
+  'diag.reading': 'Читается…', 'diag.send': 'Отправить отчёт', 'diag.show': 'Журнал', 'diag.log': 'Журнал', 'diag.clear': 'Очистить', 'diag.cleared': 'Журнал очищен', 'diag.fail': 'Отправить не удалось',
+  'diag.week': 'За 7 дней', 'diag.crash': 'сбоев: {n}', 'diag.noCrash': 'без сбоев', 'diag.killed': 'система закрывала: {n}', 'diag.gone': 'страница пересобрана: {n}',
+  'diag.return': 'возврат на главный: обычно {ms} мс, худший {worst} мс', 'diag.slow': 'медленных возвратов: {n}', 'diag.long': 'подвисаний: {n}', 'diag.err': 'ошибок: {n}' });
+Object.assign(S.uz, { 'diag.title': 'Nosozliklar va jurnal', 'diag.hint': 'Bosh ekran ishga tushish, qaytish, xotira yetishmasligi, nosozlik va qotishlarni oʻzi yozib boradi. Faqat texnik maʼlumot: ilovalar, eslatmalar va hamyonsiz. Tashqariga — faqat tugma bilan.',
+  'diag.reading': 'Oʻqilmoqda…', 'diag.send': 'Hisobot yuborish', 'diag.show': 'Jurnal', 'diag.log': 'Jurnal', 'diag.clear': 'Tozalash', 'diag.cleared': 'Jurnal tozalandi', 'diag.fail': 'Yuborib boʻlmadi',
+  'diag.week': '7 kunda', 'diag.crash': 'nosozlik: {n}', 'diag.noCrash': 'nosozliksiz', 'diag.killed': 'tizim yopgan: {n}', 'diag.gone': 'sahifa qayta yigʻilgan: {n}',
+  'diag.return': 'bosh ekranga qaytish: odatda {ms} ms, eng yomoni {worst} ms', 'diag.slow': 'sekin qaytish: {n}', 'diag.long': 'qotish: {n}', 'diag.err': 'xato: {n}' });
+Object.assign(S.en, { 'diag.title': 'Problems and log', 'diag.hint': 'The home screen records launches, returns, low memory, crashes and freezes. Technical only: no apps, notes or wallet. Leaves the phone only by the button.',
+  'diag.reading': 'Reading…', 'diag.send': 'Send report', 'diag.show': 'Log', 'diag.log': 'Log', 'diag.clear': 'Clear', 'diag.cleared': 'Log cleared', 'diag.fail': 'Could not send',
+  'diag.week': 'Last 7 days', 'diag.crash': 'crashes: {n}', 'diag.noCrash': 'no crashes', 'diag.killed': 'closed by system: {n}', 'diag.gone': 'page rebuilt: {n}',
+  'diag.return': 'return to home: usually {ms} ms, worst {worst} ms', 'diag.slow': 'slow returns: {n}', 'diag.long': 'freezes: {n}', 'diag.err': 'errors: {n}' });
+// Шрифт часов (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'set.clockFont': 'Шрифт часов', 'cf.onest': 'Ровный', 'cf.jost': 'Геометрия', 'cf.cormorant': 'Антиква', 'cf.mono': 'Моно', 'cf.tall': 'Узкий' });
+Object.assign(S.uz, { 'set.clockFont': 'Soat shrifti', 'cf.onest': 'Tekis', 'cf.jost': 'Geometrik', 'cf.cormorant': 'Antikva', 'cf.mono': 'Mono', 'cf.tall': 'Tor' });
+Object.assign(S.en, { 'set.clockFont': 'Clock font', 'cf.onest': 'Plain', 'cf.jost': 'Geometric', 'cf.cormorant': 'Serif', 'cf.mono': 'Mono', 'cf.tall': 'Tall' });
+// Стили и приёмы (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'set.style': 'Стиль', 'style.classic': 'Классика', 'style.strip': 'Полоса', 'style.soft': 'Мягкий', 'style.term': 'Терминал', 'style.menu': 'Меню', 'style.cli': 'Командная строка',
+  'style.monoHint': 'Цвет стиля появится, если выключить «Чёрно-белый».',
+  'set.wheel': 'Колесо приложений', 'set.wheelHint': 'Приложения на главном — по дуге: повести пальцем — крутится, текущее крупно',
+  'set.bulge': 'Изгиб у края', 'set.bulgeHint': 'Кольца у края экрана: заряд, практика за неделю, чтение',
+  'set.scrub': 'Шкала в списке', 'set.scrubHint': 'Во «Всех приложениях» у края: повести пальцем — буквы, список встаёт на нужную',
+  'cap.tracker': 'Melete · неделя', 'cap.balance': 'Кошелёк', 'cap.apps': 'Приложения', 'cap.clock': 'Время',
+  'heat.days': 'пн,вт,ср,чт,пт,сб,вс', 'ring.title': 'Заряд и прогресс', 'ring.bat': 'Заряд', 'ring.practice': 'Практика за неделю', 'ring.reading': 'Чтение' });
+Object.assign(S.uz, { 'set.style': 'Uslub', 'style.classic': 'Klassika', 'style.strip': 'Chiziq', 'style.soft': 'Yumshoq', 'style.term': 'Terminal', 'style.menu': 'Menyu', 'style.cli': 'Buyruq satri',
+  'style.monoHint': 'Uslub rangi «Oq-qora» oʻchirilsa koʻrinadi.',
+  'set.wheel': 'Ilovalar gʻildiragi', 'set.wheelHint': 'Bosh ekrandagi ilovalar yoy boʻylab: barmoq bilan aylantiriladi, joriysi yirik',
+  'set.bulge': 'Chetdagi egilish', 'set.bulgeHint': 'Ekran chetida halqalar: quvvat, haftalik mashq, oʻqish',
+  'set.scrub': 'Roʻyxatdagi shkala', 'set.scrubHint': '«Barcha ilovalar»da chetda: barmoq bilan — harflar, roʻyxat keraklisiga oʻtadi',
+  'cap.tracker': 'Melete · hafta', 'cap.balance': 'Hamyon', 'cap.apps': 'Ilovalar', 'cap.clock': 'Vaqt',
+  'heat.days': 'du,se,ch,pa,ju,sh,ya', 'ring.title': 'Quvvat va natija', 'ring.bat': 'Quvvat', 'ring.practice': 'Haftalik mashq', 'ring.reading': 'Oʻqish' });
+Object.assign(S.en, { 'set.style': 'Style', 'style.classic': 'Classic', 'style.strip': 'Strip', 'style.soft': 'Soft', 'style.term': 'Terminal', 'style.menu': 'Menu', 'style.cli': 'Command line',
+  'style.monoHint': 'The style colour shows when Black and white is off.',
+  'set.wheel': 'App wheel', 'set.wheelHint': 'Home apps on an arc: drag to turn, the current one is large',
+  'set.bulge': 'Edge bulge', 'set.bulgeHint': 'Rings at the screen edge: battery, weekly practice, reading',
+  'set.scrub': 'List scale', 'set.scrubHint': 'In All apps at the edge: drag for letters, the list jumps there',
+  'cap.tracker': 'Melete · week', 'cap.balance': 'Wallet', 'cap.apps': 'Apps', 'cap.clock': 'Time',
+  'heat.days': 'mo,tu,we,th,fr,sa,su', 'ring.title': 'Battery and progress', 'ring.bat': 'Battery', 'ring.practice': 'Weekly practice', 'ring.reading': 'Reading' });

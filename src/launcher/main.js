@@ -2,6 +2,7 @@
 // живёт в репозитории Melete и берёт из него общий код (темы, чтение, статистику), с самим Melete связан мостом.
 // Минимальный главный экран: часы, дата, Melete, баланс, приложения и значки; жесты, панели, обновление из GitHub.
 import { pickHome } from './homepick.js';
+import { startDiag, markShown, dlog } from './diag.js';
 import './launcher.css';
 import { prefs, isChurch, HOME_MAX, save } from './data.js';
 import { initI18n, t } from './i18n.js';
@@ -24,6 +25,7 @@ import { setAppIconLoader } from './icons.js';
 import { isNative, Launcher } from './native.js';
 import { h, toast, sheetOpen, closeTopSheet } from './ui.js';
 
+startDiag();
 const root = document.getElementById('l');
 root.tabIndex = -1; // сюда возвращается фокус из кошелька и блокнота (клавиатура компьютера снова у главного экрана)
 root.style.outline = 'none';
@@ -118,7 +120,7 @@ attachGestures(home, {
   onDragEnd: (dir, px, v) => { const p = dragPanel; dragPanel = null; return p ? p.end(px, v, true) : false; },
 });
 
-loadApps().then(renderHome);
+loadApps().then(renderHome).then(() => markShown(0)).catch((e) => dlog('ERR', `first render: ${e?.message || e}`));
 
 // Возвращение на главный экран: свежие приложения и данные Melete (папка — только если файл поменялся)
 const syncMelete = () => refreshMelete().then((ch) => { if (ch) renderHome(); });
@@ -129,7 +131,14 @@ onMeleteLive(() => refreshTracker());
 addEventListener('wallet:changed', refreshBalance);
 document.addEventListener('visibilitychange', () => {
   // вернулись: перерисовать, только если что-то поменялось (новое приложение, данные Melete) — без рывков
-  if (!document.hidden) { syncMelete(); watchMelete(); loadApps().then((ch) => { if (ch) renderHome(); }); return; }
+  // список приложений перечитывается, только если система сообщила об установке или удалении (LauncherPlugin)
+  if (!document.hidden) {
+    const t0 = performance.now();
+    syncMelete(); watchMelete();
+    const fresh = isNative() ? Launcher.appsChanged().then((c) => c.changed).catch(() => true) : Promise.resolve(true);
+    fresh.then((need) => (need ? loadApps() : false)).then((ch) => { if (ch) renderHome(); }).finally(() => markShown(t0));
+    return;
+  }
   // ушли в другое приложение или в недавние — по возвращении главный чистый: шторки, все приложения, блокнот и правка
   // закрыты мгновенно, без анимаций (в недавних главный не шевелится); «Домой» на главном ничего не меняет (onNewIntent)
   const de = document.documentElement;
@@ -170,4 +179,6 @@ addEventListener('keydown', (e) => {
   if (e.key.length === 1 && /\S/.test(e.key)) { e.preventDefault(); typeIntoSearch(e.key); }
 });
 
-addEventListener('resize', (() => { let r; return () => { clearTimeout(r); r = setTimeout(() => { applyLook(); document.querySelectorAll('iframe.l-money').forEach((f) => { try { applyInsets(f.contentDocument); } catch { /* */ } }); renderHome(); }, 150); }; })());
+// размер окна: только настоящая смена (поворот, раскладной экран) — недавние и шторка шлют resize без смены размера
+let lastSize = `${innerWidth}x${innerHeight}`;
+addEventListener('resize', (() => { let r; return () => { clearTimeout(r); r = setTimeout(() => { const sz = `${innerWidth}x${innerHeight}`; if (sz === lastSize) return; lastSize = sz; applyLook(); document.querySelectorAll('iframe.l-money').forEach((f) => { try { applyInsets(f.contentDocument); } catch { /* */ } }); renderHome(); }, 150); }; })());

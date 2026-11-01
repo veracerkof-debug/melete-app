@@ -14,10 +14,15 @@ import { hasLock } from './lock.js';
 import { t, getLang } from './i18n.js';
 import { h } from './ui.js';
 import { isNative, Launcher } from './native.js';
+import { styleId, alignOf } from './styles.js';
+import { styledMake, asciiClock } from './styled.js';
+import { renderWheel } from './wheel.js';
+import { renderBulge } from './bulge.js';
 
 let root;
 let handlers = {};
 let lastSig = null;
+let curMake = {}; // блоки, которые стиль рисует по-своему (styled.js) — и при обновлении на месте
 let battery = null;
 let sys = null; // Android: { battery, charging, net: wifi|cell|other|none, wifi: 0–4, cell: 0–4 } — из системы (LauncherPlugin.status)
 const askStatus = () => Launcher.status().then((x) => { sys = x; renderStatus(); }).catch(() => {});
@@ -42,11 +47,16 @@ export function mountHome(el, h0) {
   tick();
 }
 
+// часы идут только на виду: в фоне (другое приложение, недавние) страница не просыпается каждую секунду
+let ticking = false;
 function tick() {
+  if (document.hidden) { ticking = false; return; }
+  ticking = true;
   const now = new Date();
   updateClock(now);
   setTimeout(tick, 1000 - now.getMilliseconds() + 5);
 }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !ticking && root) tick(); });
 
 // часы — одни: часы и минуты обычными цифрами (12-часовой формат — по настройке)
 function clockText(now) {
@@ -62,7 +72,8 @@ function updateClock(now, force = false) {
   root.querySelectorAll('[data-live]').forEach((x) => { x.textContent = liveText(+x.dataset.live); });
   const el = root.querySelector('.clock');
   if (el) {
-    el.replaceChildren(h('span', {}, hh), h('i', {}, ':'), h('span', {}, mm));
+    if (styleId() === 'cli') asciiClock(el, hh, mm);
+    else el.replaceChildren(h('span', {}, hh), h('i', {}, ':'), h('span', {}, mm));
     el.setAttribute('aria-label', `${hh}:${mm}`);
     fitClock(el);
   }
@@ -84,6 +95,7 @@ const wifiIcon = (lv = 4) => SVG('0 0 24 18', `<path d="M2.5 6.5a14 14 0 0 1 19 
 const offIcon = () => SVG('0 0 24 18', '<path d="M2.5 6.5a14 14 0 0 1 19 0M6 10a9 9 0 0 1 12 0M9.3 13.4a4 4 0 0 1 5.4 0" opacity=".28"/><path d="M4 2l16 15"/>');
 
 function renderStatus() {
+  if (prefs.bulge) refreshBulge(); // кольцо заряда
   const el = root?.querySelector('.l-status');
   if (!el) return;
   let net, level, charging, label;
@@ -106,6 +118,12 @@ function renderStatus() {
     label = online ? t('status.online') : t('status.offline');
   }
   const pct = level == null ? '' : Math.round(level * 100) + '%';
+  if (styleId() === 'cli') {
+    const netTxt = sys ? (sys.net === 'wifi' ? `wifi ${'█'.repeat(sys.wifi ?? 4)}${'░'.repeat(4 - (sys.wifi ?? 4))}` : sys.net === 'none' ? 'offline' : `cell ${'█'.repeat(sys.cell ?? 4)}${'░'.repeat(4 - (sys.cell ?? 4))}`) : navigator.onLine ? 'online' : 'offline';
+    const k = level == null ? 0 : Math.round(level * 5);
+    el.replaceChildren(h('span', {}, netTxt), h('span', {}, `${pct} [${'█'.repeat(k)}${'░'.repeat(5 - k)}]${charging ? ' +' : ''}`));
+    return;
+  }
   const bat = SVG('0 0 28 14', `<rect x="1" y="1.5" width="22" height="11" rx="2.6" opacity=".5"/><rect x="3" y="3.5" width="${Math.max(1.5, 18 * (level ?? 1)).toFixed(1)}" height="7" rx="1" fill="currentColor" stroke="none"/><path d="M26 5.5v3" opacity=".5"/>`);
   el.setAttribute('aria-label', [label, pct && t('status.battery', { p: pct }), charging ? t('status.charging') : ''].filter(Boolean).join(', '));
   el.replaceChildren(
@@ -147,7 +165,7 @@ const fmtMoney = (n) => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleS
 export function refreshBalance() {
   const el = root?.querySelector('.l-balance');
   if (!el) return;
-  const fresh = renderBalance();
+  const fresh = (curMake.balance || renderBalance)();
   keepMarks(el, fresh);
   el.replaceWith(fresh);
 }
@@ -186,9 +204,10 @@ function keepMarks(old, fresh) {
 
 // перерисовать блок Melete на месте (размер блока из раскладки сохраняется)
 export function refreshTracker() {
+  if (prefs.bulge) refreshBulge();
   const tr = root?.querySelector('.l-tracker');
   if (!tr) return;
-  const fresh = renderTracker() || h('div', { class: 'l-tracker', hidden: true });
+  const fresh = (curMake.tracker || renderTracker)() || h('div', { class: 'l-tracker', hidden: true });
   keepMarks(tr, fresh);
   tr.replaceWith(fresh);
 }
@@ -199,7 +218,7 @@ const crossAt = (place) => isChurch() && prefs.cross !== 'none' && (prefs.crossA
 export function renderHome() {
   if (!root) return;
   const L = layout();
-  root.className = `l-home align-${prefs.align}` + (handlers.editing?.() ? ' editing' : '');
+  root.className = `l-home align-${alignOf()}` + (handlers.editing?.() ? ' editing' : '');
   // блоки в порядке раскладки; размер блока — множитель к общему размеру (часы — к размеру часов)
   const make = {
     clock: () => h('div', { class: 'clock-wrap', onclick: tapAction('clockTap') }, h('div', { class: 'clock' })),
@@ -211,6 +230,11 @@ export function renderHome() {
     tracker: renderTracker,
     dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
   };
+  // стиль подменяет вид отдельных блоков (styled.js); значки внизу у креста — остаются
+  const own = styledMake(styleId(), { handlers, renderList, renderDock, items: homeItems(), rerender: renderHome, openApp: (a) => openApp(a) });
+  if (own.dock) { const d0 = own.dock; own.dock = () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, d0()]; }
+  Object.assign(make, own);
+  curMake = own;
   const sized = (id, el) => {
     if (!el) return el;
     const k = L.scale[id];
@@ -226,8 +250,11 @@ export function renderHome() {
     if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }));
     return out;
   });
+  // подписи блоков (видны в стилях «Полоса», «Терминал», «Меню»)
+  blocks.forEach((el) => { const id = el.dataset?.blk; if (['tracker', 'balance', 'apps'].includes(id) || (id === 'clock' && styleId() === 'term')) el.dataset.cap = t('cap.' + id); });
   root.replaceChildren(...[
     prefs.status ? h('div', { class: 'l-status', role: 'status' }) : null,
+    prefs.bulge ? renderBulge(bulgeCtx()) : null,
     crossAt('back') ? h('div', { class: 'l-cross at-back', html: crossSVG(prefs.cross, 0.5, (prefs.crossWeight || 100) / 100) }) : null,
     ...blocks,
   ].filter(Boolean));
@@ -243,6 +270,7 @@ export function renderHome() {
 const tapAction = (id) => (e) => { if (!e.currentTarget.dataset.suppress) handlers.onGesture(id); };
 
 function renderList() {
+  if (prefs.homeWheel && !handlers.editing?.()) return renderWheel(homeItems().slice(0, HOME_MAX), { onFolder: (id) => handlers.onFolder(id), hold: () => handlers.onBlockHold('apps') });
   const list = h('nav', { class: 'l-apps', 'aria-label': t('home.apps') });
   homeItems().slice(0, HOME_MAX).forEach((item, i) => {
     const app = appOf(item.key);
@@ -257,7 +285,7 @@ function renderList() {
       if (btn.dataset.suppress) return;
       btn.classList.add('pressed');
       setTimeout(() => btn.classList.remove('pressed'), 500);
-      if (fold) handlers.onFolder(fold.id); else openApp(app);
+      if (btn.menuFolder) btn.menuFolder(); else if (fold) handlers.onFolder(fold.id); else openApp(app);
     });
     btn.longPress = () => handlers.onBlockHold('apps');
     list.append(btn);
@@ -320,4 +348,23 @@ function trackerLine(d, go, hold) {
 function liveText(start) {
   const m = Math.max(0, Math.floor((Date.now() - start) / 60e3));
   return m < 60 ? t('dur.m', { m }) : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
+
+// — изгиб у края (bulge.js): заряд, практика за неделю, чтение дня —
+function bulgeCtx() {
+  const d = prefs.tracker ? trackerData() : null;
+  const lvl = sys ? (sys.battery != null ? sys.battery / 100 : null) : battery ? battery.level : null;
+  return {
+    side: alignOf() === 'right' ? 'left' : 'right',
+    rings: [
+      lvl != null ? { id: 'bat', f: lvl, label: Math.round(lvl * 100) + '%', name: t('ring.bat') } : null,
+      d?.practice ? { id: 'practice', f: d.practice.progress, label: Math.round(d.practice.progress * 100) + '%', name: t('ring.practice'), go: () => handlers.onMelete('free') } : null,
+      d?.reading?.total ? { id: 'reading', f: (d.reading.done || 0) / d.reading.total, label: `${d.reading.done || 0}/${d.reading.total}`, name: t('ring.reading'), go: () => handlers.onMelete('bible') } : null,
+    ].filter(Boolean),
+  };
+}
+export function refreshBulge() {
+  const el = root?.querySelector('.l-bulge');
+  if (!el) return;
+  el.replaceWith(renderBulge(bulgeCtx()));
 }
