@@ -18,6 +18,7 @@ import { styleId, alignOf, DOTTED } from './styles.js';
 import { styledMake, asciiClock, sevenSeg } from './styled.js';
 import { renderWheel } from './wheel.js';
 import { renderBulge } from './bulge.js';
+import { renderNow } from './now.js';
 
 let root;
 let handlers = {};
@@ -168,6 +169,7 @@ function renderBalance() {
 const fmtMoney = (n) => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('ru-RU').replace(/\u00a0/g, ' ');
 
 export function refreshBalance() {
+  refreshNow();
   const el = root?.querySelector('.l-balance');
   if (!el) return;
   const fresh = (curMake.balance || renderBalance)();
@@ -210,6 +212,7 @@ function keepMarks(old, fresh) {
 // перерисовать блок Melete на месте (размер блока из раскладки сохраняется)
 export function refreshTracker() {
   if (prefs.bulge) refreshBulge();
+  refreshNow();
   const tr = root?.querySelector('.l-tracker');
   if (!tr) return;
   const fresh = (curMake.tracker || renderTracker)() || h('div', { class: 'l-tracker', hidden: true });
@@ -238,6 +241,7 @@ export function renderHome() {
     // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
     space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: dotted(crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100)) }) : null),
     tracker: renderTracker,
+    now: () => renderNow(handlers),
     dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
   };
   // стиль подменяет вид отдельных блоков (styled.js); значки внизу у креста — остаются
@@ -267,7 +271,7 @@ export function renderHome() {
     return out;
   });
   // подписи блоков (видны в стилях «Полоса», «Терминал», «Меню»)
-  blocks.forEach((el) => { const id = el.dataset?.blk; if (['tracker', 'balance', 'apps'].includes(id) || (id === 'clock' && styleId() === 'term')) el.dataset.cap = t('cap.' + id); });
+  blocks.forEach((el) => { const id = el.dataset?.blk; if (['tracker', 'balance', 'apps', 'now'].includes(id) || (id === 'clock' && styleId() === 'term')) el.dataset.cap = t('cap.' + id); });
   root.replaceChildren(...[
     prefs.status ? h('div', { class: 'l-status', role: 'status' }) : null,
     prefs.bulge ? renderBulge(bulgeCtx()) : null,
@@ -395,4 +399,13 @@ function dotted(svg) {
   const body = svg.replace(/fill="currentColor"/g, 'fill="url(#ldot)"').replace(/stroke="currentColor"/g, 'stroke="url(#ldot)"');
   const defs = `<defs><pattern id="ldot" width="${step}" height="${step}" patternUnits="userSpaceOnUse"><circle cx="${step / 2}" cy="${step / 2}" r="${r}" fill="currentColor"/></pattern></defs>`;
   return body.replace(/(<svg[^>]*>)/, `$1${defs}`);
+}
+
+// «Сейчас» (вариант «Фокус») — обновить на месте: занятие, практика, чтение, траты
+function refreshNow() {
+  const el = root?.querySelector('.l-now');
+  if (!el) return;
+  const fresh = renderNow(handlers);
+  keepMarks(el, fresh);
+  el.replaceWith(fresh);
 }

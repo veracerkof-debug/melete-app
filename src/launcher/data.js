@@ -31,6 +31,8 @@ export const DEFAULTS = {
   gestures: {},         // id жеста → действие; пустые — по умолчанию
   usage: {},            // ключ приложения → сколько раз открывали с главного экрана
   foldTabs: 'side',     // папки во «Всех приложениях»: side — значками справа | top — вкладками сверху (листаются)
+  variant: 'author',    // устройство лаунчера: author — как составил автор | claude — «Фокус» (предложение Claude, DECISIONS 2026-11-02)
+  layout2: null,        // раскладка главного у «Фокуса» — своя, раскладка автора не трогается
   style: 'classic',     // стиль главного: classic | strip | soft | term | menu | cli | inst | panel | tele | cont | diary (styles.js)
   homeWheel: false,     // приложения на главном — колесом (wheel.js)
   wheelShape: 'arc',    // колесо: arc — дугой у края | dial — циферблатом по кругу

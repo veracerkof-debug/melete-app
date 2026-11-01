@@ -64,7 +64,7 @@ const refresh = () => { initI18n(prefs.lang); applyLook(); renderHome(); };
 const openMelete = (route) => openMeleteApp(() => toast(t('melete.none')), route);
 
 // — Команды —
-registerCommand('drawer', () => openDrawer(false));
+registerCommand('drawer', () => openDrawer(prefs.variant === 'claude'));
 registerCommand('search', () => openDrawer(true));
 registerCommand('settings', () => openSettings(refresh, gestureOf));
 registerCommand('melete', () => openMelete());
@@ -106,7 +106,8 @@ let dragPanel = null;
 const panelFor = (dir) => {
   const a = gestureOf(dir);
   if (a?.t !== 'cmd') return null;
-  if (a.id === 'drawer' || a.id === 'search') { setDrawerFocus(a.id === 'search'); return drawerPanel; }
+  // «Фокус»: все приложения открываются сразу с поиском (печатать — и найдено всё)
+  if (a.id === 'drawer' || a.id === 'search') { setDrawerFocus(a.id === 'search' || prefs.variant === 'claude'); return drawerPanel; }
   if (a.id === 'money') return moneyPanel;
   if (a.id === 'notes') return notesPanel;
   return null;

@@ -3,7 +3,7 @@
 // По умолчанию (prefs.layout пуст): сверху — время, дата, Melete и баланс; приложения и значки — внизу, под большой палец.
 import { prefs, save } from './data.js';
 
-export const BLOCKS = ['clock', 'date', 'tracker', 'balance', 'space', 'apps', 'dock']; // своя строка состояния — всегда сверху (настройка «Вид»)
+export const BLOCKS = ['clock', 'date', 'now', 'tracker', 'balance', 'space', 'apps', 'dock']; // своя строка состояния — всегда сверху (настройка «Вид»)
 const DEFAULT = {
   order: BLOCKS,
   hide: {},          // id → true
@@ -13,8 +13,16 @@ const DEFAULT = {
   drawerScale: 100,  // названия во «Всех приложениях», %
 };
 
+// «Фокус» (prefs.variant = claude): своя раскладка — «Сейчас» вместо Melete и кошелька; у автора «Сейчас» спрятан
+const focus = () => prefs.variant === 'claude';
+const KEY = () => (focus() ? 'layout2' : 'layout');
+const BASE = () => (focus()
+  ? { ...DEFAULT, order: ['clock', 'date', 'now', 'space', 'apps', 'dock', 'tracker', 'balance'], hide: { tracker: true, balance: true } }
+  : { ...DEFAULT, hide: { now: true } });
+
 export function layout() {
-  const l = { ...DEFAULT, ...(prefs.layout || {}) };
+  const base = BASE(), own = prefs[KEY()] || {};
+  const l = { ...base, ...own, hide: { ...base.hide, ...(own.hide || {}) } };
   const order = (l.order || []).filter((id) => BLOCKS.includes(id));
   // новый блок в сохранённой раскладке — на своё место по умолчанию (после соседа слева)
   BLOCKS.forEach((id, i) => { if (!order.includes(id)) { const prev = BLOCKS.slice(0, i).reverse().find((x) => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); } });
@@ -28,8 +36,8 @@ export function homeOrder() {
 }
 
 export function setLayout(patch) {
-  prefs.layout = { ...layout(), ...patch };
+  prefs[KEY()] = { ...layout(), ...patch };
   save();
 }
-export const resetLayout = () => { prefs.layout = null; save(); };
+export const resetLayout = () => { prefs[KEY()] = null; save(); };
 export const blockScale = (id) => (layout().scale[id] || 100) / 100;

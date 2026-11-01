@@ -604,3 +604,39 @@ test('все стили: без ошибок, ничего не выходит �
   }
   expect(errors).toEqual([]);
 });
+
+test('«Фокус»: переключатель в настройках; «Сейчас» вместо Melete и кошелька; раскладка автора не трогается', async ({ page, errors }) => {
+  await open(page, { layout: { order: ['apps', 'clock', 'date', 'tracker', 'balance', 'space', 'dock'] } });
+  await page.evaluate(() => localStorage.setItem('elachiston.money.draft', JSON.stringify({ recs: [{ k: 'i', a: 500000, t: 1 }, { k: 'e', a: 45000, t: Date.now() }] })));
+  await page.reload(); await page.waitForSelector('.l-home .clock');
+  await expect(page.locator('.l-now')).toHaveCount(0);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
+  await page.locator('.l-seg button', { hasText: 'Фокус' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.l-now')).toBeVisible();
+  await expect(page.locator('.l-now')).toContainText('Сегодня потрачено');
+  await expect(page.locator('.l-now')).toContainText('45 000');
+  await expect(page.locator('.l-home > .l-tracker:not([hidden])')).toHaveCount(0);
+  // раскладка автора — на месте
+  const p = await page.evaluate(() => JSON.parse(localStorage.getItem('elachiston.prefs')));
+  expect(p.layout.order[0]).toBe('apps');
+  expect(p.variant).toBe('claude');
+  expect(errors).toEqual([]);
+});
+
+test('«Фокус»: смахнуть вверх — сразу поиск; находит действия и разделы настроек; поиск в настройках', async ({ page, errors }) => {
+  await open(page, { variant: 'claude' });
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer .l-search')).toBeFocused();
+  await page.keyboard.type('кош');
+  await expect(page.locator('.l-find', { hasText: 'Кошелёк' })).toHaveCount(1);
+  await page.locator('.l-drawer .l-search').fill('стиль');
+  await page.locator('.l-find', { hasText: 'Стиль' }).click();
+  await expect(page.locator('.l-sheet .l-set-find')).toHaveValue('Стиль');
+  await expect(page.locator('.l-sheet .l-styles')).toBeVisible();
+  await page.locator('.l-sheet .l-set-find').fill('журнал');
+  await expect(page.locator('.l-sheet section.l-sec', { hasText: 'Сбои и журнал' })).toHaveCount(1);
+  await expect(page.locator('.l-sheet .l-styles')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

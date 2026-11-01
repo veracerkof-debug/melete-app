@@ -84,7 +84,8 @@ function drawBar() {
         h('button', { class: 'l-arr-chip danger', onclick: () => { setLayout({ hide: { ...L.hide, [selected]: true } }); selected = null; redraw(); } }, t('arr.hide')),
         done));
   } else {
-    const hidden = L.order.filter((id) => L.hide[id]);
+    // «Сейчас» — блок «Фокуса»: в варианте автора его не предлагаем
+    const hidden = L.order.filter((id) => L.hide[id] && !(id === 'now' && prefs.variant !== 'claude'));
     bar.replaceChildren(
       h('p', { class: 'l-arr-hint' }, t('arr.hint')),
       h('div', { class: 'l-arr-row' },

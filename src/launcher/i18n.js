@@ -510,3 +510,19 @@ Object.assign(S.en, { 'style.inst': 'Instruments', 'style.panel': 'Panels', 'sty
 Object.assign(S.ru, { 'tl.practice': 'Практика' });
 Object.assign(S.uz, { 'tl.practice': 'Mashq' });
 Object.assign(S.en, { 'tl.practice': 'Practice' });
+// «Фокус» — вариант устройства лаунчера (DECISIONS 2026-11-02)
+Object.assign(S.ru, { 'set.variant': 'Устройство', 'variant.author': 'Как у автора', 'variant.claude': 'Фокус',
+  'variant.authorHint': 'Главный экран, панели и настройки — как составлены автором.',
+  'variant.claudeHint': 'Вариант Claude: на главном «Сейчас» — одно касание до дела; смахнуть вверх — сразу поиск по приложениям, папкам, действиям и настройкам; поиск в настройках. Раскладка своя, прежняя сохраняется.',
+  'blk.now': 'Сейчас', 'cap.now': 'Сейчас', 'now.practice': 'Практика', 'now.notYet': 'сегодня ещё нет', 'now.start': 'Начать', 'now.week': 'неделя', 'now.spent': 'Сегодня потрачено',
+  'find.folders': 'Папки', 'find.actions': 'Действия', 'find.settings': 'Настройки', 'set.find': 'Найти в настройках' });
+Object.assign(S.uz, { 'set.variant': 'Tuzilish', 'variant.author': 'Muallif kabi', 'variant.claude': 'Fokus',
+  'variant.authorHint': 'Bosh ekran, panellar va sozlamalar — muallif tuzganidek.',
+  'variant.claudeHint': 'Claude varianti: bosh ekranda «Hozir» — ishga bir bosish; yuqoriga surish — darhol ilovalar, jildlar, amallar va sozlamalar boʻyicha qidiruv; sozlamalarda qidiruv. Joylashuv alohida, avvalgisi saqlanadi.',
+  'blk.now': 'Hozir', 'cap.now': 'Hozir', 'now.practice': 'Mashq', 'now.notYet': 'bugun hali yoʻq', 'now.start': 'Boshlash', 'now.week': 'hafta', 'now.spent': 'Bugun sarflandi',
+  'find.folders': 'Jildlar', 'find.actions': 'Amallar', 'find.settings': 'Sozlamalar', 'set.find': 'Sozlamalardan topish' });
+Object.assign(S.en, { 'set.variant': 'Layout', 'variant.author': 'Author\'s', 'variant.claude': 'Focus',
+  'variant.authorHint': 'Home, panels and settings as the author arranged them.',
+  'variant.claudeHint': 'Claude\'s variant: “Now” on home — one tap to what matters; swipe up — search across apps, folders, actions and settings at once; search in settings. Its own layout; yours is kept.',
+  'blk.now': 'Now', 'cap.now': 'Now', 'now.practice': 'Practice', 'now.notYet': 'not yet today', 'now.start': 'Start', 'now.week': 'week', 'now.spent': 'Spent today',
+  'find.folders': 'Folders', 'find.actions': 'Actions', 'find.settings': 'Settings', 'set.find': 'Find in settings' });

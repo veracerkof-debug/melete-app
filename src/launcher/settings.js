@@ -48,6 +48,9 @@ const move = (arr, i, d) => { const j = i + d; if (j >= 0 && j < arr.length) [ar
 
 // вкладка настроек; секции помечены ею и показываются только на своей (четыре страницы — DECISIONS 2026-10-27)
 const TABS = ['look', 'home', 'gestures', 'data'];
+// поиск по настройкам («Фокус»): строка над вкладками ищет по всем разделам сразу
+let setQ = '';
+export const setSettingsQuery = (q) => { setQ = q || ''; };
 const S = (tab, title, ...kids) => { const el = section(title, '', ...kids); el.dataset.tab = tab; return el; };
 
 export function openSettings(onChange, getGesture, tab) {
@@ -58,7 +61,7 @@ export function openSettings(onChange, getGesture, tab) {
   let goTab = () => {};
   openSheet({
     title: t('set.title'), full: true,
-    onClose: () => unbindUpd?.(),
+    onClose: () => { unbindUpd?.(); setQ = ''; },
     onSwipe: (dir) => { const i = TABS.indexOf(prefs.setTab); const n = TABS[i + (dir === 'left' ? 1 : -1)]; if (n) goTab(n, dir); },
     render(body, _close, rerender) {
       const church = isChurch(); // мог переключиться прямо здесь
@@ -66,6 +69,10 @@ export function openSettings(onChange, getGesture, tab) {
       const keep = (fn) => () => { const sc = body.parentElement, y = sc.scrollTop; fn(); requestAnimationFrame(() => { sc.scrollTop = y; }); };
 
       // — Вид: тема, язык, размеры, сторона, своя строка состояния —
+      // устройство лаунчера: как составил автор или «Фокус» (предложение Claude) — у каждого своя раскладка
+      body.append(S('look', t('set.variant'),
+        segmented([{ value: 'author', label: t('variant.author') }, { value: 'claude', label: t('variant.claude') }], prefs.variant === 'claude' ? 'claude' : 'author', (v) => { setQ = ''; up({ variant: v }); }, t('set.variant')),
+        h('p', { class: 'l-hint' }, t(prefs.variant === 'claude' ? 'variant.claudeHint' : 'variant.authorHint'))));
       body.append(S('look', t('set.appearance'),
         h('div', { class: 'l-label' }, t('set.theme')),
         segmented([{ value: 'system', label: t('theme.system') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'oled', label: 'OLED' }], prefs.theme, (v) => up({ theme: v }), t('set.theme')),
@@ -272,7 +279,20 @@ export function openSettings(onChange, getGesture, tab) {
 
       // четыре страницы: показываем только секции текущей вкладки; переключатель — сверху, всегда на виду
       const tab = TABS.includes(prefs.setTab) ? prefs.setTab : 'look';
-      body.querySelectorAll('section.l-sec').forEach((sec) => { if (sec.dataset.tab !== tab) sec.remove(); });
+      const q = prefs.variant === 'claude' ? setQ.trim().toLowerCase() : '';
+      if (q) {
+        // поиск: разделы всех вкладок, где есть искомое; у раздела — вкладка, откуда он
+        // сначала — по названиям (заголовок, подписи, переключатели, кнопки); нет таких — по всему тексту раздела
+        const NAMES = 'h3, .l-label, .l-row-main > span, .l-btn, .l-folder-t, .l-seg button, .l-style small, .l-clockfont small';
+        const secs = [...body.querySelectorAll('section.l-sec')];
+        const byName = secs.filter((sec) => [...sec.querySelectorAll(NAMES)].some((n) => n.textContent.toLowerCase().includes(q)));
+        const keep = new Set(byName.length ? byName : secs.filter((sec) => sec.textContent.toLowerCase().includes(q)));
+        secs.forEach((sec) => {
+          if (!keep.has(sec)) { sec.remove(); return; }
+          sec.prepend(h('div', { class: 'l-kicker' }, t('tab.' + sec.dataset.tab)));
+        });
+        if (!body.querySelector('section.l-sec')) body.append(h('p', { class: 'l-empty' }, t('drawer.none')));
+      } else body.querySelectorAll('section.l-sec').forEach((sec) => { if (sec.dataset.tab !== tab) sec.remove(); });
       goTab = (id, dir) => {
         if (id === prefs.setTab) return;
         const from = TABS.indexOf(prefs.setTab);
@@ -281,8 +301,15 @@ export function openSettings(onChange, getGesture, tab) {
         const side = dir || (TABS.indexOf(id) > from ? 'left' : 'right');
         body.classList.add('l-tab-in-' + side); setTimeout(() => body.classList.remove('l-tab-in-' + side), 320);
       };
-      body.prepend(h('nav', { class: 'l-set-tabs', role: 'tablist', 'aria-label': t('set.sections') }, TABS.map((id) =>
+      if (!q) body.prepend(h('nav', { class: 'l-set-tabs', role: 'tablist', 'aria-label': t('set.sections') }, TABS.map((id) =>
         h('button', { class: id === tab ? 'on' : '', role: 'tab', 'aria-selected': String(id === tab), onclick: () => goTab(id) }, t('tab.' + id)))));
+      if (prefs.variant === 'claude') {
+        const inp = h('input', { class: 'l-search l-set-find', type: 'search', placeholder: t('set.find'), 'aria-label': t('set.find'), value: setQ,
+          oninput: (e) => { setQ = e.target.value; rerender(); } });
+        body.prepend(inp);
+        // после перерисовки — снова в поле, курсор в конце
+        if (setQ) requestAnimationFrame(() => { const n = body.querySelector('.l-set-find'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } });
+      }
     },
   });
 }

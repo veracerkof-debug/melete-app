@@ -12,6 +12,9 @@ import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { pickHome } from './homepick.js';
 import { mountScrub, refreshScrub } from './scrub.js';
+import { runAction, commandsFor } from './actions.js';
+import { isChurch } from './data.js';
+import { setSettingsQuery } from './settings.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
 import { setCover } from './cover.js';
@@ -217,7 +220,10 @@ function items(id, q) {
     });
     out.push(btn);
   });
-  if (!apps.length) out.push(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
+  // «Фокус»: поиск находит всё — папки, действия, разделы настроек (под приложениями)
+  const more = q && prefs.variant === 'claude' ? findMore(q) : [];
+  out.push(...more);
+  if (!apps.length && !more.length) out.push(h('p', { class: 'l-empty' }, f ? t('fold.empty') : q ? t('drawer.none') : t('fold.allIn')));
   return out;
 }
 
@@ -468,4 +474,23 @@ function addWebLink() {
         } }, t('ui.done')));
     },
   });
+}
+
+// — поиск «Фокуса»: папки, действия лаунчера, разделы настроек —
+const SET_FIND = [
+  ['look', 'set.style'], ['look', 'set.theme'], ['look', 'set.clockFont'], ['look', 'set.lang'], ['look', 'set.mono'], ['look', 'set.variant'],
+  ['home', 'hide.title'], ['home', 'set.home'], ['home', 'set.drawer'], ['gestures', 'tab.gestures'], ['data', 'set.upd'], ['data', 'diag.title'], ['data', 'set.data'],
+];
+function findMore(q) {
+  const has = (x) => (x || '').toLowerCase().includes(q);
+  const out = [];
+  const head = (k) => h('div', { class: 'l-d-letter l-find-k' }, t(k));
+  const row = (label, sub, fn) => { const b = h('button', { class: 'l-d-app l-find' }, h('span', {}, label), sub ? h('small', {}, sub) : null); b.addEventListener('click', () => { if (!b.dataset.held && !list.dataset.swiped) fn(); }); return b; };
+  const fs = folders().filter((f) => has(folderName(f)));
+  if (fs.length) out.push(head('find.folders'), ...fs.map((f) => row(folderName(f) + '/', '', () => { search.value = ''; tab = f.id; fill(); list.scrollTop = 0; })));
+  const acts = commandsFor(isChurch()).filter((c) => !['none', 'drawer', 'search'].includes(c.id) && has(t('cmd.' + c.id)));
+  if (acts.length) out.push(head('find.actions'), ...acts.map((c) => row(t('cmd.' + c.id), '', () => { closeDrawer(); runAction({ t: 'cmd', id: c.id }); })));
+  const sets = SET_FIND.filter(([, k]) => has(t(k)));
+  if (sets.length) out.push(head('find.settings'), ...sets.map(([tabId, k]) => row(t(k), t('tab.' + tabId), () => { closeDrawer(); setSettingsQuery(t(k)); prefs.setTab = tabId; runAction({ t: 'cmd', id: 'settings' }); })));
+  return out;
 }
