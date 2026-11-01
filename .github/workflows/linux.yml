@@ -15,9 +15,11 @@ on:
 permissions:
   contents: write
 
+# Не отменять идущую сборку: Rust без кэша собирается долго, а в main пушат часто — иначе до конца не дойдёт ни
+# одна. Идущая доделывается, из ждущих остаётся самая свежая
 concurrency:
   group: linux-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   MELETE_CHANNEL: ${{ github.ref_name == 'pre' && 'pre' || 'dev' }}
