@@ -92,7 +92,7 @@
   "tr.audioHint": "Plays once from the clip start. Stretch for more of the take, drag the left edge to trim.",
   "exportMidi": ".mid — to the media library (piano)",
   "exportXml": "Score — to Tabs (MusicXML)",
-  "exportedXml": "Score saved — open it in Tabs & notes",
+  "exportedXml": "Score saved — it is in Tabs & notes",
   "undo": "Undo",
   "swing": "Swing",
   "swingHint": "off-beat eighths later",
