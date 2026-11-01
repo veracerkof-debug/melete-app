@@ -482,3 +482,9 @@ img.app-ico { filter: grayscale(1) contrast(1.05); object-fit: contain; display:
 .l-folder-n { color: var(--l3); font-size: 15px; }
 .l-folder-go { color: var(--l3); font-size: 22px; line-height: 1; }
 .l-warn { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; margin: 6px 0 10px; border-radius: 14px; border: 1px solid var(--ink); font-size: 15px; }
+.l-diag { margin: 0 0 12px; padding: 12px; border-radius: 12px; background: var(--fill); font: 11px/1.45 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; max-height: 62vh; overflow: auto; }
+/* перелистывание папок: соседняя папка стоит рядом со списком и въезжает вместе с ним (drawer.js: ghost) */
+.l-drawer { overflow: hidden; }
+.l-d-body { position: relative; }
+.l-d-list, .l-d-ghost { will-change: transform; }
+.l-d-ghost { overflow: hidden; }

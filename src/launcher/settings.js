@@ -9,6 +9,7 @@ import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
 import { pickHome } from './homepick.js';
+import { readDiag, summarize, shareDiag, clearDiag } from './diag.js';
 import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp, systemName } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
 import { isNative, Launcher } from './native.js';
@@ -226,6 +227,22 @@ export function openSettings(onChange, getGesture, tab) {
             h('button', { class: 'l-btn', onclick: () => Launcher.openHomeSettings() }, t('set.sys.choose')));
         }).catch(() => {});
       }
+      // — Сбои и журнал: сводка за неделю, отчёт файлом, сам журнал —
+      const diagInfo = h('p', { class: 'l-hint' }, t('diag.reading'));
+      readDiag().then(({ text }) => {
+        const d = summarize(text);
+        diagInfo.textContent = diagLine(d);
+      });
+      body.append(S('data', t('diag.title'),
+        h('p', { class: 'l-hint' }, t('diag.hint')),
+        diagInfo,
+        h('div', { class: 'l-btn-row' },
+          h('button', { class: 'l-btn primary', onclick: async () => {
+            const { text } = await readDiag();
+            try { await shareDiag(diagLine(summarize(text))); } catch { toast(t('diag.fail')); }
+          } }, t('diag.send')),
+          h('button', { class: 'l-btn', onclick: () => diagSheet() }, t('diag.show')))));
+
       body.append(S('data', t('set.sys'),
         sys,
         h('div', { class: 'l-btn-row' },
@@ -270,6 +287,32 @@ function scaleRow(label, key, min, max) {
 }
 
 // Подпись приложения на главном (удержание названия)
+// сводка журнала одной строкой (и в начало отчёта)
+function diagLine(d) {
+  const parts = [t('diag.week')];
+  parts.push(d.crash ? t('diag.crash', { n: d.crash }) : t('diag.noCrash'));
+  if (d.killed) parts.push(t('diag.killed', { n: d.killed }));
+  if (d.gone) parts.push(t('diag.gone', { n: d.gone }));
+  if (d.median != null) parts.push(t('diag.return', { ms: d.median, worst: d.worst }));
+  if (d.slow) parts.push(t('diag.slow', { n: d.slow }));
+  if (d.long) parts.push(t('diag.long', { n: d.long }));
+  if (d.err) parts.push(t('diag.err', { n: d.err }));
+  return parts.join(' · ');
+}
+
+// журнал целиком — свежее сверху
+function diagSheet() {
+  openSheet({
+    title: t('diag.log'), kicker: '', full: true,
+    render(body, close) {
+      const pre = h('pre', { class: 'l-diag' }, t('diag.reading'));
+      readDiag().then(({ head, text }) => { pre.textContent = head + '\n' + text.trim().split('\n').reverse().slice(0, 600).join('\n'); });
+      body.append(pre, h('div', { class: 'l-btn-row' },
+        h('button', { class: 'l-btn', onclick: async () => { await clearDiag(); close(); toast(t('diag.cleared')); } }, t('diag.clear'))));
+    },
+  });
+}
+
 // Скрытые приложения — своя папка: поиск, касание — открыть (скрытое не видно больше нигде), «Вернуть», «Скрыть ещё»
 function hiddenSheet(after) {
   let q = '';

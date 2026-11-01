@@ -310,6 +310,7 @@ test('папки вкладками сверху: листаются смахи�
   await page.mouse.move(b.x + b.width - 40, b.y + 80); await page.mouse.down();
   await page.mouse.move(b.x + 40, b.y + 90, { steps: 6 }); await page.mouse.up();
   await expect(page.locator('.l-d-tab.fold.on')).not.toContainText('Связь');
+  await page.waitForTimeout(600); // строка вкладок плавно доехала до новой
   // порядок вкладок — удержать и перетащить вправо
   const ids = () => page.locator('.l-d-tab.fold').evaluateAll((els) => els.map((e) => e.dataset.id));
   const was = await ids();
@@ -497,4 +498,18 @@ test('блок приложений убран: настройки говоря�
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await expect(page.locator('.l-app .label', { hasText: 'Почта' })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('сбои и журнал: ошибка страницы попадает в журнал, сводка и журнал в настройках', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => setTimeout(() => { throw new Error('проверка журнала'); }, 0));
+  await page.waitForTimeout(1800); // строки дописываются пачкой
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Данные' }).click();
+  const sec = page.locator('section.l-sec', { hasText: 'Сбои и журнал' });
+  await expect(sec).toContainText('За 7 дней');
+  await expect(sec).toContainText('ошибок: 1');
+  await sec.locator('.l-btn', { hasText: 'Журнал' }).click();
+  await expect(page.locator('.l-diag')).toContainText('проверка журнала');
+  await expect(page.locator('.l-diag')).toContainText('page start');
 });

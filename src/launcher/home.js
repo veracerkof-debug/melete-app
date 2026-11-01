@@ -42,11 +42,16 @@ export function mountHome(el, h0) {
   tick();
 }
 
+// часы идут только на виду: в фоне (другое приложение, недавние) страница не просыпается каждую секунду
+let ticking = false;
 function tick() {
+  if (document.hidden) { ticking = false; return; }
+  ticking = true;
   const now = new Date();
   updateClock(now);
   setTimeout(tick, 1000 - now.getMilliseconds() + 5);
 }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !ticking && root) tick(); });
 
 // часы — одни: часы и минуты обычными цифрами (12-часовой формат — по настройке)
 function clockText(now) {

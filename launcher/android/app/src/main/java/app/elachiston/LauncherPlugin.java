@@ -60,6 +60,8 @@ public class LauncherPlugin extends Plugin {
 
     @PluginMethod
     public void apps(PluginCall call) {
+        long t0 = android.os.SystemClock.elapsedRealtime();
+        appsDirty = false;
         Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> list = pm().queryIntentActivities(main, 0);
         HashSet<String> seen = new HashSet<>();
@@ -76,7 +78,69 @@ public class LauncherPlugin extends Plugin {
         }
         JSObject r = new JSObject();
         r.put("apps", out);
+        long ms = android.os.SystemClock.elapsedRealtime() - t0;
+        if (ms > 120) Diag.log("slow", "apps list " + out.length() + " in " + ms + "ms");
         call.resolve(r);
+    }
+
+    // Список приложений меняется только при установке, удалении и обновлении — страница спрашивает при возврате,
+    // а не перечитывает весь список каждый раз (это сотни обращений к системе ровно в момент возврата на главный)
+    private static volatile boolean appsDirty = true;
+    private android.content.BroadcastReceiver pkgRx;
+
+    @PluginMethod
+    public void appsChanged(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("changed", appsDirty);
+        call.resolve(o);
+    }
+
+    /* ---------- журнал (Diag.java) ---------- */
+
+    @PluginMethod
+    public void diag(PluginCall call) {
+        JSArray lines = call.getArray("lines");
+        if (lines != null) for (int i = 0; i < lines.length(); i++) Diag.log("js", lines.optString(i, ""));
+        call.resolve();
+    }
+
+    // страница показана после возврата: сколько прошло от onResume
+    @PluginMethod
+    public void shown(PluginCall call) {
+        long ms = MainActivity.resumedAt > 0 ? android.os.SystemClock.elapsedRealtime() - MainActivity.resumedAt : -1;
+        Diag.log(ms > 700 ? "SLOW" : "shown", "home visible in " + ms + "ms (js " + call.getInt("js", -1) + "ms)");
+        JSObject o = new JSObject();
+        o.put("ms", ms);
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void diagRead(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("head", Diag.header(getContext()));
+        o.put("text", Diag.read());
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void diagClear(PluginCall call) { Diag.clear(); Diag.log("diag", "cleared"); call.resolve(); }
+
+    // Отчёт — файлом через «Поделиться» (почта, мессенджер): шапка, сводка страницы и журнал
+    @PluginMethod
+    public void diagShare(PluginCall call) {
+        try {
+            java.io.File f = new java.io.File(getContext().getCacheDir(), "elachiston-report.txt");
+            String text = Diag.header(getContext()) + "\n" + call.getString("summary", "") + "\n\n" + Diag.read();
+            try (java.io.FileOutputStream o = new java.io.FileOutputStream(f, false)) { o.write(text.getBytes(StandardCharsets.UTF_8)); }
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+            Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_SUBJECT, "Elachiston — отчёт")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent ch = Intent.createChooser(send, "Elachiston").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getContext().startActivity(ch);
+            call.resolve();
+        } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
     }
 
     // Родной значок приложения картинкой (PNG, data: URL) — для своих мест на главном (DECISIONS 2026-10-29).
@@ -310,11 +374,43 @@ public class LauncherPlugin extends Plugin {
         android.content.IntentFilter f = new android.content.IntentFilter(M_STATE);
         if (android.os.Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(stateRx, f, Context.RECEIVER_EXPORTED);
         else getContext().registerReceiver(stateRx, f);
+        pkgRx = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(Context c, Intent i) { appsDirty = true; }
+        };
+        android.content.IntentFilter pf = new android.content.IntentFilter();
+        pf.addAction(Intent.ACTION_PACKAGE_ADDED);
+        pf.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        pf.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        pf.addAction(Intent.ACTION_PACKAGE_REPLACED);
+        pf.addDataScheme("package");
+        if (android.os.Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(pkgRx, pf, Context.RECEIVER_EXPORTED);
+        else getContext().registerReceiver(pkgRx, pf);
+        // приложения на карте памяти и в рабочем профиле — отдельные рассылки
+        android.content.IntentFilter ef = new android.content.IntentFilter();
+        ef.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
+        ef.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE);
+        if (android.os.Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(pkgRx, ef, Context.RECEIVER_EXPORTED);
+        else getContext().registerReceiver(pkgRx, ef);
     }
+
+    // в фоне строку состояния не шлём (заряд меняется каждые несколько секунд); вернулись — одно свежее значение
+    private String lastStatus = null;
+    private void pushStatus() {
+        if (!MainActivity.resumed) return;
+        JSObject st = statusNow();
+        String k = st.toString();
+        if (k.equals(lastStatus)) return;
+        lastStatus = k;
+        notifyListeners("status", st);
+    }
+
+    @Override
+    protected void handleOnResume() { lastStatus = null; pushStatus(); }
 
     @Override
     protected void handleOnDestroy() {
         try { if (stateRx != null) getContext().unregisterReceiver(stateRx); } catch (Exception ignored) { }
+        try { if (pkgRx != null) getContext().unregisterReceiver(pkgRx); } catch (Exception ignored) { }
         try { if (batRx != null) getContext().unregisterReceiver(batRx); } catch (Exception ignored) { }
         try { if (netCb != null) cm().unregisterNetworkCallback(netCb); } catch (Exception ignored) { }
     }
@@ -366,15 +462,15 @@ public class LauncherPlugin extends Plugin {
     public void status(PluginCall call) {
         if (batRx == null) {
             batRx = new android.content.BroadcastReceiver() {
-                @Override public void onReceive(Context c, Intent i) { lastBattery = i; notifyListeners("status", statusNow()); }
+                @Override public void onReceive(Context c, Intent i) { lastBattery = i; pushStatus(); }
             };
             android.content.IntentFilter f = new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             if (android.os.Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(batRx, f, Context.RECEIVER_NOT_EXPORTED);
             else getContext().registerReceiver(batRx, f);
             try {
                 netCb = new android.net.ConnectivityManager.NetworkCallback() {
-                    @Override public void onCapabilitiesChanged(android.net.Network n, android.net.NetworkCapabilities nc) { notifyListeners("status", statusNow()); }
-                    @Override public void onLost(android.net.Network n) { notifyListeners("status", statusNow()); }
+                    @Override public void onCapabilitiesChanged(android.net.Network n, android.net.NetworkCapabilities nc) { pushStatus(); }
+                    @Override public void onLost(android.net.Network n) { pushStatus(); }
                 };
                 cm().registerDefaultNetworkCallback(netCb);
             } catch (Exception ignored) { netCb = null; }

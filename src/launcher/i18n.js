@@ -458,3 +458,16 @@ Object.assign(S.en, { 'home.on': 'On home', 'home.folders': 'Folders', 'home.app
 Object.assign(S.ru, { 'home.blockOff': 'Список приложений на главном убран', 'home.blockOn': 'Показать' });
 Object.assign(S.uz, { 'home.blockOff': 'Bosh ekrandagi ilovalar roʻyxati olib tashlangan', 'home.blockOn': 'Koʻrsatish' });
 Object.assign(S.en, { 'home.blockOff': 'The app list is removed from home', 'home.blockOn': 'Show' });
+// Сбои и журнал (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'diag.title': 'Сбои и журнал', 'diag.hint': 'Главный экран сам записывает запуски, возвращения, нехватку памяти, сбои и подвисания. Только техника: без приложений, заметок и кошелька. Наружу — только по кнопке.',
+  'diag.reading': 'Читается…', 'diag.send': 'Отправить отчёт', 'diag.show': 'Журнал', 'diag.log': 'Журнал', 'diag.clear': 'Очистить', 'diag.cleared': 'Журнал очищен', 'diag.fail': 'Отправить не удалось',
+  'diag.week': 'За 7 дней', 'diag.crash': 'сбоев: {n}', 'diag.noCrash': 'без сбоев', 'diag.killed': 'система закрывала: {n}', 'diag.gone': 'страница пересобрана: {n}',
+  'diag.return': 'возврат на главный: обычно {ms} мс, худший {worst} мс', 'diag.slow': 'медленных возвратов: {n}', 'diag.long': 'подвисаний: {n}', 'diag.err': 'ошибок: {n}' });
+Object.assign(S.uz, { 'diag.title': 'Nosozliklar va jurnal', 'diag.hint': 'Bosh ekran ishga tushish, qaytish, xotira yetishmasligi, nosozlik va qotishlarni oʻzi yozib boradi. Faqat texnik maʼlumot: ilovalar, eslatmalar va hamyonsiz. Tashqariga — faqat tugma bilan.',
+  'diag.reading': 'Oʻqilmoqda…', 'diag.send': 'Hisobot yuborish', 'diag.show': 'Jurnal', 'diag.log': 'Jurnal', 'diag.clear': 'Tozalash', 'diag.cleared': 'Jurnal tozalandi', 'diag.fail': 'Yuborib boʻlmadi',
+  'diag.week': '7 kunda', 'diag.crash': 'nosozlik: {n}', 'diag.noCrash': 'nosozliksiz', 'diag.killed': 'tizim yopgan: {n}', 'diag.gone': 'sahifa qayta yigʻilgan: {n}',
+  'diag.return': 'bosh ekranga qaytish: odatda {ms} ms, eng yomoni {worst} ms', 'diag.slow': 'sekin qaytish: {n}', 'diag.long': 'qotish: {n}', 'diag.err': 'xato: {n}' });
+Object.assign(S.en, { 'diag.title': 'Problems and log', 'diag.hint': 'The home screen records launches, returns, low memory, crashes and freezes. Technical only: no apps, notes or wallet. Leaves the phone only by the button.',
+  'diag.reading': 'Reading…', 'diag.send': 'Send report', 'diag.show': 'Log', 'diag.log': 'Log', 'diag.clear': 'Clear', 'diag.cleared': 'Log cleared', 'diag.fail': 'Could not send',
+  'diag.week': 'Last 7 days', 'diag.crash': 'crashes: {n}', 'diag.noCrash': 'no crashes', 'diag.killed': 'closed by system: {n}', 'diag.gone': 'page rebuilt: {n}',
+  'diag.return': 'return to home: usually {ms} ms, worst {worst} ms', 'diag.slow': 'slow returns: {n}', 'diag.long': 'freezes: {n}', 'diag.err': 'errors: {n}' });
