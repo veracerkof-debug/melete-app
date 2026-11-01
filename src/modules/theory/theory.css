@@ -37,7 +37,7 @@
 .pane.strip .scnotes b{font-size:14px}
 .pane.quarter .scnotes{gap:3px}
 .vrow{display:flex;align-items:center;justify-content:center;gap:10px}
-.vrow.tight{gap:6px}
+.vrow.tight{gap:6px;flex-wrap:wrap;row-gap:6px}
 .pane.quarter .scnotes{gap:2px;width:100%}
 .pane.quarter .scnotes div{min-width:0;padding:4px 0}
 .pane.quarter .scnotes b{font-size:clamp(11px,8cqw,16px)}

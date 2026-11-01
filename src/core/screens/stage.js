@@ -213,8 +213,9 @@ export function openStage(app, evId, i = 0) {
   const onKey = (e) => {
     if (!S.el || e.target.matches('input, textarea, select')) return;
     const k = e.key;
-    if (k === 'PageDown' || k === 'ArrowRight' || k === 'ArrowDown') { e.preventDefault(); page(1); }
-    else if (k === 'PageUp' || k === 'ArrowLeft' || k === 'ArrowUp') { e.preventDefault(); page(-1); }
+    // педали-перелистыватели шлют стрелки, PageUp/PageDown или (в медиа-режиме) «следующий/предыдущий трек»
+    if (k === 'PageDown' || k === 'ArrowRight' || k === 'ArrowDown' || k === 'MediaTrackNext') { e.preventDefault(); page(1); }
+    else if (k === 'PageUp' || k === 'ArrowLeft' || k === 'ArrowUp' || k === 'MediaTrackPrevious') { e.preventDefault(); page(-1); }
     else if (k === ' ' || k === 'Enter') { e.preventDefault(); if (S.playing) { stop(); render(); } else play(); }
   };
   // Удержание названия — меню сцены: ночь, педаль, автопрокрутка этой песни

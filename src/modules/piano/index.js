@@ -29,6 +29,7 @@ const offs = [], ptr = new Map(), hold = { mode: 0, k: new Map() };
 // MIDI: ноты с клавиатуры и из записи (id → { key, m }) и сколько раз подсвечена клавиша
 const mi = new Map(), lit = new Map();
 let lastW = 0; // ширина окна при последней отрисовке: на компьютере от неё число клавиш
+let lastFit = 0; // сколько белых клавиш помещалось в окно при последней отрисовке
 
 const P = () => ctx.store.all();
 const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
@@ -45,7 +46,11 @@ function view() {
   // на клавиатуре компьютера две с половиной октавы, их видно целиком
   const wpx = host ? host.clientWidth : 0;
   lastW = wpx;
-  const nw = ctx.desk && ctx.desk() && wpx > 900 ? Math.max(p.size, Math.min(29, Math.floor(wpx / 58))) : p.size;
+  // узкое окно (четверть, полоса): клавиш столько, сколько помещается целиком (≥ 30 px на белую) — иначе часть уезжала
+  // за край под прокрутку, которую на клавиатуре пальцем не сделать
+  const fit = wpx > 0 && !rot ? Math.max(5, Math.floor((wpx - 28) / 30)) : 99;
+  lastFit = fit;
+  const nw = ctx.desk && ctx.desk() && wpx > 900 ? Math.max(p.size, Math.min(29, Math.floor(wpx / 58))) : Math.min(p.size, fit);
   const bar = '<div class="pbar"><div class="pgrp">' + pk('data-step="poct" data-d="-1"', '‹', t('octDown')) + '<span class="num pval">' + mName(m0) + '–' +
     mName(lastWhite(m0, nw)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
@@ -76,7 +81,8 @@ function layout() {
   if (host.closest('.tview.pure, .pfull')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
   const used = (bar ? bar.offsetHeight + 8 : 0) + (hl ? hl.offsetHeight + 6 : 0) + 24, avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
-  let kh = Math.round(Math.max(96, Math.min((W / n) * 5.2, avail, 340)));
+  // в малых окнах сессии клавиши выше (до 7 ширин, как настоящие ≈ 6,4): иначе узкое окно оставляет пустую половину
+  let kh = Math.round(Math.max(96, Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340)));
   // с панелью эффектов — клавиши ровно в нижней половине, панель занимает всё, что выше
   if (ps) kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used) * 0.5)));
   kbs.forEach((k) => (k.style.height = kh + 'px'));
@@ -235,7 +241,7 @@ export default {
     render();
     bind();
     // ширина сильно изменилась (окно компьютера растянули) — клавиш стало больше или меньше: перерисовать
-    ro = new ResizeObserver(() => { if (ctx.desk && ctx.desk() && host && Math.abs(host.clientWidth - lastW) > 58) render(); else layout(); });
+    ro = new ResizeObserver(() => { const w = host ? host.clientWidth : 0, fit = w > 0 ? Math.max(5, Math.floor((w - 28) / 30)) : 99; if (host && ((ctx.desk && ctx.desk() && Math.abs(w - lastW) > 58) || (Math.min(P().size, fit) !== Math.min(P().size, lastFit) && !rotated()))) render(); else layout(); });
     ro.observe(host);
     unsubShared = ctx.shared.subscribe((k) => { if (k === 'highlight') render(); });
     // подписи клавиш компьютера: сменилась октава (↑ ↓) или режим компьютера — перерисовать клавиши
