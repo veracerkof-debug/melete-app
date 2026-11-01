@@ -61,7 +61,7 @@ const SETS = ['iv', 'ch', 'dg', 'sc', 'nt'];
 // Значения по умолчанию (прототип: EC())
 export function normalizeEar(e) {
   e.sec = e.sec || 'home';
-  e.level = e.level || 'easy';
+  e.level = ['easy', 'mid', 'hard', 'custom'].includes(e.level) ? e.level : 'easy';
   e.dir = e.dir || 'up';
   e.arp = e.arp !== false;
   e.auto = e.auto !== false;
@@ -82,7 +82,7 @@ export function normalizeEar(e) {
   if (!TEMPOS[e.tempo]) e.tempo = 'normal';
   if (!EAR_TIMBRES.includes(e.timbre)) e.timbre = 'piano';
   if (e.listen == null) e.listen = true; // «Ноты»: клавиши можно слушать до ответа
-  SETS.forEach((k) => { if (!e[k + 'Set'] || !e[k + 'Set'].length) e[k + 'Set'] = LEVELS[k][e.level === 'custom' ? 'easy' : e.level].slice(); });
+  SETS.forEach((k) => { if (!Array.isArray(e[k + 'Set']) || !e[k + 'Set'].length) e[k + 'Set'] = LEVELS[k][e.level === 'custom' ? 'easy' : e.level].slice(); });
   return e;
 }
 

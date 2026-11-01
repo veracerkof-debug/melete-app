@@ -584,6 +584,7 @@
   "accent.green": "yashil",
   "accent.graphite": "grafit",
   "data.title": "Maʼlumotlar",
+  "data.broken": "Maʼlumotlar oʻqilmadi. Ularni qaytarish mumkin: Profil → Maʼlumotlar va nusxalar → «Qurilmadagi nusxalar».",
   "data.export": "Zaxira nusxani saqlash",
   "data.import": "Fayldan yuklash",
   "data.hint": "Hammasi shu qurilmada saqlanadi. Nusxa — Melete papkasiga yoki «Ulashish» orqali. Yuklash hech narsani oʻchirmaydi.",

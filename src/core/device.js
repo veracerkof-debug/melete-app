@@ -28,8 +28,16 @@ export function loadDevice(storage = globalThis.localStorage) {
     Object.keys(s).forEach((k) => { if (!(k in d) && s[k] && typeof s[k] === 'object') d[k] = s[k]; });
   } catch { /* по умолчанию */ }
   if (!DRONE_SOUNDS.includes(d.drone.sound)) d.drone.sound = 'soft';
+  // числа, от которых зависит раскладка и звук: битые (null, строка, ±1e9) — к умолчаниям, иначе зависание или NaN
+  const def = deviceDefaults(), num = (o, k, lo, hi, dv) => { const v = o[k] == null || o[k] === '' ? NaN : Math.round(+o[k]); o[k] = Number.isFinite(v) && v >= lo && v <= hi ? v : dv; };
+  num(d.piano, 'oct', 0, 7, def.piano.oct); num(d.piano, 'size', 5, 15, def.piano.size);
+  num(d.drone, 'pc', 0, 11, def.drone.pc); num(d.drone, 'oct', 1, 6, def.drone.oct);
+  num(d.theory, 'pc', 0, 11, def.theory.pc); num(d.scale, 'pc', 0, 11, def.scale.pc);
+  if (typeof d.piano.sound !== 'string') d.piano.sound = def.piano.sound;
+  if (d.drone.vol == null || !(+d.drone.vol >= 0 && +d.drone.vol <= 1.5)) d.drone.vol = def.drone.vol;
+  ['metro', 'piano', 'drone', 'audio'].forEach((k) => { if (d.mix[k] == null || !(+d.mix[k] >= 0 && +d.mix[k] <= 1.5)) d.mix[k] = def.mix[k]; });
   d.piano.start = 0;
-  if (!d.drone.layers) {
+  if (!d.drone.layers || typeof d.drone.layers !== 'object' || Array.isArray(d.drone.layers)) {
     d.drone.layers = { 2: false, 3: false, 4: false };
     d.drone.layers[d.drone.oct || 3] = true;
   }

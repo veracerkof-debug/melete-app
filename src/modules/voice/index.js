@@ -47,7 +47,7 @@ const st = () => {
   if (!s.voice) { s.voice = migrateVoice(s.fx); ctx.store.save(); } // режимы обработки (2026-11) — из прежних настроек один раз
   s.voice = normalizeVoiceSet(s.voice);
   s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
-  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; s.savedRaw ??= []; return s; };
+  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = []; return s; };
 // Прежние ручки (шумоподавление, гейт, нормализация) → режим: не трогали — «Музыка», трогали — «Свой» с ними
 function migrateVoice(fx = {}) {
   const custom = fx.denoise > 0 || (fx.gate != null && fx.gate > -90) || fx.normalize === false;

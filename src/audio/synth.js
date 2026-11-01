@@ -79,19 +79,31 @@ export const MAX_VOICES = 22; // в полном режиме; в экономн
 // Патч пианино из настроек устройства (создаётся при первом обращении); убранный звук — ближайший из оставшихся,
 // прежнее синтезированное «Пианино» — рояль
 export function pianoPatch(piano) {
-  if (!piano.syn) {
+  if (!piano.syn || typeof piano.syn !== 'object') {
     const pre = piano.sound === 'pad' ? 'wair' : 'piano';
     piano.syn = Object.assign({ preset: pre }, PRESETS[pre]);
   } else if (!piano.syn.name && (PRESET_ALIAS[piano.syn.preset] || (piano.syn.preset === 'piano' && piano.syn.kind !== 'grand'))) {
     applyPreset(piano.syn, PRESET_ALIAS[piano.syn.preset] || 'piano');
   }
-  return piano.syn;
+  return fixPatch(piano.syn);
+}
+// Битые ручки (не число или вне пределов) — из пресета; иначе NaN в узлах звука и на экране
+function fixPatch(p) {
+  if (!p || typeof p !== 'object') return p;
+  const base = presetOf(p.preset) || PRESETS.piano;
+  Object.entries(PATCH_RANGE).forEach(([k, [lo, hi]]) => {
+    if (!(k in p)) return;
+    const v = +p[k];
+    if (!Number.isFinite(v) || v < lo || v > hi) { if (base[k] != null) p[k] = base[k]; else delete p[k]; }
+  });
+  return p;
 }
 // Второй слой (или null); тот же переход для убранных звуков
 export function pianoLayer(piano) {
-  const l = piano.layer;
+  let l = piano.layer;
+  if (l && typeof l !== 'object') l = piano.layer = null;
   if (l && !l.name && PRESET_ALIAS[l.preset]) applyPreset(l, PRESET_ALIAS[l.preset]);
-  return l || null;
+  return fixPatch(l) || null;
 }
 
 // Сменить звук: ручки звука — из пресета, громкость и эквалайзер слоя остаются

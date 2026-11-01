@@ -122,8 +122,10 @@ const cfg = () => {
   s.sound ??= 'pad:wair'; s.snap ??= 'magnet'; s.scale ??= 'chrom'; s.root ??= 0; s.side ??= 'right'; s.charX ??= true; s.showCam ??= true;
   s.width ??= 12; s.lo ??= 60;
   if (!WIDTHS.includes(s.width)) s.width = 12;
-  s.lo = clampLo(s.lo, s.width);
-  if (!s.fx) s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
+  s.lo = clampLo(Number.isFinite(+s.lo) ? Math.round(+s.lo) : 60, s.width);
+  if (!(Number.isInteger(+s.root) && +s.root >= 0 && +s.root < 12)) s.root = 0; else s.root = +s.root;
+  if (!(Number.isInteger(+s.ckey) && +s.ckey >= 0 && +s.ckey < 12)) s.ckey = 0; else s.ckey = +s.ckey;
+  if (!s.fx || typeof s.fx !== 'object') s.fx = applyPreset('violin'); // поющий звук с вибрато — ближе всего к терменвоксу
   s.gmap = { ...DEFAULT_MAP, ...(s.gmap || {}) };
   s.mode ??= 'solo'; if (!MODES.includes(s.mode)) s.mode = 'solo'; s.gmic ??= true; s.gplay ??= false; s.gdia ??= true; s.ckey ??= 0; s.cmode ??= 'maj'; s.cq ??= 'hand'; s.csound ??= 'same'; s.ctilt ??= true; s.cpro ??= false; s.pacc ??= 'rot'; if (!ACC_GESTURES.includes(s.pacc)) s.pacc = 'rot'; s.pflip ??= false; s.pminor ??= 'back'; s.harm ??= true; s.hstyle ??= 'classic'; if (!HARM_IDS.includes(s.hstyle)) s.hstyle = 'classic'; s.stilt ??= 'vib'; s.hud ??= 'full'; s.camAuto ??= false;
   s.facing ??= 'user'; s.light ??= false; s.sgest ??= true; s.mel = null; // мелодии по подсказке убраны

@@ -18,7 +18,7 @@ import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
 import { createMixerDrawer } from './screens/mixer.js';
 import { createShared } from './modules.js';
-import { createPomodoro, pomoDefaults } from './pomodoro.js';
+import { createPomodoro, pomoDefaults, POMO_LIMITS } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, countsWhileHidden } from './session.js';
 import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
@@ -93,6 +93,8 @@ export function boot(root) {
   device.timer ??= { ...pomoDefaults(), ...device.pomo, style: device.ui?.pomo === 'flip' ? 'flip' : 'ring' };
   // Недостающие длительности (старые или неполные настройки) — по умолчанию, иначе часы показывают NaN
   device.timer = { ...pomoDefaults(), ...device.timer };
+  // испорченные числа — к умолчаниям и в пределы (иначе NaN:NaN на экране)
+  Object.entries(POMO_LIMITS).forEach(([k, [lo, hi]]) => { const v = +device.timer[k]; device.timer[k] = Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : pomoDefaults()[k]; });
   device.notes ??= { ...device.tab };
   device.audio ??= { last: device.lastAudio || {}, style: device.ui?.audio === 'vinyl' ? 'vinyl' : 'wave' };
 
@@ -288,6 +290,8 @@ export function boot(root) {
     toast(t('web.hello')); st.webHello = true; store.settingsChanged();
   };
   setTimeout(webHello, 2500);
+  // Данные при запуске не прочитались: строка сохранена отдельно (store.js), вернуть — из копий на устройстве
+  if (store.broken) { log('store', 'данные не прочитались при запуске — строка сохранена в practice.v1.broken', 'e'); setTimeout(() => toast(t('data.broken')), 1500); }
   initGuard(app);
   initDrop(app); // файлы, перетащенные в окно
   initWebMemory(app); // веб-версия: постоянное хранилище и работа без сети (service worker)
