@@ -4,6 +4,7 @@
 import { fft } from '../music/analyze.js';
 
 import { renderFx } from './fx.js';
+import { vocalPre, toLevel, normalizeVoiceSet } from './vocal.js';
 
 const dbToLin = (db) => Math.pow(10, db / 20);
 export const linToDb = (x) => (x > 1e-9 ? 20 * Math.log10(x) : -180);
@@ -221,18 +222,22 @@ export function migrateVoiceFx(o = {}) {
   };
 }
 
-// Обработка на общей цепочке (та же, что звучит вживую до записи): обрезка → шумоподавление → гейт →
-// цепочка эффектов (эквалайзер, сжатие, драйв, тремоло, задержка, хор, реверберация) и усиление → нормализация.
-// Шумоподавление и гейт — до эффектов, чтобы реверберация и задержка не тянули шум. Без OfflineAudioContext (тесты) —
-// старая обработка эквивалентными шагами
+// Обработка записи — та же цепочка, что звучит вживую до записи: обрезка → шумоподавление → голосовая цепочка
+// (vocal.js: срез, экспандер, де-эссер, тембр, компрессор) → общие эффекты (fx.js) и усиление → громкость файла
+// (BS.1770) и лимитер. Шумоподавление — до всего, чтобы цепочка и реверберация не тянули шум; громкость файла —
+// только в файле (вживую — та же цепочка без подъёма до цели). o.voice — { mode, p, level } (режим диктофона);
+// без него — прежняя обработка (гейт, нормализация). Без OfflineAudioContext (тесты) — эффекты пропускаются
 export async function processVoice(ch, sr, o = {}) {
   let c = ch.map((x) => Float32Array.from(x));
   if (o.trim) c = trim(c, sr, o.trim[0], o.trim[1]);
-  if (o.denoise > 0) c = denoise(c, sr, o.denoise);
-  if (o.gate != null && o.gate > -90) gateFx(c, sr, o.gate);
+  const v = o.voice ? normalizeVoiceSet(o.voice) : null, dn = v ? v.p.denoise : o.denoise;
+  if (dn > 0) c = denoise(c, sr, dn);
+  if (v) vocalPre(c, sr, v.p);
+  else if (o.gate != null && o.gate > -90) gateFx(c, sr, o.gate);
   const r = await renderFx(c, sr, o.chain, +o.gain || 0);
   if (r) c = r; else if (o.gain) gain(c, o.gain);
-  if (o.normalize) normalize(c, -1);
+  if (v) toLevel(c, sr, v.level, v.p);
+  else if (o.normalize) normalize(c, -1);
   c.forEach((x) => { for (let i = 0; i < x.length; i++) x[i] = Math.max(-1, Math.min(1, x[i])); });
   return c;
 }
@@ -252,15 +257,22 @@ export function process(ch, sr, o = {}) {
   return c;
 }
 
-// WAV, 16 бит
-export function encodeWav(ch, sr) {
-  const n = ch[0].length, nc = ch.length, buf = new ArrayBuffer(44 + n * nc * 2), v = new DataView(buf);
+// WAV: 16 или 24 бит (целые) либо 32 (плавающая точка)
+export function encodeWav(ch, sr, bits = 16) {
+  const n = ch[0].length, nc = ch.length, bps = bits === 24 ? 3 : bits === 32 ? 4 : 2, fl = bps === 4, data = n * nc * bps;
+  const buf = new ArrayBuffer(44 + data), v = new DataView(buf);
   const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); v.setUint32(4, 36 + n * nc * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); v.setUint16(22, nc, true); v.setUint32(24, sr, true); v.setUint32(28, sr * nc * 2, true);
-  v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * nc * 2, true);
+  w(0, 'RIFF'); v.setUint32(4, 36 + data, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, fl ? 3 : 1, true); v.setUint16(22, nc, true); v.setUint32(24, sr, true); v.setUint32(28, sr * nc * bps, true);
+  v.setUint16(32, nc * bps, true); v.setUint16(34, bps * 8, true); w(36, 'data'); v.setUint32(40, data, true);
   let o = 44;
-  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) { const s = Math.max(-1, Math.min(1, ch[c][i])); v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2; }
+  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) {
+    const s = Math.max(-1, Math.min(1, ch[c][i]));
+    if (fl) v.setFloat32(o, s, true);
+    else if (bps === 3) { const q = Math.round(s < 0 ? s * 0x800000 : s * 0x7fffff); v.setUint8(o, q & 0xff); v.setUint8(o + 1, (q >> 8) & 0xff); v.setUint8(o + 2, (q >> 16) & 0xff); }
+    else v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    o += bps;
+  }
   return new Uint8Array(buf);
 }
 

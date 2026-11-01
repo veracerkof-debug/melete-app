@@ -188,11 +188,12 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- Работа в фоне (KeepAliveService): пока идёт занятие или звучит инструмент -->
+        <!-- Работа в фоне (KeepAliveService): пока идёт занятие или звучит инструмент; пока идёт запись — и микрофон
+             (без этого Android глушит микрофон свёрнутого приложения или при погашенном экране) -->
         <service
             android:name=".KeepAliveService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:foregroundServiceType="mediaPlayback|microphone" />
         <!-- Плавающая кнопка поверх других приложений (FloatService): пауза и громкость источников, пока приложение свёрнуто -->
         <service
             android:name=".FloatService"
@@ -218,6 +219,7 @@
          снятие ограничения батареи — только по согласию человека (системный запрос) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />

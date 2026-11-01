@@ -33,9 +33,11 @@ import java.io.RandomAccessFile;
 public class VoicePlugin extends Plugin {
 
     private AudioManager am;
-    private volatile boolean recording = false, paused = false, playing = false, monitor = false;
+    private volatile boolean recording = false, paused = false, playing = false, monitor = false, ended = false;
+    private volatile String endReason = null;
     private Thread recThread, playThread;
     private File recFile;
+    private static final long MIN_FREE = 40L * 1024 * 1024; // меньше — запись не начинается и бережно останавливается
     private int recRate = 48000, recCh = 1;
     private long recFrames = 0;
     private AudioDeviceCallback cb;
@@ -182,6 +184,28 @@ public class VoicePlugin extends Plugin {
         else call.reject("denied");
     }
 
+    // Папка записей: постоянная (filesDir) — кэш система может очистить сама, и запись пропала бы молча.
+    // Прежние записи из кэша видны и открываются (fileOf, list)
+    private File dir() { File d = new File(getContext().getFilesDir(), "voice"); if (!d.exists()) d.mkdirs(); return d; }
+    private File oldDir() { return new File(getContext().getCacheDir(), "voice"); }
+
+    private AudioRecord open(int src, AudioDeviceInfo dev, int chMask) {
+        int min = AudioRecord.getMinBufferSize(recRate, chMask, AudioFormat.ENCODING_PCM_16BIT);
+        if (min <= 0) return null;
+        AudioRecord ar = null;
+        try {
+            ar = new AudioRecord(src, recRate, chMask, AudioFormat.ENCODING_PCM_16BIT, Math.max(min * 4, recRate));
+            if (ar.getState() != AudioRecord.STATE_INITIALIZED) {
+                ar.release();
+                ar = new AudioRecord(MediaRecorder.AudioSource.MIC, recRate, chMask, AudioFormat.ENCODING_PCM_16BIT, Math.max(min * 4, recRate));
+            }
+            if (ar.getState() != AudioRecord.STATE_INITIALIZED) { ar.release(); return null; }
+            if (dev != null) ar.setPreferredDevice(dev);
+            ar.startRecording();
+            return ar;
+        } catch (Exception e) { if (ar != null) try { ar.release(); } catch (Exception x) { /* уже */ } return null; }
+    }
+
     private void doStart(PluginCall call) {
         if (recording) { call.reject("busy"); return; }
         int id = call.getInt("deviceId", -1);
@@ -189,43 +213,61 @@ public class VoicePlugin extends Plugin {
         boolean raw = Boolean.TRUE.equals(call.getBoolean("raw", true));
         // проверка уровня: всё как при записи, но в файл ничего не пишется
         monitor = Boolean.TRUE.equals(call.getBoolean("monitor", false));
+        File d = dir();
+        if (!monitor && d.getUsableSpace() < MIN_FREE) { call.reject("space"); return; }
         AudioDeviceInfo dev = id >= 0 ? find(AudioManager.GET_DEVICES_INPUTS, id) : null;
         boolean bt = isBtVoice(dev);
         if (bt) useComm(dev);
         recRate = bt ? 16000 : 48000;
         recCh = stereo && !bt && dev != null && dev.getChannelCounts().length > 0 && max(dev.getChannelCounts()) >= 2 ? 2 : 1;
-        int chMask = recCh == 2 ? AudioFormat.CHANNEL_IN_STEREO : AudioFormat.CHANNEL_IN_MONO;
-        int min = AudioRecord.getMinBufferSize(recRate, chMask, AudioFormat.ENCODING_PCM_16BIT);
-        if (min <= 0) { recRate = 44100; min = AudioRecord.getMinBufferSize(recRate, chMask, AudioFormat.ENCODING_PCM_16BIT); }
+        final int chMask = recCh == 2 ? AudioFormat.CHANNEL_IN_STEREO : AudioFormat.CHANNEL_IN_MONO;
+        if (AudioRecord.getMinBufferSize(recRate, chMask, AudioFormat.ENCODING_PCM_16BIT) <= 0) recRate = 44100;
         // UNPROCESSED — без системной обработки (если устройство умеет); голосовой канал — для Bluetooth
-        int src = bt ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC;
-        AudioRecord ar;
-        try {
-            ar = new AudioRecord(src, recRate, chMask, AudioFormat.ENCODING_PCM_16BIT, Math.max(min * 4, recRate));
-            if (ar.getState() != AudioRecord.STATE_INITIALIZED) {
-                ar.release();
-                ar = new AudioRecord(MediaRecorder.AudioSource.MIC, recRate, chMask, AudioFormat.ENCODING_PCM_16BIT, Math.max(min * 4, recRate));
-            }
-            if (dev != null) ar.setPreferredDevice(dev);
-        } catch (Exception e) { releaseComm(); call.reject("unavailable"); return; }
-        final AudioRecord rec = ar;
-        File dir = new File(getContext().getCacheDir(), "voice");
-        if (!dir.exists()) dir.mkdirs();
-        recFile = new File(dir, "rec-" + System.currentTimeMillis() + ".wav");
-        recFrames = 0; recording = true; paused = false;
-        try { rec.startRecording(); } catch (Exception e) { recording = false; rec.release(); releaseComm(); call.reject("unavailable"); return; }
+        final int src = bt ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC;
+        final AudioRecord first = open(src, dev, chMask);
+        if (first == null) { releaseComm(); call.reject("unavailable"); return; }
+        recFile = new File(d, "rec-" + System.currentTimeMillis() + ".wav");
+        recFrames = 0; recording = true; paused = false; ended = false; endReason = null;
+        final boolean btIn = bt;
         recThread = new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+            AudioRecord rec = first;
             short[] buf = new short[recRate / 20 * recCh]; // 50 мс
             byte[] bytes = new byte[buf.length * 2];
             byte[] pcm = new byte[2048]; // последние 1024 отсчёта (моно) — для спектра на экране
-            try (FileOutputStream out = new FileOutputStream(recFile)) {
-                out.write(new byte[44]); // заголовок — при остановке
+            int fails = 0;
+            long lastHdr = 0, lastSync = 0, lastSpace = 0;
+            try (RandomAccessFile out = new RandomAccessFile(recFile, "rw")) {
+                out.write(header(0, recRate, recCh)); // размер — каждую секунду: оборвётся — файл всё равно целый
                 while (recording) {
                     int n = rec.read(buf, 0, buf.length);
-                    if (n <= 0) continue;
+                    if (n <= 0) {
+                        // вход пропал (выдернули USB, отключилась гарнитура) или сбой — открыть встроенный микрофон и
+                        // писать дальше в тот же файл; не вышло — бережно закончить, записанное остаётся
+                        if (++fails < 6 && n != AudioRecord.ERROR_DEAD_OBJECT) { try { Thread.sleep(20); } catch (InterruptedException e) { break; } continue; }
+                        try { rec.stop(); } catch (Exception e) { /* уже */ }
+                        rec.release();
+                        AudioRecord again = btIn ? null : open(raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC, null, chMask);
+                        if (again == null) { rec = null; ended = true; endReason = "device"; JSObject e = new JSObject(); e.put("reason", "device"); notifyListeners("lost", e); break; }
+                        rec = again; fails = 0;
+                        JSObject e = new JSObject(); e.put("reason", "device"); e.put("switched", true); notifyListeners("lost", e);
+                        continue;
+                    }
+                    fails = 0;
                     int peak = 0; double sum = 0;
                     for (int i = 0; i < n; i++) { int v = Math.abs(buf[i]); if (v > peak) peak = v; sum += (double) buf[i] * buf[i]; bytes[2 * i] = (byte) (buf[i] & 0xff); bytes[2 * i + 1] = (byte) ((buf[i] >> 8) & 0xff); }
                     if (!paused && !monitor) { out.write(bytes, 0, n * 2); recFrames += n / recCh; }
+                    long now = System.currentTimeMillis();
+                    if (!monitor && now - lastHdr > 1000) {
+                        lastHdr = now;
+                        long pos = out.getFilePointer(), data = recFrames * recCh * 2;
+                        out.seek(4); out.write(le4(36 + data)); out.seek(40); out.write(le4(data)); out.seek(pos);
+                        if (now - lastSync > 5000) { lastSync = now; try { out.getFD().sync(); } catch (Exception e) { /* как получится */ } }
+                    }
+                    if (!monitor && now - lastSpace > 5000) {
+                        lastSpace = now;
+                        if (recFile.getParentFile().getUsableSpace() < MIN_FREE / 2) { ended = true; endReason = "space"; JSObject e = new JSObject(); e.put("reason", "space"); notifyListeners("lost", e); break; }
+                    }
                     int frames = n / recCh, m = Math.min(1024, frames), from = frames - m;
                     for (int i = 0; i < m; i++) {
                         int v = buf[(from + i) * recCh];
@@ -241,9 +283,10 @@ public class VoicePlugin extends Plugin {
                     lv.put("paused", paused);
                     notifyListeners("level", lv);
                 }
-            } catch (Exception e) { /* запись прервана */ }
-            try { rec.stop(); } catch (Exception e) { /* уже */ }
-            rec.release();
+                // окончательный заголовок
+                if (!monitor) { long data = recFrames * recCh * 2; out.seek(0); out.write(header(data, recRate, recCh)); try { out.getFD().sync(); } catch (Exception e) { /* как получится */ } }
+            } catch (Exception e) { ended = true; if (endReason == null) endReason = "write"; }
+            if (rec != null) { try { rec.stop(); } catch (Exception e) { /* уже */ } rec.release(); }
             releaseComm();
         });
         recThread.start();
@@ -251,7 +294,7 @@ public class VoicePlugin extends Plugin {
         r.put("rate", recRate);
         r.put("channels", recCh);
         r.put("bt", bt);
-        r.put("routed", dev == null || rec.getRoutedDevice() == null ? -1 : rec.getRoutedDevice().getId());
+        r.put("routed", dev == null || first.getRoutedDevice() == null ? -1 : first.getRoutedDevice().getId());
         call.resolve(r);
     }
 
@@ -260,24 +303,26 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void pause(PluginCall call) { paused = Boolean.TRUE.equals(call.getBoolean("on", true)); call.resolve(); }
 
+    // Стоп — и после того, как запись закончилась сама (вход пропал, места нет): файл уже целый, вернуть его
     @PluginMethod
     public void stop(PluginCall call) {
-        if (!recording) { call.reject("idle"); return; }
+        if (recFile == null || (!recording && !ended)) { call.reject("idle"); return; }
         recording = false;
-        try { recThread.join(3000); } catch (InterruptedException e) { /* ну и ладно */ }
-        try (RandomAccessFile f = new RandomAccessFile(recFile, "rw")) {
-            long data = recFrames * recCh * 2;
-            f.seek(0);
-            f.write(header(data, recRate, recCh));
-        } catch (Exception e) { call.reject("write"); return; }
+        try { if (recThread != null) recThread.join(3000); } catch (InterruptedException e) { /* ну и ладно */ }
+        ended = false;
         JSObject r = new JSObject();
         r.put("path", recFile.getName());
         r.put("size", recFile.length());
         r.put("sec", recFrames / (double) recRate);
         r.put("rate", recRate);
         r.put("channels", recCh);
+        if (endReason != null) r.put("reason", endReason);
+        if (monitor) recFile.delete(); // проверка уровня — файла нет
+        recFile = null;
         call.resolve(r);
     }
+
+    private static byte[] le4(long v) { byte[] b = new byte[4]; le(b, 0, v, 4); return b; }
 
     private static byte[] header(long data, int rate, int ch) {
         byte[] h = new byte[44];
@@ -288,11 +333,13 @@ public class VoicePlugin extends Plugin {
     private static void put(byte[] b, int o, String s) { for (int i = 0; i < s.length(); i++) b[o + i] = (byte) s.charAt(i); }
     private static void le(byte[] b, int o, long v, int n) { for (int i = 0; i < n; i++) b[o + i] = (byte) ((v >> (8 * i)) & 0xff); }
 
-    /* ---------- файлы записей (в кэше приложения): чтение и запись частями ---------- */
+    /* ---------- файлы записей (папка приложения): чтение и запись частями ---------- */
 
     private File fileOf(PluginCall call) {
         String name = call.getString("path", "").replaceAll("[\\\\/]", "_");
-        return new File(new File(getContext().getCacheDir(), "voice"), name);
+        File f = new File(dir(), name);
+        if (!f.exists()) { File o = new File(oldDir(), name); if (o.exists()) return o; }
+        return f;
     }
 
     @PluginMethod
@@ -317,8 +364,6 @@ public class VoicePlugin extends Plugin {
 
     @PluginMethod
     public void write(PluginCall call) {
-        File dir = new File(getContext().getCacheDir(), "voice");
-        if (!dir.exists()) dir.mkdirs();
         File f = fileOf(call);
         try (FileOutputStream out = new FileOutputStream(f, Boolean.TRUE.equals(call.getBoolean("append", false)))) {
             out.write(Base64.decode(call.getString("data", ""), Base64.DEFAULT));
@@ -333,12 +378,15 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void list(PluginCall call) {
         JSArray a = new JSArray();
-        File[] fs = new File(getContext().getCacheDir(), "voice").listFiles();
-        if (fs != null) for (File f : fs) {
-            if (!f.getName().startsWith("rec-") || !f.getName().endsWith(".wav") || f.length() <= 44) continue;
-            JSObject o = new JSObject();
-            o.put("path", f.getName()); o.put("size", f.length()); o.put("at", f.lastModified());
-            a.put(o);
+        for (File d : new File[] { dir(), oldDir() }) {
+            File[] fs = d.listFiles();
+            if (fs != null) for (File f : fs) {
+                if (!f.getName().startsWith("rec-") || !f.getName().endsWith(".wav") || f.length() <= 44) continue;
+                if (recording && recFile != null && f.getName().equals(recFile.getName())) continue; // пишется сейчас
+                JSObject o = new JSObject();
+                o.put("path", f.getName()); o.put("size", f.length()); o.put("at", f.lastModified());
+                a.put(o);
+            }
         }
         JSObject r = new JSObject();
         r.put("files", a);

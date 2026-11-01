@@ -9,6 +9,7 @@ import { t } from '../i18n/index.js';
 import { sheet, snav } from '../ui/index.js';
 import { log } from './log.js';
 import { mascotOf } from './settings.js';
+import { REC } from '../audio/recstate.js';
 
 const KA = Capacitor.isNativePlatform() ? registerPlugin('KeepAlive') : null;
 export const bgAvailable = () => !!KA;
@@ -17,13 +18,16 @@ export const bgAsk = { battery: () => KA && KA.askBattery(), notify: () => KA &&
 
 // Что сейчас идёт — строка для уведомления; null — ничего
 // Лицо маскота для уведомления — маленьким значком (ns_<f|m>_<лицо>.png — build/notifyicons.mjs); '' — без маскота
+// Идёт запись (диктофон, запись в инструменте, ансамбль) — службе нужен и микрофон
+export const recBusy = (app) => REC.voice || !!(app.rec && app.rec.active) || !!(app.ens && app.ens.recording) || !!(app.ensCli && app.ensCli.S && app.ensCli.S.recording);
 export function busyFace(app) {
   const g = mascotOf(app.store.state.settings);
   if (g === 'none') return '';
-  const mood = app.active ? (app.active.pausedAt ? 'wait' : 'focus') : app.audio.metro.running ? 'calm' : app.soundingAudio() ? 'sing' : 'wait';
+  const mood = recBusy(app) ? 'focus' : app.active ? (app.active.pausedAt ? 'wait' : 'focus') : app.audio.metro.running ? 'calm' : app.soundingAudio() ? 'sing' : 'wait';
   return 'ns_' + g + '_' + mood;
 }
 export function busyText(app) {
+  if (recBusy(app)) return t('bg.rec');
   if (app.active) return t(app.active.pausedAt ? 'bg.paused' : 'bg.session');
   const j = app.jobs && app.jobs.current;
   if (j && j.kind === 'stems') return t('bg.stems', { pct: Math.round((j.frac || 0) * 100) });
@@ -40,10 +44,10 @@ export function initBackground(app) {
   // первый же тик без дела её снимет; иначе уведомление «Идёт занятие» висит, хотя занятие давно кончилось
   let on = true, shown = '', asked = !!app.device.bgAsked;
   const tick = () => {
-    const text = busyText(app), face = busyFace(app), key = text + '|' + face;
+    const text = busyText(app), face = busyFace(app), mic = recBusy(app), key = text + '|' + face + '|' + mic;
     if (text && (!on || key !== shown)) {
       if (document.visibilityState !== 'visible' && !on) return; // из фона Android службу не даёт — дождёмся экрана
-      KA.start({ title: text, text: '', icon: face, channel: t('bg.channel') }).then(() => {
+      KA.start({ title: text, text: '', icon: face, channel: t('bg.channel'), mic }).then(() => {
         if (!on) log('bg', 'работа в фоне: включена');
         on = true; shown = key;
         if (!asked) { asked = true; app.device.bgAsked = true; app.saveDevice(); offer(); }

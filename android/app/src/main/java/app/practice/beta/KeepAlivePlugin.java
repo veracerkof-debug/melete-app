@@ -29,6 +29,7 @@ public class KeepAlivePlugin extends Plugin {
         i.putExtra("text", call.getString("text", ""));
         i.putExtra("channel", call.getString("channel", "Melete"));
         i.putExtra("icon", call.getString("icon", ""));
+        i.putExtra("mic", Boolean.TRUE.equals(call.getBoolean("mic", false)));
         try { ContextCompat.startForegroundService(getContext(), i); call.resolve(); }
         catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
     }

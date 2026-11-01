@@ -2,7 +2,8 @@
 # (Melete-Dev.AppImage и melete-dev.deb — отдельная программа «Melete DEV», tauri.dev.conf.json); ветка pre
 # (по слову автора) → релиз «pre» (Melete.AppImage, melete.deb). Последней в релиз — метка linux-<номер>.ver.
 # AppImage — один файл, запускается без установки и обновляется сам (src-tauri/src/update.rs); .deb ставит система
-# (Ubuntu, Debian, Mint), обновляется новым пакетом. Сборка — на ubuntu-22.04: AppImage идёт и на системах новее.
+# (Ubuntu, Debian, Mint), обновляется новым пакетом. Сборка — на ubuntu-24.04: готовые библиотеки ONNX Runtime (крейт
+# ort, дорожки и разбор) собраны под glibc 2.38+, на 22.04 не линкуются. Работает на Ubuntu 24.04+, Mint 22+, Debian 13+.
 # Модели компьютерной версии (текст песни, улучшенное разделение, ноты всех инструментов) — те же, что у Windows.
 name: Linux (dev и pre)
 
@@ -27,7 +28,7 @@ env:
 
 jobs:
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +48,7 @@ jobs:
       - name: Системные библиотеки
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev patchelf libfuse2 file cmake clang \
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev patchelf libfuse2t64 file cmake clang \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-pulseaudio
 
       - name: Зависимости
