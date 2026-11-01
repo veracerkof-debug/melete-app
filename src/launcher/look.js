@@ -1,5 +1,6 @@
 // Оформление Elachiston — на токенах Melete (styles/tokens.css): темы светлая, тёмная, OLED и системная.
 // Один шрифт (Onest) и один акцент — дизайн единый, без декоративных настроек (DECISIONS 2026-10-28).
+import { clockFont } from './clockfonts.js';
 import { accentVars } from '../core/palettes.js';
 import { prefs } from './data.js';
 import { isNative, Launcher } from './native.js';
@@ -36,6 +37,12 @@ export function applyLook(de = document.documentElement) {
   de.style.setProperty('--l-auto', String(auto));
   de.style.setProperty('--l-ck', String(auto * ((prefs.clockScale || 100) / 100)));
   const ui = (prefs.uiScale || 100) / 100;
+  // шрифт часов (clockfonts.js)
+  const cf = clockFont(prefs.clockFont);
+  de.style.setProperty('--l-clock-font', cf.family);
+  de.style.setProperty('--l-clock-w', String(cf.weight));
+  de.style.setProperty('--l-clock-track', cf.track);
+  de.style.setProperty('--l-clock-num', cf.num || 'tabular-nums');
   // крест: толщина и непрозрачность (настройки «Вид» → крест)
   de.style.setProperty('--l-cw', String((prefs.crossWeight || 100) / 100));
   de.style.setProperty('--l-co', String((prefs.crossOpacity || 100) / 100));

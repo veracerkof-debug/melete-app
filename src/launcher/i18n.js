@@ -471,3 +471,7 @@ Object.assign(S.en, { 'diag.title': 'Problems and log', 'diag.hint': 'The home s
   'diag.reading': 'Reading…', 'diag.send': 'Send report', 'diag.show': 'Log', 'diag.log': 'Log', 'diag.clear': 'Clear', 'diag.cleared': 'Log cleared', 'diag.fail': 'Could not send',
   'diag.week': 'Last 7 days', 'diag.crash': 'crashes: {n}', 'diag.noCrash': 'no crashes', 'diag.killed': 'closed by system: {n}', 'diag.gone': 'page rebuilt: {n}',
   'diag.return': 'return to home: usually {ms} ms, worst {worst} ms', 'diag.slow': 'slow returns: {n}', 'diag.long': 'freezes: {n}', 'diag.err': 'errors: {n}' });
+// Шрифт часов (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'set.clockFont': 'Шрифт часов', 'cf.onest': 'Ровный', 'cf.jost': 'Геометрия', 'cf.cormorant': 'Антиква', 'cf.mono': 'Моно', 'cf.tall': 'Узкий' });
+Object.assign(S.uz, { 'set.clockFont': 'Soat shrifti', 'cf.onest': 'Tekis', 'cf.jost': 'Geometrik', 'cf.cormorant': 'Antikva', 'cf.mono': 'Mono', 'cf.tall': 'Tor' });
+Object.assign(S.en, { 'set.clockFont': 'Clock font', 'cf.onest': 'Plain', 'cf.jost': 'Geometric', 'cf.cormorant': 'Serif', 'cf.mono': 'Mono', 'cf.tall': 'Tall' });

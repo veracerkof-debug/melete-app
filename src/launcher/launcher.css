@@ -3,6 +3,11 @@
    единственное украшение — крест (церковный режим). Классы — с приставкой l-. */
 @import '../styles/tokens.css';
 @import '@fontsource-variable/onest';
+/* шрифты часов (clockfonts.js): только цифры и двоеточие — латинский набор */
+@font-face { font-family: 'Clock Jost'; src: url('../../node_modules/@fontsource-variable/jost/files/jost-latin-wght-normal.woff2') format('woff2-variations'); font-weight: 100 900; font-display: block; unicode-range: U+0020-007F; }
+@font-face { font-family: 'Clock Cormorant'; src: url('../../node_modules/@fontsource-variable/cormorant/files/cormorant-latin-wght-normal.woff2') format('woff2-variations'); font-weight: 300 700; font-display: block; unicode-range: U+0020-007F; }
+@font-face { font-family: 'Clock Mono'; src: url('../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations'); font-weight: 100 800; font-display: block; unicode-range: U+0020-007F; }
+@font-face { font-family: 'Clock Tall'; src: url('../../node_modules/@fontsource-variable/sofia-sans-extra-condensed/files/sofia-sans-extra-condensed-latin-wght-normal.woff2') format('woff2-variations'); font-weight: 1 1000; font-display: block; unicode-range: U+0020-007F; }
 
 :root {
   /* отступы системы: строка состояния сверху, полоса жестов снизу, вырез; Android — из MainActivity (window.__insets) */
@@ -70,8 +75,8 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--ink); outli
 .clock-wrap { margin-bottom: 4px; }
 .clock {
   display: flex; align-items: baseline; color: var(--ink);
-  font-family: var(--l-display); font-weight: 250; font-size: 86px; line-height: 1;
-  letter-spacing: -0.035em; font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-family: var(--l-clock-font, var(--l-display)), var(--l-display); font-weight: var(--l-clock-w, 250); font-size: 86px; line-height: 1;
+  letter-spacing: var(--l-clock-track, -0.035em); font-variant-numeric: var(--l-clock-num, tabular-nums); white-space: nowrap;
 }
 .clock i { font-style: normal; padding: 0 0.02em; opacity: .7; }
 
@@ -488,3 +493,9 @@ img.app-ico { filter: grayscale(1) contrast(1.05); object-fit: contain; display:
 .l-d-body { position: relative; }
 .l-d-list, .l-d-ghost { will-change: transform; }
 .l-d-ghost { overflow: hidden; }
+/* выбор шрифта часов (настройки «Вид») */
+.l-clockfonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-bottom: 14px; }
+.l-clockfont { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px 8px; border-radius: 14px; border: 1px solid var(--fill); min-height: 84px; color: var(--ink); }
+.l-clockfont.on { border-color: var(--ink); }
+.l-clockfont-n { font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.l-clockfont small { font-size: 11px; color: var(--l2); }

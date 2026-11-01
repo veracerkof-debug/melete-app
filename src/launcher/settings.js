@@ -9,6 +9,7 @@ import { GESTURES } from './gestures.js';
 import { describeAction, openUrl, openApp } from './actions.js';
 import { pickIcon, pickAction } from './pickers.js';
 import { pickHome } from './homepick.js';
+import { CLOCK_FONTS, clockFont } from './clockfonts.js';
 import { readDiag, summarize, shareDiag, clearDiag } from './diag.js';
 import { homeItems, dockSlots, appOf, appName, hiddenApps, setHidden, renameApp, systemName } from './apps.js';
 import { folderOfKey, folderName } from './folders.js';
@@ -72,6 +73,12 @@ export function openSettings(onChange, getGesture, tab) {
         segmented([{ value: '', label: t('set.lang.sys') }, { value: 'ru', label: 'Русский' }, { value: 'uz', label: 'Oʻzbekcha' }, { value: 'en', label: 'English' }], prefs.lang || '', (v) => up({ lang: v }), t('set.lang')),
         h('div', { class: 'l-label' }, t('set.align')),
         segmented([{ value: 'left', label: t('set.left') }, { value: 'center', label: t('set.center') }, { value: 'right', label: t('set.right') }], prefs.align, (v) => up({ align: v }), t('set.align')),
+        // шрифт часов: каждая плитка — часы этим шрифтом
+        h('div', { class: 'l-label' }, t('set.clockFont')),
+        h('div', { class: 'l-clockfonts', role: 'radiogroup', 'aria-label': t('set.clockFont') },
+          ...CLOCK_FONTS.map((f) => h('button', { class: 'l-clockfont' + (clockFont(prefs.clockFont).id === f.id ? ' on' : ''), role: 'radio', 'aria-checked': String(clockFont(prefs.clockFont).id === f.id), onclick: () => up({ clockFont: f.id }) },
+            h('span', { class: 'l-clockfont-n', style: { fontFamily: f.family + ', var(--l-display)', fontWeight: String(f.weight), letterSpacing: f.track, fontVariantNumeric: f.num || 'tabular-nums' } }, prefs.hour12 ? '9:41' : '21:41'),
+            h('small', {}, t('cf.' + f.id))))),
         scaleRow(t('set.clockScale'), 'clockScale', 60, 140),
         scaleRow(t('set.uiScale'), 'uiScale', 60, 130),
         toggle(t('set.hour12'), prefs.hour12, (v) => up({ hour12: v })),

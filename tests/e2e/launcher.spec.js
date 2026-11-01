@@ -513,3 +513,15 @@ test('сбои и журнал: ошибка страницы попадает �
   await expect(page.locator('.l-diag')).toContainText('проверка журнала');
   await expect(page.locator('.l-diag')).toContainText('page start');
 });
+
+test('шрифт часов: выбор в настройках «Вид» меняет часы на главном', async ({ page, errors }) => {
+  await open(page);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
+  await expect(page.locator('.l-clockfont')).toHaveCount(5);
+  await page.locator('.l-clockfont', { hasText: 'Моно' }).click();
+  await expect(page.locator('.l-clockfont.on')).toContainText('Моно');
+  await page.keyboard.press('Escape');
+  expect(await page.locator('.clock').evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Clock Mono');
+  expect(errors).toEqual([]);
+});
