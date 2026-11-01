@@ -525,3 +525,51 @@ test('шрифт часов: выбор в настройках «Вид» ме�
   expect(await page.locator('.clock').evaluate((e) => getComputedStyle(e).fontFamily)).toContain('Clock Mono');
   expect(errors).toEqual([]);
 });
+
+test('стили: выбор в настройках меняет вид; командная строка — часы знаками и мигающий курсор', async ({ page, errors }) => {
+  await open(page);
+  await hold(page, 60, 330);
+  await page.locator('.l-set-tabs button', { hasText: 'Вид' }).click();
+  await expect(page.locator('.l-style')).toHaveCount(6);
+  await page.locator('.l-style', { hasText: 'Командная строка' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-style', 'cli');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.clock .l-ascii')).toBeVisible();
+  await expect(page.locator('.l-cli-cur')).toBeVisible();
+  for (const s of ['strip', 'soft', 'term', 'menu']) {
+    await open(page, { style: s });
+    await expect(page.locator('html')).toHaveAttribute('data-style', s);
+    await expect(page.locator('.l-app').first()).toBeVisible();
+  }
+  await open(page, { style: 'classic' });
+  expect(await page.locator('html').getAttribute('data-style')).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+test('колесо приложений крутится пальцем, изгиб у края — кольца', async ({ page, errors }) => {
+  await open(page, { homeWheel: true, bulge: true });
+  const cur = () => page.locator('.l-wh-i.cur .label').textContent();
+  await expect(page.locator('.l-wh-i.cur')).toHaveCount(1);
+  const first = await cur();
+  const b = await page.locator('.l-wheel').boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.7); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.35, { steps: 8 }); await page.mouse.up();
+  await expect.poll(cur).not.toBe(first);
+  await expect(page.locator('.l-bulge .l-ring').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('шкала в списке: повести пальцем — список встаёт на букву', async ({ page, errors }) => {
+  await open(page, { scrub: true, foldTabs: 'top' });
+  await page.keyboard.press('ArrowUp');
+  await page.locator('.l-d-tab.fold').first().click();
+  await expect(page.locator('.l-d-app').first()).toBeVisible();
+  await page.waitForTimeout(400);
+  const s = await page.locator('.l-scrub').boundingBox();
+  await page.mouse.move(s.x + s.width / 2, s.y + s.height - 20); await page.mouse.down();
+  await expect(page.locator('.l-scrub')).toHaveClass(/on/);
+  await expect(page.locator('.l-scrub-big')).not.toHaveText('');
+  await page.mouse.up();
+  await expect(page.locator('.l-scrub')).not.toHaveClass(/on/);
+  expect(errors).toEqual([]);
+});

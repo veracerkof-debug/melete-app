@@ -475,3 +475,25 @@ Object.assign(S.en, { 'diag.title': 'Problems and log', 'diag.hint': 'The home s
 Object.assign(S.ru, { 'set.clockFont': 'Шрифт часов', 'cf.onest': 'Ровный', 'cf.jost': 'Геометрия', 'cf.cormorant': 'Антиква', 'cf.mono': 'Моно', 'cf.tall': 'Узкий' });
 Object.assign(S.uz, { 'set.clockFont': 'Soat shrifti', 'cf.onest': 'Tekis', 'cf.jost': 'Geometrik', 'cf.cormorant': 'Antikva', 'cf.mono': 'Mono', 'cf.tall': 'Tor' });
 Object.assign(S.en, { 'set.clockFont': 'Clock font', 'cf.onest': 'Plain', 'cf.jost': 'Geometric', 'cf.cormorant': 'Serif', 'cf.mono': 'Mono', 'cf.tall': 'Tall' });
+// Стили и приёмы (DECISIONS 2026-11-01)
+Object.assign(S.ru, { 'set.style': 'Стиль', 'style.classic': 'Классика', 'style.strip': 'Полоса', 'style.soft': 'Мягкий', 'style.term': 'Терминал', 'style.menu': 'Меню', 'style.cli': 'Командная строка',
+  'style.monoHint': 'Цвет стиля появится, если выключить «Чёрно-белый».',
+  'set.wheel': 'Колесо приложений', 'set.wheelHint': 'Приложения на главном — по дуге: повести пальцем — крутится, текущее крупно',
+  'set.bulge': 'Изгиб у края', 'set.bulgeHint': 'Кольца у края экрана: заряд, практика за неделю, чтение',
+  'set.scrub': 'Шкала в списке', 'set.scrubHint': 'Во «Всех приложениях» у края: повести пальцем — буквы, список встаёт на нужную',
+  'cap.tracker': 'Melete · неделя', 'cap.balance': 'Кошелёк', 'cap.apps': 'Приложения', 'cap.clock': 'Время',
+  'heat.days': 'пн,вт,ср,чт,пт,сб,вс', 'ring.title': 'Заряд и прогресс', 'ring.bat': 'Заряд', 'ring.practice': 'Практика за неделю', 'ring.reading': 'Чтение' });
+Object.assign(S.uz, { 'set.style': 'Uslub', 'style.classic': 'Klassika', 'style.strip': 'Chiziq', 'style.soft': 'Yumshoq', 'style.term': 'Terminal', 'style.menu': 'Menyu', 'style.cli': 'Buyruq satri',
+  'style.monoHint': 'Uslub rangi «Oq-qora» oʻchirilsa koʻrinadi.',
+  'set.wheel': 'Ilovalar gʻildiragi', 'set.wheelHint': 'Bosh ekrandagi ilovalar yoy boʻylab: barmoq bilan aylantiriladi, joriysi yirik',
+  'set.bulge': 'Chetdagi egilish', 'set.bulgeHint': 'Ekran chetida halqalar: quvvat, haftalik mashq, oʻqish',
+  'set.scrub': 'Roʻyxatdagi shkala', 'set.scrubHint': '«Barcha ilovalar»da chetda: barmoq bilan — harflar, roʻyxat keraklisiga oʻtadi',
+  'cap.tracker': 'Melete · hafta', 'cap.balance': 'Hamyon', 'cap.apps': 'Ilovalar', 'cap.clock': 'Vaqt',
+  'heat.days': 'du,se,ch,pa,ju,sh,ya', 'ring.title': 'Quvvat va natija', 'ring.bat': 'Quvvat', 'ring.practice': 'Haftalik mashq', 'ring.reading': 'Oʻqish' });
+Object.assign(S.en, { 'set.style': 'Style', 'style.classic': 'Classic', 'style.strip': 'Strip', 'style.soft': 'Soft', 'style.term': 'Terminal', 'style.menu': 'Menu', 'style.cli': 'Command line',
+  'style.monoHint': 'The style colour shows when Black and white is off.',
+  'set.wheel': 'App wheel', 'set.wheelHint': 'Home apps on an arc: drag to turn, the current one is large',
+  'set.bulge': 'Edge bulge', 'set.bulgeHint': 'Rings at the screen edge: battery, weekly practice, reading',
+  'set.scrub': 'List scale', 'set.scrubHint': 'In All apps at the edge: drag for letters, the list jumps there',
+  'cap.tracker': 'Melete · week', 'cap.balance': 'Wallet', 'cap.apps': 'Apps', 'cap.clock': 'Time',
+  'heat.days': 'mo,tu,we,th,fr,sa,su', 'ring.title': 'Battery and progress', 'ring.bat': 'Battery', 'ring.practice': 'Weekly practice', 'ring.reading': 'Reading' });

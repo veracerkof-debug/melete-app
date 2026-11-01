@@ -147,7 +147,8 @@ describe('главный экран: минимальный', () => {
     expect(prefs.v).toBe(2);
     expect(prefs.theme).toBe('light');
     expect(prefs.align).toBe('right');
-    ['clock', 'wallpaper', 'ornament', 'style', 'font'].forEach((k) => expect(prefs[k], k).toBeUndefined());
+    ['clock', 'wallpaper', 'ornament', 'font'].forEach((k) => expect(prefs[k], k).toBeUndefined());
+    expect(prefs.style).toBe('classic'); // прежний «style» — не нынешний стиль
     expect(prefs.church).toBe(true);
     expect(prefs.home).toHaveLength(7);
     expect(prefs.gestures.swipeUp.id).toBe('drawer');

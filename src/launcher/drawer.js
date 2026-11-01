@@ -11,6 +11,7 @@ import { allApps as everyApp } from './apps.js';
 import { iconSVG, appIconHTML } from './icons.js';
 import { pickIcon } from './pickers.js';
 import { pickHome } from './homepick.js';
+import { mountScrub, refreshScrub } from './scrub.js';
 import { layout } from './layout.js';
 import { panel } from './panels.js';
 import { setCover } from './cover.js';
@@ -38,6 +39,7 @@ export function mountDrawer(container, { onChange }) {
     // папки — значками справа, низ свободен: список идёт до самого низа
     h('div', { class: 'l-d-body' }, list, tabs = h('div', { class: 'l-d-rail', role: 'tablist', 'aria-orientation': 'vertical' })));
   container.append(drawer);
+  mountScrub(drawer.querySelector('.l-d-body'), list); // шкала у края (prefs.scrub)
   // закрыть: потянуть вниз, когда список в начале (или за заголовок) — панель идёт за пальцем; колесо вверх
   let st = null;
   drawer.addEventListener('pointerdown', (e) => {
@@ -223,6 +225,7 @@ function fill(keepTabScroll = false) {
   if (!tabIds().includes(tab)) tab = tabIds()[0]; // «Все» убрана — первая папка
   renderTabs(!!q, keepTabScroll);
   list.replaceChildren(...items(tab, q));
+  if (prefs.scrub) requestAnimationFrame(refreshScrub); else refreshScrub();
 }
 
 // вкладки внизу: «Все», папки, «+»; удержание папки — её меню
