@@ -119,8 +119,13 @@ export function createMixerDrawer(app) {
     if (!tr) return;
     const k = tr.parentNode.dataset.k;
     let v = raw(k);
-    if (e.key === 'ArrowUp') v += 0.05;
-    else if (e.key === 'ArrowDown') v -= 0.05;
+    // как у ползунка по WAI-ARIA: стрелки — шаг, PageUp/PageDown — крупный шаг, Home/End — край
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') v += 0.05;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') v -= 0.05;
+    else if (e.key === 'PageUp') v += 0.2;
+    else if (e.key === 'PageDown') v -= 0.2;
+    else if (e.key === 'Home') v = 0;
+    else if (e.key === 'End') v = MIX_MAX;
     else return;
     e.preventDefault();
     mixer.set(k, v);
