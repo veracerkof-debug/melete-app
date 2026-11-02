@@ -44,7 +44,9 @@ const cfg = () => {
   s.mel = null; // мелодии по подсказке убраны (решение автора: демонстрации пока слабые)
   s.width ??= 12; s.lo ??= 60; // октава C4–C5: на телефоне по ширине в самый раз
   if (!WIDTHS.includes(s.width)) s.width = 12;
-  s.lo = clampLo(s.lo, s.width);
+  s.lo = clampLo(Number.isFinite(+s.lo) ? Math.round(+s.lo) : 60, s.width);
+  if (!(Number.isInteger(+s.root) && +s.root >= 0 && +s.root < 12)) s.root = 0; else s.root = +s.root;
+  if (!(+s.port >= 0 && +s.port <= 2000)) s.port = 60;
   normalizeFx(s);
   return s;
 };

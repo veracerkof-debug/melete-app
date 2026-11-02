@@ -1,6 +1,6 @@
 // Копии на устройстве (src/core/snapshots.js): сколько хранить
 import { describe, it, expect } from 'vitest';
-import { toPrune, dayId, KEEP_DAY, KEEP_UPD } from '../src/core/snapshots.js';
+import { toPrune, dayId, shrank, KEEP_DAY, KEEP_UPD } from '../src/core/snapshots.js';
 
 describe('копии на устройстве', () => {
   it('суточных — 7 свежих, перед обновлением — 3 свежих', () => {
@@ -13,5 +13,15 @@ describe('копии на устройстве', () => {
   it('одна суточная на день', () => {
     expect(dayId(new Date(2026, 9, 24, 1).getTime())).toBe(dayId(new Date(2026, 9, 24, 23).getTime()));
     expect(dayId(new Date(2026, 9, 24).getTime())).not.toBe(dayId(new Date(2026, 9, 25).getTime()));
+  });
+});
+
+describe('резкое уменьшение данных', () => {
+  it('меньше трети прежней копии — старые не убираются', () => {
+    const list = [{ size: 90000 }, { size: 88000 }];
+    expect(shrank(20000, list)).toBe(true);
+    expect(shrank(60000, list)).toBe(false);
+    expect(shrank(10, [{ size: 3000 }])).toBe(false); // маленькие данные — не тревога
+    expect(shrank(10, [])).toBe(false);
   });
 });

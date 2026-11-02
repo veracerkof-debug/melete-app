@@ -4,7 +4,7 @@ import { t, tn, getLang, hasMascot } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
-import { weekData, goalProgress, songStats, streakInfo } from '../stats.js';
+import { weekData, goalProgress, songStatsMap, streakInfo } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
 import { gemSec } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
@@ -170,7 +170,7 @@ function homeMonoHTML(app) {
   }).join('') + '</div>';
   P.events = nextEventsHTML(app);
   const songs = app.store.songs();
-  const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
+  const sm = songStatsMap(app.store.sessions()), rec = songs.map((s) => ({ s, st: sm.of(s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
   P.songs = mhead(t('home.continue'), '<button class="mbtn" data-act="addSong" aria-label="' + esc(t('home.firstSong')) + '">' + IC.plus + '</button><button class="mbtn" data-tab="library" aria-label="' + esc(t('home.allSongs')) + '">' + ARROW + '</button>') +
     (rec.length ? '<div class="mlist">' + rec.map(({ s, st: ss }) => '<div class="mrow"><button data-song="' + s.id + '"><span class="mt">' + esc(s.title) + '</span>' +
     (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
@@ -212,7 +212,7 @@ export function homeHTML(app) {
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
   P.events = nextEventsHTML(app);
   const songs = app.store.songs(), L = ensureLib(app.store.state, t);
-  const rec = songs.map((s) => ({ s, st: songStats(app.store.sessions(), s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
+  const sm = songStatsMap(app.store.sessions()), rec = songs.map((s) => ({ s, st: sm.of(s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
   P.songs = '<div class="hhdr"><span>' + t(rec.length ? 'home.continue' : 'songs.title') + '</span>' + (songs.length > 4 ? '<button class="link" data-tab="library">' + t('home.allSongs') + '</button>' : '') + '</div>' +
     (!rec.length ? '<button class="hfirst" data-act="addSong"><span class="hfic" aria-hidden="true">' + IC.plus + '</span><span class="grow"><b>' + t('home.firstSong') + '</b><span class="l2">' + t('home.firstSongSub') + '</span></span></button>'
     : '<div class="slist">' + rec.map(({ s, st: ss }) => {

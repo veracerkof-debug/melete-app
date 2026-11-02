@@ -152,8 +152,11 @@ export function readMidi(u8) {
     const len = u32(p + 4), start = p + 8, end = Math.min(d.length, start + len);
     if (str(p) !== 'MTrk') { p = end; tr--; if (p >= d.length) break; continue; }
     let i = start, tk = 0, run = 0, k = 0;
-    const vl = () => { let v = 0, b; do { b = d[i++]; v = (v << 7) | (b & 0x7f); } while (b & 0x80 && i < end); return v; };
-    while (i < end) {
+    // число переменной длины: не больше 4 байт, без переполнения (иначе отрицательная длина отбрасывает назад — вечный цикл)
+    const vl = () => { let v = 0, b, c = 0; do { b = d[i++]; v = v * 128 + (b & 0x7f); } while (b & 0x80 && i < end && ++c < 4); return v; };
+    let guard = 0;
+    while (i < end && guard++ < 4e6) {
+      const at = i;
       tk += vl();
       let st = d[i];
       if (st & 0x80) i++; else st = run;
@@ -171,6 +174,7 @@ export function readMidi(u8) {
         i += two ? 2 : 1;
         all.push({ tk, tr, k: k++, msg });
       } else break; // испорченная дорожка
+      if (i <= at) break; // ни шага вперёд — дорожка испорчена
     }
     p = end;
   }

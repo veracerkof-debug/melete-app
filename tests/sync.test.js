@@ -192,3 +192,18 @@ describe('порт DEV', () => {
     delete globalThis.localStorage;
   });
 });
+
+import { resetPairGuard, PAIR_TRIES } from '../src/core/sync.js';
+describe('подбор кода сопряжения', () => {
+  it('после 5 неверных кодов — пауза, даже верный код ждёт', async () => {
+    resetPairGuard();
+    let t = 1000;
+    const ctx = { app: {}, mem: {}, code: '123456', name: 'PC', now: () => t };
+    const ask = (code) => handleRequest(ctx, { path: '/melete/v1/pair', json: { code, name: 'x' } });
+    for (let i = 0; i < PAIR_TRIES; i++) expect((await ask('000000')).status).toBe(403);
+    expect((await ask('123456')).status).toBe(429);
+    t += 61000;
+    expect((await ask('123456')).status).toBe(200);
+    resetPairGuard();
+  });
+});

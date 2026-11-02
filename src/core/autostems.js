@@ -98,11 +98,11 @@ export function createAutoStems(app) {
     try {
       if (needsAna(r)) await analyze(r);
       else if (needsLyr(r)) {
-        log('auto', 'текст в фоне: ' + r.name);
+        log('auto', 'текст в фоне: ' + r.id);
         try { await jobs.lyrics(r, { auto: true }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else { r.lyrTried = true; await files.save(r); } }
       } else {
         const m = modeOf(r), hq = !needsStems(r);
-        log('auto', 'дорожки в фоне: ' + r.name + ' (' + m + (hq ? ', hq' : '') + ')');
+        log('auto', 'дорожки в фоне: ' + r.id + ' (' + m + (hq ? ', hq' : '') + ')');
         try { await jobs.separate(r, m, { auto: true, hq }); } catch (e) { if (e && e.message === 'cancel') failed.set(r.id, Date.now() + RETRY_MS); else failed.set(r.id, Date.now() + 6 * 3600000); }
       }
     } finally { running = false; }

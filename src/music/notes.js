@@ -15,6 +15,7 @@ export const pcOf = (n) => (NAT[n[0]] + accOf(n) + 24) % 12;
 
 // Ноты от root по интервалам ivs; li — номер буквы (ступени) для каждой ноты
 export function spell(root, ivs, li) {
+  if (typeof root !== 'string' || NAT[root[0]] == null) root = 'C'; // испорченная тональность — не падать
   const L0 = LETTERS.indexOf(root[0]), rpc = pcOf(root);
   return ivs.map((iv, k) => {
     const L = LETTERS[(L0 + li[k]) % 7], d = ((((rpc + iv) % 12) - NAT[L] + 18) % 12) - 6;
@@ -30,6 +31,6 @@ export const parseN = (n) => {
 // MIDI → 'C♯4'
 export const mName = (m) => SH[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 // 'C♯4' → ['C♯', '4']
-export const splitN = (n) => { const m = n.match(/^(.*?)(-?\d)$/); return [m[1], m[2]]; };
+export const splitN = (n) => { const m = String(n ?? '').match(/^(.*?)(-?\d)$/); return m ? [m[1], m[2]] : [String(n ?? '–'), '']; }; // не нота (битые данные) — без падения
 // 'C♯/D♭' для кнопок выбора тоники
 export const enh = (i) => (SH[i] === FL[i] ? SH[i] : SH[i] + '/' + FL[i]);

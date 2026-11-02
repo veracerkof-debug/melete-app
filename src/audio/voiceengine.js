@@ -124,7 +124,7 @@ function webEngine() {
       const c = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' }), nc = stereo || deviceId === 'display' ? 2 : 1;
       let stream;
       try { stream = await openStream(deviceId, nc, raw); }
-      catch (e) { c.close(); throw Object.assign(new Error('mic'), { message: e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : 'unavailable' }); }
+      catch (e) { c.close(); throw Object.assign(new Error('mic'), { message: e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable' }); }
       if (c.state !== 'running') { try { await c.resume(); } catch { /* попробуем так */ } }
       const src = c.createMediaStreamSource(stream), path = 'rec-' + Date.now() + '.wav', sr = c.sampleRate;
       let frames = 0, paused = false, seq = 0, pend = [], pendN = 0, lastFlush = 0, node = null, sp = null, ended = false;

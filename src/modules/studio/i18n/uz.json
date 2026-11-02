@@ -89,7 +89,7 @@
   "tr.audioHint": "Klip boshidan bir marta yangraydi. Choʻzish — yozuvning davomi, chap chet — boshini kesish.",
   "exportMidi": ".mid — mediatekaga (pianino)",
   "exportXml": "Notalar — «Tablar»ga (MusicXML)",
-  "exportedXml": "Notalar saqlandi — «Tablar va notalar»da oching",
+  "exportedXml": "Notalar saqlandi — ular «Tablar va notalar»da",
   "undo": "Bekor qilish",
   "swing": "Sving",
   "swingHint": "kuchsiz sakkizliklar — kechroq",

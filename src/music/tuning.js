@@ -26,7 +26,10 @@ export function normalizeTuner(t) {
   if (!t.style || !STYLES.includes(t.style)) t.style = 'needle';
   if (t.showStrings == null) t.showStrings = true;
   if (t.head == null) t.head = false;
-  if (!t.customs) t.customs = [];
+  if (!Array.isArray(t.customs)) t.customs = [];
+  // A4: число в разумных пределах (битые данные — NaN в каждом кадре тюнера)
+  const a4 = +t.a4;
+  t.a4 = a4 >= 380 && a4 <= 480 ? a4 : 440;
   return t;
 }
 

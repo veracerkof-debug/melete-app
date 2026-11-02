@@ -103,12 +103,12 @@ export function createEnsembleHost(app, { sound, now = () => Date.now() } = {}) 
         const rec = F.get(m.got[n]);
         if (!rec || !rec.blob) continue;
         const w = decodeWav(new Uint8Array(await rec.blob.arrayBuffer()));
-        if (!w) { log('ens', m.name + ': не WAV', 'w'); continue; }
+        if (!w) { log('ens', 'участник ' + String(m.key).slice(0, 6) + '/' + m.part + ': не WAV', 'w'); continue; }
         const mono = w.ch.length === 1 ? w.ch[0] : w.ch[0].map((v, i) => (v + w.ch[1][i]) / 2);
         let loc = locate(mono, w.sr, T.gap), approx = false;
         if (loc.s == null) {
           // сигнала не слышно — по сверенным часам (точность — десятки мс)
-          if (m.recAt == null) { log('ens', m.name + ': сигнал не найден, пропуск', 'w'); continue; }
+          if (m.recAt == null) { log('ens', 'участник ' + String(m.key).slice(0, 6) + '/' + m.part + ': сигнал не найден, пропуск', 'w'); continue; }
           loc = { s: ((T.epoch0 - m.recAt) / 1000) * w.sr, rate: w.sr }; approx = true;
         }
         const plan = trackPlan(loc, w.sr, HEAD, T.gap), ch = await alignChannels(w.ch, plan, () => new Promise((r) => setTimeout(r, 0)));
@@ -117,7 +117,7 @@ export function createEnsembleHost(app, { sound, now = () => Date.now() } = {}) 
           blob: new Blob([wav], { type: 'audio/wav' }), dur: plan.n / OUT_SR, peaks: Array.from(peaks(ch, 600)), ens: { sid, take: n, part: m.part, who: m.name, src: rec.id, role: 'aligned', ...(approx ? { approx: true } : {}) } };
         await F.add(out);
         tracks.push({ m, rec: out, approx, snr: loc.snr, drift: plan.driftMs });
-        log('ens', m.name + ': выровнено' + (approx ? ' по часам' : ', сигнал ×' + Math.round(loc.snr) + ', ход часов ' + plan.driftMs + ' мс'));
+        log('ens', 'участник ' + String(m.key).slice(0, 6) + '/' + m.part + ': выровнено' + (approx ? ' по часам' : ', сигнал ×' + Math.round(loc.snr) + ', ход часов ' + plan.driftMs + ' мс'));
         work.done++; emit();
       }
       if (!tracks.length) throw new Error('empty');
@@ -204,7 +204,7 @@ export function createEnsembleHost(app, { sound, now = () => Date.now() } = {}) 
       if (m.rec === take && (phase === 'count' || phase === 'rec' || phase === 'end') && !m.takes.includes(take)) m.takes.push(take);
       const fresh = !members.has(key);
       members.set(key, m);
-      if (fresh) { log('ens', 'подключился: ' + m.name); emit(); }
+      if (fresh) { log('ens', 'подключился участник ' + m.id); emit(); }
       return { status: 200, json: { th: now(), sid, phase, take, goAt, n: live().length, got: !!m.got[take] } };
     },
     // Файл дубля дошёл (sync.js: /melete/v1/put с пометкой ens)
@@ -212,7 +212,7 @@ export function createEnsembleHost(app, { sound, now = () => Date.now() } = {}) 
       const m = members.get(key), e = meta && meta.ens;
       if (!m || !e || e.sid !== sid) return;
       m.got[e.take] = meta.id; m.up = null;
-      log('ens', m.name + ': запись получена (дубль ' + e.take + ')');
+      log('ens', 'участник ' + String(m.key).slice(0, 6) + '/' + m.part + ': запись получена (дубль ' + e.take + ')');
       emit();
     },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },

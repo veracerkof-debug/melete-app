@@ -114,3 +114,9 @@
 @keyframes mlIn{from{opacity:0}to{opacity:1}}
 @keyframes mlPulse{from{transform:scale(.94);opacity:.75}to{transform:scale(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.modload,.modload .mlic{animation:none}}
+/* Очень низкая полоска (альбомный телефон, 3–4 окна стопкой): кнопки не выше окна — ничего не срезано снизу */
+@media (max-height: 460px) {
+  .pane.strip{padding:3px 10px!important}
+  .pane.strip :is(button, .ic, .icb, .mtile, [role=button]){max-height:100cqh}
+  .pane.strip .bpmlbl, .pane.strip .beats.mini{display:none}
+}

@@ -19,8 +19,8 @@
 .bcard{position:relative;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--cell);border:1px solid var(--sep);border-radius:16px;padding:12px 12px 12px;min-height:96px;gap:2px;overflow:hidden}
 .bcard::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--pc)}
 .bcard i{font-style:normal;font-size:13px;font-weight:700;color:var(--pc)}
-.bcard b{font-size:17px;line-height:1.2}
-.bcard span{font-size:13px;line-height:1.3;color:var(--l2)}
+.bcard b{font-size:17px;line-height:1.2;max-width:100%;overflow-wrap:anywhere;hyphens:auto}
+.bcard span{font-size:13px;line-height:1.3;color:var(--l2);max-width:100%;overflow-wrap:anywhere;hyphens:auto}
 .bcard.p0{--pc:var(--bk-T)}.bcard.p1{--pc:var(--tint)}.bcard.p2{--pc:var(--bk-S)}.bcard.p3{--pc:var(--bk-alt)}.bcard.p4{--pc:var(--bk-D)}.bcard.p5{--pc:var(--bk-b)}
 /* чтение */
 .bkhbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;background:var(--cell);box-shadow:0 1px 0 var(--sep);padding:2px 0}

@@ -6,7 +6,7 @@ import { t, initI18n, getLang, CORE_DICTS } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
-import { loadDevice, saveDevice } from './device.js';
+import { loadDevice, saveDevice, onDeviceWriteFail } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme, tabsMigrate, calmMigrate, mascotOf } from './settings.js';
@@ -18,7 +18,7 @@ import { initBack } from './back.js';
 import { createSessionScreen } from './screens/session.js';
 import { createMixerDrawer } from './screens/mixer.js';
 import { createShared } from './modules.js';
-import { createPomodoro, pomoDefaults } from './pomodoro.js';
+import { createPomodoro, pomoDefaults, POMO_LIMITS } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, countsWhileHidden } from './session.js';
 import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
@@ -72,7 +72,15 @@ export function boot(root) {
   let clock = null;
   // коды и проверка создателем убраны: если проверка шла — настоящие данные возвращаются из копии (до чтения данных)
   const { restored } = dropTestMode();
-  const store = createStore({ clockBad: () => !!(clock && clock.bad) });
+  // Запись в хранилище не прошла (нет места) — в журнал и сообщение не чаще раза в минуту: потеря не бывает молчаливой
+  let writeFailAt = 0;
+  const writeFail = (where) => (e) => {
+    const n = Date.now(); if (n - writeFailAt < 60000) return; writeFailAt = n;
+    try { log('store', 'запись не прошла (' + where + '): ' + (e && (e.name || e.message)), 'e'); } catch { /* */ }
+    setTimeout(() => { try { toast(t('data.noSpace')); } catch { /* */ } }, 0);
+  };
+  onDeviceWriteFail(writeFail('настройки'));
+  const store = createStore({ clockBad: () => !!(clock && clock.bad), onWriteFail: writeFail('данные') });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   const st0 = store.state.settings;
   if (tabsMigrate(st0)) store.settingsChanged();
@@ -93,6 +101,8 @@ export function boot(root) {
   device.timer ??= { ...pomoDefaults(), ...device.pomo, style: device.ui?.pomo === 'flip' ? 'flip' : 'ring' };
   // Недостающие длительности (старые или неполные настройки) — по умолчанию, иначе часы показывают NaN
   device.timer = { ...pomoDefaults(), ...device.timer };
+  // испорченные числа — к умолчаниям и в пределы (иначе NaN:NaN на экране)
+  Object.entries(POMO_LIMITS).forEach(([k, [lo, hi]]) => { const v = +device.timer[k]; device.timer[k] = Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : pomoDefaults()[k]; });
   device.notes ??= { ...device.tab };
   device.audio ??= { last: device.lastAudio || {}, style: device.ui?.audio === 'vinyl' ? 'vinyl' : 'wave' };
 
@@ -159,7 +169,7 @@ export function boot(root) {
   // после перезагрузки: «вдали», начатое при закрытии страницы, заканчивается сразу
   setTimeout(awayCheck, 0);
 
-  const files = createFiles();
+  const files = createFiles({ onWriteFail: writeFail('файлы') });
 
   // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
   async function confirmUpload() {
@@ -288,6 +298,8 @@ export function boot(root) {
     toast(t('web.hello')); st.webHello = true; store.settingsChanged();
   };
   setTimeout(webHello, 2500);
+  // Данные при запуске не прочитались: строка сохранена отдельно (store.js), вернуть — из копий на устройстве
+  if (store.broken) { log('store', 'данные не прочитались при запуске — строка сохранена в practice.v1.broken', 'e'); setTimeout(() => toast(t('data.broken')), 1500); }
   initGuard(app);
   initDrop(app); // файлы, перетащенные в окно
   initWebMemory(app); // веб-версия: постоянное хранилище и работа без сети (service worker)

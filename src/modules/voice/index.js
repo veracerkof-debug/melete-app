@@ -47,7 +47,7 @@ const st = () => {
   if (!s.voice) { s.voice = migrateVoice(s.fx); ctx.store.save(); } // режимы обработки (2026-11) — из прежних настроек один раз
   s.voice = normalizeVoiceSet(s.voice);
   s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
-  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; s.savedRaw ??= []; return s; };
+  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = []; return s; };
 // Прежние ручки (шумоподавление, гейт, нормализация) → режим: не трогали — «Музыка», трогали — «Свой» с ними
 function migrateVoice(fx = {}) {
   const custom = fx.denoise > 0 || (fx.gate != null && fx.gate > -90) || fx.normalize === false;
@@ -90,7 +90,7 @@ function devHTML() {
       '<div class="cell"><span class="grow"><span>' + t('raw') + '</span><span class="st l2">' + t('rawHint') + '</span></span>' + sw('raw', s.raw) + '</div>' : '') + '</div>' +
     (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '');
 }
-const sw = (k, on) => '<label class="sw"><input type="checkbox" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
+const sw = (k, on) => '<label class="sw"><input type="checkbox" role="switch" aria-label="' + esc(t(k)) + '" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
 
 /* ---------- запись ---------- */
 
@@ -118,7 +118,7 @@ async function liveStart() {
     S.err = null;
     const loop = () => { if (!L || !L.an) return; L.raf = requestAnimationFrame(loop); meterUpdate(levelOf(L.an, L.buf)); grUpdate(L.fx.gr()); };
     loop();
-  } catch (e) { L = null; S.err = e && e.reason === 'denied' ? 'denied' : 'unavailable'; if (E.native) E.unroute(); }
+  } catch (e) { L = null; S.err = e && (e.reason === 'denied' || e.reason === 'nomic') ? e.reason : 'unavailable'; if (E.native) E.unroute(); }
   render();
 }
 async function liveStop() {
@@ -144,7 +144,7 @@ async function startRec() {
     ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + ', ' + r.rate + ' Гц, каналов ' + r.channels);
   } catch (e) {
     const m = String(e && e.message);
-    S.err = m === 'denied' || m === 'space' || m === 'noaudio' ? m : 'unavailable';
+    S.err = m === 'denied' || m === 'space' || m === 'noaudio' || m === 'nomic' ? m : 'unavailable';
     ctx.log('запись не началась: ' + S.err, 'w');
   }
   render();
@@ -460,7 +460,7 @@ function grUpdate(g) {
 // Нижняя полоса — главная кнопка под большим пальцем: запись, стоп, пауза, прослушать, сохранить
 const bottom = (inner) => '<div class="vc-bot">' + inner + '</div>';
 function html() {
-  const err = S.err ? '<p class="ftr" style="color:var(--red)">' + t({ denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio' }[S.err] || 'micNone') + '</p>' : '';
+  const err = S.err ? '<p class="ftr" style="color:var(--red)">' + t({ denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div><div class="vc-bar vcled mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
       '<div class="vc-btns"><button class="vc-btn sec" data-x="pause" aria-label="' + t(S.paused ? 'resume' : 'pause') + '">' + (S.paused ? I.rec : I.pause) + '</button>' +

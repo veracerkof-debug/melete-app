@@ -134,7 +134,7 @@ function circleHTML() {
   const th = TH(), k = keyInfo(th.pc, th.minor, th.sev), { t } = ctx;
   if (size === 'quarter') return '<div class="cwrap q">' + circleSVG(k) + '</div>';
   const modes = '<div class="seg" style="width:auto" data-seg="kmode" role="group" aria-label="' + t('modeToggle') + '"><button data-v="0" aria-pressed="' + !th.minor +
-    '" style="min-width:54px">' + t('major') + '</button><button data-v="1" aria-pressed="' + th.minor + '" style="min-width:54px">' + t('minor') + '</button></div>' +
+    '" style="min-width:66px;flex:none;padding:0 12px">' + t('major') + '</button><button data-v="1" aria-pressed="' + th.minor + '" style="min-width:66px;flex:none;padding:0 12px">' + t('minor') + '</button></div>' +
     '<button class="ic txt sm' + (th.sev ? ' act' : '') + '" data-x="sevt" aria-pressed="' + th.sev + '" aria-label="' + t('sevenths') + '">7</button>';
   const cgrid = '<div class="cgrid">' + k.chords.map((c, i) => '<button class="cbtn" data-x="chord" data-i="' + i + '"><span class="fnb f' + c.f + '">' + c.rn + '</span><b>' + c.name + '</b></button>').join('') + '</div>';
   if (size === 'strip') {

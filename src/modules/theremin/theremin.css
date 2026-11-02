@@ -1,5 +1,5 @@
 /* Терменвокс: кадр камеры на всё окно, поверх — линии нот, точки рук, нота и одна узкая панель в углу */
-.tm{position:relative;flex:1;width:100%;height:100%;min-height:80px;overflow:hidden;border-radius:16px;background:#0d0d10;user-select:none;-webkit-user-select:none}
+.tm{position:relative;flex:1;width:100%;height:100%;min-height:min(80px,100cqh);overflow:hidden;border-radius:16px;background:#0d0d10;user-select:none;-webkit-user-select:none}
 .tview.imm .tm{border-radius:0}
 .tmcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);pointer-events:none;filter:saturate(.7) brightness(.78) contrast(1.06)}
 /* затемнение к краям — картинка спокойнее, подсказки читаются */
@@ -74,3 +74,5 @@
 /* Полный экран (src/core/pure.js): только картинка и руки — без кнопок и надписей; камера выключена — кнопка «Старт» остаётся */
 :is(.tview.pure,.pfull) .tmbar,:is(.tview.pure,.pfull) .tmnote,:is(.tview.pure,.pfull) .tmlost,:is(.tview.pure,.pfull) .tmhint,:is(.tview.pure,.pfull) .tmpriv,:is(.tview.pure,.pfull) .mlbtn{display:none!important}
 :is(.tview.pure,.pfull) .tm{border-radius:0}
+/* низкая полоска: заставка без камеры не выше окна */
+@media (max-height: 460px) { .tm.strip .tmstart{padding:2px 8px} .tm.strip .tmstart .btn{min-height:0;height:min(40px,100cqh)} }

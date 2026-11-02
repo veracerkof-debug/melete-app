@@ -3,7 +3,7 @@
    Палитра спокойная: акцент — охра, фон светлой темы — тёплый серый, вместо ярких системных цветов —
    приглушённые (settings.js: CALM). */
 :root {
-  --bg: #F3F2EE; --cell: #FFFFFF; --ink: #161514; --l2: #87847E; --l3: #C6C3BC;
+  --bg: #F3F2EE; --cell: #FFFFFF; --ink: #161514; --l2: #6F6C66; --l3: #C6C3BC;
   --sep: rgba(60,55,45,.15); --fill: rgba(120,115,105,.12); --fill2: rgba(120,115,105,.2);
   --tint: #9C7242; --tint-text: #765A38; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
   --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
@@ -30,7 +30,7 @@
 }
 
 :root[data-theme="paper"] {
-  --bg: #F4EFE6; --cell: #FBF8F2; --ink: #2B2620; --l2: #857B6E; --l3: #C9BFB1;
+  --bg: #F4EFE6; --cell: #FBF8F2; --ink: #2B2620; --l2: #736A5E; --l3: #C9BFB1;
   --sep: rgba(90,70,40,.16); --fill: rgba(120,95,60,.10); --fill2: rgba(120,95,60,.18); --bar: rgba(244,239,230,.85);
   color-scheme: light;
 }

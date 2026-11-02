@@ -16,6 +16,11 @@ export function toPrune(list, keepDay = KEEP_DAY, keepUpd = KEEP_UPD) {
   return [...by('day').slice(keepDay), ...by('update').slice(keepUpd)].map((x) => x.id);
 }
 export const dayId = (t) => 'day-' + dayOf(t);
+// Данные заметно меньше самой крупной из последних копий (меньше трети, а там было больше 4 КБ)
+export function shrank(size, list) {
+  const big = list.slice(0, KEEP_DAY + KEEP_UPD).reduce((m, x) => Math.max(m, x.size || 0), 0);
+  return big > 4096 && size < big / 3;
+}
 
 function open() {
   return new Promise((res, rej) => {
@@ -37,7 +42,11 @@ export function createSnapshots(app) {
   async function take(kind = 'day', { build = 0 } = {}) {
     try {
       const text = backupText(app), at = Date.now(), id = kind === 'day' ? dayId(at) : 'upd-' + at + '-' + Math.random().toString(36).slice(2, 6);
+      const before = await list();
       await tx('readwrite', (s) => s.put({ id, at, kind, build, size: text.length, text }));
+      // данные резко уменьшились (сбой загрузки, ошибка, случайная очистка) — старые копии не убирать: иначе за неделю
+      // пустые копии вытеснят все хорошие
+      if (shrank(text.length, before)) { log('snap', 'данные заметно меньше прежней копии — старые копии сохранены', 'w'); return id; }
       const old = toPrune(await list());
       if (old.length) await tx('readwrite', (s) => old.forEach((k) => s.delete(k)));
       log('snap', 'копия на устройстве: ' + (kind === 'day' ? 'суточная' : 'перед обновлением') + ', ' + Math.round(text.length / 1024) + ' КБ');

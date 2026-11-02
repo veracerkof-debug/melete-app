@@ -71,16 +71,20 @@ function safeStorage() {
 }
 
 // clockBad() — часы устройства сбиты (src/core/clock.js): записи в это время не подтверждаются
-export function createStore({ storage = safeStorage(), now = Date.now, clockBad = () => false } = {}) {
+// onWriteFail(e) — запись не прошла (нет места, запрещено): сказать человеку, не молчать
+export function createStore({ storage = safeStorage(), now = Date.now, clockBad = () => false, onWriteFail = () => {} } = {}) {
   const subs = new Set();
-  let state = blank();
-  try {
-    const raw = storage && storage.getItem(LS);
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (p && p.version === 1) state = p;
-    }
-  } catch { /* повреждённые данные — начинаем с пустого */ }
+  let state = blank(), broken = false;
+  // Данные не читаются (запись оборвалась, кончилось место, чужой формат) — строка не теряется: она сохраняется
+  // отдельно (practice.v1.broken) до того, как приложение что-либо запишет поверх; дальше — с пустого, а копии на
+  // устройстве (snapshots.js) и папка Melete помогут вернуть данные
+  let raw = null;
+  try { raw = storage && storage.getItem(LS); } catch { raw = null; }
+  if (raw) {
+    try { const p = JSON.parse(raw); if (p && p.version === 1 && typeof p === 'object') state = p; else broken = true; }
+    catch { broken = true; }
+    if (broken) { try { storage.setItem(LS + '.broken', raw); storage.setItem(LS + '.brokenAt', String(now())); } catch { /* места нет — хотя бы не затираем молча ниже */ } }
+  }
   state = normalize(state);
   // Переход на печати: всё, что записано до них, — подтверждено (один раз; позже записи без печати — нет)
   if (!state.settings.sealed) {
@@ -99,12 +103,14 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
   };
 
   const write = () => {
-    try { storage && storage.setItem(LS, JSON.stringify(state)); } catch { /* нет места или запрещено */ }
+    try { storage && storage.setItem(LS, JSON.stringify(state)); } catch (e) { onWriteFail(e); }
   };
   const emit = () => subs.forEach((fn) => fn(state));
 
   const store = {
     get state() { return state; },
+    // данные при запуске не прочитались (сохранены в practice.v1.broken)
+    broken,
     now,
 
     save() {

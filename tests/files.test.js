@@ -29,4 +29,16 @@ describe('файлы', () => {
     expect(f.list('audio')).toEqual([]);
     expect(n).toBe(3);
   });
+
+  it('нет места в базе: файл в памяти помечен, сигнал onWriteFail, база не считается пропавшей', async () => {
+    const db = { transaction() { const t = { objectStore: () => ({ put() { setTimeout(() => { t.error = new DOMException('full', 'QuotaExceededError'); t.onabort(); }, 0); return {}; }, getAll() { const r = {}; setTimeout(() => { r.result = []; t.oncomplete(); }, 0); return r; } }) }; return t; } };
+    const idb = { open() { const r = {}; setTimeout(() => { r.result = db; r.onsuccess(); }, 0); return r; } };
+    const fails = [];
+    const f = createFiles({ indexedDB: idb, onWriteFail: (e, rec) => fails.push([e.name, rec.id]) });
+    await f.ready;
+    expect(await f.add({ id: 'big', name: 'x' })).toBe(false);
+    expect(fails).toEqual([['QuotaExceededError', 'big']]);
+    expect(f.get('big').unsaved).toBe(true);
+    expect(f.noDb).toBeFalsy();
+  });
 });

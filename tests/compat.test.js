@@ -45,3 +45,33 @@ describe('совместимость данных прошлых версий', 
     });
   }
 });
+
+describe('повреждённые данные при запуске', () => {
+  const box = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
+  it('нечитаемая строка сохраняется отдельно и не затирается', () => {
+    const st = box(), bad = '{"version":1,"songs":[{"id":"a","title":"Моя песня"'; // оборванная запись
+    st.setItem(LS, bad);
+    const s = createStore({ storage: st, now: () => 1000 });
+    expect(s.broken).toBe(true);
+    expect(st.getItem(LS + '.broken')).toBe(bad);
+    s.save();
+    expect(st.getItem(LS + '.broken')).toBe(bad);
+  });
+  it('целые данные — без тревоги', () => {
+    const st = box();
+    st.setItem(LS, JSON.stringify({ version: 1, songs: [], sessions: [], settings: {} }));
+    expect(createStore({ storage: st, now: () => 1 }).broken).toBe(false);
+    expect(st.getItem(LS + '.broken')).toBe(null);
+  });
+});
+
+describe('нет места при записи', () => {
+  it('сбой записи не молчит: onWriteFail', async () => {
+    const { createStore } = await import('../src/core/store.js');
+    const fails = [];
+    const storage = { getItem: () => null, setItem: () => { throw new DOMException('full', 'QuotaExceededError'); } };
+    const s = createStore({ storage, onWriteFail: (e) => fails.push(e.name) });
+    s.save ? s.save() : s.update?.((x) => x);
+    expect(fails.length).toBeGreaterThan(0);
+  });
+});
