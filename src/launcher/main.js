@@ -4,6 +4,7 @@
 import { pickHome } from './homepick.js';
 import { startDiag, markShown, dlog } from './diag.js';
 import './launcher.css';
+import './character.css';
 import { prefs, isChurch, HOME_MAX, save } from './data.js';
 import { initI18n, t } from './i18n.js';
 import { applyLook } from './look.js';

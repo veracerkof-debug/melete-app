@@ -46,6 +46,8 @@ export function openSheet({ title, kicker, render, full = false, onClose, onSwip
   const wrap = h('div', { class: 'l-sheet-wrap' }, scrim, panel);
   document.querySelector('#l').append(wrap);
   requestAnimationFrame(() => wrap.classList.add('open'));
+  // содержимое появляется по очереди, в манере стиля (character.css); перерисовка потом — без повторов
+  wrap.classList.add('stag'); setTimeout(() => wrap.classList.remove('stag'), 700);
   let closed = false;
   const entry = {};
   const close = () => {

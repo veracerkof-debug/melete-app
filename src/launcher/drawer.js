@@ -341,6 +341,7 @@ export function openFolder(id) {
   });
 }
 
+let stagT;
 export function openDrawer(focus = false) {
   if (open) return;
   open = true;
@@ -352,6 +353,8 @@ export function openDrawer(focus = false) {
   search.value = '';
   fill();
   list.scrollTop = 0;
+  // открыли не пальцем (пальцем список уже на виду) — строки появляются по очереди, в манере стиля (character.css)
+  if (drawer.style.visibility !== 'visible') { drawer.classList.add('stag'); clearTimeout(stagT); stagT = setTimeout(() => drawer.classList.remove('stag'), 700); }
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   setCover('bottom', true);

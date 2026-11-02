@@ -5,6 +5,7 @@ import { styleOf } from './styles.js';
 import { accentVars } from '../core/palettes.js';
 import { prefs } from './data.js';
 import { isNative, Launcher } from './native.js';
+import framesCss from './frames.css?raw';
 
 export const THEMES = ['light', 'dark', 'oled'];
 const ACCENT = 'orange';
@@ -70,14 +71,20 @@ export function applyLook(de = document.documentElement) {
 }
 
 // Кошелёк и блокнот — отдельные страницы (iframe): тот же вид, что у главного — цвета темы, шрифты, акцент
-const VARS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--tint', '--tint-text', '--on-tint', '--red', '--font', '--l-display'];
-export function themeDoc(doc) {
+const VARS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--tint', '--tint-text', '--on-tint', '--red', '--font', '--l-display',
+  '--l-acc', '--l-pan', '--l-hi', '--l-lo'];
+export function themeDoc(doc, page) {
   const de = doc?.documentElement;
   if (!de) return;
   const cs = getComputedStyle(document.documentElement);
   VARS.forEach((v) => { const x = cs.getPropertyValue(v).trim(); if (x) de.style.setProperty(v, x); });
   de.style.setProperty('--serif', cs.getPropertyValue('--l-display').trim());
   if ('mono' in document.documentElement.dataset) de.dataset.mono = ''; else delete de.dataset.mono;
+  // стиль главного — и здесь: форма клавиш, значков, полос, строк (frames.css); page — какая страница
+  const style = document.documentElement.dataset.style;
+  if (style) de.dataset.style = style; else delete de.dataset.style;
+  if (page) de.dataset.page = page;
+  if (!doc.getElementById('l-char') && doc.head) { const c = doc.createElement('style'); c.id = 'l-char'; c.textContent = framesCss; doc.head.append(c); }
   const bg = cs.getPropertyValue('--bg').trim(), m = bg.match(/^#([0-9a-f]{6})$/i);
   const dark = m && (0.299 * parseInt(m[1].slice(0, 2), 16) + 0.587 * parseInt(m[1].slice(2, 4), 16) + 0.114 * parseInt(m[1].slice(4, 6), 16)) / 255 < 0.5;
   de.style.colorScheme = dark ? 'dark' : 'light';
@@ -96,5 +103,5 @@ export function themeDoc(doc) {
   }
 }
 export function themeFrames() {
-  document.querySelectorAll('iframe.l-money').forEach((f) => { try { themeDoc(f.contentDocument); } catch { /* ещё грузится */ } });
+  document.querySelectorAll('iframe.l-money').forEach((f) => { try { themeDoc(f.contentDocument, f.classList.contains('l-notes') ? 'notes' : 'money'); } catch { /* ещё грузится */ } });
 }

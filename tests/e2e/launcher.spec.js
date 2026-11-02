@@ -659,3 +659,25 @@ test('крест в стилях — на своём месте: полоса, �
   expect(hgt).toBeLessThanOrEqual(170);
   expect(errors).toEqual([]);
 });
+
+test('характер стиля на всех экранах: кошелёк и блокнот получают стиль, «Все приложения» появляются в манере стиля', async ({ page, errors }) => {
+  await open(page, { style: 'tele', mono: false });
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer.stag')).toHaveCount(1);
+  await expect(page.locator('.l-drawer.stag')).toHaveCount(0, { timeout: 2000 }); // снимается сам
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  await page.keyboard.press('ArrowRight');
+  const notes = page.frameLocator('iframe.l-notes');
+  await expect(notes.locator('html')).toHaveAttribute('data-page', 'notes');
+  await expect(notes.locator('html')).toHaveAttribute('data-style', 'tele');
+  await page.evaluate(() => window.__launcherBack());
+  await page.waitForTimeout(500);
+  await page.evaluate(() => window.__homeFocus());
+  await page.keyboard.press('ArrowLeft');
+  const money = page.frameLocator('iframe.l-money:not(.l-notes)');
+  await expect(money.locator('html')).toHaveAttribute('data-style', 'tele');
+  await expect(money.locator('html')).toHaveAttribute('data-page', 'money');
+  await expect(money.locator('#l-char')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
