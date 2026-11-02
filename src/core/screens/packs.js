@@ -1,7 +1,7 @@
 // Пакеты моделей на экране «Модули и функции» и в модулях (ctx.packs): скачать, ход, отменить, удалить (src/core/packs.js)
 import { t } from '../../i18n/index.js';
 import { esc, confirm, toast } from '../../ui/index.js';
-import { packList, packMeta, hasPack, packState, packCheck, downloadPack, cancelPack, removePack, onPacks } from '../packs.js';
+import { packList, packMeta, hasPack, packState, packCheck, downloadPack, cancelPack, removePack, onPacks, packUrl } from '../packs.js';
 
 const mb = (b) => Math.max(1, Math.round(b / 1048576));
 // Почему не скачалось — коротко и по-человечески
@@ -57,4 +57,4 @@ export function bindPacks(el) {
 }
 
 // Для модулей (ctx.packs): модуль показывает строку пакета и подписывается на изменения
-export const packsApi = { row: packRow, ask: askPack, has: hasPack, state: packState, meta: packMeta, cancel: cancelPack, onChange: onPacks };
+export const packsApi = { row: packRow, ask: askPack, has: hasPack, state: packState, meta: packMeta, cancel: cancelPack, onChange: onPacks, url: packUrl };

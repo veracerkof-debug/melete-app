@@ -1203,7 +1203,10 @@ function menuSheet(id) {
   const body = () => {
     const songs = ctx.songs();
     return ui.snav(x.name) + '<div class="mlmh">' + artHTML(x, 'big') + '<div><b>' + esc(x.name) + '</b><div class="l2" style="font-size:13px">' + [x.dur ? fmtT(x.dur) : '', sizeMb(x)].filter(Boolean).join(' · ') +
-      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="send">' + t('shareRec') + '</button><button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
+      '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="send">' + t('shareRec') + '</button>' +
+      // конвертер (src/modules/convert): «Поделиться как …» — в нужном формате одним касанием, «Конвертировать…» — с настройкой
+      (ctx.hasTool && ctx.hasTool('convert') ? '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' : '') +
+      '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
       '<div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>';
@@ -1216,8 +1219,17 @@ function menuSheet(id) {
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
     else if (m === 'send') shareRec(x, b);
+    else if (m === 'conv') { sh.close(); ctx.openIn('convert', { inbox: { ids: [x.id] } }); }
+    else if (m === 'shareAs') shareAsSheet(x, sh);
     else if (m === 'del') { sh.close(); removeTrack(x); }
   }));
+}
+
+// Поделиться как MP3 / M4A / OGG / WAV / FLAC: конвертер делает файл (он же — в медиатеке) и сразу отдаёт «Поделиться»
+function shareAsSheet(x, parent) {
+  const { t, ui } = ctx, F = [['mp3', 'MP3'], ['m4a', 'M4A'], ['opus', 'OGG (Opus)'], ['wav', 'WAV'], ['flac', 'FLAC']];
+  ui.sheet(() => ui.snav(t('shareAs')) + '<div class="group">' + F.map(([k, l]) => '<button class="cell act" data-sf="' + k + '">' + l + '</button>').join('') + '</div><p class="ftr">' + t('shareAsHint') + '</p>',
+    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-sf]'); if (!b) return; sh.close(); if (parent) parent.close(); ctx.openIn('convert', { inbox: { ids: [x.id], fmt: b.dataset.sf, share: true } }); }));
 }
 
 // Поделиться записью (Telegram, почта, другое приложение — системный выбор; на компьютере — «Сохранить как»): файл как есть

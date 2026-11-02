@@ -251,5 +251,8 @@
   "rpre.def": "Asli: 50 · 75 · 90 · 100",
   "shareRec": "Ulashish",
   "shareFail": "Yozuvni ulashib boʻlmadi",
-  "stems.packHint": "Ajratish uchun model kerak — «Vokal va cholgʻu» paketi, bir marta yuklanadi."
+  "stems.packHint": "Ajratish uchun model kerak — «Vokal va cholgʻu» paketi, bir marta yuklanadi.",
+  "shareAs": "… sifatida ulashish",
+  "convertTo": "Konvertatsiya…",
+  "shareAsHint": "Bu formatdagi fayl mediatekada ham paydo boʻladi"
 }

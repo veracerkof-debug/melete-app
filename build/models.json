@@ -3,7 +3,8 @@
   "packs": {
     "_": "Пакеты (DECISIONS 2026-10-28, модульность шаг 2): модели с полем pack не встраиваются в сборку перечисленных систем, а скачиваются по кнопке из релиза packs (build/packs.mjs, build/packs.json, src/core/packs.js). Windows — всё встроено (решение автора 28.10: «не телефон, память до трёх гигов нормально»)",
     "piano": ["android"],
-    "vocals": ["android"]
+    "vocals": ["android"],
+    "ffmpeg": ["android"]
   },
   "models": [
     {
@@ -135,6 +136,22 @@
       "platform": "windows",
       "optional": true,
       "what": "YourMT3+ — шаг многоканального декодера T5 (13 групп инструментов, кеш [P,L,2,N,H,DK]); ноты со слуха на компьютере (src-tauri/src/notes.rs)"
+    },
+    {
+      "file": "public/models/ffmpeg/ffmpeg-core.js",
+      "pack": "ffmpeg",
+      "url": "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js",
+      "sha256": "67a48f11645f85439f3fde4f2119042c16b374b910206b7a7a24f342e28dcae3",
+      "bytes": 111804,
+      "what": "FFmpeg 0.12.10 в WebAssembly (@ffmpeg/core, GPL-2.0-or-later) — конвертер: читает любые форматы и пишет ALAC, Vorbis, WMA, AC3, AAC (src/audio/convert/ffmpeg.js); телефон — пакетом по кнопке, компьютер — в сборке"
+    },
+    {
+      "file": "public/models/ffmpeg/ffmpeg-core.wasm",
+      "pack": "ffmpeg",
+      "url": "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm",
+      "sha256": "9f57947a5bd530d8f00c5b3f2cb2a3492faa7e5d823315342d6a8656d0a6b7b7",
+      "bytes": 32232419,
+      "what": "FFmpeg 0.12.10 в WebAssembly (@ffmpeg/core, GPL-2.0-or-later) — конвертер: читает любые форматы и пишет ALAC, Vorbis, WMA, AC3, AAC (src/audio/convert/ffmpeg.js); телефон — пакетом по кнопке, компьютер — в сборке"
     }
   ]
 }
