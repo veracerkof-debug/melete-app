@@ -64,3 +64,14 @@ describe('повреждённые данные при запуске', () => {
     expect(st.getItem(LS + '.broken')).toBe(null);
   });
 });
+
+describe('нет места при записи', () => {
+  it('сбой записи не молчит: onWriteFail', async () => {
+    const { createStore } = await import('../src/core/store.js');
+    const fails = [];
+    const storage = { getItem: () => null, setItem: () => { throw new DOMException('full', 'QuotaExceededError'); } };
+    const s = createStore({ storage, onWriteFail: (e) => fails.push(e.name) });
+    s.save ? s.save() : s.update?.((x) => x);
+    expect(fails.length).toBeGreaterThan(0);
+  });
+});

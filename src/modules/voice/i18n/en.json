@@ -51,6 +51,7 @@
   "discardYes": "Delete",
   "micDenied": "No microphone access. It can be allowed in the phone settings.",
   "micNone": "The microphone is unavailable — another app may be using it.",
+  "micMissing": "No microphone found — no input is connected.",
   "fileName": "Recording {d} {t}",
   "st.idle": "Ready",
   "st.rec": "Recording",

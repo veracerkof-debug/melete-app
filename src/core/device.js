@@ -55,6 +55,8 @@ const lastSaved = new WeakMap(); // хранилище → последняя з
 export const lockDevice = (v = true) => { locked = v; };
 // soft — страховочная запись (закрытие инструмента, уход в фон): если с прошлой записи хранилище поменял кто-то другой,
 // его версия остаётся (обычное сохранение после правки пишет всегда)
+let onFail = () => {};
+export const onDeviceWriteFail = (fn) => { onFail = fn || (() => {}); };
 export function saveDevice(d, storage = globalThis.localStorage, { soft = false } = {}) {
   if (locked || !storage) return;
   const j = JSON.stringify(d), last = lastSaved.get(storage);
@@ -62,5 +64,5 @@ export function saveDevice(d, storage = globalThis.localStorage, { soft = false 
   try {
     if (soft && storage.getItem(LS_T) !== (last ?? null)) return;
     storage.setItem(LS_T, j); lastSaved.set(storage, j);
-  } catch { /* ignore */ }
+  } catch (e) { onFail(e); }
 }

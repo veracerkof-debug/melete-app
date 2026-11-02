@@ -33,7 +33,8 @@ export async function openInput(c, deviceId) {
   if (deviceId && deviceId !== -1 && typeof deviceId === 'string') audio.deviceId = { exact: deviceId };
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio }); } catch (e) {
-    throw Object.assign(new Error(e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable'), { reason: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' });
+    const why = e && e.name === 'NotAllowedError' ? 'denied' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable';
+    throw Object.assign(new Error(why), { reason: why });
   }
   const src = c.createMediaStreamSource(stream);
   return { stream, src, stop() { stream.getTracks().forEach((t) => t.stop()); try { src.disconnect(); } catch { /* уже */ } } };

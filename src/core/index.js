@@ -6,7 +6,7 @@ import { t, initI18n, getLang, CORE_DICTS } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
-import { loadDevice, saveDevice } from './device.js';
+import { loadDevice, saveDevice, onDeviceWriteFail } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
 import { applyTheme, tabsMigrate, calmMigrate, mascotOf } from './settings.js';
@@ -72,7 +72,15 @@ export function boot(root) {
   let clock = null;
   // коды и проверка создателем убраны: если проверка шла — настоящие данные возвращаются из копии (до чтения данных)
   const { restored } = dropTestMode();
-  const store = createStore({ clockBad: () => !!(clock && clock.bad) });
+  // Запись в хранилище не прошла (нет места) — в журнал и сообщение не чаще раза в минуту: потеря не бывает молчаливой
+  let writeFailAt = 0;
+  const writeFail = (where) => (e) => {
+    const n = Date.now(); if (n - writeFailAt < 60000) return; writeFailAt = n;
+    try { log('store', 'запись не прошла (' + where + '): ' + (e && (e.name || e.message)), 'e'); } catch { /* */ }
+    setTimeout(() => { try { toast(t('data.noSpace')); } catch { /* */ } }, 0);
+  };
+  onDeviceWriteFail(writeFail('настройки'));
+  const store = createStore({ clockBad: () => !!(clock && clock.bad), onWriteFail: writeFail('данные') });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   const st0 = store.state.settings;
   if (tabsMigrate(st0)) store.settingsChanged();
@@ -161,7 +169,7 @@ export function boot(root) {
   // после перезагрузки: «вдали», начатое при закрытии страницы, заканчивается сразу
   setTimeout(awayCheck, 0);
 
-  const files = createFiles();
+  const files = createFiles({ onWriteFail: writeFail('файлы') });
 
   // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
   async function confirmUpload() {

@@ -597,6 +597,7 @@
   "accent.graphite": "graphite",
   "data.title": "Data",
   "data.broken": "The data could not be read. It can be restored: Profile → Data and backups → “Copies on the device”.",
+  "data.noSpace": "Data is not being saved: the device is out of space. Free some space and saving will resume.",
   "data.export": "Save a backup",
   "data.import": "Load from file",
   "data.hint": "Everything stays on this device. A backup goes to the Melete folder or via “Share”. Loading never deletes anything.",

@@ -71,7 +71,8 @@ function safeStorage() {
 }
 
 // clockBad() — часы устройства сбиты (src/core/clock.js): записи в это время не подтверждаются
-export function createStore({ storage = safeStorage(), now = Date.now, clockBad = () => false } = {}) {
+// onWriteFail(e) — запись не прошла (нет места, запрещено): сказать человеку, не молчать
+export function createStore({ storage = safeStorage(), now = Date.now, clockBad = () => false, onWriteFail = () => {} } = {}) {
   const subs = new Set();
   let state = blank(), broken = false;
   // Данные не читаются (запись оборвалась, кончилось место, чужой формат) — строка не теряется: она сохраняется
@@ -102,7 +103,7 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
   };
 
   const write = () => {
-    try { storage && storage.setItem(LS, JSON.stringify(state)); } catch { /* нет места или запрещено */ }
+    try { storage && storage.setItem(LS, JSON.stringify(state)); } catch (e) { onWriteFail(e); }
   };
   const emit = () => subs.forEach((fn) => fn(state));
 

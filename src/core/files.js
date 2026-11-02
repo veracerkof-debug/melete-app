@@ -5,7 +5,11 @@
 
 const DB = 'practice-audio', STORE = 'tracks';
 
-export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
+// onWriteFail(e, rec) — файл не лёг в базу (нет места): сказать человеку, файл живёт только до закрытия
+// Нет места: имя ошибки по стандарту и старое имя Firefox (коды 22 / 1014)
+export const isQuota = (e) => !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+
+export function createFiles({ indexedDB = globalThis.indexedDB, onWriteFail = () => {} } = {}) {
   let dbP = null;
   const all = [], subs = new Set();
   const emit = () => subs.forEach((fn) => fn());
@@ -27,7 +31,7 @@ export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
   }));
 
   // Поля, которые не сохраняем (служебные, на время работы)
-  const clean = (r) => { const c = { ...r }; delete c._busy; return c; };
+  const clean = (r) => { const c = { ...r }; delete c._busy; delete c.unsaved; return c; };
 
   const files = {
     noDb: false, // хранилище недоступно — файлы живут до перезагрузки
@@ -43,7 +47,7 @@ export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
       all.push(rec);
       emit();
       try { await tx('readwrite', (st) => st.put(clean(rec))); return true; }
-      catch { files.noDb = true; return false; }
+      catch (e) { const full = isQuota(e); if (full) { rec.unsaved = true; onWriteFail(e, rec); } else files.noDb = true; return false; }
     },
     // Перечитать файл из базы: выбранный на Android файл (content://) часто нельзя читать с середины,
     // а сохранённая копия — обычный файл на диске; true — получилось
@@ -55,7 +59,7 @@ export function createFiles({ indexedDB = globalThis.indexedDB } = {}) {
       return false;
     },
     // Сохранить изменения записи (имя, привязки к песням, волна)
-    save(rec) { emit(); return tx('readwrite', (st) => st.put(clean(rec))).catch(() => {}); },
+    save(rec) { emit(); return tx('readwrite', (st) => st.put(clean(rec))).catch((e) => { if (isQuota(e)) onWriteFail(e, rec); }); },
     remove(id) {
       const i = all.findIndex((r) => r.id === id);
       if (i >= 0) all.splice(i, 1);

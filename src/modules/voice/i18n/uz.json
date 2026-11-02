@@ -51,6 +51,7 @@
   "discardYes": "Oʻchirish",
   "micDenied": "Mikrofonga ruxsat yoʻq. Uni telefon sozlamalarida yoqish mumkin.",
   "micNone": "Mikrofon mavjud emas — ehtimol, boshqa ilova band qilgan.",
+  "micMissing": "Mikrofon topilmadi — ulangan kirish yoʻq.",
   "fileName": "Yozuv {d} {t}",
   "st.idle": "Yozishga tayyor",
   "st.rec": "Yozilmoqda",
