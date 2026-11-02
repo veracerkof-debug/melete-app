@@ -8,7 +8,7 @@ export const HUES = ['orange', 'red', 'yellow', 'green', 'mint', 'teal', 'cyan',
 
 // soft — светлые цвета: текст акцентом и «опасные» кнопки темнее самого цвета (иначе на белом не читается)
 export const PALETTES = {
-  classic: { orange: '#9C7242', red: '#A75750', yellow: '#AE934D', green: '#5F8568', mint: '#4A8681', teal: '#548591', cyan: '#5988A7',
+  classic: { orange: '#946B3E', red: '#A75750', yellow: '#AE934D', green: '#5F8568', mint: '#4A8681', teal: '#548591', cyan: '#5988A7',
     blue: '#567198', indigo: '#646493', purple: '#866B9D', pink: '#A95E72', brown: '#A2845E', graphite: '#8E8E93' },
   bright: { orange: '#FF9500', red: '#FF3B30', yellow: '#FFCC00', green: '#34C759', mint: '#00C7BE', teal: '#30B0C7', cyan: '#32ADE6',
     blue: '#007AFF', indigo: '#5856D6', purple: '#AF52DE', pink: '#FF2D55', brown: '#A2845E', graphite: '#8E8E93' },

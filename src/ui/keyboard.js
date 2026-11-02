@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 // Клавиатура пианино (разметка): пианино, гаммы и аккорды на клавишах. Перенесено из legacy/practice.html (kbHTML).
 import './keyboard.css';
 import { mName } from '../music/notes.js';
@@ -22,5 +23,6 @@ export function kbHTML(m0, nw, hl, root, keys = null) {
     } else if (wi > 0) bs += '<div class="b' + h + '" data-m="' + m + '" role="button" aria-label="' + nm + '" style="left:' + (wi * 100) / nw + '%">' + kq(m) + '</div>';
     m++;
   }
-  return '<div class="kbwrap"><div class="kb" style="--n:' + nw + '">' + ws + bs + '</div></div>';
+  // прокручиваемая клавиатура доступна и с клавиатуры компьютера (Tab → стрелки прокручивают)
+  return '<div class="kbwrap" tabindex="0" role="group" aria-label="' + t('kb.aria') + '"><div class="kb" style="--n:' + nw + '">' + ws + bs + '</div></div>';
 }

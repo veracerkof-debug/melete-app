@@ -70,7 +70,7 @@
 .eopt.ok{background:#34C759}
 .ekeys{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-height:150px}
 .ekb .kb{height:clamp(140px,30cqh,240px)!important}
-.ekb .kb .w span{font-size:12px;color:#8a8a8e}
+.ekb .kb .w span{font-size:12px;color:#6e6e73}
 .ekb .kb .w.eok{background:#c9f2d3}
 .ekb .kb .b.eok{background:#34C759}
 .ekb .kb .w.ebad{background:#ffd3cf}

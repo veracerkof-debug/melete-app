@@ -1602,6 +1602,7 @@ export default {
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    { const a = c.store.all(); if (a.sortOnce) { ML.sort = a.sortOnce; delete a.sortOnce; c.store.save(); } } // «Освободить место» — крупные сверху
     ensureEl(c);
     input = document.createElement('input');
     input.type = 'file';

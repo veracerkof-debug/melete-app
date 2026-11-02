@@ -4,7 +4,7 @@
 // своих данных. Всё остальное — по умолчанию (Мелетий, классические напоминания, церковный режим, демо-набор);
 // имя Мелетий спрашивает уже на главной (askName). Соглашение — в настройках («О Melete»).
 import '../../ui/onboard.css';
-import { t, getLang, LANGS, LANG_NAMES, initI18n } from '../../i18n/index.js';
+import { t, getLang, LANGS, LANG_NAMES, initI18n, loadLang } from '../../i18n/index.js';
 import { esc, toast } from '../../ui/index.js';
 import { PRIOR_MAX, GOAL_BY_LEVEL, LEVELS, LEVEL_FROM, newProfile, saveProfile, applyLevelDefaults, toolsFor, levelByHours } from '../profile.js';
 import { modules, moduleById } from '../../modules/index.js';
@@ -146,7 +146,7 @@ export function langGate(app, then = () => {}) {
   document.body.appendChild(l);
   l.addEventListener('click', (e) => {
     const b = e.target.closest('[data-lg]');
-    if (b) { st.lang = b.dataset.lg; initI18n(st.lang); render(); return; }
+    if (b) { st.lang = b.dataset.lg; loadLang(st.lang).then(() => { initI18n(st.lang); render(); }); return; }
     if (!e.target.closest('[data-wlgo]')) return;
     st.lang = st.lang || getLang();
     app.store.settingsChanged();

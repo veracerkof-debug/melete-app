@@ -294,15 +294,17 @@ export function openStage(app, evId, i = 0) {
       fit();
     }
   };
-  // строки не переносятся (аккорд — над своим слогом): шрифт уменьшается, пока самая длинная строка не поместится;
-  // A− / A+ задают наибольший размер
+  // строки не переносятся (аккорд — над своим слогом): шрифт уменьшается, пока самая длинная строка не поместится,
+  // и так, чтобы самый длинный куплет (блок между пустыми строками) был виден целиком — без прокрутки посреди куплета;
+  // по высоте не мельче 16 px (песня без пустых строк — один «куплет»). A− / A+ и щипок задают наибольший размер
   const fit = () => {
     const tx = S.el && S.el.querySelector('.sgtext'), ly = tx && tx.querySelector('.lyr');
     if (!tx) return;
     if (!ly) { tx.style.fontSize = S.fs + 'px'; return; }
-    const cols = Math.max(1, ...ly.textContent.split('\n').map((l) => l.length)), w = tx.clientWidth - 36;
-    tx.style.fontSize = Math.max(12, Math.min(S.fs, Math.floor(w / (cols * 0.61)))) + 'px';
+    const fs = stageFont(ly.textContent, tx.clientWidth - 36, tx.clientHeight - 24, S.fs, lineK(ly));
+    tx.style.fontSize = fs + 'px';
   };
+  const lineK = (el) => { const cs = getComputedStyle(el), lh = parseFloat(cs.lineHeight), f = parseFloat(cs.fontSize); return lh > 0 && f > 0 ? lh / f : 1.45; };
   const onResize = () => fit();
   // вспышка доли (видно без звука в наушниках)
   const beat = ({ level, ms }) => S.timers.push(setTimeout(() => {
@@ -359,4 +361,16 @@ export function resumeStage(app) {
   try { r = JSON.parse(localStorage.getItem(RESUME) || 'null'); } catch { r = null; }
   if (!resumeOk(r) || !evOf(app, r.ev)) { try { localStorage.removeItem(RESUME); } catch { /* */ } return; }
   openStage(app, r.ev, r.i);
+}
+
+// Размер шрифта сцены: самая длинная строка — в ширину w, самый длинный куплет — в высоту h (не мельче 16 px по высоте),
+// не больше max (A− / A+). k — высота строки в долях шрифта. Чистая функция — tests/stage.test.js
+export function stageFont(text, w, h, max, k = 1.45) {
+  const lines = String(text || '').split('\n');
+  const cols = Math.max(1, ...lines.map((l) => l.length));
+  let block = 0, cur = 0;
+  lines.forEach((l) => { if (l.trim()) { cur++; block = Math.max(block, cur); } else cur = 0; });
+  const byW = Math.floor(w / (cols * 0.61));
+  const byH = h > 0 && block ? Math.max(16, Math.floor(h / (block * k))) : max;
+  return Math.max(12, Math.min(max, byW, byH));
 }

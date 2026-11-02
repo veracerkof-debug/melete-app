@@ -7,7 +7,7 @@ import { isDesktop } from '../desktop.js';
 import { logErr } from '../log.js';
 import { updateSheet, variantsSheet } from './update.js';
 import { DEV } from '../variants.js';
-import { t, tn, getLang, LANGS, LANG_NAMES } from '../../i18n/index.js';
+import { t, tn, getLang, LANGS, LANG_NAMES, loadLang } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
 import { sortable } from '../../ui/hold.js';
@@ -49,7 +49,7 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
-import { pcOf, pair, syncNow, forgetPc, PORT } from '../sync.js';
+import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT } from '../sync.js';
 import { setlistsOf } from '../guest.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
@@ -386,7 +386,7 @@ let syncMsg = '', syncBusy = false, syncAddr = '';
 const hostPort = (st) => (st.port && st.port !== PORT ? ':' + st.port : '');
 // «Компьютер забыл этот телефон»: старый ключ не поможет — сразу форма подключения с прежним адресом, нужен только код
 function onSyncErr(e) {
-  if (e && e.reason === 'key') { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); } }
+  if (e && (e.reason === 'key' || e.reason === 'pin')) { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); } }
   return syncErr(e);
 }
 const ago = (ts) => { if (!ts) return t('sy.never'); const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('sy.just') : m < 60 ? t('sy.min', { n: m }) : new Date(ts).toLocaleString(); };
@@ -396,19 +396,21 @@ function syncHTML(app) {
     const st = S.state, peers = S.peers;
     return '<div class="hdr">' + t('sy.pcTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + t('sy.pcSw') + '</span>' + psw('syncSrv', st.on, t('sy.pcSw')) + '</div>' +
       (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc((st.ips[0] || '—')) + '</b>' + (st.ips.length > 1 ? '<span class="l2">' + esc(st.ips.slice(1).join(', ')) + '</span>' : '') +
-        '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b></div>' : '') +
+        '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
+        (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') + '</div>' : '') +
       peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
       '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
       '</div><p class="ftr">' + (st.err === 'port' && !st.on ? '<b class="danger">' + t('sy.err.port2') + '</b><br>' : '') + t('sy.pcHint') + '</p>';
   }
   if (!Capacitor.isNativePlatform()) return '';
   const pc = pcOf();
+  if (!pc && !syncAddr && oldPc()) { syncAddr = oldPc(); if (!syncMsg) syncMsg = t('sy.err.repair'); } // связь стала защищённой — один раз заново
   if (!pc) return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group">' +
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" value="' + esc(syncAddr) + '" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
     '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
-  return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + '</span></span></div>' +
+  return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + (pc.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(pc.fp)) : '') + '</span></span></div>' +
     '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
     '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
     '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
@@ -585,7 +587,7 @@ export function createPanel(app, onChange) {
   setInterval(() => { const el = document.querySelector('[data-sndload]'); if (!el) return; const m = app.audio.load; if (m && m.ready) el.textContent = Math.round(m.value * 100) + ' %'; }, 1000);
   let page = null, layer = null, input = null, lastPage = null;
   // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
-  const relang = () => { app.relang(); render(); onChange(); };
+  const relang = () => { const st = app.store.state.settings; loadLang(st.lang).then(() => { app.relang(); render(); onChange(); }); };
   const render = () => {
     if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; return; }
     if (!layer) {
@@ -723,7 +725,7 @@ export function createPanel(app, onChange) {
         const addr = layer.querySelector('[data-sy="addr"]').value, code = layer.querySelector('[data-sy="code"]').value;
         syncBusy = true; syncMsg = t('sy.pairing'); render();
         pair(addr, code, t('sy.phoneName'))
-          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }); if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {}); })
+          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }) + (pc.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(pc.fp) : ''); if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {}); })
           .catch((e) => { syncMsg = syncErr(e); })
           .finally(() => { syncBusy = false; render(); });
         return;
@@ -907,6 +909,7 @@ export function legalSheet(kind) {
       lic('DeepFilterNet · tract', t('lic.df.sub'), '<p>© Hendrik Schröter; © Sonos, Inc.</p><p>' + t('lic.df.text') + '</p>') +
       lic('Airwindows', t('lic.aw.sub'), '<p>© Chris Johnson (Airwindows)</p><p>' + t('lic.mit') + '</p>') +
       lic('ureq', t('lic.ureq.sub'), '<p>© Martin Algesten ' + t('lic.andContrib') + '</p><p>' + t('lic.ureq.text') + '</p>') +
+      lic('rustls · rcgen · RustCrypto sha2', t('lic.tls.sub'), '<p>© rustls, rcgen, RustCrypto ' + t('lic.andContrib') + '</p><p>' + t('lic.tls.text') + '</p>') +
       lic('whisper.cpp · Whisper', t('lic.wc.sub'), '<p>© Georgi Gerganov; © OpenAI</p><p>' + t('lic.mit') + '</p><p>' + t('lic.wh.text') + '</p>') +
       lic('TensorFlow.js', t('lic.tf.sub'), '<p>© Google LLC</p><p>' + t('lic.tf.text') + '</p>') +
       lic('@tonejs/midi', t('lic.tm.sub'), '<p>© Yotam Mann</p><p>' + t('lic.mit') + '</p>') +

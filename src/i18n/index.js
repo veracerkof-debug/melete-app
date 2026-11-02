@@ -2,12 +2,28 @@
 // el — язык вида «Минимал»: названия (вкладки, инструменты, разделы) — слова Септуагинты и Нового Завета,
 // политоникой; всё остальное — по-русски (чего нет в el, берётся из ru). В обычный список языков не входит.
 import ru from './ru.json';
-import uz from './uz.json';
-import en from './en.json';
 import el from './el.json';
 
-const dicts = { ru, uz, en, el };
+// Русский (запасной для всех) и «Минимал» — сразу; узбекский и английский — отдельными файлами, по выбору языка
+// (main.js ждёт нужный до первой отрисовки; смена языка — loadLang, потом initI18n). Все сразу нужны редко:
+// распознать демо-файлы на любом языке (копии, синхронизация, папка) — loadAllLangs
+const dicts = { ru, el };
 export const CORE_DICTS = dicts;
+const LOADERS = { uz: () => import('./uz.json'), en: () => import('./en.json') };
+export async function loadLang(l) {
+  if (dicts[l] || !LOADERS[l]) return;
+  try { dicts[l] = (await LOADERS[l]()).default; } catch { /* нет файла — строки по-русски */ }
+}
+export const loadAllLangs = () => Promise.all(Object.keys(LOADERS).map(loadLang));
+// Язык до загрузки ядра: из сохранённых настроек, иначе язык системы
+export function guessLang(storage = globalThis.localStorage) {
+  let s = null;
+  try { s = JSON.parse(storage.getItem('practice.v1') || 'null'); } catch { s = null; }
+  const st = (s && s.settings) || {};
+  if (st.uiStyle === 'mono' && st.monoLang !== false) return MONO_LANG;
+  const sys = (globalThis.navigator && navigator.language || 'ru').slice(0, 2);
+  return [st.lang, sys].find((l) => LANGS.includes(l)) || 'ru';
+}
 export const LANGS = ['ru', 'uz', 'en'];
 export const MONO_LANG = 'el';
 // Название языка на нём самом

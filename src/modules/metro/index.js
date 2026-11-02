@@ -93,8 +93,8 @@ function wheelHTML() {
     ticks += '<line x1="' + (100 + r1 * Math.cos(a)).toFixed(1) + '" y1="' + (100 + r1 * Math.sin(a)).toFixed(1) + '" x2="' + (100 + 90 * Math.cos(a)).toFixed(1) +
       '" y2="' + (100 + 90 * Math.sin(a)).toFixed(1) + '"' + (big ? ' class="big"' : '') + '/>';
   }
-  return '<div class="mwheel' + (mode === 'arrows' ? ' nowheel' : '') + '" id="mwheel" role="slider" tabindex="0" aria-label="' + t('tempo') +
-    '" aria-valuemin="20" aria-valuemax="300" aria-valuenow="' + c.bpm + '"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="84" class="wband"/>' +
+  return '<div class="mwheel' + (mode === 'arrows' ? ' nowheel' : '') + '" id="mwheel"><svg viewBox="0 0 200 200" id="mwsl" role="slider" tabindex="0" focusable="true" aria-label="' + t('tempo') +
+    '" aria-valuemin="20" aria-valuemax="300" aria-valuenow="' + c.bpm + '"><circle cx="100" cy="100" r="84" class="wband"/>' +
     (mode === 'arrows' ? '' : '<g id="wticks" class="wticks" style="transform:rotate(' + rot + 'deg)">' + ticks + '</g>') + '<g id="wbeats"></g></svg>' +
     '<div class="wcenter">' + (arrows ? '<div class="wrow">' + ui.icb('data-hold="-1"', ui.icons.left, t('slower'), 'warr') + bpmButton(c) +
       ui.icb('data-hold="1"', ui.icons.right, t('faster'), 'warr') + '</div>' : bpmButton(c)) +
@@ -147,6 +147,8 @@ function drawBeats() {
   const b = host.querySelector('#beats');
   if (!b) return;
   const g = groupsOf(c);
+  // в полоске доли только показываются: точки 12 px — не цель для пальца; акценты — в окне побольше
+  if (size === 'strip') { b.setAttribute('aria-hidden', 'true'); b.innerHTML = c.accents.map((a, i) => '<span class="beat' + (g.has(i) && c.num > 4 ? ' grp' : '') + '" data-beat="' + i + '" data-l="' + a + '"><i></i></span>').join(''); return; }
   b.innerHTML = c.accents.map((a, i) => '<button class="beat' + (g.has(i) && c.num > 4 ? ' grp' : '') + '" data-beat="' + i + '" data-l="' + a +
     '" aria-label="' + t('beatLevel', { n: i + 1, level: t('level.' + a) }) + '"><i></i></button>').join('');
 }
@@ -165,7 +167,7 @@ function updBpm() {
   if (e) { e.textContent = c.bpm; e.setAttribute('aria-label', ctx.t('tempoBtn', { bpm: c.bpm })); }
   const tn = q('#tname');
   if (tn) tn.textContent = tempoName(c.bpm);
-  const w = q('#mwheel');
+  const w = q('#mwsl');
   if (w) w.setAttribute('aria-valuenow', c.bpm);
 }
 
@@ -432,11 +434,11 @@ function bind() {
   on(window, 'pointercancel', wheelUp, true);
 
   on(host, 'keydown', (e) => {
-    if (e.target.id !== 'mwheel') return;
+    if (e.target.id !== 'mwsl') return;
     if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { setBpm(cfg().bpm + 1); e.preventDefault(); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { setBpm(cfg().bpm - 1); e.preventDefault(); }
   });
-  on(host, 'keyup', (e) => { if (e.target.id === 'mwheel' && e.key.startsWith('Arrow')) M().save(); });
+  on(host, 'keyup', (e) => { if (e.target.id === 'mwsl' && e.key.startsWith('Arrow')) M().save(); });
 
   // Стрелки: нажатие — ±1, удержание — быстрее по 2
   let t0 = null, iv = null;

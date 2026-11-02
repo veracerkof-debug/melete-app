@@ -29,7 +29,7 @@
 .mkl.on{background:var(--tint);color:var(--on-tint)}
 .mkb{position:relative;flex:1;display:flex;touch-action:none;user-select:none;-webkit-user-select:none}
 .mw{flex:1;background:#fff;border:1px solid #d1d1d6;border-radius:0 0 7px 7px;margin:0 1px;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
-.mw span{font-size:9px;color:#8a8a8e}
+.mw span{font-size:9px;color:#6e6e73}
 .mw.on{background:color-mix(in srgb,var(--tint) 45%,#fff)}
 .mb{position:absolute;top:0;width:6.6%;margin-left:-3.3%;height:58%;background:#1c1c1e;border-radius:0 0 5px 5px;z-index:2}
 .mb.on{background:var(--tint)}
