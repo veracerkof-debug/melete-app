@@ -97,10 +97,69 @@
 .voice .vc-ico{display:grid;place-items:center;width:24px;height:24px;color:var(--tint)}
 .voice .vc-ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
 /* сокращение усиления ступенями — тонкие полоски под уровнем, загораются, когда ступень работает */
-.voice .vc-gr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;font-size:10.5px;color:var(--l2)}
-.voice .vc-gr span{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px;min-width:0}
-.voice .vc-gr em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.voice .vc-gr i{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
-.voice .vc-gr b{position:absolute;right:0;top:0;bottom:0;width:0;background:var(--tint);transition:width .08s linear}
-.voice .vc-gr s{text-decoration:none;min-width:2.2ch;text-align:right;font-variant-numeric:tabular-nums}
-.voice .vc-gr span.on{color:var(--ink)}
+.vc-gr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;font-size:10.5px;color:var(--l2)}
+.vc-gr span{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px;min-width:0}
+.vc-gr em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-gr i{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
+.vc-gr b{position:absolute;right:0;top:0;bottom:0;width:0;background:var(--tint);transition:width .08s linear}
+.vc-gr s{text-decoration:none;min-width:2.2ch;text-align:right;font-variant-numeric:tabular-nums}
+.vc-gr span.on{color:var(--ink)}
+/* ===== Один экран (02.11.2026): плашка входа · спектр · пресеты · полоса кнопок ===== */
+.voice .vc-inrow{flex:none;display:flex;align-items:stretch;gap:8px;padding:8px 10px 4px}
+.voice .vc-in{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border:0;border-radius:14px;background:var(--fill);color:var(--ink);text-align:left;cursor:pointer}
+.vc-ink{flex:none;display:grid;place-items:center;width:28px;height:28px;color:var(--tint)}
+.vc-ink svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.voice .vc-int{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.voice .vc-int b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice .vc-int .l2{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice .vc-warn{font-size:12.5px;color:#A86A12}
+.voice .vc-lamp{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:72px;min-height:52px;padding:4px 8px;border:0;border-radius:14px;background:var(--fill);color:var(--l2);font:500 11px/1.15 var(--font);text-align:center;cursor:pointer}
+.voice .vc-lamp em{font-style:normal}
+.voice .vc-lamp i{width:12px;height:12px;border-radius:50%;background:var(--l3);transition:background .2s,box-shadow .2s}
+.voice .vc-lamp.wait i{animation:vc-pulse 1.4s ease-in-out infinite}
+.voice .vc-lamp.ok i{background:#3E9B5A;box-shadow:0 0 6px 1px rgba(62,155,90,.55)}
+.voice .vc-lamp.low i{background:#C9A23A}
+.voice .vc-lamp.none i{background:#D2463F}
+.voice .vc-lamp.none,.voice .vc-lamp.clip{color:#C0392B}
+.voice .vc-lamp.clip i{background:#FF3B30;box-shadow:0 0 8px 2px rgba(255,59,48,.75);animation:vc-blink .5s steps(2,start) infinite}
+@keyframes vc-pulse{50%{opacity:.35}}
+.voice .vc-stage{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;padding:6px 10px 8px;cursor:pointer;outline-offset:-2px}
+.voice .vc-stage .vc-spec{flex:1;min-height:56px;height:auto;margin:0;width:100%}
+.voice .vc-stage .vc-time{position:absolute;top:8px;left:0;right:0;text-align:center;font-size:44px;font-weight:300;pointer-events:none}
+.voice .vc-stage .vc-time.dim{color:var(--l2)}
+.voice .vc-stage .vc-state{position:absolute;top:64px;left:0;right:0;margin:0}
+.voice .vc-stage .vc-off{position:absolute;left:12px;right:12px;top:45%;margin:0;text-align:center}
+.voice .vc-stage .vc-bar{flex:none;margin-top:6px;height:8px}
+.voice .vc-err{flex:none;margin:0 12px}
+.voice .vc-pre{flex:none;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 10px 8px}
+.voice .vc-pre::-webkit-scrollbar{display:none}
+.voice .vc-pc{flex:none;min-height:40px;padding:0 14px;border:0;border-radius:999px;background:var(--fill);color:var(--ink);font:500 14px var(--font);cursor:pointer}
+.voice .vc-pc.on{background:var(--tint);color:var(--on-tint);font-weight:600}
+.voice .vc-pc.dirty::after{content:'';display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:currentColor;vertical-align:middle}
+.voice .vc-btn:disabled{opacity:.38;cursor:default}
+.voice .vc-mk{position:relative}
+.voice .vc-mn{position:absolute;top:0;right:0;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:var(--tint);color:var(--on-tint);font-size:11px;font-weight:700;display:grid;place-items:center}
+.voice .vc-mk.flash{animation:vc-flash .35s ease-out}
+@keyframes vc-flash{40%{transform:scale(1.16)}}
+.voice.big .vc-take{flex:1;min-height:0;overflow:auto;padding:8px 10px 0}
+.voice.big .vc-take .vc-wave{height:clamp(110px,32vh,260px)}
+.voice .vc-bot{gap:6px;justify-content:space-between}
+/* шторки диктофона (вне окна модуля) */
+.vcd{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:4px 0 12px}
+.vcd div{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--cell);border-radius:14px;padding:12px 4px;text-align:center;font-size:12px}
+.vcd b{font-size:28px;font-weight:300;font-variant-numeric:tabular-nums}
+.vcd b.hot{color:#D2463F}
+.vc-irow{gap:10px}
+.vc-irow.on .grow{font-weight:600}
+.vc-chk{color:var(--tint);font-weight:700}
+.vc-pacts{flex-wrap:wrap;gap:4px 18px}
+.vc-pname{gap:10px}
+.vc-pname .inp{flex:1;min-width:0}
+.vc-ptabs{margin:10px 0 4px}
+.vcs .vc-lbl{flex:none}
+@container (max-height: 420px){.voice .vc-stage .vc-time{font-size:30px}.voice .vc-inrow{padding-top:4px}.voice .vc-in,.voice .vc-lamp{min-height:44px}}
+.voice .vc-btn svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#vps-head .st{display:block;font-size:12.5px}
+.vcsh .st{display:block;font-size:12.5px;color:var(--l2)}
+.vcsh .vc-irow .grow{display:flex;flex-direction:column}
+@container (max-height: 420px){.voice .vc-bot{padding-top:6px;padding-bottom:6px}.voice .vc-bot .vc-btn{width:46px;height:46px}.voice .vc-bot .vc-btn.main{width:64px;height:64px;box-shadow:0 0 0 4px color-mix(in srgb,#D2463F 18%,transparent)}.voice .vc-pre{padding-bottom:4px}}

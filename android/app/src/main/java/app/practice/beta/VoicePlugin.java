@@ -236,7 +236,8 @@ public class VoicePlugin extends Plugin {
             byte[] bytes = new byte[buf.length * 2];
             byte[] pcm = new byte[2048]; // последние 1024 отсчёта (моно) — для спектра на экране
             int fails = 0;
-            long lastHdr = 0, lastSync = 0, lastSpace = 0;
+            long lastHdr = 0, lastSync = 0, lastSpace = 0, lastRoute = 0;
+            int routedId = rec.getRoutedDevice() == null ? -1 : rec.getRoutedDevice().getId();
             try (RandomAccessFile out = new RandomAccessFile(recFile, "rw")) {
                 out.write(header(0, recRate, recCh)); // размер — каждую секунду: оборвётся — файл всё равно целый
                 while (recording) {
@@ -250,7 +251,9 @@ public class VoicePlugin extends Plugin {
                         AudioRecord again = btIn ? null : open(raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC, null, chMask);
                         if (again == null) { rec = null; ended = true; endReason = "device"; JSObject e = new JSObject(); e.put("reason", "device"); notifyListeners("lost", e); break; }
                         rec = again; fails = 0;
-                        JSObject e = new JSObject(); e.put("reason", "device"); e.put("switched", true); notifyListeners("lost", e);
+                        JSObject e = new JSObject(); e.put("reason", "device"); e.put("switched", true);
+                        if (again.getRoutedDevice() != null) { e.put("dev", devJson(again.getRoutedDevice())); routedId = again.getRoutedDevice().getId(); }
+                        notifyListeners("lost", e);
                         continue;
                     }
                     fails = 0;
@@ -263,6 +266,13 @@ public class VoicePlugin extends Plugin {
                         long pos = out.getFilePointer(), data = recFrames * recCh * 2;
                         out.seek(4); out.write(le4(36 + data)); out.seek(40); out.write(le4(data)); out.seek(pos);
                         if (now - lastSync > 5000) { lastSync = now; try { out.getFD().sync(); } catch (Exception e) { /* как получится */ } }
+                    }
+                    // откуда на самом деле идёт звук: система могла не послушаться выбора или сменить вход на ходу
+                    if (now - lastRoute > 1000) {
+                        lastRoute = now;
+                        AudioDeviceInfo rd = rec.getRoutedDevice();
+                        int rid = rd == null ? -1 : rd.getId();
+                        if (rid != routedId) { routedId = rid; JSObject re = new JSObject(); if (rd != null) re.put("dev", devJson(rd)); notifyListeners("route", re); }
                     }
                     if (!monitor && now - lastSpace > 5000) {
                         lastSpace = now;
@@ -295,6 +305,8 @@ public class VoicePlugin extends Plugin {
         r.put("channels", recCh);
         r.put("bt", bt);
         r.put("routed", dev == null || first.getRoutedDevice() == null ? -1 : first.getRoutedDevice().getId());
+        if (first.getRoutedDevice() != null) r.put("dev", devJson(first.getRoutedDevice()));
+        r.put("raw", src == MediaRecorder.AudioSource.UNPROCESSED);
         call.resolve(r);
     }
 

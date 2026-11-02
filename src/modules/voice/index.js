@@ -15,8 +15,9 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
-import { engine, isLav, KIND } from '../../audio/voiceengine.js';
-import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, migrateVoiceFx } from '../../audio/voicefx.js';
+import { engine, isLav, KIND, devKind } from '../../audio/voiceengine.js';
+import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, migrateVoiceFx, withCue } from '../../audio/voicefx.js';
+import { BUILTIN, isUser, isDirty, applyPreset, saveAs, overwrite, rename, remove as removePreset, migratePresets, normalizePresets } from '../../audio/voicepresets.js';
 import { MODE_IDS, LEVELS, normalizeVoiceSet, editVoiceSet, modeParams, modeLevel } from '../../audio/vocal.js';
 import { normalizeFx } from '../../audio/fx.js';
 import { createLiveFx, openInput, setOutput, levelOf } from '../../audio/livefx.js';
@@ -31,14 +32,28 @@ const I = {
   ear: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>',
   save: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>',
+  mark: '<svg viewBox="0 0 24 24"><path d="M7 3.5h10a1 1 0 0 1 1 1V20l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>',
+  inp: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
+};
+// Вид входа — значок на плашке входа
+const KI = {
+  phone: '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M11 18.5h2"/></svg>',
+  wired: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/></svg>',
+  bt: '<svg viewBox="0 0 24 24"><path d="m7 7.5 10 9-5 4.5V3l5 4.5-10 9"/></svg>',
+  usb: '<svg viewBox="0 0 24 24"><path d="M12 21V4M9 6.5 12 3.5l3 3M12 15l-4.5-3V9.5M12 13l4.5-3V8"/><circle cx="7.5" cy="8.5" r="1.3"/><rect x="15.3" y="6" width="2.4" height="2.4"/><circle cx="12" cy="20" r="1.6"/></svg>',
+  lav: '<svg viewBox="0 0 24 24"><rect x="9.5" y="3" width="5" height="9" rx="2.5"/><path d="M12 12v4M8 21c0-3 2-5 4-5s4 2 4 5"/></svg>',
+  display: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
+  hdmi: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
+  other: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
 };
 const FX_DEF = { denoise: 0, gate: -90, gain: 0, normalize: true }; // своё у диктофона; остальное — общая цепочка (s.chain)
 const RAW_KEEP_DAYS = 14, RAW_KEEP_MIN = 10; // исходники сохранённых записей: не меньше 10 последних и не старше 14 дней
 // Окно уровня: что показывать (настраивается — шестерёнка в окне)
 const METER_DEF = { spec: true, style: 'bars', mode: 'both', clip: -0.3, hold: 2, range: 60, smooth: 'mid' };
 
-let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null, pm = null, pmb = null;
-const S = { gr: null, phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null, kept: [] };
+let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null;
+const S = { marks: [], warned: {}, recDev: null, liveDev: null, inWarn: '', gr: null, phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null, kept: [] };
 
 const st = () => {
   const s = ctx.store.all();
@@ -47,7 +62,12 @@ const st = () => {
   if (!s.voice) { s.voice = migrateVoice(s.fx); ctx.store.save(); } // режимы обработки (2026-11) — из прежних настроек один раз
   s.voice = normalizeVoiceSet(s.voice);
   s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
-  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = []; return s; };
+  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = [];
+  // пресеты (02.11.2026): свой режим или настроенные эффекты становятся своим пресетом «Мой» — звук не меняется
+  if (migratePresets(s, t('preset.mine'))) ctx.store.save();
+  s.presets = normalizePresets(s.presets);
+  if (!s.marksBy || typeof s.marksBy !== 'object') s.marksBy = {}; // метки записей в памяти: путь исходника → [{ t, name }]
+  return s; };
 // Прежние ручки (шумоподавление, гейт, нормализация) → режим: не трогали — «Музыка», трогали — «Свой» с ними
 function migrateVoice(fx = {}) {
   const custom = fx.denoise > 0 || (fx.gate != null && fx.gate > -90) || fx.normalize === false;
@@ -79,17 +99,6 @@ async function loadDevices() {
 }
 const curIn = () => S.devs.inputs.find((d) => String(d.id) === String(st().in)) || null;
 
-function devHTML() {
-  const s = st(), sel = (k, list, cur, def) => '<select class="sortsel" data-v="' + k + '" aria-label="' + esc(t(k === 'in' ? 'in' : 'out')) + '"><option value="">' + esc(def) + '</option>' +
-    list.map((d) => '<option value="' + esc(d.id) + '"' + (String(d.id) === String(cur) ? ' selected' : '') + '>' + esc(devName(d)) + (isLav(d) ? ' · ' + esc(t('lav')) : '') + '</option>').join('') + '</select>';
-  const lav = curIn() && isLav(curIn());
-  return '<div class="group vc-dev"><label class="cell"><span class="vc-lbl">' + t('in') + '</span>' + sel('in', S.devs.inputs, s.in, t('auto')) + '</label>' +
-    '<label class="cell"><span class="vc-lbl">' + t('out') + '</span>' + (S.devs.outputs.length ? sel('out', S.devs.outputs, s.out, t('auto')) : '<span class="l2 vc-note">' + t('outAuto') + '</span>') + '</label>' +
-    (big() ? '<div class="cell"><span class="grow">' + t('stereo') + '</span>' + sw('stereo', s.stereo) + '</div>' +
-      (!s.stereo ? '<div class="cellcol"><span class="vc-lbl">' + t('pick') + '</span>' + ctx.ui.seg('vpick', [['mix', t('pick.mix')], ['l', t('pick.l')], ['r', t('pick.r')]], s.pick, t('pick')) + '</div>' : '') +
-      '<div class="cell"><span class="grow"><span>' + t('raw') + '</span><span class="st l2">' + t('rawHint') + '</span></span>' + sw('raw', s.raw) + '</div>' : '') + '</div>' +
-    (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '');
-}
 const sw = (k, on) => '<label class="sw"><input type="checkbox" role="switch" aria-label="' + esc(t(k)) + '" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
 
 /* ---------- запись ---------- */
@@ -114,7 +123,10 @@ async function liveStart() {
     mon.gain.value = s.hear ? 1 : 0;
     if (!E.native && s.out) setOutput(c, s.out);
     L = { c, inp, fx, an, mon, buf: new Float32Array(an.fftSize), raf: 0 };
-    Object.assign(M, { hold: -120, clipAt: 0, spec: null, rate: c.sampleRate });
+    resetMeter(c.sampleRate);
+    // какой вход открыт на самом деле (браузер и компьютер: имя и частота дорожки)
+    const tr = inp.stream && inp.stream.getAudioTracks()[0], ts = (tr && tr.getSettings && tr.getSettings()) || {};
+    S.liveDev = tr && !E.native ? { id: ts.deviceId || '', name: tr.label || '', rate: ts.sampleRate || c.sampleRate, channels: ts.channelCount || 0 } : null;
     S.err = null;
     const loop = () => { if (!L || !L.an) return; L.raf = requestAnimationFrame(loop); meterUpdate(levelOf(L.an, L.buf)); grUpdate(L.fx.gr()); };
     loop();
@@ -139,9 +151,10 @@ async function startRec() {
   const s = st(), dev = curIn();
   try {
     const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo || s.pick !== 'mix', raw: s.raw });
-    Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, bt: r.bt });
-    Object.assign(M, { hold: -120, clipAt: 0, spec: null, rate: r.rate || 48000 });
-    ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + ', ' + r.rate + ' Гц, каналов ' + r.channels);
+    Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, recCh: r.channels, bt: r.bt, marks: [], t0: Date.now(), inWarn: '', warned: {}, recDev: r.dev ? { ...r.dev, rate: r.dev.rate || r.rate } : null });
+    s.liveMarks = { t0: S.t0, marks: [] }; ctx.store.save();
+    resetMeter(r.rate || 48000);
+    ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + (r.dev ? ' (пишет: ' + (r.dev.type || '') + ' «' + r.dev.name + '»)' : '') + ', ' + r.rate + ' Гц, каналов ' + r.channels + (r.raw === false ? ', с обработкой системы' : ''));
   } catch (e) {
     const m = String(e && e.message);
     S.err = m === 'denied' || m === 'space' || m === 'noaudio' || m === 'nomic' ? m : 'unavailable';
@@ -152,8 +165,11 @@ async function startRec() {
 async function stopRec() {
   try {
     const r = await engine().stop();
+    const s = st();
+    if (S.marks.length) s.marksBy[r.path] = S.marks.slice(); // метки — к исходнику (до чтения: чтение может не удаться)
+    delete s.liveMarks; ctx.store.save();
     S.take = await loadTake(r.path);
-    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null });
+    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null, marks: [], inWarn: '' });
     ctx.log('записано ' + S.take.sec.toFixed(1) + ' с' + (r.reason ? ' (остановлено: ' + r.reason + ')' : ''));
   } catch (e) { ctx.logErr(e); S.phase = 'idle'; ctx.ui.toast(t('recFail')); loadKept(); }
   render();
@@ -164,7 +180,11 @@ async function loadTake(path) {
   const u8 = await engine().read(path), w = u8 && decodeWav(u8);
   if (!w || !w.ch[0].length) throw new Error('empty');
   const pk = st().pick, ch = w.ch.length === 2 && !st().stereo ? (pk === 'l' ? [w.ch[0]] : pk === 'r' ? [w.ch[1]] : [w.ch[0].map((v, i) => (v + w.ch[1][i]) / 2)]) : w.ch;
-  return { path, ch, sr: w.sr, sec: ch[0].length / w.sr, peaks: peaks(ch, 600), saved: false };
+  const s = st();
+  // метки: свои у исходника; запись оборвалась (сбой, закрыли окно) — метки той записи из liveMarks
+  let marks = s.marksBy[path];
+  if (!marks && s.liveMarks && s.liveMarks.marks && s.liveMarks.marks.length) { marks = s.liveMarks.marks; s.marksBy[path] = marks; delete s.liveMarks; ctx.store.save(); }
+  return { path, ch, sr: w.sr, sec: ch[0].length / w.sr, peaks: peaks(ch, 600), saved: false, marks: (marks || []).slice() };
 }
 // Исходники прошлых записей в памяти диктофона: после сбоя, закрытия или неудачного чтения запись не теряется —
 // её можно открыть снова и сохранить. Исходники сохранённых записей хранятся RAW_KEEP_DAYS дней (не меньше
@@ -177,6 +197,8 @@ async function loadKept() {
   const gone = new Set(old.map((f) => f.path)), have = new Set(fs.map((f) => f.path));
   const keep = s.savedRaw.filter((x) => !gone.has(x.path) && have.has(x.path));
   if (keep.length !== s.savedRaw.length) { s.savedRaw = keep; ctx.store.save(); }
+  const mk = Object.keys(s.marksBy).filter((k) => !have.has(k) || gone.has(k));
+  if (mk.length && fs.length) { mk.forEach((k) => delete s.marksBy[k]); ctx.store.save(); }
   S.kept = fs.filter((f) => !gone.has(f.path) && (!S.take || f.path !== S.take.path)).map((f) => ({ ...f, saved: saved.has(f.path) })).sort((a, b) => b.at - a.at);
   render();
 }
@@ -193,7 +215,7 @@ async function openKept(path) {
 // Убрать дубль с экрана: несохранённый — удалить (после подтверждения), сохранённый — исходник остаётся в памяти
 async function dropTake() {
   await stopPlay();
-  if (S.take) { if (!S.take.saved) engine().remove(S.take.path); if (S.proc) engine().remove(S.proc.path); }
+  if (S.take) { if (!S.take.saved) { engine().remove(S.take.path); delete st().marksBy[S.take.path]; ctx.store.save(); } if (S.proc) engine().remove(S.proc.path); }
   S.take = null; S.proc = null; S.phase = 'idle';
   loadKept();
 }
@@ -228,14 +250,15 @@ async function play() {
 async function stopPlay() { if (S.playing) { S.playing = false; try { await engine().stopPlay(); } catch { /* уже */ } } }
 
 const stamp = () => { const d = new Date(), pad = (n) => String(n).padStart(2, '0'); return { d: pad(d.getDate()) + '.' + pad(d.getMonth() + 1), t: pad(d.getHours()) + '-' + pad(d.getMinutes()) }; };
-async function addFile(name, wav, dur) {
+// Метки — и в запись медиатеки (плеер показывает их на волне), и в сам WAV (cue: видят Reaper, Audition, Audacity)
+async function addFile(name, wav, dur, marks = []) {
   const song = ctx.session && ctx.session.songId;
-  await ctx.files.add({ id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur });
+  await ctx.files.add({ id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur, ...(marks.length ? { marks } : {}) });
 }
-// Исходник в медиатеку как есть (байт в байт)
+// Исходник в медиатеку как есть (звук байт в байт; метки — блоком после звука, только у целого файла)
 async function saveRaw() {
-  const u8 = await engine().read(S.take.path);
-  await addFile(t('fileName', stamp()) + ' · ' + t('rawSfx') + '.wav', u8, S.take.sec);
+  const u8 = await engine().read(S.take.path), marks = S.take.marks || [];
+  await addFile(t('fileName', stamp()) + ' · ' + t('rawSfx') + '.wav', withCue(u8, marks, S.take.sr), S.take.sec, marks);
 }
 function markSaved() {
   const s = st();
@@ -253,55 +276,63 @@ async function save() {
     render(); return;
   }
   try {
-    const wav = encodeWav(p.ch, S.take.sr, st().bits);
-    await addFile(t('fileName', stamp()) + '.wav', wav, p.sec);
+    const [a, b] = selSec(), marks = marksIn(S.take.marks, a, b);
+    const wav = withCue(encodeWav(p.ch, S.take.sr, st().bits), marks, S.take.sr);
+    await addFile(t('fileName', stamp()) + '.wav', wav, p.sec, marks);
     if (st().keepRaw) await saveRaw();
     markSaved();
     ctx.ui.toast(t('saved'));
-    ctx.log('сохранено в медиатеку: ' + p.sec.toFixed(1) + ' с, ' + st().bits + ' бит, режим ' + st().voice.mode);
+    ctx.log('сохранено в медиатеку: ' + p.sec.toFixed(1) + ' с, ' + st().bits + ' бит, пресет ' + (isUser(st().cur) ? 'свой' : st().cur) + (isDirty(st()) ? ' (изменён)' : '') + ', меток ' + marks.length);
   } catch (e) { ctx.logErr(e); ctx.ui.toast(t('saveFail')); }
   render();
 }
 
 /* ---------- экран ---------- */
+// Один экран (DECISIONS 2026-11-02): сверху — плашка входа (откуда и как пишется) и лампочка состояния; посередине —
+// спектр и полоска уровня на всё свободное место; под ним — пресеты строкой; внизу — одна полоса кнопок:
+// вход · метка · запись · настройка пресета · ещё. Цифры, работа обработки, эффекты и эквалайзер — по кнопкам и касанию.
 
-// Окно уровня: дБ (пик и/или RMS), шкала с удержанием пика, лампочка перегруза, спектр
-const M = { hold: -120, holdAt: 0, clipAt: 0, spec: null, rate: 48000 };
-function meterHTML(live = false) {
-  const m = st().meter, ticks = [-60, -40, -30, -20, -12, -6, -3, 0].filter((d) => d >= -m.range), s = st();
-  return '<div class="vc-mon' + (live ? ' mini' : '') + '"><div class="vc-monh">' +
-    '<span class="vc-dbs"><b class="num" id="vc-db">−∞</b><span class="vc-dbu">' + t(m.mode === 'rms' ? 'm.rmsU' : 'm.peakU') + '</span>' +
-    (m.mode === 'both' ? '<span class="num l2" id="vc-db2"></span>' : '') + '</span>' +
-    '<button class="vc-clip" id="vc-clip" data-x="clipreset" aria-label="' + esc(t('m.clipAria')) + '"><i></i>CLIP</button>' +
-    // до записи: слушать вход и слышать себя в наушниках (с обработкой)
-    (live ? '<button class="ic sm' + (s.live ? ' on' : '') + '" data-x="live" aria-pressed="' + !!s.live + '" aria-label="' + esc(t('live.on')) + '">' + I.wave + '</button>' +
-      '<button class="ic sm' + (s.hear ? ' on' : '') + '" data-x="hear" aria-pressed="' + !!s.hear + '" aria-label="' + esc(t('live.hear')) + '"' + (s.live ? '' : ' disabled') + '>' + I.ear + '</button>' : '') +
-    '<button class="ic sm" data-x="mset" aria-label="' + esc(t('m.set')) + '">' + GEAR + '</button></div>' +
-    '<div class="vc-bar vcled" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
-    '<div class="vc-ticks num" aria-hidden="true">' + ticks.map((d) => '<span style="left:' + ((d + m.range) / m.range) * 100 + '%">' + (d ? d : '0') + '</span>').join('') + '</div>' +
-    (m.spec && big() ? '<canvas id="vc-spec" class="vc-spec" aria-hidden="true"></canvas>' : '') +
-    (live && s.live && L && L.fx && L.fx.live ? grHTML() : '') +
-    (live && !s.live ? '<p class="l2 vc-off">' + t('live.off') + '</p>' : '') + '</div>';
-}
-const GEAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
+// Уровень и лампочка: «жду сигнал» → «в норме» / «тихо» / «нет сигнала»; перегруз горит, пока его не коснутся
+const M = { hold: -120, holdAt: 0, clip: false, spec: null, rate: 48000, t0: 0, sigAt: 0, loudAt: 0, lamp: 'wait', db: -120, rms: -120 };
+let detailEl = null; // открытая шторка с цифрами — обновляется вместе с экраном
+const resetMeter = (rate) => Object.assign(M, { hold: -120, holdAt: 0, clip: false, spec: null, rate: rate || M.rate, t0: 0, sigAt: 0, loudAt: 0, lamp: 'wait' });
 const pctOf = (db) => Math.max(0, Math.min(100, ((db + st().meter.range) / st().meter.range) * 100));
 const dbOf = (x) => (x > 1e-6 ? 20 * Math.log10(x) : -120);
+const fmtDb = (d) => (d <= -90 ? '−∞' : (d > -0.05 ? '0.0' : d.toFixed(1)).replace('-', '−'));
+function lampOf(now) {
+  if (M.clip) return 'clip';
+  if (!M.sigAt) return now - M.t0 > 3000 ? 'none' : 'wait';
+  if (now - M.sigAt > 3000) return 'none';
+  return now - M.loudAt > 5000 ? 'low' : 'ok';
+}
 function meterUpdate(e) {
   if (!host) return;
-  const m = st().meter, now = performance.now(), q = (s) => host.querySelector(s);
+  const m = st().meter, now = performance.now(), q = (sel) => host.querySelector(sel);
   const pk = dbOf(e.peak), rm = dbOf(e.rms);
-  if (pk >= m.clip) M.clipAt = now;
+  if (!M.t0) M.t0 = now;
+  if (pk >= m.clip) M.clip = true;
+  if (pk > -90) M.sigAt = now;
+  if (pk > -40) M.loudAt = now;
   if (pk > M.hold || (m.hold > 0 && now - M.holdAt > m.hold * 1000) || m.hold === 0) { M.hold = pk; M.holdAt = now; }
-  const shown = m.mode === 'rms' ? rm : pk, fmtDb = (d) => (d <= -90 ? '−∞' : (d > -0.05 ? '0.0' : d.toFixed(1)).replace('-', '−'));
-  const a = q('#vc-db'); if (a) { a.textContent = fmtDb(shown); a.classList.toggle('hot', pk >= m.clip); }
-  const b = q('#vc-db2'); if (b) b.textContent = 'RMS ' + fmtDb(rm);
-  // полоса из «огоньков»: заливка во всю ширину, видна до уровня (цвета зелёный → жёлтый → красный стоят на месте)
+  M.db = pk; M.rms = rm;
   const cut = (x) => 'inset(0 ' + (100 - x).toFixed(1) + '% 0 0)';
-  const r = q('#vc-barr'); if (r) r.style.clipPath = cut(m.mode === 'peak' ? 0 : pctOf(rm));
-  const p = q('#vc-barp'); if (p) p.style.clipPath = cut(m.mode === 'rms' ? 0 : pctOf(pk));
-  const bar = q('.vc-bar'); if (bar) bar.classList.toggle('hot', pk > -6);
+  const r = q('#vc-barr'); if (r) r.style.clipPath = cut(pctOf(rm));
+  const p = q('#vc-barp'); if (p) p.style.clipPath = cut(pctOf(pk));
   const h = q('#vc-hold'); if (h) h.style.left = pctOf(M.hold) + '%';
-  const c = q('#vc-clip'); if (c) c.classList.toggle('on', !!M.clipAt && (m.hold === -1 || now - M.clipAt < Math.max(1, m.hold || 1) * 1000));
+  const lamp = lampOf(now);
+  if (lamp !== M.lamp) {
+    M.lamp = lamp; const l = q('#vc-lamp'); if (l) { l.className = 'vc-lamp ' + lamp; l.querySelector('em').textContent = t('lamp.' + lamp); }
+    // при записи — сказать один раз: молчащий внешний микрофон легко не заметить (кабель, фантомное питание, канал)
+    if (S.phase === 'rec' && (lamp === 'none' || lamp === 'clip') && !S.warned[lamp]) {
+      S.warned[lamp] = true; ctx.log('запись: ' + (lamp === 'none' ? 'нет сигнала со входа' : 'перегруз входа'), 'w');
+      if (lamp === 'none') ctx.ui.toast(t('lamp.noneHint'));
+    }
+  }
+  if (detailEl) {
+    const a = detailEl.querySelector('#vcd-pk'); if (a) { a.textContent = fmtDb(pk); a.classList.toggle('hot', pk >= m.clip); }
+    const b = detailEl.querySelector('#vcd-rms'); if (b) b.textContent = fmtDb(rm);
+    const c = detailEl.querySelector('#vcd-hold'); if (c) c.textContent = fmtDb(M.hold);
+  }
   if (e.samples && m.spec) drawSpec(e.samples, e.rate || M.rate);
 }
 // Спектр: логарифмическая шкала 40 Гц…16 кГц, столбики или линия, сглаживание по времени
@@ -355,27 +386,199 @@ function meterSheet() {
     ctx.store.save(); sh.update(); render();
   }));
 }
-/* ---------- режимы и настройка обработки ---------- */
-
-const MODE_ORDER = ['raw', 'music', 'speech', 'vocal', 'radio', 'band'];
-const levelTxt = (l) => (l === 'off' ? t('lvl.off') : l === 'peak' ? t('lvl.peak') : String(l).replace('-', '−') + ' LUFS');
-function modesHTML() {
-  const v = st().voice, ids = MODE_ORDER.filter((k) => MODE_IDS.includes(k)).concat(v.mode === 'own' ? ['own'] : []);
-  return '<div class="vc-eqp" role="group" aria-label="' + esc(t('mode.title')) + '">' + ids.map((k) =>
-    '<button type="button" data-vmode="' + k + '"' + (v.mode === k ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + t('mode.' + k) + '</button>').join('') + '</div>' +
-    '<p class="ftr vc-modeh">' + t('modeh.' + v.mode) + '</p>';
+// Шторка с цифрами: пик, RMS, удержание, работа обработки по ступеням (живой вход); оттуда — спектр на весь экран
+function detailSheet() {
+  const { ui } = ctx, live = S.phase === 'idle' && L && L.fx && L.fx.live;
+  ui.sheet(() => ui.snav(t('det.title')) +
+    '<div class="vcd"><div><b class="num" id="vcd-pk">' + fmtDb(M.db) + '</b><span class="l2">' + t('m.peakU') + '</span></div>' +
+    '<div><b class="num" id="vcd-rms">' + fmtDb(M.rms) + '</b><span class="l2">' + t('m.rmsU') + '</span></div>' +
+    '<div><b class="num" id="vcd-hold">' + fmtDb(M.hold) + '</b><span class="l2">' + t('det.hold') + '</span></div></div>' +
+    (live ? '<div class="hdr">' + t('det.gr') + '</div>' + grHTML() : '') +
+    '<div class="group"><button class="cell act" data-d="spec">' + t('det.full') + '</button><button class="cell act" data-d="mset">' + t('m.set') + '</button></div>' +
+    '<p class="ftr">' + t('m.hint') + '</p>',
+  (el, sh) => {
+    detailEl = el;
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-d]');
+      if (!b) return;
+      if (b.dataset.d === 'spec') { sh.close(); stopPlay(); ctx.openTool('spectrum'); } else meterSheet();
+    });
+  }, { onClose: () => { detailEl = null; } });
 }
-function fxHTML(pre = false) {
-  const f = st().fx, s = st(), rng = (k, min, max, step, val, label, txt) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vfx-' + k + '">' + txt + '</b></span>' +
-    '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-fx="' + k + '" aria-label="' + esc(label) + '"></label>';
-  return '<div class="hdr">' + t(pre ? 'live.title' : 'fx') + '</div>' + modesHTML() +
-    '<div class="group"><button class="cell act" data-x="vset"><span class="vc-ico">' + I.tune + '</span><span class="grow">' + t('vs.title') + '</span><span class="val">' + levelTxt(s.voice.level) + '</span></button></div>' +
-    '<div class="hdr">' + t('fx.more') + '</div>' + (pm ? pm.html() : '') +
-    '<div class="hdr">' + t('fx.file') + '</div><div class="group">' +
-    rng('gain', -12, 18, 1, f.gain, t('fx.gain'), fxTxt('gain', f.gain)) +
-    '<div class="cellcol"><span class="vc-lbl">' + t('bits') + '</span>' + ctx.ui.seg('vbits', [['16', '16 ' + t('bit')], ['24', '24 ' + t('bit')], ['32', '32 float']], String(s.bits), t('bits')) + '</div>' +
-    '<div class="cell"><span class="grow"><span>' + t('keepRaw') + '</span><span class="st l2">' + t('keepRawHint') + '</span></span>' + sw('keepRaw', s.keepRaw) + '</div></div>' +
-    '<p class="ftr">' + t(pre ? 'live.hint' : 'fxHint') + '</p>';
+// Сокращение усиления ступенями (живой вход): экспандер, де-эссер, компрессор, лимитер — в шторке с цифрами
+function grHTML() {
+  return '<div class="vc-gr" id="vc-gr" aria-hidden="true">' + ['exp', 'ds', 'comp', 'lim'].map((k) =>
+    '<span data-g="' + k + '"><em>' + t('gr.' + k) + '</em><i><b></b></i><s class="num">0</s></span>').join('') + '</div>';
+}
+function grUpdate(g) {
+  const box = detailEl && detailEl.querySelector('#vc-gr');
+  if (!box || !g) return;
+  ['exp', 'ds', 'comp', 'lim'].forEach((k) => {
+    const el = box.querySelector('[data-g="' + k + '"]'), v = Math.max(0, g[k] || 0);
+    if (!el) return;
+    el.querySelector('b').style.width = Math.min(100, (v / 12) * 100) + '%';
+    el.querySelector('s').textContent = v >= 0.5 ? '−' + Math.round(v) : '0';
+    el.classList.toggle('on', v >= 0.5);
+  });
+}
+
+/* ---------- вход ---------- */
+
+// Плашка входа: вид (значком), имя, частота и каналы; если система пишет не с выбранного входа — сказать это
+const kindOf = (d) => (!d ? 'phone' : d.type === 'display' ? 'display' : isLav(d) ? 'lav' : devKind(d));
+function actualDev() { return S.phase === 'rec' ? S.recDev : S.liveDev; }
+function inHTML() {
+  const s = st(), d = curIn(), act = actualDev();
+  const name = d ? devName(d) : act && act.name ? (act.type ? devName(act) : act.name) : t('auto');
+  const kind = d ? kindOf(d) : act && act.type ? kindOf(act) : 'phone';
+  const rate = (act && act.rate) || (S.phase === 'rec' ? S.rate : M.rate);
+  const ch = S.phase === 'rec' && S.recCh ? S.recCh : s.stereo ? 2 : 1;
+  const sub = [rate ? (rate / 1000).toString().replace('.', ',') + ' ' + t('khz') : '', t(ch === 2 ? 'in.stereo' : 'in.mono'), s.raw && d && d.type !== 'display' ? t('in.clean') : ''].filter(Boolean).join(' · ');
+  // выбран один вход, а пишет другой (система не послушалась или переключила)
+  const other = d && act && act.name && (act.id != null && String(act.id) !== '' ? String(act.id) !== String(d.id) : false);
+  const warn = S.inWarn || (other ? t('in.actual', { name: act.type ? devName(act) : act.name }) : '');
+  return '<div class="vc-inrow"><button class="vc-in" data-x="insheet" aria-label="' + esc(t('in') + ': ' + name) + '"><span class="vc-ink">' + (KI[kind] || KI.other) + '</span>' +
+    '<span class="vc-int"><b>' + esc(name) + '</b><span class="l2">' + esc(sub) + '</span>' + (warn ? '<span class="vc-warn">' + esc(warn) + '</span>' : '') + '</span></button>' +
+    '<button class="vc-lamp ' + M.lamp + '" id="vc-lamp" data-x="lamp" aria-label="' + esc(t('lamp.aria')) + '"><i></i><em>' + t('lamp.' + M.lamp) + '</em></button></div>';
+}
+// Шторка входа: входы строками со значками, выход, стерео и канал, обработка телефона, слушать вход и себя
+function inSheet() {
+  const { ui } = ctx, rec = S.phase === 'rec';
+  ui.sheet(() => {
+    const s = st(), row = (id, kind, name, on, extra) => '<button class="cell act vc-irow' + (on ? ' on' : '') + '" data-in="' + esc(id) + '"' + (rec ? ' disabled' : '') + ' aria-pressed="' + on + '"><span class="vc-ink">' + (KI[kind] || KI.other) + '</span><span class="grow">' + esc(name) + (extra ? '<span class="st l2">' + esc(extra) + '</span>' : '') + '</span>' + (on ? '<span class="vc-chk" aria-hidden="true">✓</span>' : '') + '</button>';
+    const lav = curIn() && isLav(curIn());
+    return ui.snav(t('in')) + '<div class="vcsh">' + (rec ? '<p class="ftr">' + t('in.recLock') + '</p>' : '') +
+      '<div class="group">' + row('', 'other', t('auto'), !s.in, '') + S.devs.inputs.map((d) => row(d.id, kindOf(d), devName(d), String(d.id) === String(s.in), isLav(d) ? t('lav') : d.channels > 1 ? t('in.chN', { n: d.channels }) : '')).join('') + '</div>' +
+      (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p>') +
+      '<div class="hdr">' + t('in.how') + '</div><div class="group">' +
+      '<div class="cell"><span class="grow">' + t('stereo') + '</span>' + sw('stereo', s.stereo) + '</div>' +
+      (!s.stereo ? '<div class="cellcol"><span class="vc-lbl">' + t('pick') + '</span>' + ui.seg('vpick', [['mix', t('pick.mix')], ['l', t('pick.l')], ['r', t('pick.r')]], s.pick, t('pick')) + '</div>' : '') +
+      '<div class="cell"><span class="grow"><span>' + t('raw') + '</span><span class="st l2">' + t('rawHint') + '</span></span>' + sw('raw', s.raw) + '</div></div>' +
+      '<div class="hdr">' + t('in.mon') + '</div><div class="group">' +
+      '<div class="cell"><span class="grow">' + t('live.on') + '</span>' + sw('live', s.live) + '</div>' +
+      '<div class="cell"><span class="grow">' + t('live.hear') + '</span>' + sw('hear', s.hear) + '</div>' +
+      '<label class="cell"><span class="vc-lbl">' + t('out') + '</span>' + (S.devs.outputs.length ? '<select class="sortsel" data-v="out" aria-label="' + esc(t('out')) + '"><option value="">' + esc(t('auto')) + '</option>' + S.devs.outputs.map((d) => '<option value="' + esc(d.id) + '"' + (String(d.id) === String(s.out) ? ' selected' : '') + '>' + esc(devName(d)) + '</option>').join('') + '</select>' : '<span class="l2 vc-note">' + t('outAuto') + '</span>') + '</label></div></div>';
+  }, (el, sh) => {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-in]');
+      if (b && !rec) { const s = st(); s.in = b.dataset.in || null; ctx.store.save(); S.err = null; S.inWarn = ''; S.liveDev = null; sh.update(); render(); if (S.phase === 'idle') liveRestart(); return; }
+      const sg = e.target.closest('[data-seg] [data-v]');
+      if (sg && sg.closest('[data-seg]').dataset.seg === 'vpick') { st().pick = sg.dataset.v; ctx.store.save(); S.proc = null; sh.update(); }
+    });
+    el.addEventListener('change', (e) => {
+      const d = e.target.dataset, s = st();
+      if (d.v === 'out') { s.out = e.target.value || null; ctx.store.save(); if (S.phase === 'idle') liveRestart(); return; }
+      if (!['stereo', 'raw', 'live', 'hear'].includes(d.v)) return;
+      s[d.v] = e.target.checked; ctx.store.save();
+      if (d.v === 'hear') liveHear();
+      else if (d.v === 'live') { if (s.live) liveStart(); else liveStop().then(render); }
+      else if (S.phase === 'idle') liveRestart();
+      if (d.v === 'stereo') sh.update();
+      render();
+    });
+  });
+}
+
+/* ---------- пресеты ---------- */
+
+const levelTxt = (l) => (l === 'off' ? t('lvl.off') : l === 'peak' ? t('lvl.peak') : String(l).replace('-', '−') + ' LUFS');
+const presetName = (id) => (isUser(id) ? ((st().presets.find((p) => p.id === id) || {}).name || '—') : t('mode.' + id));
+function presetsHTML() {
+  const s = st(), dirty = isDirty(s), list = BUILTIN.concat(s.presets.map((p) => p.id));
+  return '<div class="vc-pre" role="group" aria-label="' + esc(t('preset.title')) + '">' + list.map((id) => {
+    const on = id === s.cur;
+    return '<button type="button" class="vc-pc' + (on ? ' on' : '') + (on && dirty ? ' dirty' : '') + '" data-preset="' + esc(id) + '" aria-pressed="' + on + '"' + (on ? ' aria-label="' + esc(presetName(id) + (dirty ? ', ' + t('preset.changed') : '') + '. ' + t('preset.tapEdit')) + '"' : '') + '>' + esc(presetName(id)) + '</button>';
+  }).join('') + '</div>';
+}
+function pickPreset(id) {
+  const s = st();
+  if (id === s.cur) { presetSheet(); return; } // касание выбранного — настроить его
+  applyPreset(s, id); ctx.store.save(); liveFx(); S.proc = null; render();
+}
+// Шторка пресета: имя и действия сверху; ниже — «Голос» (обработка), «Эффекты» (общая панель приложения), «Файл».
+// Правка звучит сразу (вход слушается; у записи — «С обработкой»); пресет меняется только по «Сохранить»
+let ptab = 'voice';
+function presetSheet() {
+  const { ui } = ctx;
+  let pm2 = null, b2 = null, naming = null; // naming: 'new' | 'rename'
+  const panel = () => pm2 || (pm2 = ctx.fxPanel({ get: () => st().chain, set: (fx) => { st().chain = normalizeFx(fx); ctx.store.save(); liveFx(); S.proc = null; head(); syncRow(); return st().chain; } }));
+  const v = () => st().voice;
+  const sl = (k, min, max, step, label) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vs-' + k + '">' + VS[k](v().p[k]) + '</b></span>' +
+    '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v().p[k] + '" data-vp="' + k + '" aria-label="' + esc(label) + '"></label>';
+  const grp = (title, hint, body) => '<div class="hdr">' + title + '</div><div class="group">' + body + '</div>' + (hint ? '<p class="ftr">' + hint + '</p>' : '');
+  const headHTML = () => {
+    const s = st(), dirty = isDirty(s), user = isUser(s.cur);
+    const nameInp = (val) => '<div class="cell vc-pname"><input class="inp" data-pname maxlength="40" value="' + esc(val) + '" placeholder="' + esc(t('preset.namePh')) + '" aria-label="' + esc(t('preset.name')) + '"><button class="link b" data-pa="' + naming + '">' + t('preset.ok') + '</button></div>';
+    return '<div class="group"><div class="cell"><span class="grow"><b>' + esc(presetName(s.cur)) + '</b><span class="st l2">' + (dirty ? t('preset.changed') : user ? t('preset.mineH') : t('modeh.' + s.cur)) + '</span></span></div>' +
+      (naming ? nameInp(naming === 'rename' ? presetName(s.cur) : '') :
+        '<div class="cell vc-pacts">' + (user && dirty ? '<button class="link b" data-pa="save">' + t('preset.save') + '</button>' : '') +
+        '<button class="link" data-pa="new">' + t('preset.saveAs') + '</button>' +
+        (dirty ? '<button class="link" data-pa="revert">' + t('preset.revert') + '</button>' : '') +
+        (user ? '<button class="link" data-pa="rename">' + t('preset.rename') + '</button><button class="link danger" data-pa="del">' + t('preset.del') + '</button>' : '') + '</div>') + '</div>';
+  };
+  const voiceHTML = () => '<div class="vcs">' +
+    grp(t('vs.hp'), t('vsh.hp'), sl('hp', 0, 300, 5, t('vs.freq')) + '<div class="cellcol"><span class="vc-lbl">' + t('vs.slope') + '</span>' + ui.seg('vslope', [['12', '12 ' + t('dbo')], ['24', '24 ' + t('dbo')]], String(v().p.hpSlope), t('vs.slope')) + '</div>') +
+    grp(t('vs.exp'), t('vsh.exp'), sl('expThr', -90, -20, 1, t('vs.thr')) + sl('expRatio', 1, 8, 0.1, t('vs.ratio')) + sl('expRange', 0, 60, 1, t('vs.range'))) +
+    grp(t('vs.ds'), t('vsh.ds'), sl('dsAmt', 0, 1, 0.05, t('vs.amt')) + sl('dsFreq', 3000, 10000, 100, t('vs.freq'))) +
+    grp(t('vs.tone'), t('vsh.tone'), sl('eqLow', -12, 12, 0.5, t('vs.low')) + sl('eqMud', -12, 12, 0.5, t('vs.mud')) + sl('eqPres', -12, 12, 0.5, t('vs.pres')) + sl('eqAir', -12, 12, 0.5, t('vs.air'))) +
+    grp(t('vs.comp'), t('vsh.comp'), sl('compRatio', 1, 10, 0.1, t('vs.ratio')) + sl('compThr', -50, 0, 1, t('vs.thr')) + sl('compAtt', 0.5, 80, 0.5, t('vs.att')) + sl('compRel', 20, 800, 10, t('vs.rel'))) +
+    grp(t('vs.lim'), t('vsh.lim'), '<div class="cell"><span class="grow">' + t('vs.limOn') + '</span><label class="sw"><input type="checkbox" data-vp="limOn"' + (v().p.limOn ? ' checked' : '') + ' aria-label="' + esc(t('vs.limOn')) + '"><i></i></label></div>' + sl('lim', -12, 0, 0.1, t('vs.ceil'))) +
+    grp(t('vs.level'), t('vsh.level'), '<div class="cellcol">' + ui.seg('vlevel', LEVELS.map((l) => [String(l), l === 'off' ? t('lvl.off') : l === 'peak' ? t('lvl.peak') : String(l).replace('-', '−')]), String(v().level), t('vs.level')) + '</div>') +
+    grp(t('vs.dn'), t('vsh.dn'), sl('denoise', 0, 1, 0.05, t('vs.amt'))) + '</div>';
+  const fileHTML = () => {
+    const f = st().fx, s = st();
+    return '<div class="group"><label class="cellcol vc-fx"><span class="vc-fxh"><span>' + t('fx.gain') + '</span><b class="num" id="vfx-gain">' + fxTxt('gain', f.gain) + '</b></span><input type="range" min="-12" max="18" step="1" value="' + f.gain + '" data-fx="gain" aria-label="' + esc(t('fx.gain')) + '"></label>' +
+      '<div class="cellcol"><span class="vc-lbl">' + t('bits') + '</span>' + ui.seg('vbits', [['16', '16 ' + t('bit')], ['24', '24 ' + t('bit')], ['32', '32 float']], String(s.bits), t('bits')) + '</div>' +
+      '<div class="cell"><span class="grow"><span>' + t('keepRaw') + '</span><span class="st l2">' + t('keepRawHint') + '</span></span>' + sw('keepRaw', s.keepRaw) + '</div></div><p class="ftr">' + t('fxHint') + '</p>';
+  };
+  let sh = null;
+  const head = () => { const h = sh && sh.el.querySelector('#vps-head'); if (h) h.innerHTML = headHTML(); };
+  const syncRow = () => { const r = host && host.querySelector('.vc-pre'); if (r) { const tmp = document.createElement('div'); tmp.innerHTML = presetsHTML(); r.replaceWith(tmp.firstChild); } };
+  const changed = () => { ctx.store.save(); liveFx(); S.proc = null; head(); syncRow(); };
+  const full = () => { sh.update(); if (b2 && b2.mount) b2.mount(); render(); };
+  sh = ui.sheet(() => ui.snav(t('preset.title')) + '<div class="vcsh"><div id="vps-head">' + headHTML() + '</div>' +
+    '<div class="vc-ptabs">' + ui.seg('ptab', [['voice', t('ptab.voice')], ['fx', t('ptab.fx')], ['file', t('ptab.file')]], ptab, t('preset.title')) + '</div>' +
+    (ptab === 'voice' ? voiceHTML() : ptab === 'fx' ? panel().html() : fileHTML()) + '</div>',
+  (el, api) => {
+    b2 = panel().bind(el, { update: full });
+    const apply = (k, val, redraw) => {
+      st().voice = editVoiceSet(st().voice, k, val); changed();
+      const b = el.querySelector('#vs-' + k); if (b && VS[k]) b.textContent = VS[k](st().voice.p[k]);
+      if (redraw) full();
+    };
+    el.addEventListener('input', (e) => {
+      const d = e.target.dataset;
+      if (d.vp && e.target.type === 'range') apply(d.vp, +e.target.value, false);
+      else if (d.fx === 'gain') { st().fx.gain = +e.target.value; changed(); const lb = el.querySelector('#vfx-gain'); if (lb) lb.textContent = fxTxt('gain', +e.target.value); }
+    });
+    el.addEventListener('change', (e) => {
+      const d = e.target.dataset;
+      if (d.vp) apply(d.vp, e.target.type === 'checkbox' ? (e.target.checked ? 1 : 0) : +e.target.value, true);
+      else if (d.v === 'keepRaw') { st().keepRaw = e.target.checked; ctx.store.save(); }
+    });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-pname]')) { e.preventDefault(); el.querySelector('[data-pa="' + naming + '"]')?.click(); } });
+    el.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-pa]');
+      if (a) {
+        const s = st(), k = a.dataset.pa, inp = el.querySelector('[data-pname]');
+        if ((k === 'new' || k === 'rename') && !inp) { naming = k; head(); setTimeout(() => el.querySelector('[data-pname]')?.focus(), 30); return; }
+        if (k === 'new') { const nm = inp.value.trim(); if (!nm) { inp.focus(); return; } saveAs(s, nm); naming = null; ctx.store.save(); ctx.ui.toast(t('preset.savedAs', { name: nm })); full(); return; }
+        if (k === 'rename') { if (!inp.value.trim()) { inp.focus(); return; } rename(s, s.cur, inp.value); naming = null; ctx.store.save(); full(); return; }
+        if (k === 'save') { overwrite(s); ctx.store.save(); ctx.ui.toast(t('preset.saved')); head(); syncRow(); return; }
+        if (k === 'revert') { applyPreset(s, s.cur); changed(); full(); return; }
+        if (k === 'del') { ctx.ui.confirm(t('preset.delTitle', { name: presetName(s.cur) }), '', t('preset.del')).then((ok) => { if (!ok) return; removePreset(s, s.cur); ctx.store.save(); full(); }); return; }
+        return;
+      }
+      const b = e.target.closest('[data-seg] [data-v]');
+      if (!b) return;
+      const k = b.closest('[data-seg]').dataset.seg;
+      if (k === 'ptab') { ptab = b.dataset.v; naming = null; full(); }
+      else if (k === 'vslope') apply('hpSlope', +b.dataset.v, true);
+      else if (k === 'vlevel') apply('level', b.dataset.v === 'off' || b.dataset.v === 'peak' ? b.dataset.v : +b.dataset.v, true);
+      else if (k === 'vbits') { st().bits = +b.dataset.v; ctx.store.save(); full(); }
+    });
+    sh = api;
+  }, { onClose: () => { pm2 = null; b2 = null; render(); } });
 }
 function fxTxt(k, v) {
   if (k === 'gate') return v <= -90 ? t('off') : v + ' ' + t('db');
@@ -393,102 +596,103 @@ const VS = {
   denoise: (v) => (v > 0 ? Math.round(v * 100) + '%' : t('off')),
 };
 VS.eqMud = VS.eqPres = VS.eqAir = VS.eqLow;
-// Шторка «Настройка обработки»: все ступени цепочки по порядку, правка звучит сразу (вход слушается)
-function voiceSheet() {
-  const { ui } = ctx, v = () => st().voice;
-  const sl = (k, min, max, step, label) => '<label class="cellcol vc-fx"><span class="vc-fxh"><span>' + label + '</span><b class="num" id="vs-' + k + '">' + VS[k](v().p[k]) + '</b></span>' +
-    '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v().p[k] + '" data-vp="' + k + '" aria-label="' + esc(label) + '"></label>';
-  const grp = (title, hint, body) => '<div class="hdr">' + title + '</div><div class="group">' + body + '</div>' + (hint ? '<p class="ftr">' + hint + '</p>' : '');
-  ui.sheet(() => ui.snav(t('vs.title')) + '<div class="vcs">' + modesHTML() +
-    grp(t('vs.hp'), t('vsh.hp'), sl('hp', 0, 300, 5, t('vs.freq')) + '<div class="cellcol"><span class="vc-lbl">' + t('vs.slope') + '</span>' + ui.seg('vslope', [['12', '12 ' + t('dbo')], ['24', '24 ' + t('dbo')]], String(v().p.hpSlope), t('vs.slope')) + '</div>') +
-    grp(t('vs.exp'), t('vsh.exp'), sl('expThr', -90, -20, 1, t('vs.thr')) + sl('expRatio', 1, 8, 0.1, t('vs.ratio')) + sl('expRange', 0, 60, 1, t('vs.range'))) +
-    grp(t('vs.ds'), t('vsh.ds'), sl('dsAmt', 0, 1, 0.05, t('vs.amt')) + sl('dsFreq', 3000, 10000, 100, t('vs.freq'))) +
-    grp(t('vs.tone'), t('vsh.tone'), sl('eqLow', -12, 12, 0.5, t('vs.low')) + sl('eqMud', -12, 12, 0.5, t('vs.mud')) + sl('eqPres', -12, 12, 0.5, t('vs.pres')) + sl('eqAir', -12, 12, 0.5, t('vs.air'))) +
-    grp(t('vs.comp'), t('vsh.comp'), sl('compRatio', 1, 10, 0.1, t('vs.ratio')) + sl('compThr', -50, 0, 1, t('vs.thr')) + sl('compAtt', 0.5, 80, 0.5, t('vs.att')) + sl('compRel', 20, 800, 10, t('vs.rel'))) +
-    grp(t('vs.lim'), t('vsh.lim'), '<div class="cell"><span class="grow">' + t('vs.limOn') + '</span><label class="sw"><input type="checkbox" data-vp="limOn"' + (v().p.limOn ? ' checked' : '') + '><i></i></label></div>' + sl('lim', -12, 0, 0.1, t('vs.ceil'))) +
-    grp(t('vs.level'), t('vsh.level'), '<div class="cellcol">' + ui.seg('vlevel', LEVELS.map((l) => [String(l), l === 'off' ? t('lvl.off') : l === 'peak' ? t('lvl.peak') : String(l).replace('-', '−')]), String(v().level), t('vs.level')) + '</div>') +
-    grp(t('vs.dn'), t('vsh.dn'), sl('denoise', 0, 1, 0.05, t('vs.amt'))) +
-    (v().mode === 'own' && v().base ? '<div class="group"><button class="cell act" data-vreset="1">' + t('vs.reset', { m: t('mode.' + v().base) }) + '</button></div>' : '') + '</div>',
-  (el, sh) => {
-    const apply = (k, val, redraw) => {
-      st().voice = editVoiceSet(st().voice, k, val); ctx.store.save(); liveFx(); S.proc = null;
-      const b = el.querySelector('#vs-' + k); if (b && VS[k]) b.textContent = VS[k](st().voice.p[k]);
-      if (redraw) { sh.update(); render(); } else syncModes(el);
-    };
-    el.addEventListener('input', (e) => { const k = e.target.dataset.vp; if (k && e.target.type === 'range') apply(k, +e.target.value, false); });
-    el.addEventListener('change', (e) => { const k = e.target.dataset.vp; if (!k) return; apply(k, e.target.type === 'checkbox' ? (e.target.checked ? 1 : 0) : +e.target.value, true); });
-    el.addEventListener('click', (e) => {
-      const m = e.target.closest('[data-vmode]');
-      if (m) { setMode(m.dataset.vmode); sh.update(); return; }
-      if (e.target.closest('[data-vreset]')) { setMode(st().voice.base); sh.update(); return; }
-      const b = e.target.closest('[data-seg] [data-v]');
-      if (!b) return;
-      const k = b.closest('[data-seg]').dataset.seg;
-      if (k === 'vslope') apply('hpSlope', +b.dataset.v, true);
-      else if (k === 'vlevel') apply('level', b.dataset.v === 'off' || b.dataset.v === 'peak' ? b.dataset.v : +b.dataset.v, true);
-    });
-  });
+/* ---------- метки ---------- */
+
+// Метка одним касанием: время записи (или прослушивания), без повторов ближе полсекунды. Метки записи сразу
+// сохраняются в настройки (liveMarks) — сбой или закрытие окна их не теряет; к записи они переходят по её пути
+function markAt(list, sec) {
+  const tm = Math.max(0, Math.round(sec * 10) / 10);
+  if (list.some((m) => Math.abs(m.t - tm) < 0.5)) return false;
+  list.push({ t: tm, name: '' }); list.sort((a, b) => a.t - b.t);
+  return true;
 }
-// Ряд режимов в шторке и на экране — без перерисовки ползунков (их тянут)
-function syncModes(el) {
-  const v = st().voice;
-  [el, host].forEach((root) => root && root.querySelectorAll('.vc-eqp').forEach((row) => { const tmp = document.createElement('div'); tmp.innerHTML = modesHTML(); row.replaceWith(tmp.firstChild); }));
-  [el, host].forEach((root) => root && root.querySelectorAll('.vc-modeh').forEach((h) => { h.textContent = t('modeh.' + v.mode); }));
+function addMark() {
+  let ok = false, n = 0, tm = 0;
+  if (S.phase === 'rec') {
+    tm = S.sec; ok = markAt(S.marks, tm); n = S.marks.length;
+    if (ok) { st().liveMarks = { t0: S.t0, marks: S.marks }; ctx.store.save(); }
+  } else if (S.phase === 'take' && S.take && S.playing) {
+    tm = (S.offset || 0) + (S.pos || 0); S.take.marks = S.take.marks || []; ok = markAt(S.take.marks, tm); n = S.take.marks.length;
+    if (ok) { st().marksBy[S.take.path] = S.take.marks; ctx.store.save(); drawWave(); }
+  } else { ctx.ui.toast(t('mark.when')); return; }
+  if (!ok) return;
+  try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет */ }
+  const b = host && host.querySelector('[data-x="mark"]');
+  if (b) { b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); const c = b.querySelector('.vc-mn'); if (c) c.textContent = n; else b.insertAdjacentHTML('beforeend', '<span class="vc-mn num">' + n + '</span>'); }
+  ctx.log('метка ' + n + ' на ' + fmt(tm));
 }
-function setMode(id) {
-  if (id === 'own') return;
-  st().voice = normalizeVoiceSet({ mode: id }); ctx.store.save(); liveFx(); S.proc = null;
-  render();
-}
-// Сокращение усиления ступенями (живой вход): экспандер, де-эссер, компрессор, лимитер
-function grHTML() {
-  return '<div class="vc-gr" id="vc-gr" aria-hidden="true">' + ['exp', 'ds', 'comp', 'lim'].map((k) =>
-    '<span data-g="' + k + '"><em>' + t('gr.' + k) + '</em><i><b></b></i><s class="num">0</s></span>').join('') + '</div>';
-}
-function grUpdate(g) {
-  const box = host && host.querySelector('#vc-gr');
-  if (!box || !g) return;
-  ['exp', 'ds', 'comp', 'lim'].forEach((k) => {
-    const el = box.querySelector('[data-g="' + k + '"]'), v = Math.max(0, g[k] || 0);
-    if (!el) return;
-    el.querySelector('b').style.width = Math.min(100, (v / 12) * 100) + '%';
-    el.querySelector('s').textContent = v >= 0.5 ? '−' + Math.round(v) : '0';
-    el.classList.toggle('on', v >= 0.5);
-  });
+// Метки для сохранённого файла: внутри выделения, от его начала
+const marksIn = (marks, a, b) => (marks || []).filter((m) => m.t >= a && m.t <= b).map((m) => ({ ...m, t: Math.round((m.t - a) * 10) / 10 }));
+
+/* ---------- ещё ---------- */
+
+function moreSheet() {
+  const { ui } = ctx;
+  ui.sheet(() => ui.snav(t('more')) + '<div class="group">' +
+    (S.phase === 'take' ? '<button class="cell act" data-m="preset">' + t('preset.title') + '</button>' : '') +
+    '<button class="cell act" data-m="det">' + t('det.title') + '</button>' +
+    '<button class="cell act" data-m="spec">' + t('det.full') + '</button>' +
+    '<button class="cell act" data-m="mset">' + t('m.set') + '</button>' +
+    (S.phase === 'take' ? '<button class="cell act danger" data-m="drop">' + t('drop') + '</button>' : '') + '</div>' +
+    (S.phase === 'idle' ? keptHTML() : ''),
+  (el, sh) => el.addEventListener('click', (e) => {
+    const ko = e.target.closest('[data-kopen]'), kd = e.target.closest('[data-kdel]');
+    if (ko) { sh.close(); openKept(ko.dataset.kopen); return; }
+    if (kd) { ctx.ui.confirm(t('kept.delTitle'), '', t('discardYes')).then((ok) => { if (!ok) return; engine().remove(kd.dataset.kdel); delete st().marksBy[kd.dataset.kdel]; ctx.store.save(); S.kept = S.kept.filter((f) => f.path !== kd.dataset.kdel); sh.update(); }); return; }
+    const b = e.target.closest('[data-m]');
+    if (!b) return;
+    const k = b.dataset.m;
+    if (k === 'spec') { sh.close(); stopPlay(); ctx.openTool('spectrum'); }
+    else if (k === 'mset') meterSheet();
+    else if (k === 'det') { sh.close(); detailSheet(); }
+    else if (k === 'preset') { sh.close(); presetSheet(); }
+    else if (k === 'drop') { sh.close(); ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')).then((ok) => ok && dropTake().then(render)); }
+  }));
 }
 
-// Нижняя полоса — главная кнопка под большим пальцем: запись, стоп, пауза, прослушать, сохранить
+/* ---------- разметка ---------- */
+
 const bottom = (inner) => '<div class="vc-bot">' + inner + '</div>';
+const bt = (x, icon, label, cls = '', extra = '') => '<button class="vc-btn sec' + (cls ? ' ' + cls : '') + '" data-x="' + x + '" aria-label="' + esc(label) + '"' + extra + '>' + icon + '</button>';
+const markBtn = (n, dis) => '<button class="vc-btn sec vc-mk" data-x="mark" aria-label="' + esc(t('mark.add')) + '"' + (dis ? ' disabled' : '') + '>' + I.mark + (n ? '<span class="vc-mn num">' + n + '</span>' : '') + '</button>';
+function stageHTML() {
+  const m = st().meter, s = st();
+  const off = S.phase === 'idle' && !s.live;
+  return '<div class="vc-stage" data-x="det" role="button" tabindex="0" aria-label="' + esc(t('det.title')) + '">' +
+    (m.spec ? '<canvas id="vc-spec" class="vc-spec" aria-hidden="true"></canvas>' : '<div class="vc-spec"></div>') +
+    (off ? '<p class="vc-off l2">' + t('live.off') + '</p>' : '') +
+    '<div class="vc-time num' + (S.phase === 'rec' ? '' : ' dim') + '" id="vc-time">' + fmt(S.phase === 'rec' ? S.sec : 0) + '</div>' +
+    (S.phase === 'rec' && S.paused ? '<p class="vc-state l2">' + t('paused') + '</p>' : '') +
+    '<div class="vc-bar vcled" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div></div>';
+}
 function html() {
-  const err = S.err ? '<p class="ftr" style="color:var(--red)">' + t({ denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
+  const err = S.err ? '<p class="ftr vc-err">' + t({ denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div><div class="vc-bar vcled mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
-      '<div class="vc-btns"><button class="vc-btn sec" data-x="pause" aria-label="' + t(S.paused ? 'resume' : 'pause') + '">' + (S.paused ? I.rec : I.pause) + '</button>' +
-      '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div></div>';
-    return '<div class="vc-top">' + meterHTML() + '</div><div class="vc-mid vc-center"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div>' +
-      '<p class="l2 vc-state">' + (S.paused ? t('paused') : esc(curIn() ? devName(curIn()) : t('auto'))) + '</p></div>' +
-      bottom('<button class="vc-btn sec" data-x="pause" aria-label="' + t(S.paused ? 'resume' : 'pause') + '">' + (S.paused ? I.rec : I.pause) + '</button>' +
-        '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button><span class="vc-btn ghost"></span>');
+      '<div class="vc-btns">' + markBtn(S.marks.length) + '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div></div>';
+    return inHTML() + stageHTML() + presetsHTML() +
+      bottom(bt('pause', S.paused ? I.rec : I.pause, t(S.paused ? 'resume' : 'pause')) + markBtn(S.marks.length) +
+        '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button>' +
+        bt('preset', I.tune, t('preset.title')) + bt('more', I.more, t('more')));
   }
   if (S.phase === 'take' && S.take) {
     const [a, b] = selSec();
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num">' + fmt(b - a) + '</div><div class="vc-btns"><button class="vc-btn sec" data-x="play" aria-label="' + t(S.playing ? 'stop' : 'play') + '">' + (S.playing ? I.stop : I.play) + '</button><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div></div>';
-    return '<div class="vc-mid"><div class="vc-take"><canvas id="vc-wave" class="vc-wave" aria-label="' + esc(t('waveAria')) + '"></canvas>' +
+    return '<div class="vc-take"><canvas id="vc-wave" class="vc-wave" aria-label="' + esc(t('waveAria')) + '"></canvas>' +
       '<div class="vc-sel num"><span>' + fmt(a) + '</span><b>' + fmt(b - a) + '</b><span>' + fmt(b) + '</span></div>' +
-      '<div class="vc-tools">' + ctx.ui.seg('vmode', [['orig', t('orig')], ['proc', t('proc')]], S.mode, t('listen')) + '</div>' +
-      fxHTML() +
-      '<div class="group"><button class="cell act danger" data-x="drop">' + t('drop') + '</button></div>' +
-      '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '</div></div>' +
+      '<div class="vc-tools">' + ctx.ui.seg('vmode', [['orig', t('orig')], ['proc', t('proc')]], S.mode, t('listen')) + '</div></div>' +
+      presetsHTML() +
       bottom('<button class="vc-btn sec" data-x="play" aria-label="' + t(S.playing ? 'stop' : 'play') + '">' + (S.busy ? '…' : S.playing ? I.stop : I.play) + '</button>' +
+        markBtn((S.take.marks || []).length, !S.playing) +
         '<button class="vc-btn main" data-x="rec" aria-label="' + t('newRec') + '">' + I.rec + '</button>' +
-        '<button class="vc-btn sec' + (S.take.saved ? ' done' : '') + '" data-x="save"' + (S.busy ? ' disabled' : '') + ' aria-label="' + t(S.take.saved ? 'savedAgain' : 'save') + '">' + I.save + '</button>');
+        '<button class="vc-btn sec' + (S.take.saved ? ' done' : '') + '" data-x="save"' + (S.busy ? ' disabled' : '') + ' aria-label="' + t(S.take.saved ? 'savedAgain' : 'save') + '">' + I.save + '</button>' +
+        bt('more', I.more, t('more')));
   }
-  // ожидание
   if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div>' + err + '</div>';
-  // сверху — мини-окно (спектр и уровень), посередине — звук до записи и устройства, внизу — кнопка записи
-  return '<div class="vc-top">' + meterHTML(true) + '</div>' +
-    '<div class="vc-mid">' + err + keptHTML() + fxHTML(true) + '<div class="hdr">' + t('devices') + '</div>' + devHTML() + '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p></div>' +
-    bottom('<span class="vc-btn ghost"></span><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button><span class="vc-btn ghost"></span>');
+  return inHTML() + err + stageHTML() + presetsHTML() +
+    bottom(bt('insheet', I.inp, t('in')) + markBtn(0, true) +
+      '<button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button>' +
+      bt('preset', I.tune, t('preset.title')) + bt('more', I.more, t('more')));
 }
 
 function keptHTML() {
@@ -508,7 +712,6 @@ function render() {
   if (S.phase === 'idle' && big() && st().live && !L && !S.err) liveStart();
   else if (L && (S.phase !== 'idle' || !big())) liveStop();
   drawWave();
-  if (pmb) pmb.mount(); // полотно эквалайзера общей панели — на новом холсте
 }
 
 function drawWave() {
@@ -517,7 +720,7 @@ function drawWave() {
   const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
   if (!W || !H) return;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc';
+  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#946B3E', l3 = cs.getPropertyValue('--l3').trim() || '#ccc', ink = cs.getPropertyValue('--ink').trim();
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const p = S.take.peaks, n = p.length, bw = W / n, [a, b] = S.sel;
   for (let i = 0; i < n; i++) {
@@ -525,11 +728,14 @@ function drawWave() {
     g.fillStyle = f >= a && f <= b ? tint : l3;
     g.fillRect(x, (H - h) / 2, Math.max(1, bw - 0.6), h);
   }
+  // метки: тонкая линия и номер сверху
+  g.font = '600 10px system-ui, sans-serif'; g.textAlign = 'center';
+  (S.take.marks || []).forEach((m, i) => { const x = (m.t / S.take.sec) * W; g.fillStyle = ink; g.globalAlpha = 0.55; g.fillRect(x - 0.5, 12, 1, H - 12); g.globalAlpha = 1; g.fillText(String(i + 1), Math.max(6, Math.min(W - 6, x)), 10); });
   // ручки обрезки
   g.fillStyle = tint;
   [a, b].forEach((f) => { const x = f * W; g.fillRect(x - 1.5, 0, 3, H); g.beginPath(); g.arc(x, H / 2, 7, 0, 2 * Math.PI); g.fill(); });
   // где играет
-  if (S.playing) { const x = ((S.offset + S.pos) / S.take.sec) * W; g.fillStyle = cs.getPropertyValue('--ink').trim(); g.fillRect(x - 1, 0, 2, H); }
+  if (S.playing) { const x = ((S.offset + S.pos) / S.take.sec) * W; g.fillStyle = ink; g.fillRect(x - 1, 0, 2, H); }
 }
 
 // Обновление без перерисовки: время и уровень при записи, позиция при воспроизведении
@@ -538,9 +744,7 @@ function onLevel(e) {
   if (S.phase !== 'rec' || !host) return;
   meterUpdate(e);
   S.sec = e.sec; S.paused = !!e.paused;
-  if (e.peak > 0.98) S.clip = performance.now();
-  const q = (s) => host.querySelector(s), db = (x) => Math.max(0, Math.min(100, ((20 * Math.log10(Math.max(1e-5, x)) + 60) / 60) * 100));
-  const tm = q('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
+  const tm = host.querySelector('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
 }
 function onPos(e) {
   if (!S.playing || !S.take) return;
@@ -549,14 +753,22 @@ function onPos(e) {
   drawWave();
 }
 function onEnd() { if (S.playing) { S.playing = false; render(); } }
-// Вход пропал во время записи: Android переключился на встроенный микрофон — запись идёт дальше; иначе (или кончилось
-// место) — бережно остановить, всё записанное остаётся
+// Вход пропал во время записи: переключились на встроенный микрофон — запись идёт дальше, на плашке видно, откуда
+// теперь пишется; иначе (или кончилось место) — бережно остановить, всё записанное остаётся
 function onLost(e) {
   if (S.phase !== 'rec') return;
-  ctx.log('запись: вход пропал (' + (e && e.reason) + (e && e.switched ? ', дальше со встроенного микрофона' : ', остановлено') + ')', 'w');
-  if (e && e.switched) { ctx.ui.toast(t('lost.switch')); return; }
+  ctx.log('запись: вход пропал (' + (e && e.reason) + (e && e.switched ? ', дальше со встроенного микрофона' : e && e.soft ? '' : ', остановлено') + ')', 'w');
+  if (e && e.soft) { S.inWarn = t('lost.sleep'); render(); return; }
+  if (e && e.switched) { S.recDev = e.dev || null; S.inWarn = t('lost.switched'); ctx.ui.toast(t('lost.switch')); render(); return; }
   ctx.ui.toast(t(e && e.reason === 'space' ? 'lost.space' : 'lost.stop'));
   stopRec();
+}
+// Android сменил вход сам (или не послушался выбора) — показать фактический
+function onRoute(e) {
+  if (S.phase !== 'rec' || !e || !e.dev) return;
+  S.recDev = e.dev; ctx.log('запись: звук идёт с ' + e.dev.type + ' «' + e.dev.name + '»', 'w');
+  const row = host && host.querySelector('.vc-inrow');
+  if (row) { const tmp = document.createElement('div'); tmp.innerHTML = inHTML(); row.replaceWith(tmp.firstChild); }
 }
 
 /* ---------- модуль ---------- */
@@ -568,48 +780,32 @@ export default {
     host = el; ctx = c; size = sz;
     S.mode = c.store.get('vmode', S.mode);
     const E = engine();
-    offs = [E.on('level', onLevel), E.on('pos', onPos), E.on('end', onEnd), E.on('devices', loadDevices), E.on('lost', onLost)];
+    offs = [E.on('level', onLevel), E.on('pos', onPos), E.on('end', onEnd), E.on('devices', loadDevices), E.on('lost', onLost), E.on('route', onRoute)];
     onClick = (e) => {
-      // нажатие на окно уровня (не на его кнопки) — полное окно спектра и шумомера
-      if (S.phase === 'idle' && e.target.closest('.vc-mon') && !e.target.closest('button, input, select, [data-x]')) { stopPlay(); ctx.openTool('spectrum'); return; }
       const sg = e.target.closest('[data-seg] [data-v]');
       if (sg) {
         const k = sg.closest('[data-seg]').dataset.seg;
         if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; ctx.store.set('vmode', S.mode); render(); } // как слушать — помнится
-        else if (k === 'vbits') { st().bits = +sg.dataset.v; ctx.store.save(); render(); }
-        else if (k === 'vpick') { st().pick = sg.dataset.v; ctx.store.save(); S.proc = null; render(); }
         return;
       }
-      const vm = e.target.closest('[data-vmode]');
-      if (vm) { setMode(vm.dataset.vmode); return; }
-      const ko = e.target.closest('[data-kopen]'), kd = e.target.closest('[data-kdel]');
-      if (ko) { openKept(ko.dataset.kopen); return; }
-      if (kd) { ctx.ui.confirm(t('kept.delTitle'), '', t('discardYes')).then((ok) => { if (!ok) return; engine().remove(kd.dataset.kdel); S.kept = S.kept.filter((f) => f.path !== kd.dataset.kdel); render(); }); return; }
+      const pr = e.target.closest('[data-preset]');
+      if (pr) { pickPreset(pr.dataset.preset); return; }
       const x = e.target.closest('[data-x]');
-      if (!x || S.busy) return;
+      if (!x || (S.busy && x.dataset.x !== 'lamp')) return;
       const a = x.dataset.x;
       if (a === 'rec') startRec();
       else if (a === 'stop') stopRec();
       else if (a === 'pause') { S.paused = !S.paused; engine().pause(S.paused); render(); }
       else if (a === 'play') play();
       else if (a === 'save') save();
-      else if (a === 'live') { const s = st(); s.live = !s.live; ctx.store.save(); if (s.live) liveStart(); else liveStop().then(render); }
-      else if (a === 'hear') { const s = st(); s.hear = !s.hear; ctx.store.save(); liveHear(); x.classList.toggle('on', s.hear); x.setAttribute('aria-pressed', String(s.hear)); }
-      else if (a === 'mset') meterSheet();
-      else if (a === 'vset') voiceSheet();
-      else if (a === 'clipreset') { M.clipAt = 0; M.hold = -120; const c = host.querySelector('#vc-clip'); if (c) c.classList.remove('on'); }
-      else if (a === 'drop') ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')).then((ok) => ok && dropTake().then(render));
+      else if (a === 'mark') addMark();
+      else if (a === 'insheet') inSheet();
+      else if (a === 'preset') presetSheet();
+      else if (a === 'more') moreSheet();
+      else if (a === 'det') { if (S.phase === 'idle' && !st().live) { st().live = true; ctx.store.save(); liveStart(); return; } detailSheet(); }
+      else if (a === 'lamp') { M.clip = false; M.hold = -120; M.lamp = lampOf(performance.now()); const l = host.querySelector('#vc-lamp'); if (l) { l.className = 'vc-lamp ' + M.lamp; l.querySelector('em').textContent = t('lamp.' + M.lamp); } }
     };
-    onChange = (e) => {
-      const d = e.target.dataset, s = st();
-      if (d.v === 'in' || d.v === 'out') { s[d.v] = e.target.value || null; ctx.store.save(); render(); if (S.phase === 'idle') { S.err = null; liveRestart(); } }
-      else if (d.v === 'stereo' || d.v === 'raw' || d.v === 'keepRaw') { s[d.v] = e.target.checked; ctx.store.save(); if (d.v === 'stereo') render(); }
-      else if (d.fx) {
-        const v = e.target.type === 'checkbox' ? e.target.checked : +e.target.value;
-        s.fx[d.fx] = v; ctx.store.save(); liveFx();
-        const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, v);
-      }
-    };
+    onChange = () => {};
     // ручки обрезки: перетаскивание ближайшей
     onPtr = (e) => {
       const cv = e.target.closest('#vc-wave');
@@ -622,18 +818,11 @@ export default {
       move(e);
       addEventListener('pointermove', move); addEventListener('pointerup', up);
     };
+    // клавиатура: окно с цифрами по Enter/пробелу на полотне
+    onInput = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.vc-stage')) { e.preventDefault(); e.target.click(); } };
     host.addEventListener('click', onClick);
-    host.addEventListener('change', onChange);
     host.addEventListener('pointerdown', onPtr);
-    // ползунки обработки: подпись и звук до записи — пока тянут
-    onInput = (e) => {
-      const d = e.target.dataset;
-      if (d.fx && e.target.type === 'range') { st().fx[d.fx] = +e.target.value; liveFx(); const lb = host.querySelector('#vfx-' + d.fx); if (lb) lb.textContent = fxTxt(d.fx, +e.target.value); }
-    };
-    host.addEventListener('input', onInput);
-    // общая панель эффектов: правка применяется к живому входу сразу и к записи при обработке; слушатели — на окне один раз
-    pm = ctx.fxPanel({ get: () => st().chain, set: (fx) => { st().chain = normalizeFx(fx); ctx.store.save(); liveFx(); S.proc = null; return st().chain; } });
-    pmb = pm.bind(host, { update: render });
+    host.addEventListener('keydown', onInput);
     render();
     loadDevices();
     loadKept();
@@ -641,8 +830,7 @@ export default {
   resize(sz) { size = sz; render(); },
   unmount() {
     offs.forEach((f) => f()); offs = [];
-    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('change', onChange); host.removeEventListener('pointerdown', onPtr); host.removeEventListener('input', onInput); }
-    pm = null; pmb = null;
+    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onPtr); host.removeEventListener('keydown', onInput); }
     liveStop();
     stopPlay();
     // запись не прерывается молча: остановить и оставить дубль до следующего открытия

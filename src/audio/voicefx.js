@@ -305,3 +305,60 @@ export function peaks(ch, n = 400) {
   for (let b = 0; b < out.length; b++) { let m = 0; const e = Math.min(len, (b + 1) * step); for (let i = b * step; i < e; i++) for (const x of ch) { const v = Math.abs(x[i]); if (v > m) m = v; } out[b] = m; }
   return out;
 }
+
+// Метки в WAV: блок «cue » (позиции в отсчётах) и «LIST/adtl» с подписями — их видят Reaper, Audition, Audacity.
+// marks — [{ t: секунды, name }]. Файл с оборванным заголовком (размер данных 0 или больше файла) не трогается:
+// метки дописываются только к целому файлу, звук не сдвигается ни на отсчёт
+export function withCue(u8, marks, sr) {
+  const list = (marks || []).filter((m) => m && m.t >= 0).sort((a, b) => a.t - b.t);
+  if (!list.length || !u8 || u8.length < 44) return u8;
+  const v = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), s = (o, n) => String.fromCharCode(...u8.subarray(o, o + n));
+  if (s(0, 4) !== 'RIFF' || s(8, 4) !== 'WAVE') return u8;
+  let o = 12, dataOk = false, end = 12;
+  while (o + 8 <= u8.length) {
+    const id = s(o, 4), size = v.getUint32(o + 4, true), next = o + 8 + size + (size & 1);
+    if (id === 'data') { if (!size || o + 8 + size > u8.length) return u8; dataOk = true; }
+    if (id === 'cue ' || (id === 'LIST' && s(o + 8, 4) === 'adtl')) return u8; // метки уже есть
+    if (next > u8.length) { if (id !== 'data') break; end = u8.length; break; }
+    end = next; o = next;
+  }
+  if (!dataOk) return u8;
+  const enc = new TextEncoder(), labels = list.map((m, i) => enc.encode(String(m.name || '').trim() || String(i + 1)));
+  const cueSize = 4 + 24 * list.length;
+  const lablSize = (b) => 4 + b.length + 1, lablPad = (b) => lablSize(b) + (lablSize(b) & 1);
+  const listSize = 4 + labels.reduce((a, b) => a + 8 + lablPad(b), 0);
+  const head = end + (end & 1), out = new Uint8Array(head + 8 + cueSize + 8 + listSize);
+  out.set(u8.subarray(0, Math.min(end, u8.length)));
+  const w = new DataView(out.buffer), put = (p, str) => { for (let i = 0; i < str.length; i++) out[p + i] = str.charCodeAt(i); };
+  let p = head;
+  put(p, 'cue '); w.setUint32(p + 4, cueSize, true); w.setUint32(p + 8, list.length, true); p += 12;
+  list.forEach((m, i) => {
+    const pos = Math.round(m.t * sr);
+    w.setUint32(p, i + 1, true); w.setUint32(p + 4, pos, true); put(p + 8, 'data'); w.setUint32(p + 12, 0, true); w.setUint32(p + 16, 0, true); w.setUint32(p + 20, pos, true); p += 24;
+  });
+  put(p, 'LIST'); w.setUint32(p + 4, listSize, true); put(p + 8, 'adtl'); p += 12;
+  labels.forEach((b, i) => { put(p, 'labl'); w.setUint32(p + 4, lablSize(b), true); w.setUint32(p + 8, i + 1, true); out.set(b, p + 12); p += 8 + lablPad(b); });
+  w.setUint32(4, out.length - 8, true);
+  return out;
+}
+// Метки из WAV (cue + подписи) → [{ t, name }] — для файлов, пришедших извне
+export function readCue(u8) {
+  if (!u8 || u8.length < 44) return [];
+  const v = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), s = (o, n) => String.fromCharCode(...u8.subarray(o, o + n));
+  if (s(0, 4) !== 'RIFF' || s(8, 4) !== 'WAVE') return [];
+  let o = 12, sr = 0;
+  const pts = new Map(), names = new Map(), dec = new TextDecoder();
+  while (o + 8 <= u8.length) {
+    const id = s(o, 4), size = v.getUint32(o + 4, true);
+    if (id === 'fmt ') sr = v.getUint32(o + 12, true);
+    else if (id === 'cue ' && o + 12 <= u8.length) { const n = v.getUint32(o + 8, true); for (let i = 0; i < n && o + 12 + i * 24 + 24 <= u8.length; i++) { const q = o + 12 + i * 24; pts.set(v.getUint32(q, true), v.getUint32(q + 20, true)); } }
+    else if (id === 'LIST' && s(o + 8, 4) === 'adtl') {
+      let q = o + 12;
+      while (q + 12 <= o + 8 + size && q + 12 <= u8.length) { const sid = s(q, 4), sz = v.getUint32(q + 4, true); if (sid === 'labl') names.set(v.getUint32(q + 8, true), dec.decode(u8.subarray(q + 12, Math.min(u8.length, q + 8 + sz))).replace(/\0+$/, '')); q += 8 + sz + (sz & 1); }
+    }
+    if (!size && id === 'data') break;
+    o += 8 + size + (size & 1);
+  }
+  if (!sr) return [];
+  return [...pts.entries()].map(([k, pos]) => { const nm = names.get(k) || ''; return { t: Math.round((pos / sr) * 10) / 10, name: /^\d+$/.test(nm) ? '' : nm }; }).sort((a, b) => a.t - b.t);
+}
