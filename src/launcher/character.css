@@ -357,3 +357,25 @@ html[data-style="diary"] { --k-in: k-paper; --k-dur: .42s; --k-tab: l-fade; --k-
 .l-d-title { flex-wrap: nowrap; min-width: 0; }
 .l-d-title .l-d-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .l-d-link { white-space: nowrap; flex: none; }
+
+/* ——— переключатели: «вкл» и «выкл» различаются не только цветом кружка (проверка 02.11.2026) ——— */
+/* мягкий: включён — дорожка залита акцентом и выпукла, выключен — вдавлена и пуста */
+[data-style="soft"] .l-sw { width: 46px; height: 26px; }
+[data-style="soft"] .l-sw i { top: 4px; left: 4px; width: 18px; height: 18px; background: var(--bg); box-shadow: 2px 2px 4px var(--l-lo), -1px -1px 3px var(--l-hi); }
+[data-style="soft"] .l-sw.on { background: var(--l-acc) !important; box-shadow: inset 2px 2px 5px rgba(0,0,0,.18), inset -2px -2px 5px rgba(255,255,255,.25); }
+[data-style="soft"] .l-sw.on i { transform: translateX(20px); background: #fff; }
+[data-style="soft"][data-mono] .l-sw.on { background: var(--ink) !important; }
+[data-style="soft"][data-mono] .l-sw.on i { background: var(--bg); }
+/* дневник: включён — залит чернилами, выключен — пустая рамка */
+[data-style="diary"] .l-sw.on { background: var(--l-acc); border-color: var(--l-acc); }
+[data-style="diary"] .l-sw.on i { background: var(--cell); }
+[data-style="diary"][data-mono] .l-sw.on { background: var(--ink); border-color: var(--ink); }
+[data-style="diary"] .l-sw:not(.on) i { background: var(--l3); }
+/* телеметрия: выключен — пустая дорожка, кружок слева; включён — красная заливка */
+[data-style="tele"] .l-sw:not(.on) { background: transparent; }
+[data-style="tele"] .l-sw:not(.on) i { background: var(--l2); }
+/* телеметрия в «Чёрно-белом»: галочка — цветом фона на белом квадрате (была белой на белом) */
+[data-style="tele"][data-mono] .l-check.on .l-check-box::after { border-color: var(--bg); }
+/* мягкий: главная кнопка — надпись плотнее (акцент на светлом был бледным) */
+[data-style="soft"] .l-btn.primary { font-weight: 600; color: color-mix(in srgb, var(--l-acc) 72%, var(--ink)); }
+[data-style="soft"][data-mono] .l-btn.primary { color: var(--ink); }

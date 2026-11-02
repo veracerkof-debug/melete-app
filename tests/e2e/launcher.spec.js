@@ -712,3 +712,19 @@ test('поле поиска во «Всех приложениях»: по ум�
   await expect(page.locator('.l-d-find')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('переключатели в настройках во всех стилях: касание меняет и значение, и вид', async ({ page, errors }) => {
+  for (const style of ['classic', 'strip', 'soft', 'term', 'menu', 'cli', 'inst', 'panel', 'tele', 'cont', 'diary']) {
+    await open(page, { style, mono: style === 'tele' });
+    await hold(page, 200, 14);
+    await page.locator('.l-set-tabs button', { hasText: 'Главный' }).click();
+    const row = page.locator('.l-sheet [role=switch]').first();
+    const look = () => row.locator('.l-sw').evaluate((e) => { const c = getComputedStyle(e), b = getComputedStyle(e, '::before'), i = e.querySelector('i'); return [c.backgroundColor, b.content, i ? getComputedStyle(i).transform : ''].join('|'); });
+    const v0 = await row.getAttribute('aria-checked'), l0 = await look();
+    await row.click();
+    await page.waitForTimeout(350);
+    expect(await page.locator('.l-sheet [role=switch]').first().getAttribute('aria-checked'), style).not.toBe(v0);
+    expect(await look(), style).not.toBe(l0);
+  }
+  expect(errors).toEqual([]);
+});
