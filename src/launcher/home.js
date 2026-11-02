@@ -239,7 +239,7 @@ export function renderHome() {
     balance: renderBalance,
     apps: renderList,
     // пустое место; крест посередине — здесь, вместо обоев (касания проходят сквозь него)
-    space: () => h('div', { class: 'l-spacer' }, crossAt('center') ? h('div', { class: 'l-cross at-center', html: dotted(crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100)) }) : null),
+    space: () => h('div', { class: 'l-spacer' }, crossAt('center') && !crossSlot() ? h('div', { class: 'l-cross at-center', html: dotted(crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100)) }) : null),
     tracker: renderTracker,
     now: () => renderNow(handlers),
     dock: () => [crossAt('bottom') ? h('div', { class: 'l-cross at-bottom', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }) : null, renderDock()],
@@ -270,6 +270,8 @@ export function renderHome() {
     if (id === 'clock' && crossAt('top')) out.unshift(h('div', { class: 'l-cross at-top', html: crossSVG(prefs.cross, 1.2, (prefs.crossWeight || 100) / 100) }));
     return out;
   });
+  // крест посередине — в стилях со своим местом для него: часть устройства стиля, а не пустоты (crossSlot)
+  if (crossAt('center') && crossSlot()) placeSlotCross(blocks);
   // подписи блоков (видны в стилях «Полоса», «Терминал», «Меню»)
   blocks.forEach((el) => { const id = el.dataset?.blk; if (['tracker', 'balance', 'apps', 'now'].includes(id) || (id === 'clock' && styleId() === 'term')) el.dataset.cap = t('cap.' + id); });
   root.replaceChildren(...[
@@ -390,8 +392,8 @@ export function refreshBulge() {
 }
 
 // крест точками — в тёмных «цифровых» стилях (styles.js: DOTTED), как рисунок из точек
-function dotted(svg) {
-  if (!DOTTED.includes(styleId())) return svg;
+function dotted(svg, force = false) {
+  if (!force && !DOTTED.includes(styleId())) return svg;
   const vb = /viewBox="([^"]+)"/.exec(svg)?.[1].split(/\s+/).map(Number) || [0, 0, 24, 32];
   // у креста с голубем контур внутри группы с scale(.1) — узор считается в её единицах (в 10 раз крупнее)
   const k = /scale\(\.1/.test(svg) ? 10 : 1;
@@ -408,4 +410,26 @@ function refreshNow() {
   const fresh = renderNow(handlers);
   keepMarks(el, fresh);
   el.replaceWith(fresh);
+}
+
+// Место креста «посередине» в стилях (DECISIONS 2026-11-02): полоса — над значками в цветной полосе; меню — во главе
+// полосы значков вместо звёздочки; приборы — отверстия решётки динамика крестом; терминал — точками в карточке времени;
+// дневник — маленькая виньетка над месяцем. Нет нужного блока (убран) — крест на обычном месте посередине.
+const SLOTS = { strip: 'dock', menu: 'dock', inst: 'grille', term: 'clock', diary: 'head' };
+const crossSlot = () => SLOTS[styleId()] || null;
+function placeSlotCross(blocks) {
+  const svg = (w = 1.2) => crossSVG(prefs.cross, w, (prefs.crossWeight || 100) / 100);
+  const blk = (id) => blocks.find((b) => b.dataset?.blk === id);
+  const slot = crossSlot();
+  const put = () => {
+    if (slot === 'dock') { const d = blk('dock'); if (!d || d.classList.contains('l-dock-gap')) return false; d.prepend(h('div', { class: 'l-cross in-slot', html: svg() })); return true; }
+    if (slot === 'grille') { const g = blk('clock')?.querySelector('.l-grille'); if (!g) return false; g.classList.add('has-cross'); g.innerHTML = dotted(svg(2.4), true); return true; }
+    if (slot === 'clock') { const c = blk('clock'); if (!c) return false; c.append(h('div', { class: 'l-cross in-slot', html: dotted(svg(2.4)) })); return true; }
+    if (slot === 'head') { const c = blk('clock'); if (!c) return false; c.prepend(h('div', { class: 'l-cross in-slot', html: svg() })); return true; }
+    return false;
+  };
+  if (put()) return;
+  // запасное место — посередине
+  const sp = blocks.find((b) => b.classList?.contains('l-spacer'));
+  sp?.append(h('div', { class: 'l-cross at-center', html: dotted(svg()) }));
 }
