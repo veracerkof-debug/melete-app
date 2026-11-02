@@ -97,3 +97,5 @@
 .dctr.on circle{fill:color-mix(in srgb,var(--tint) 16%,var(--cell))}
 .dctr.on text{fill:var(--tint-text);font-size:13px}
 @media (prefers-reduced-motion:reduce){.dseg.on path{animation:none}}
+/* низкая полоска (альбомный телефон, окна стопкой): двенадцать тонов в один ряд — второй ряд не срезан */
+@media (max-height: 460px) { .pane.strip .dgrid.g6{grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:1fr!important} .pane.strip .dtile{font-size:clamp(12px,40cqh,20px)} }

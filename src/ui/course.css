@@ -1,5 +1,7 @@
 /* Уроки тренажёров (src/ui/course.js) */
 .crsmode{flex:none}
+/* полоска — только сам тренажёр: переключатель режимов занимал половину окна (выбор — в окне побольше) */
+.pane.strip .crsmode{display:none}
 .crs{display:flex;flex-direction:column;gap:10px}
 .crsplace{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:color-mix(in srgb,var(--tint) 10%,var(--cell));box-shadow:inset 0 0 0 1px var(--sep)}
 .crsplace span{font-size:14px;color:var(--l2)}

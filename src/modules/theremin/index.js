@@ -149,7 +149,7 @@ function view() {
   const camBtn = ui.icb('data-x="tcam"', on || S.state === 'loading' ? I.camOff : I.cam, t(on || S.state === 'loading' ? 'stop' : 'start'), 'sm');
   // узкое окно с работающей камерой: диапазон уходит в настройки — место кнопкам камеры и света
   const narrow = on && host && host.clientWidth < 470;
-  const range = big && !gtr && !narrow ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
+  const range = big && !gtr && !narrow && size !== 'quarter' ? '<div class="glrange">' + ui.icb('data-x="tlo" data-d="-12"', I.left, t('octDown'), 'sm') + '<span class="num">' + rangeTxt(s) + '</span>' + ui.icb('data-x="tlo" data-d="12"', I.right, t('octUp'), 'sm') + '</div>' : '';
   const snap = size === 'full' && s.mode === 'solo' && host && host.clientWidth > 520 ? '<button class="glsnap" data-x="tsnap" aria-label="' + ui.esc(t('snapBtn', { mode: t('snap.' + s.snap) })) + '">' + t('snap.' + s.snap) + '</button>' : '';
   // соло → аккорды → гитара (соло ↔ аккорды — то же жестом «окей» правой рукой)
   const modeBtn = size !== 'strip' ? '<button class="glsnap" data-x="tmode" aria-label="' + ui.esc(t('modeBtn', { mode: t('mode.' + s.mode) })) + '">' + t('mode.' + s.mode) + '</button>' : '';
@@ -164,7 +164,7 @@ function view() {
     '<div class="glnote tmnote" aria-live="off"><b class="num" id="tmnote">' + (on ? '—' : '') + '</b><span class="num" id="tmc"></span></div>' +
     '<span class="tmlost" id="tmlost" hidden>' + t('noHands') + '</span>' +
     melOver(s) + (gtr && on ? '<div class="tmgs" id="tmgs" aria-live="polite" hidden><b></b><span></span></div>' : '') + mid + (S.state === 'loading' || (on && !S.live) ? '<div class="tmwait">' + ui.loader('wave') + '</div>' : '') +
-    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + (on && big ? flipBtn + lightBtn : '') + camBtn + gear + '</div></div>';
+    '<div class="glov tmbar">' + (size === 'strip' ? '' : range + modeBtn + snap) + (on && big ? flipBtn + lightBtn : '') + (S.state === 'off' || S.state === 'error' ? '' : camBtn) + gear + '</div></div>';
 }
 
 function render() {
