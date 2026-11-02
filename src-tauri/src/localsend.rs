@@ -78,6 +78,10 @@ fn subdir(name: &str) -> &'static str {
 fn safe_name(s: &str) -> String {
     let n: String = s.chars().map(|c| if "\\/:*?\"<>|".contains(c) || (c as u32) < 32 { '_' } else { c }).collect();
     let n = n.trim().trim_end_matches('.').to_string();
+    // зарезервированные имена Windows (CON, NUL, COM1…): такой «файл» уходит в устройство, а не на диск
+    let stem = n.split('.').next().unwrap_or("").trim().to_ascii_uppercase();
+    let reserved = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL") || ((stem.starts_with("COM") || stem.starts_with("LPT")) && stem.len() == 4 && stem.as_bytes()[3].is_ascii_digit());
+    let n = if reserved { format!("_{n}") } else { n };
     if n.is_empty() { "file".into() } else { n.chars().take(120).collect() }
 }
 fn free_path(dir: &Path, name: &str) -> PathBuf {

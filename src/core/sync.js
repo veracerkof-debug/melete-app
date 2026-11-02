@@ -100,14 +100,24 @@ const writeLS = (v) => { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); 
 
 // Обработать запрос. req: { method, path, query, key, json, bytes }; → { status, json } | { status, bytes }.
 // ctx: { app, mem, code, name } — mem: { peers }, code — текущий код сопряжения; incoming — недокачанные файлы
+// Подбор кода: после PAIR_TRIES неверных попыток — пауза PAIR_LOCK мс (шесть цифр иначе перебираются за минуты)
+export const PAIR_TRIES = 5, PAIR_LOCK = 60000;
+const pairGuard = { fails: 0, until: 0 };
+export const resetPairGuard = () => { pairGuard.fails = 0; pairGuard.until = 0; };
 export async function handleRequest(ctx, req, incoming = new Map()) {
   const { app, mem } = ctx;
   if (req.path === '/melete/v1/pair') {
+    const t = (ctx.now || Date.now)();
+    if (t < pairGuard.until) return { status: 429, json: { error: 'wait' } };
     const code = String((req.json && req.json.code) || '').replace(/\D/g, '');
-    if (!ctx.code || code !== ctx.code) return { status: 403, json: { error: 'code' } };
+    if (!ctx.code || code !== ctx.code) {
+      if (++pairGuard.fails >= PAIR_TRIES) { pairGuard.fails = 0; pairGuard.until = t + PAIR_LOCK; log('sync', 'неверный код ' + PAIR_TRIES + ' раз — пауза', 'w'); }
+      return { status: 403, json: { error: 'code' } };
+    }
+    pairGuard.fails = 0;
     const key = newKey();
     mem.peers = { ...(mem.peers || {}), [key]: { name: String((req.json && req.json.name) || 'Телефон').slice(0, 60), at: Date.now() } };
-    log('sync', 'сопряжение: ' + mem.peers[key].name);
+    log('sync', 'сопряжение: устройство ' + String(key).slice(0, 6));
     return { status: 200, json: { key, name: ctx.name || 'PC' } };
   }
   const peer = mem.peers && mem.peers[req.key];
@@ -260,11 +270,11 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   try { hello = await H('GET', base + '/melete/v1/hello', { timeout: 6000 }); } catch { throw Object.assign(new Error('unreachable'), { reason: 'unreachable' }); }
   if (!hello || hello.app !== 'melete') throw Object.assign(new Error('not melete'), { reason: 'unreachable' });
   let r;
-  try { r = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName } }); } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : 'off' }); }
+  try { r = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName } }); } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : e.status === 429 ? 'wait' : 'off' }); }
   const m = readLS();
   m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 2 };
   writeLS(m);
-  log('sync', 'сопряжено с ' + m.pc.name);
+  log('sync', 'сопряжено с компьютером');
   return m.pc;
 }
 

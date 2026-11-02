@@ -412,6 +412,7 @@
   "sy.err.addr": "That does not look like the computer’s address",
   "sy.err.unreachable": "The computer does not answer: same Wi-Fi? Is “Accept the phone” on?",
   "sy.err.code": "Wrong code — check the computer screen",
+  "sy.err.wait": "Too many wrong codes — wait a minute",
   "sy.err.off": "“Accept the phone” is off on the computer",
   "sy.err.key": "The computer forgot this phone — connect again",
   "sy.err.nopc": "No computer connected",

@@ -563,7 +563,7 @@ async function engineLoad(t) {
       try {
         if (set.length) { AU.partsFor = t; await AU.eng.loadParts(blobsOf(set), mixOf(t)); } else { AU.partsFor = null; await AU.eng.load(t.blob); }
         if (AU.engFor !== t || AU.cur !== t) return false; // пока грузили — выбрали другое
-        ctx.log('движок: ' + t.name + (set.length ? ' (дорожки ' + set.length + ')' : '') + ', ' + Math.round(AU.eng.duration) + ' с');
+        ctx.log('движок: файл ' + t.id + (set.length ? ' (дорожки ' + set.length + ')' : '') + ', ' + Math.round(AU.eng.duration) + ' с');
         AU.eng.playbackRate = AU.rate;
         AU.engOn = true;
         try { if (!AU.el.paused) AU.el.pause(); AU.el.removeAttribute('src'); AU.el.load(); } catch { /* */ }
@@ -709,7 +709,7 @@ function soundCheck(t) {
   if (!t || SC.id === key) return;
   SC.id = key;
   // анализатор подключается сейчас, замер — позже: сразу после подключения в нём ещё нули
-  if (!SC.an) { const tp = ctx.audio.tap(); if (!tp) { ctx.log('играет ' + t.name + ': контекста звука нет', 'w'); return; } SC.an = tp.ctx.createAnalyser(); SC.an.fftSize = 2048; SC.an.smoothingTimeConstant = 0; SC.buf = new Float32Array(2048); tp.into(SC.an); }
+  if (!SC.an) { const tp = ctx.audio.tap(); if (!tp) { ctx.log('играет ' + t.id + ': контекста звука нет', 'w'); return; } SC.an = tp.ctx.createAnalyser(); SC.an.fftSize = 2048; SC.an.smoothingTimeConstant = 0; SC.buf = new Float32Array(2048); tp.into(SC.an); }
   setTimeout(() => {
     try {
       if (AU.cur !== t || pl().paused) return;
@@ -719,10 +719,10 @@ function soundCheck(t) {
       const db = Math.round(20 * Math.log10(Math.sqrt(e / SC.buf.length) + 1e-9));
       const info = (AU.engOn ? 'движок' : 'элемент') + ', ' + tp.ctx.state + ', шина ' + ctx.audio.mixer.value('media') + ', ' + Math.round(pl().currentTime * 10) / 10 + ' с, ' + (t.type || '?');
       if (db < -60 || bad) {
-        ctx.log('играет ' + t.name + ', а на выходе тишина (' + db + ' дБ' + (bad ? ', NaN' : '') + '): ' + info, 'w');
+        ctx.log('играет ' + t.id + ', а на выходе тишина (' + db + ' дБ' + (bad ? ', NaN' : '') + '): ' + info, 'w');
         if (AU.engOn && !AU.noEngine) engineFallback(t, db + ' дБ'); // движок молчит на этом устройстве — звук элементом, до перезапуска
       }
-      else ctx.log('играет ' + t.name + ': ' + db + ' дБ, ' + info);
+      else ctx.log('играет ' + t.id + ': ' + db + ' дБ, ' + info);
     } catch (e) { ctx.logErr(e); }
   }, 2500);
 }

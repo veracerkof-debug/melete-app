@@ -400,6 +400,7 @@
   "sy.err.addr": "Bu kompyuter manziliga oʻxshamaydi",
   "sy.err.unreachable": "Kompyuter javob bermayapti: bir Wi-Fi tarmogʻidami? «Telefonni qabul qilish» yoqilganmi?",
   "sy.err.code": "Kod mos emas — kompyuter ekranini qarang",
+  "sy.err.wait": "Notoʻgʻri kod koʻp marta kiritildi — bir daqiqa kutish kerak",
   "sy.err.off": "Kompyuterda «Telefonni qabul qilish» oʻchiq",
   "sy.err.key": "Kompyuter bu telefonni unutgan — qayta ulang",
   "sy.err.nopc": "Kompyuter ulanmagan",

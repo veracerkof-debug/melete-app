@@ -134,7 +134,7 @@ export function createJobs(files) {
     const r = { id: old ? old.id : 'dn' + at.toString(36), name: base(rec) + ' — ' + t('stems.cleanSuffix') + '.wav', size: wav.length, type: 'audio/wav', kind: 'audio', songs: rec.songs || [], created: at,
       blob: new Blob([wav], { type: 'audio/wav' }), dur: res.dur, peaks: stemPeaks([res.x]), dn: { src: rec.id, at }, noAuto: true };
     await files.add(r);
-    log('jobs', 'шум убран: ' + r.name);
+    log('jobs', 'шум убран: ' + r.id);
     return r;
   }
 

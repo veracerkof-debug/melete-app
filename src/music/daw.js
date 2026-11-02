@@ -52,9 +52,12 @@ export function readMidiSong(u8) {
     if (str(p) !== 'MTrk') { p = end; tr--; if (p >= d.length) break; continue; }
     let i = start, tk = 0, run = 0, name = '';
     const by = new Map(), prog = {}, open = new Map(); // канал → дорожка; канал → инструмент; ch:m → нота
-    const vl = () => { let v = 0, b; do { b = d[i++]; v = (v << 7) | (b & 0x7f); } while (b & 0x80 && i < end); return v; };
+    // не больше 4 байт и без переполнения: отрицательная длина отбрасывала назад — вечный цикл на испорченном файле
+    const vl = () => { let v = 0, b, c = 0; do { b = d[i++]; v = v * 128 + (b & 0x7f); } while (b & 0x80 && i < end && ++c < 4); return v; };
     const trackOf = (ch) => { let t = by.get(ch); if (!t) { t = { name: '', drums: ch === 9, program: prog[ch] ?? null, notes: [] }; by.set(ch, t); tracks.push(t); } return t; };
-    while (i < end) {
+    let guard = 0;
+    while (i < end && guard++ < 4e6) {
+      const at = i;
       tk += vl();
       let st = d[i];
       if (st & 0x80) i++; else st = run;
@@ -76,6 +79,7 @@ export function readMidiSong(u8) {
         else if (kind === 0x90 && b > 0) { const key = ch + ':' + a; if (open.has(key)) closeNote(open, key, tk, trackOf(ch), div); open.set(key, { tk, v: b / 127 }); }
         else if (kind === 0x80 || (kind === 0x90 && b === 0)) closeNote(open, ch + ':' + a, tk, trackOf(ch), div);
       } else break;
+      if (i <= at) break;
     }
     open.forEach((_, key) => closeNote(open, key, tk, trackOf(+key.split(':')[0]), div));
     by.forEach((t) => { t.name = name; });
@@ -229,7 +233,8 @@ export function readFlp(u8) {
     if (id < 64) { v = d[p]; p += 1; }
     else if (id < 128) { v = u16(d, p); p += 2; }
     else if (id < 192) { v = u32(d, p); p += 4; }
-    else { let sh = 0, b; do { b = d[p++]; n |= (b & 0x7f) << sh; sh += 7; } while (b & 0x80 && p < end); data = p; p += n; }
+    // длина — не больше 5 байт и без переполнения (иначе отрицательная длина уводит назад — вечный цикл)
+    else { let sh = 0, b; do { b = d[p++]; n += (b & 0x7f) * 2 ** sh; sh += 7; } while (b & 0x80 && p < end && sh < 35); data = p; p += n; }
     switch (id) {
       case FL.VERSION: { const ver = flText(d, data, n); wide = parseInt(ver, 10) >= 12; break; }
       case FL.TIMESIG_NUM: song.num = v; break;
