@@ -1025,3 +1025,63 @@ body { transition: background-color .35s var(--ease), color .35s var(--ease); }
 .l-set-find { margin: 0 0 6px; }
 .l-sheet-body > .l-sec > .l-kicker { font-size: 11px; color: var(--l2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; }
 .l-search:focus-visible { outline: none; }
+
+/* ═════════ Пропорции стилей и крест в устройстве стиля (DECISIONS 2026-11-02) ═════════ */
+/* крест посередине в стилях: ровный размер (не по остатку места) — не меньше 90 и не больше 160 px */
+[data-style] .l-home .l-spacer:has(> .l-cross.at-center) { min-height: 104px; }
+[data-style] .l-cross.at-center { inset: 4% 0; }
+[data-style] .l-cross.at-center svg { height: clamp(90px, 100%, 160px); max-height: 100%; }
+/* мягкий: выпуклый медальон; контур: в рамке, как дата; панели: на светлой панели */
+[data-style="soft"] .l-cross.at-center svg { height: clamp(84px, 86%, 124px); aspect-ratio: 1; padding: 20px; border-radius: 50%; background: var(--bg); box-shadow: 8px 8px 18px var(--l-lo), -8px -8px 18px var(--l-hi); box-sizing: border-box; }
+[data-style="cont"] .l-cross.at-center svg { height: clamp(84px, 86%, 118px); aspect-ratio: 1; padding: 16px; border: 2px solid var(--ink); border-radius: 22px; background: var(--bg); box-shadow: 4px 4px 0 rgba(22,24,22,.2); box-sizing: border-box; }
+[data-style="panel"] .l-cross.at-center svg { height: clamp(84px, 86%, 118px); aspect-ratio: 1; padding: 16px; border-radius: 14px; background: var(--l-pan); color: #111; box-sizing: border-box; }
+[data-style="panel"] .l-cross.at-center svg .l-dove { fill: var(--l-acc); }
+/* места креста у стилей (home.js: crossSlot) */
+.l-cross.in-slot { pointer-events: none; }
+.l-cross.in-slot svg { display: block; width: 100%; height: 100%; }
+.l-cross.in-slot svg * { vector-effect: non-scaling-stroke; }
+[data-style="strip"] .l-dock > .l-cross.in-slot { width: 46%; height: calc(56px * var(--l-auto, 1)); margin: 0 auto 14px; color: #fff; opacity: min(1, calc(.95 * var(--l-co, 1))); }
+[data-style="strip"][data-mono] .l-dock > .l-cross.in-slot { color: var(--ink); }
+[data-style="strip"] .l-dock > .l-cross.in-slot svg .l-dove { fill: currentColor; }
+[data-style="menu"] .l-dock:has(> .l-cross.in-slot)::before { display: none; }
+[data-style="menu"] .l-dock > .l-cross.in-slot { width: 22px; height: 30px; flex: none; margin: 2px 0 12px; padding-bottom: 12px; box-sizing: content-box; border-bottom: 1px solid var(--sep); color: var(--ink); }
+.l-grille.has-cross { background-image: none; display: grid; place-items: center; color: rgba(0,0,0,.42); }
+.l-grille.has-cross svg { height: 100%; width: auto; }
+.l-grille.has-cross svg .l-dove { fill: url(#ldot); }
+[data-style="term"] .clock-wrap { position: relative; }
+[data-style="term"] .clock-wrap > .l-cross.in-slot { position: absolute; right: 16px; top: 14px; bottom: 14px; width: auto; aspect-ratio: 3 / 4; color: var(--ink); opacity: min(1, calc(.8 * var(--l-co, 1))); }
+[data-style="term"] .clock-wrap > .l-cross.in-slot svg * { vector-effect: none; stroke-width: 2.6; }
+[data-style="diary"] .l-dhead > .l-cross.in-slot { width: 16px; height: 22px; margin-bottom: 4px; color: var(--ink); }
+
+/* ——— единые пропорции: часы близкого веса, карточки — по содержимому ——— */
+[data-style="strip"] .clock { font-size: 62px; }
+[data-style="soft"] .clock { font-size: 80px; }
+[data-style="soft"] .l-home > .clock-wrap { padding: 16px 30px 14px; border-radius: 32px; margin-bottom: 14px; }
+[data-style="soft"] .l-pt-g { width: 118px; height: 118px; }
+[data-style="soft"] .l-apps .l-app { font-size: 16px; padding: 10px 24px; }
+[data-style="soft"] .l-dock-btn { width: 44px; height: 44px; }
+[data-style="term"] .clock { font-size: 60px; }
+[data-style="term"] .l-home { gap: 8px; }
+[data-style="term"] .l-home > .clock-wrap, [data-style="term"] .l-home > .l-tracker, [data-style="term"] .l-balance, [data-style="term"] .l-home > .l-apps { padding: 10px 14px; }
+[data-style="term"] .l-balance { display: flex; flex-wrap: nowrap !important; align-items: baseline; gap: 10px; }
+[data-style="term"] .l-balance::before { flex-basis: auto !important; margin: 0 !important; }
+[data-style="term"] .l-bal-v { font-size: 19px; margin-left: auto; }
+[data-style="term"] .l-heat-c { grid-template-rows: repeat(6, 5px); gap: 2px; }
+[data-style="menu"] .clock { font-size: 62px; }
+[data-style="inst"] .clock { font-size: 54px; }
+[data-style="inst"] .l-home > .clock-wrap.l-tile { min-height: 112px; padding: 14px 16px 12px; }
+[data-style="inst"] .l-tile-g { width: 58%; margin: 2px 0; }
+[data-style="inst"] .l-tile-v { font-size: 20px; }
+[data-style="inst"] .l-tile { padding: 10px 12px; border-radius: 20px; }
+[data-style="inst"] .l-apps .l-app { font-size: 18px; padding: 7px 0; }
+[data-style="panel"] .clock { font-size: 54px; }
+[data-style="panel"] .l-pan { min-height: 74px; padding: 10px 16px; }
+[data-style="panel"] .l-pan-l b { font-size: 30px; }
+[data-style="panel"] .l-apps .l-app { font-size: 19px; padding: 7px 0; }
+[data-style="tele"] .clock { font-size: 68px; }
+[data-style="tele"] .l-tl-ring { width: 80px; }
+[data-style="cont"] .clock { font-size: 50px; }
+[data-style="cont"] .l-cdate-n { width: 66px; height: 66px; font-size: 34px; border-radius: 18px; }
+[data-style="cont"] .l-cdate-t b { font-size: 21px; }
+[data-style="cont"] .l-apps .l-app { padding: 10px 18px; }
+[data-style="diary"] .clock { font-size: 52px; }

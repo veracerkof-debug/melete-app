@@ -640,3 +640,22 @@ test('«Фокус»: смахнуть вверх — сразу поиск; н�
   await expect(page.locator('.l-sheet .l-styles')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('крест в стилях — на своём месте: полоса, меню, приборы, терминал, дневник; другие места — как выбраны', async ({ page, errors }) => {
+  const at = { strip: '.l-dock > .l-cross.in-slot', menu: '.l-dock > .l-cross.in-slot', inst: '.l-grille.has-cross svg', term: '.clock-wrap > .l-cross.in-slot', diary: '.l-dhead > .l-cross.in-slot' };
+  for (const [s, sel] of Object.entries(at)) {
+    await open(page, { style: s, church: true, cross: 'classic', crossAt: 'center' });
+    await expect(page.locator(sel), s).toHaveCount(1);
+    await expect(page.locator('.l-spacer .l-cross'), s).toHaveCount(0);
+  }
+  // выбрано «вверху» — вверху и в стиле
+  await open(page, { style: 'term', church: true, cross: 'classic', crossAt: 'top' });
+  await expect(page.locator('.l-cross.at-top')).toHaveCount(1);
+  await expect(page.locator('.l-cross.in-slot')).toHaveCount(0);
+  // остальные стили — посередине, ровного размера
+  await open(page, { style: 'cont', church: true, cross: 'classic', crossAt: 'center' });
+  const hgt = await page.locator('.l-cross.at-center svg').evaluate((e) => e.getBoundingClientRect().height);
+  expect(hgt).toBeGreaterThanOrEqual(80);
+  expect(hgt).toBeLessThanOrEqual(170);
+  expect(errors).toEqual([]);
+});
