@@ -8,6 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
+import { foldQ } from '../../core/library.js';
 import { SH, FL } from '../../music/notes.js';
 import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
@@ -836,7 +837,7 @@ function libHTML() {
   const { t, tn } = ctx;
   let list = tracks().slice();
   queuePeaks();
-  if (ML.q) { const q = ML.q.toLowerCase(); list = list.filter((x) => x.name.toLowerCase().includes(q)); }
+  if (ML.q) { const q = foldQ(ML.q); list = list.filter((x) => foldQ(x.name).includes(q)); }
   if (ML.f === 'songs') list = list.filter((x) => fileSongs(x).length);
   else if (ML.f === 'free') list = list.filter((x) => !fileSongs(x).length);
   const so = { date: (a, b) => (b.created || 0) - (a.created || 0), name: (a, b) => a.name.localeCompare(b.name, ctx.lang()), size: (a, b) => (b.size || 0) - (a.size || 0), dur: (a, b) => (b.dur || 0) - (a.dur || 0) };
@@ -852,7 +853,7 @@ function libHTML() {
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
   // записи MIDI (игра в пианино, глайдере, терменвоксе): касание — открыть инструмент и проиграть
-  const midis = ML.f === 'songs' ? [] : ctx.files.list('midi').filter((x) => !ML.q || x.name.toLowerCase().includes(ML.q.toLowerCase())).sort((a, b) => (b.created || 0) - (a.created || 0));
+  const midis = ML.f === 'songs' ? [] : ctx.files.list('midi').filter((x) => !ML.q || foldQ(x.name).includes(foldQ(ML.q))).sort((a, b) => (b.created || 0) - (a.created || 0));
   const midiHTML = midis.length && !sel ? '<div class="mlmh2">MIDI</div><div class="mlist">' + midis.map((x) => {
     const tl = ctx.midi.tool(x.tool), nm = x.name.replace(/\.midi?$/i, '');
     return '<div class="mlrow"><button class="mlmain" data-x="mmplay" data-id="' + x.id + '" aria-label="' + esc(t('playX', { name: nm })) + '"><span class="mlart midi" style="--mc:' + (tl ? tl.color : 'var(--tint)') + '">' + (tl ? tl.icon : ICON) + '</span>' +

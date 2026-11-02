@@ -44,7 +44,7 @@
   "pre.piano": "Royal",
   "pre.organ": "Organ",
   "pre.sine": "Sinus",
-  "pre.bell": "Qo‘ng‘iroq",
+  "pre.bell": "Qoʻngʻiroq",
   "scale.major": "Major",
   "scale.minor": "Tabiiy minor",
   "scale.harm": "Garmonik minor",
@@ -100,10 +100,10 @@
   "help.2": "Beshtagacha barmoq; bogʻlash — pardasiz, magnit yoki notalar.",
   "help.tip": "Magnit notaga tushishga yordam beradi va sirpanishni saqlaydi.",
   "mel.title": "Kuy",
-  "mel.hint": "Ko'rsatma bo'yicha kuy: kerakli nota yoritilgan, yuqorida — keyingi notalar va so'zlar. Notaga tushilganda u hisoblanadi. «▶» — qanday yangrashini tinglash.",
+  "mel.hint": "Koʻrsatma boʻyicha kuy: kerakli nota yoritilgan, yuqorida — keyingi notalar va soʻzlar. Notaga tushilganda u hisoblanadi. «▶» — qanday yangrashini tinglash.",
   "mel.none": "Kuysiz",
   "mel.listen": "Kuyni tinglash",
-  "mel.stop": "To'xtatish",
+  "mel.stop": "Toʻxtatish",
   "mel.off": "Kuyni olib tashlash",
   "mel.done": "Kuy chalindi — boshidan",
   "pre.fmep": "FM-pianino",
@@ -120,6 +120,6 @@
   "tab.sound": "Tovush",
   "tab.notes": "Notalar",
   "tab.fx": "Effektlar",
-  "tab.look": "Ko‘rinish",
-  "fxLead": "Tayyor to‘plam — bir bosishda. Quyida har bir effekt: kalit yoqadi, nomini bosish tafsilotlarni ochadi."
+  "tab.look": "Koʻrinish",
+  "fxLead": "Tayyor toʻplam — bir bosishda. Quyida har bir effekt: kalit yoqadi, nomini bosish tafsilotlarni ochadi."
 }

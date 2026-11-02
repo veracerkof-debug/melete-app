@@ -90,7 +90,7 @@ function devHTML() {
       '<div class="cell"><span class="grow"><span>' + t('raw') + '</span><span class="st l2">' + t('rawHint') + '</span></span>' + sw('raw', s.raw) + '</div>' : '') + '</div>' +
     (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '');
 }
-const sw = (k, on) => '<label class="sw"><input type="checkbox" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
+const sw = (k, on) => '<label class="sw"><input type="checkbox" role="switch" aria-label="' + esc(t(k)) + '" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
 
 /* ---------- запись ---------- */
 

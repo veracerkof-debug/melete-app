@@ -142,13 +142,16 @@ export function deleteSong(store, id) {
 export const SORTS = ['recent', 'title', 'mastery', 'difficulty', 'time', 'forgotten'];
 
 // Список песен с фильтрами экрана «Песни». f: { cat ('' | '_none' | id), q, genre, tag, sort }
+// Поиск без оглядки на регистр, «ё» и вид апострофа (узбекское oʻ можно набрать как o')
+export const foldQ = (s) => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[ʻʼ'‘’`]/g, "'");
+
 export function listSongs(songs, sessions, L, f = {}, locale = 'ru') {
   const m = songStatsMap(sessions);
   let list = songs.map((s) => ({ s, st: m.of(s.id) }));
   if (f.cat) list = list.filter((x) => (f.cat === '_none' ? !x.s.cat : x.s.cat === f.cat));
   if (f.q) {
-    const q = f.q.toLowerCase();
-    list = list.filter((x) => (x.s.title + ' ' + (x.s.artist || '')).toLowerCase().includes(q));
+    const q = foldQ(f.q);
+    list = list.filter((x) => foldQ(x.s.title + ' ' + (x.s.artist || '')).includes(q));
   }
   // Жанры и теги, которые встречаются после фильтра по категории и поиску — для полосы фильтров
   const usedGenres = L.genres.filter((g) => list.some((x) => genreOf(L, x.s.genre) === g));

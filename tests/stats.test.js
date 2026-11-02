@@ -9,3 +9,13 @@ describe('статистика песен одним проходом', () => {
     for (let k = 0; k < 8; k++) expect(m.of('s' + k)).toEqual(_ss(ses, 's' + k));
   });
 });
+
+import { foldQ, listSongs } from '../src/core/library.js';
+describe('поиск песен', () => {
+  it('ё и вид апострофа не мешают', () => {
+    expect(foldQ('Oʻzbek Ёлка')).toBe("o'zbek елка");
+    const songs = [{ id: 'a', title: 'Qoʻshiq' }, { id: 'b', title: 'Ёлочка' }];
+    expect(listSongs(songs, [], { genres: [], tags: [] }, { q: "qo'sh" }).list.map((x) => x.s.id)).toEqual(['a']);
+    expect(listSongs(songs, [], { genres: [], tags: [] }, { q: 'елоч' }).list.map((x) => x.s.id)).toEqual(['b']);
+  });
+});
