@@ -102,9 +102,22 @@ export function createMixerDrawer(app) {
   });
   el.addEventListener('pointermove', (e) => {
     if (drag && e.pointerId === drag.id) { setFrom(drag, e.clientY); return; }
-    if (sw && e.clientX - sw.x > 40) { sw = null; setOpen(false); }
+    // шире экрана — панель листается; закрывает смахивание вправо только от левого края ленты
+    if (sw && e.clientX - sw.x > 40) { const p = el.querySelector('.mxp'); sw = null; if (p.scrollLeft <= 0) setOpen(false); }
   });
   el.addEventListener('pointerup', () => { drag = null; sw = null; });
+  // на телефоне лента листается сама (браузер забирает жест), поэтому закрытие смахиванием — по касаниям:
+  // смахнули вправо, начав у левого края ленты, — микшер закрывается
+  let tsw = null;
+  el.addEventListener('touchstart', (e) => {
+    const p = el.querySelector('.mxp'), x = e.touches[0];
+    tsw = p.contains(e.target) && !e.target.closest('.mxt') && e.touches.length === 1 ? { x: x.clientX, y: x.clientY, edge: p.scrollLeft <= 0 } : null;
+  }, { passive: true });
+  el.addEventListener('touchend', (e) => {
+    const x = e.changedTouches[0];
+    if (tsw && tsw.edge && x.clientX - tsw.x > 60 && Math.abs(x.clientY - tsw.y) < 60) setOpen(false);
+    tsw = null;
+  }, { passive: true });
   el.addEventListener('click', (e) => {
     if (e.target.closest('[data-tama]')) { app.tama.toggle(); render(); return; }
     const fxb = e.target.closest('[data-fx]');
