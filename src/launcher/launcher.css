@@ -1085,3 +1085,10 @@ body { transition: background-color .35s var(--ease), color .35s var(--ease); }
 [data-style="cont"] .l-cdate-t b { font-size: 21px; }
 [data-style="cont"] .l-apps .l-app { padding: 10px 18px; }
 [data-style="diary"] .clock { font-size: 52px; }
+
+/* ═════════ Поле поиска во «Всех приложениях» — по умолчанию скрыто, лупа в заголовке (DECISIONS 2026-11-02) ═════════ */
+.l-drawer.nosearch .l-search { display: none; }
+.l-d-find { display: none; width: 40px; height: 40px; place-items: center; align-self: center; color: var(--l2); flex: none; margin-right: -8px; }
+.l-d-find svg { width: 22px; height: 22px; }
+.l-drawer.nosearch .l-d-find { display: grid; }
+.l-d-title:not(:has(.l-d-link)) .l-d-find { margin-left: auto; }

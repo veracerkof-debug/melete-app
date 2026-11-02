@@ -20,6 +20,7 @@ html[data-style][data-page="notes"] .list > *:nth-child(n+4) { animation-delay: 
 
 /* ═══ Полоса: метка-риска, полоса у края ═══ */
 [data-style="strip"] #app { box-shadow: inset -4px 0 0 var(--l-acc); }
+[data-style="strip"][data-mono] #app { box-shadow: inset -4px 0 0 var(--fill2); }
 [data-style="strip"] .mrow h1, [data-style="strip"][data-page="notes"] .bar h1 { border-left: 3px solid var(--l-acc); padding-left: 10px; }
 [data-style="strip"] .cat, [data-style="strip"] .row .badge { border-radius: 6px; }
 [data-style="strip"]:not([data-page="notes"]) .bar, [data-style="strip"]:not([data-page="notes"]) .bar i, [data-style="strip"]:not([data-page="notes"]) .ebar i { border-radius: 1px; }
@@ -78,37 +79,90 @@ html[data-style][data-page="notes"] .list > *:nth-child(n+4) { animation-delay: 
 [data-style="menu"] .sheet { background: var(--bg); border-radius: 28px 28px 0 0; }
 [data-style="menu"] .sheet button { background: var(--cell); margin-bottom: 6px; border-radius: 14px; }
 
-/* ═══ Командная строка: только текст и знаки ═══ */
-[data-style="cli"] .cat, [data-style="cli"] .quick button, [data-style="cli"] .tag, [data-style="cli"] .keys button, [data-style="cli"] .btn, [data-style="cli"] .cal .d { border-radius: 0; background: none; border: 1px dashed var(--sep); }
-[data-style="cli"] .cat .ic, [data-style="cli"] .quick .ic { display: none; }
-[data-style="cli"] .cat .cn::before { content: '> '; color: var(--l3); }
-[data-style="cli"] .keys button::before { content: '['; color: var(--l3); }
-[data-style="cli"] .keys button::after { content: ']'; color: var(--l3); }
-[data-style="cli"] .keys button { border: 0; font-weight: 400; }
-[data-style="cli"] .amt { font-weight: 400; }
-[data-style="cli"] .amt::before { content: '$ '; color: var(--l-acc); font-size: .5em; vertical-align: .3em; }
-[data-style="cli"] .amt::after { content: '_'; color: var(--l-acc); animation: f-blink 1s steps(1) infinite; }
-[data-style="cli"] .seg { background: none; border: 0; }
-[data-style="cli"] .seg button.on { background: none; box-shadow: none; color: var(--l-acc); }
-[data-style="cli"] .seg button.on::before { content: '['; } [data-style="cli"] .seg button.on::after { content: ']'; }
-/* полосы — знаками: заполнено ▓, пусто ░ */
-[data-style="cli"]:not([data-page="notes"]) .bar, [data-style="cli"]:not([data-page="notes"]) .ebar { height: 12px; border-radius: 0; background: repeating-linear-gradient(90deg, var(--l3) 0 1px, transparent 1px 7px); }
-[data-style="cli"]:not([data-page="notes"]) .ebar i, [data-style="cli"]:not([data-page="notes"]) .bar i { height: 100%; border-radius: 0; -webkit-mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px); mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px); }
-[data-style="cli"] .mrow h1, [data-style="cli"][data-page="notes"] .bar h1 { font-size: 16px; font-weight: 400; text-transform: lowercase; }
-[data-style="cli"] .mrow h1::before, [data-style="cli"][data-page="notes"] .bar h1::before { content: '$ cat ~/'; color: var(--l-acc); }
-[data-style="cli"] .day::before { content: '## '; color: var(--l3); }
-[data-style="cli"] .row .badge { background: none; border-radius: 0; }
-[data-style="cli"][data-page="notes"] .row { border-bottom: 1px dashed var(--sep); }
-[data-style="cli"][data-page="notes"] .row b::before { content: '- '; color: var(--l-acc); }
-[data-style="cli"] .tag.on { background: none; color: var(--l-acc); border-color: var(--l-acc); }
-[data-style="cli"] .fab { border-radius: 0; background: var(--bg); color: var(--l-acc); border: 1px solid var(--l-acc); box-shadow: none; font-size: 26px; }
-[data-style="cli"][data-mono] .fab { color: var(--ink); border-color: var(--ink); background: var(--bg); }
-[data-style="cli"] .btn.main { background: none; color: var(--l-acc); border: 1px solid var(--l-acc); }
-[data-style="cli"] .sheet { border-radius: 0; border-top: 1px dashed var(--l3); }
-[data-style="cli"] .sheet button::before { content: '> '; color: var(--l3); }
-[data-style="cli"] .q, [data-style="cli"] .f input { border-radius: 0; border-style: dashed; background: none; }
-[data-style="cli"] .toast { border-radius: 0; background: var(--bg); color: var(--ink); border: 1px solid var(--l-acc); }
-[data-style="cli"] .cats .cat { animation: f-type .25s steps(10) both; }
+/* ═══ Командная строка — PowerShell (как pwsh.css главного): синяя консоль, без рамок; Format-Wide для категорий,
+   Write-Progress для полос, «PS C:\Ноябрь>» в заголовках, $sum = …, выбранное — жёлтым или наоборот ═══ */
+html[data-style="cli"] { --ps-g: #3BD671; --ps-c: #61D6D6; --ps-prog: #0A7E8C; }
+html[data-style="cli"][data-mono] { --ps-g: var(--ink); --ps-c: var(--ink); --ps-prog: rgba(255,255,255,.14); }
+/* «Чёрно-белый» в консоли: синий фон остаётся (как на главном), цвета категорий и сумм — светлым текстом */
+html[data-style="cli"][data-mono] #app { filter: none; }
+[data-style="cli"][data-mono] .neg, [data-style="cli"][data-mono] .pos { color: inherit; }
+[data-style="cli"][data-mono] .cb .bar i, [data-style="cli"][data-mono] .bar i.over { --o: var(--ink); }
+[data-style="cli"][data-mono] .cb .t .ic, [data-style="cli"][data-mono] .icpick button { color: var(--ink); }
+[data-style="cli"] *, [data-style="cli"] *::before, [data-style="cli"] *::after { border-color: transparent !important; box-shadow: none !important; }
+[data-style="cli"] .cat, [data-style="cli"] .keys button, [data-style="cli"] .btn, [data-style="cli"] .quick button, [data-style="cli"] .tag, [data-style="cli"] .cal .d,
+[data-style="cli"] .seg, [data-style="cli"] .seg button, [data-style="cli"] .sheet, [data-style="cli"] .toast, [data-style="cli"] .q, [data-style="cli"] .f input,
+[data-style="cli"] .demo, [data-style="cli"] .demo button, [data-style="cli"] .icpick button, [data-style="cli"] .row .badge, [data-style="cli"] .bar, [data-style="cli"] .ebar i,
+[data-style="cli"] .tools button, [data-style="cli"] .bar .ib, [data-style="cli"] .mrow button, [data-style="cli"] .sheet button { border: 0 !important; border-radius: 0 !important; }
+[data-style="cli"] .grab { display: none; }
+/* заголовки — приглашение: PS C:\Ноябрь> */
+[data-style="cli"] .mrow h1, [data-style="cli"][data-page="notes"] .bar h1 { font-size: 16px; font-weight: 400; text-transform: none; }
+[data-style="cli"] .mrow h1::before, [data-style="cli"][data-page="notes"] .bar h1::before { content: 'PS C:\\'; color: var(--ink); }
+[data-style="cli"] .mrow h1::after, [data-style="cli"][data-page="notes"] .bar h1::after { content: '>'; color: var(--ink); }
+[data-style="cli"] .top { color: var(--l2); }
+/* сумма — переменная: $sum = 470 000 */
+[data-style="cli"] .amt { font-weight: 400; letter-spacing: -.02em; }
+[data-style="cli"] .amt::before { content: '$sum = '; color: var(--ps-g); font-size: .32em; vertical-align: .35em; letter-spacing: 0; }
+[data-style="cli"] .amt::after { content: '_'; color: var(--ink); animation: f-blink 1.06s steps(1) infinite; }
+/* выбор — параметры: -Расход -Доход, выбранное жёлтым */
+[data-style="cli"] .seg { background: none; padding: 0; gap: 10px; }
+[data-style="cli"] .seg button { background: none !important; color: var(--l2); padding: 7px 4px; }
+[data-style="cli"] .seg button::before { content: '-'; }
+[data-style="cli"] .seg button.on { color: var(--l-acc); }
+/* категории — Format-Wide: имена столбцами, «Ещё» — [в скобках], как папка */
+[data-style="cli"] .cat { background: none; align-items: flex-start; text-align: left; padding: 0 6px; }
+[data-style="cli"] .cat .ic, [data-style="cli"] .quick .ic, [data-style="cli"] .row .badge { display: none; }
+[data-style="cli"] .cat.more .cn::before { content: '['; } [data-style="cli"] .cat.more .cn::after { content: ']'; }
+[data-style="cli"] .cat.more { background: none; color: var(--l2); }
+[data-style="cli"] .cat:active, [data-style="cli"] .keys button:active, [data-style="cli"] .btn:active, [data-style="cli"] .sheet button:active { background: var(--ink); color: var(--bg); transform: none; }
+[data-style="cli"] .allcats .cat { background: none; height: 52px; }
+[data-style="cli"] .cats.grid { grid-auto-rows: 48px; }
+[data-style="cli"] .cats.grid .cat { justify-content: center; }
+[data-style="cli"] .allcats .cat.on { outline: 0; background: var(--ink); color: var(--bg); }
+[data-style="cli"] .keys button { background: none; font-weight: 400; }
+[data-style="cli"] .quick button { background: none; color: var(--l2); }
+/* кнопки — команды */
+[data-style="cli"] .btn { background: none; color: var(--l-acc); }
+[data-style="cli"] .btn.main { background: var(--ink); color: var(--bg); }
+[data-style="cli"] .btn.del { color: var(--red); }
+[data-style="cli"] .fab { border-radius: 0; background: var(--ink); color: var(--bg); box-shadow: none; width: 56px; height: 56px; font-size: 30px; }
+[data-style="cli"] .link { color: var(--l-acc); }
+/* полосы — Write-Progress: голубая полоса, жёлтые o */
+[data-style="cli"]:not([data-page="notes"]) .bar, [data-style="cli"] .ebar { height: 12px; padding: 0; margin-top: 6px; background: var(--ps-prog); }
+[data-style="cli"]:not([data-page="notes"]) .bar i, [data-style="cli"] .ebar i { --o: var(--l-acc); height: 100%; border-radius: 0; background: radial-gradient(circle, transparent 1.7px, var(--o) 2.1px 3.3px, transparent 3.7px) 0 50% / 8px 8px repeat-x; }
+[data-style="cli"] .cb .bar i { --o: var(--c); }
+[data-style="cli"] .bar i.over, [data-style="cli"] .ebar i.over { --o: var(--red); }
+/* итоги и дни — заголовки таблицы зелёным */
+[data-style="cli"] .totals div { color: var(--ps-g); }
+[data-style="cli"] .totals b { color: var(--ink); font-weight: 400; }
+[data-style="cli"] .day { color: var(--ps-g); }
+[data-style="cli"] .tbl th { color: var(--ps-g); }
+[data-style="cli"] .tbl td { border-top: 0; }
+[data-style="cli"] .cal .d { background: none; }
+[data-style="cli"] .cal .d.today { outline: 0; background: var(--ink); color: var(--bg); }
+[data-style="cli"] .sheet { background: var(--bg); }
+[data-style="cli"] .sheet h2 { font-weight: 400; font-size: 16px; color: var(--l-acc); }
+[data-style="cli"] .sheet h2::before { content: 'PS C:\\> '; color: var(--ink); }
+[data-style="cli"] .wrap .bg { background: rgba(0,8,30,.55); }
+[data-style="cli"] .f > span { color: var(--ps-g); }
+[data-style="cli"] .f > span::after { content: ':'; }
+[data-style="cli"] .f input, [data-style="cli"] .q { background: var(--fill); color: var(--l-acc); }
+[data-style="cli"] .icpick button.on { background: var(--ink); color: var(--bg); outline: 0; }
+[data-style="cli"] .demo { background: var(--fill); }
+[data-style="cli"] .demo button { background: var(--ink); color: var(--bg); }
+[data-style="cli"] .toast { background: #000; color: var(--l-acc); border-radius: 0; }
+[data-style="cli"] .empty-m::before, [data-style="cli"] .empty::before { content: '# '; }
+[data-style="cli"] .hint { color: var(--l2); }
+/* блокнот */
+[data-style="cli"] .tag { background: none; color: var(--ps-c); }
+[data-style="cli"] .tag.on { background: var(--ink); color: var(--bg); }
+[data-style="cli"][data-page="notes"] .row { border-bottom: 0; }
+[data-style="cli"][data-page="notes"] .row b { font-weight: 400; color: var(--l-acc); }
+[data-style="cli"][data-page="notes"] .row b i { color: var(--ps-g); }
+[data-style="cli"] .ed { caret-color: var(--l-acc); }
+[data-style="cli"] .tools { border-top: 0; }
+[data-style="cli"] .read h1, [data-style="cli"] .read h2, [data-style="cli"] .read h3 { font-family: var(--font); color: var(--ps-g); font-weight: 400; }
+[data-style="cli"] .read a, [data-style="cli"] .read .ht, [data-style="cli"] .read .cs b { color: var(--ps-c); }
+[data-style="cli"] .read pre.mono, [data-style="cli"] .read code { border-radius: 0; }
 
 /* ═══ Приборы: клавиши корпуса, оранжевое главное, деления ═══ */
 [data-style="inst"] .keys button, [data-style="inst"] .cat, [data-style="inst"] .btn, [data-style="inst"] .quick button { background: var(--cell); border-color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); }

@@ -1,0 +1,165 @@
+/* ═════════ «Командная строка» — PowerShell (слово автора 02.11.2026) ═════════
+   Всё — как в окне PowerShell: синий фон консоли, светлый текст, ни одной рамки и линии. Только то, что есть в самом
+   PowerShell: приглашение «PS C:\>», команда жёлтым, параметры серым, строки голубым; вывод — Format-Table (заголовок
+   зелёным и черта из дефисов), Format-List («Имя : значение»), Write-Progress (голубой блок, жёлтые буквы, [oooo  ]),
+   $true / $false, выбор подтверждения «[П] Почта», комментарий «#», ошибка красным. Выбранное — жёлтым или наоборот
+   (светлым фоном), как выделение в консоли. Касания, размеры и жесты — как в «Классике». */
+html:root[data-style="cli"] {
+  --bg: #012456; --cell: #012456; --ink: #EEEDF0; --l2: #A9B6D3; --l3: #6E80A8; --sep: transparent;
+  --fill: rgba(255,255,255,.07); --fill2: rgba(255,255,255,.13); --red: #F16D78;
+  --ps-g: #3BD671; --ps-c: #61D6D6; --ps-prog: #0A7E8C;
+  --l-r: 0; --l-r-tab: 0; --l-r-sheet: 0; --l-bd: 0 solid transparent; --l-sel-bg: var(--ink); --l-sel-fg: var(--bg);
+}
+html:root[data-style="cli"][data-mono] { --ps-g: var(--ink); --ps-c: var(--ink); --ps-prog: rgba(255,255,255,.14); }
+/* ни одной рамки, линии и тени — только знаки */
+:root[data-style="cli"] *, :root[data-style="cli"] *::before, :root[data-style="cli"] *::after { border-color: transparent !important; box-shadow: none !important; }
+:root[data-style="cli"] .l-sheet, :root[data-style="cli"] .l-drawer, :root[data-style="cli"] .l-sec, :root[data-style="cli"] .l-pick,
+:root[data-style="cli"] .l-check, :root[data-style="cli"] .l-edit-row, :root[data-style="cli"] .l-search, :root[data-style="cli"] .l-field input,
+:root[data-style="cli"] .l-btn, :root[data-style="cli"] .l-chip, :root[data-style="cli"] .l-seg, :root[data-style="cli"] .l-mini,
+:root[data-style="cli"] .l-icon-cell, :root[data-style="cli"] .l-cross-pick, :root[data-style="cli"] .l-sheet-x, :root[data-style="cli"] .l-arr-bar,
+:root[data-style="cli"] .l-arr-chip, :root[data-style="cli"] .l-toast, :root[data-style="cli"] .l-set-tabs, :root[data-style="cli"] .l-d-tab { border: 0 !important; border-radius: 0 !important; }
+:root[data-style="cli"] .l-grip, :root[data-style="cli"] .l-d-grip::before { display: none; }
+:root[data-style="cli"] .l-sheet, :root[data-style="cli"] .l-toast, :root[data-style="cli"] .l-lock, :root[data-style="cli"] .l-arr-bar, :root[data-style="cli"] .l-drawer { font-family: var(--font); }
+
+/* ——— главный ——— */
+:root[data-style="cli"] .l-cli { color: var(--ink); white-space: pre-wrap; }
+:root[data-style="cli"] .l-ps { white-space: pre-wrap; }
+:root[data-style="cli"] .l-ps-pr { color: var(--ink); }
+:root[data-style="cli"] .l-ps-cmd { color: var(--l-acc); }
+:root[data-style="cli"] .l-ps-par { color: var(--l2); }
+:root[data-style="cli"] .l-ps-arg { color: var(--ps-c); }
+:root[data-style="cli"] .l-ps-head, :root[data-style="cli"] .l-ps-key { color: var(--ps-g); }
+:root[data-style="cli"] .l-ps-ok { color: var(--ps-g); }
+:root[data-style="cli"] .l-ps-dim { color: var(--l2); }
+:root[data-style="cli"] .l-ps-prog { background: var(--ps-prog); color: var(--l-acc); white-space: pre; overflow: hidden; font-size: 13px; line-height: 1.45; padding: 4px 0; margin: 4px 0 8px; }
+:root[data-style="cli"][data-mono] .l-ps-prog { color: var(--ink); }
+:root[data-style="cli"] .l-cli-p { color: var(--l-acc); }
+:root[data-style="cli"] .clock { color: var(--ink); }
+:root[data-style="cli"] .l-ascii b { color: rgba(255,255,255,.16); }
+:root[data-style="cli"] .l-ascii b.on { color: var(--ink); }
+:root[data-style="cli"] .l-date { color: var(--ink); margin: 8px 0 14px; }
+:root[data-style="cli"] .l-date::before { content: none; }
+:root[data-style="cli"] .l-cli-cur { width: .6em; height: 2px; vertical-align: baseline; background: var(--ink); animation: l-blink 1.06s steps(1) infinite; }
+/* Get-ChildItem: Mode и Name */
+:root[data-style="cli"] .l-ps-ls .l-app .label::before { content: '-a---  '; color: var(--l2); }
+:root[data-style="cli"] .l-ps-ls .l-app.folder .label::before { content: 'd----  '; color: var(--l2); }
+:root[data-style="cli"] .l-ps-ls .l-app.folder .label::after { content: none; }
+:root[data-style="cli"] .l-app .label::before { content: '-a---  '; color: var(--l2); }
+:root[data-style="cli"] .l-app.folder .label::after { content: none; }
+:root[data-style="cli"] .l-ps-ls .l-app { padding: 9px 0; }
+:root[data-style="cli"] .l-app:active .label, :root[data-style="cli"] .l-d-app:active span:last-of-type { background: var(--ink); color: var(--bg); }
+/* выбор подтверждения: [П] Почта */
+:root[data-style="cli"] .l-cli-key { color: var(--ink); padding: 10px 14px 10px 0; font-size: 13px; }
+:root[data-style="cli"] .l-cli-key b { color: var(--l-acc); }
+:root[data-style="cli"] .l-cli-key:active { background: var(--ink); color: var(--bg); }
+:root[data-style="cli"] .l-cli-key:active b { background: none; color: var(--bg); }
+/* «Сейчас» — Format-List */
+:root[data-style="cli"] .l-now-k { color: var(--ps-g); }
+:root[data-style="cli"] .l-now-k::before { content: none; }
+:root[data-style="cli"] .l-now-k::after { content: ' :'; color: var(--ps-g); }
+:root[data-style="cli"] .l-now-r.start .l-now-a { color: var(--l-acc); }
+:root[data-style="cli"] .l-now-r.start .l-now-a::before { content: '['; color: var(--ink); }
+:root[data-style="cli"] .l-now-r.start .l-now-a::after { content: ']'; color: var(--ink); }
+
+/* ——— все приложения: PS C:\Связь> и Get-ChildItem ——— */
+:root[data-style="cli"] .l-d-name { font-size: 16px; font-weight: 400; text-transform: none; }
+:root[data-style="cli"] .l-d-name::before { content: 'PS C:\\'; color: var(--ink); }
+:root[data-style="cli"] .l-d-name::after { content: '>'; color: var(--ink); animation: none; }
+:root[data-style="cli"] .l-d-find svg { display: none; }
+:root[data-style="cli"] .l-d-find { width: auto; padding: 0 2px; }
+:root[data-style="cli"] .l-d-find::before { content: 'Find-App'; color: var(--l-acc); font-size: 14px; }
+:root[data-style="cli"] .l-d-link { color: var(--l2); }
+:root[data-style="cli"] .l-search { background: var(--fill); padding: 10px 10px; font-size: 15px; color: var(--l-acc); }
+:root[data-style="cli"] .l-search::placeholder { color: var(--l2); }
+:root[data-style="cli"] .l-d-list::before { content: 'Mode   Name\A----   ----'; display: block; white-space: pre; color: var(--ps-g); font-size: 14px; line-height: 1.45; margin: 2px 0 2px; }
+:root[data-style="cli"] .l-d-list::after { content: '# ' attr(data-hint); margin-top: 18px; padding-top: 0; color: var(--l2); white-space: normal; }
+:root[data-style="cli"] .l-d-letter { color: var(--ps-g); font-weight: 400; font-size: 13px; padding: 14px 0 2px; text-transform: none; }
+:root[data-style="cli"] .l-d-letter::before { content: '   Name: '; color: var(--ps-g); white-space: pre; }
+:root[data-style="cli"] .l-d-letter::after { content: none; }
+:root[data-style="cli"] .l-d-app { font-size: 16px; padding: 9px 0; }
+:root[data-style="cli"] .l-d-app span:last-of-type::before { content: '-a---  '; color: var(--l2); white-space: pre; }
+:root[data-style="cli"] .l-d-tab { color: var(--l2); --k-sw: 1.8; }
+:root[data-style="cli"] .l-d-tab.on { background: var(--ink) !important; color: var(--bg) !important; outline: 0 !important; }
+:root[data-style="cli"] .l-d-tab.add { color: var(--l3); }
+:root[data-style="cli"] .l-empty::before { content: '# '; color: var(--l2); }
+:root[data-style="cli"] .l-empty { color: var(--l2); }
+:root[data-style="cli"] .l-d-dot { border-radius: 0; background: var(--l-acc); }
+
+/* ——— шторки и настройки ——— */
+:root[data-style="cli"] .l-sheet { background: var(--bg); }
+:root[data-style="cli"] .l-scrim { background: rgba(0,8,30,.55); }
+:root[data-style="cli"] .l-sheet-head { padding-top: 16px; }
+:root[data-style="cli"] .l-sheet-head h2 { font-size: 16px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--l-acc); }
+:root[data-style="cli"] .l-sheet-head h2::before { content: 'PS C:\\> '; color: var(--ink); }
+:root[data-style="cli"] .l-sheet-head h2::after { content: '_'; display: inline; border: 0; margin: 0; width: auto; color: var(--ink); animation: k-blink 1.06s steps(1) infinite; }
+:root[data-style="cli"] .l-sheet-x { width: auto; padding: 0 4px; }
+:root[data-style="cli"] .l-sheet-x svg { display: none; }
+:root[data-style="cli"] .l-sheet-x::before { content: 'exit'; color: var(--l2); font-size: 14px; }
+/* вкладки настроек — параметры: -Вид -Главный; выбранная — жёлтым */
+:root[data-style="cli"] .l-set-tabs { background: var(--bg); }
+:root[data-style="cli"] .l-set-tabs button { color: var(--l2); background: none !important; font-weight: 400 !important; }
+:root[data-style="cli"] .l-set-tabs button::before { content: '-'; }
+:root[data-style="cli"] .l-set-tabs button::after { content: none; }
+:root[data-style="cli"] .l-set-tabs button.on { color: var(--l-acc); }
+:root[data-style="cli"] .l-set-tabs button.on::before { content: '-'; }
+/* раздел — заголовок таблицы: зелёным и черта из дефисов */
+:root[data-style="cli"] .l-sec { padding: 14px 0 6px; }
+:root[data-style="cli"] .l-sec h3 { display: inline-block; max-width: 100%; color: var(--ps-g); font-weight: 400; font-size: 13px; text-transform: none; letter-spacing: 0; margin-bottom: 8px; }
+:root[data-style="cli"] .l-sec h3::before { content: none; }
+:root[data-style="cli"] .l-sec h3::after { content: '------------------------------------------------------------'; display: block; overflow: hidden; white-space: nowrap; color: var(--ps-g); height: 1.2em; }
+:root[data-style="cli"] .l-label, :root[data-style="cli"] .l-hint, :root[data-style="cli"] .l-row-main small { color: var(--l2); }
+/* выбор из нескольких — как выбор PowerShell: выбранное жёлтым */
+:root[data-style="cli"] .l-seg { background: none; padding: 0; gap: 6px; flex-wrap: wrap; }
+:root[data-style="cli"] .l-seg button { color: var(--l2); background: none !important; flex: 0 1 auto; padding: 0 8px 0 0; }
+:root[data-style="cli"] .l-seg button::before { content: '-' !important; color: inherit; }
+:root[data-style="cli"] .l-seg button::after { content: none !important; }
+:root[data-style="cli"] .l-seg button.on { color: var(--l-acc); }
+:root[data-style="cli"] .l-chip { background: none; color: var(--l2); }
+:root[data-style="cli"] .l-chip.on { background: none; color: var(--l-acc); }
+:root[data-style="cli"] .l-chip.on::before, :root[data-style="cli"] .l-chip.on::after { content: none; }
+/* переключатель — $true / $false */
+:root[data-style="cli"] .l-sw { width: 56px; height: 24px; background: none !important; display: grid; place-items: center end; }
+:root[data-style="cli"] .l-sw i { display: none; }
+:root[data-style="cli"] .l-sw::before { content: '$false'; color: var(--l2); font-size: 14px; }
+:root[data-style="cli"] .l-sw.on::before { content: '$true'; color: var(--ps-g); }
+:root[data-style="cli"] .l-check-box { width: 56px; height: auto; background: none !important; display: block; text-align: left; }
+:root[data-style="cli"] .l-check-box::before { content: '$false'; color: var(--l2); font-size: 14px; }
+:root[data-style="cli"] .l-check.on .l-check-box::before { content: '$true'; color: var(--ps-g); }
+:root[data-style="cli"] .l-check.on .l-check-box::after { display: none; }
+/* строки и кнопки */
+:root[data-style="cli"] .l-pick { padding: 11px 0; }
+:root[data-style="cli"] .l-pick > span:not(.l-pick-ico):not(.l-fold-ico)::before { content: none; }
+:root[data-style="cli"] .l-pick.on::before { display: none; }
+:root[data-style="cli"] .l-pick.on span { color: var(--l-acc); font-weight: 400; }
+:root[data-style="cli"] .l-pick.danger span, :root[data-style="cli"] .l-btn.danger { color: var(--red); }
+:root[data-style="cli"] .l-pick.danger > span::before { content: none; }
+:root[data-style="cli"] .l-pick::after { content: none; }
+:root[data-style="cli"] .l-btn { background: none; color: var(--l-acc); justify-content: flex-start; padding: 0; }
+:root[data-style="cli"] .l-btn::before { content: '& '; color: var(--l2); white-space: pre; }
+:root[data-style="cli"] .l-btn.primary { background: var(--ink); color: var(--bg); justify-content: center; }
+:root[data-style="cli"] .l-btn.primary::before { content: none; }
+:root[data-style="cli"] .l-btn:active { background: var(--ink); color: var(--bg); }
+:root[data-style="cli"] .l-field > span::after { content: ':'; }
+:root[data-style="cli"] .l-field input { background: var(--fill); padding: 10px; color: var(--l-acc); }
+:root[data-style="cli"] .l-icon-cell, :root[data-style="cli"] .l-cross-pick { background: none; }
+:root[data-style="cli"] .l-icon-cell.on, :root[data-style="cli"] .l-cross-pick.on { background: var(--ink); color: var(--bg); }
+:root[data-style="cli"] .l-icon-cell.on small, :root[data-style="cli"] .l-cross-pick.on small { color: var(--bg); }
+:root[data-style="cli"] .l-mini { background: var(--fill); }
+:root[data-style="cli"] .l-scale { accent-color: var(--l-acc); }
+:root[data-style="cli"] .l-pick-ico, :root[data-style="cli"] .l-fold-ico, :root[data-style="cli"] .l-glyph { --k-sw: 1.8; --k-cap: square; --k-join: miter; }
+/* сообщение — как предупреждение PowerShell: жёлтым на чёрном */
+:root[data-style="cli"] .l-toast { background: #000; color: var(--l-acc); }
+:root[data-style="cli"] .l-toast::before { content: none; }
+/* правка главного */
+:root[data-style="cli"] .l-arr-bar { background: var(--bg); }
+:root[data-style="cli"] .l-arr-chip { background: none; color: var(--l-acc); }
+:root[data-style="cli"] .l-arr-done { background: var(--ink); color: var(--bg); border-radius: 0; }
+/* замок — Read-Host -AsSecureString: «Код кошелька: ****» */
+:root[data-style="cli"] .l-lock-title::before { content: none; }
+:root[data-style="cli"] .l-lock-title::after { content: ':'; }
+:root[data-style="cli"] .l-lock-k { border-radius: 0; }
+:root[data-style="cli"] .l-lock-k::before, :root[data-style="cli"] .l-lock-k::after { content: none; }
+:root[data-style="cli"] .l-lock-k:active { background: var(--ink); color: var(--bg); }
+:root[data-style="cli"] .l-lock-dots i.on::before { color: var(--ink); }
+:root[data-style="cli"] .l-lock-msg { color: var(--red); }
+:root[data-style="cli"] .l-d-link { white-space: nowrap; }

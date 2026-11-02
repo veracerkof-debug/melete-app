@@ -167,6 +167,7 @@ export function openSettings(onChange, getGesture, tab) {
         segmented([{ value: 'side', label: t('set.foldTabs.side') }, { value: 'top', label: t('set.foldTabs.top') }], prefs.foldTabs === 'top' ? 'top' : 'side', (v) => up({ foldTabs: v }), t('set.foldTabs')),
         prefs.foldTabs === 'top' ? toggle(t('set.foldLabels'), prefs.foldLabels !== false, (v) => up({ foldLabels: v }), t('set.foldLabelsHint')) : null,
         toggle(t('set.drawerAll'), prefs.drawerAll !== false, (v) => up({ drawerAll: v }), t('set.drawerAllHint')),
+        toggle(t('set.drawerSearch'), prefs.drawerSearch === true, (v) => up({ drawerSearch: v }), t('set.drawerSearchHint')),
       ));
 
       // — Мост с Melete: чтение и практика —
@@ -356,7 +357,7 @@ const PREVIEW = {
     + T('right:6px;top:38px;width:26px;height:26px;border:1.5px solid #161816;border-radius:7px;font:700 13px/26px var(--l-display);text-align:center;color:#161816', '23') + [0, 1].map((i) => T(`left:6px;right:38px;top:${44 + i * 14}px;height:1.5px;background:#161816;opacity:.4`)).join('')),
   diary: PV('#EEECE5', T('left:0;right:0;top:9px;text-align:center;font:400 7px/1 monospace;letter-spacing:.12em;color:#2E3A55', 'НОЯБРЬ 2026') + T('left:0;right:0;top:20px;text-align:center;font:400 16px/1 monospace;color:#2E3A55', '18:46')
     + [0, 1, 2].map((i) => T(`left:10px;top:${46 + i * 14}px;width:3px;height:10px;background:linear-gradient(#3b3550,#e3a37f)`) + T(`left:17px;top:${48 + i * 14}px;width:${40 - i * 8}px;height:3px;background:#2E3A55;opacity:.5`) + T(`right:10px;top:${49 + i * 14}px;width:4px;height:4px;border-radius:50%;background:#C9826B`)).join('')),
-  cli: PV('#000', T('left:7px;top:10px;font:400 9px/1.5 monospace;color:#8A8A8A;white-space:pre', '<span style="color:#3CF27A">~$</span> date\n<span style="color:#3CF27A">█ █ ███</span>\n<span style="color:#3CF27A">~$</span> ls\n./notes\n<span style="color:#3CF27A">~$ █</span>')),
+  cli: PV('#012456', T('left:6px;top:9px;font:400 8.5px/1.5 monospace;color:#EEEDF0;white-space:pre', 'PS C:\\> <span style="color:#F9F1A5">Get-Date</span>\n<span style="color:#3BD671">Mode   Name\n----   ----</span>\n<span style="color:#A9B6D3">-a---</span>  notes\n<span style="background:#0A7E8C;color:#F9F1A5"> [oooo   ] </span>')),
 };
 
 // сводка журнала одной строкой (и в начало отчёта)
