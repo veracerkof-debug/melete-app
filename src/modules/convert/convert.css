@@ -1,0 +1,43 @@
+/* Конвертер: список файлов — рабочая поверхность; формат и качество строкой; полоса кнопок внизу */
+.cvm{height:100%;display:flex;flex-direction:column;min-height:0}
+.cvm .cvlist{flex:1;min-height:0;overflow:auto;padding:4px 2px 8px;display:flex;flex-direction:column;gap:6px}
+.cvm .cvrow{display:flex;align-items:center;gap:8px;padding:8px 6px 8px 12px;border-radius:14px;background:var(--fill)}
+.cvm .cvn{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+.cvm .cvn b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvm .cvn span{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvm .cvok{color:#3E8B55}
+.cvm .cverr{color:#C0392B;white-space:normal!important}
+.cvm .cvbar{display:block;height:4px;border-radius:2px;background:var(--sep);overflow:hidden;margin-top:4px}
+.cvm .cvbar b{display:block;height:100%;background:var(--tint);transition:width .2s linear}
+.cvm .cvx{font-size:22px;line-height:1;color:var(--l2)}
+.cvm .cvrow .ic svg,.cvm .vc-like svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cvm .cvempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;text-align:center}
+.cvm .cvempty p{margin:0;max-width:340px}
+.cvm .cvadd{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.cvm .cvbig{min-height:52px;padding:0 20px;border:0;border-radius:16px;background:var(--fill);color:var(--ink);font:600 15px var(--font);cursor:pointer}
+.cvm .cvopts{flex:none;padding:6px 2px 4px;display:flex;flex-direction:column;gap:6px}
+.cvm .cvfmts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.cvm .cvfmts::-webkit-scrollbar{display:none}
+.cvm .cvf{flex:none;min-width:52px;min-height:40px;padding:0 12px;border:0;border-radius:999px;background:var(--fill);color:var(--ink);font:600 13.5px var(--font);letter-spacing:.02em;cursor:pointer}
+.cvm .cvf.on{background:var(--tint);color:var(--on-tint)}
+.cvm .cvf.ff{color:var(--l2);background:none;box-shadow:inset 0 0 0 1px var(--sep)}
+.cvm .cvq{display:flex;align-items:center;gap:8px}
+.cvm .cvq .l2{flex:none;font-size:12.5px;min-width:52px}
+.cvm .cvq .seg{flex:1;min-width:0}
+.cvm .cvproc{border:0;background:none;padding:2px 0;text-align:left;font-size:12.5px;min-height:28px;cursor:pointer}
+.cvm .cvbot{flex:none;display:flex;align-items:center;gap:8px;padding:8px 2px calc(4px + env(safe-area-inset-bottom,0px))}
+.cvm .vc-like{flex:none;width:48px;height:48px;border:0;border-radius:50%;background:var(--fill);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.cvm .vc-like:disabled,.cvm .cvgo:disabled{opacity:.4;cursor:default}
+.cvm .cvgo{flex:1;min-width:0;min-height:52px;padding:0 14px;border:0;border-radius:999px;background:var(--tint);color:var(--on-tint);font:600 15.5px var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cvm .cvs{height:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:6px;flex-wrap:wrap}
+.cvm .cvs .cvgo{flex:0 1 auto;min-height:44px}
+/* шторки */
+.cvl .st,.cvp .st{display:block;font-size:12.5px;color:var(--l2)}
+.cvl.on .grow{font-weight:600}
+.cvchk{color:var(--tint);font-weight:700}
+.cvp .cvtrim{gap:12px}
+.cvp .cvtrim label{flex:1;display:flex;flex-direction:column;gap:4px}
+.cvp .inp.num{width:100%;box-sizing:border-box}
+.cvp .cvh{display:flex;justify-content:space-between;align-items:center}
+.cvp input[type=range]{width:100%;accent-color:var(--tint)}
+@container (max-height: 380px){.cvm .cvgo{min-height:44px}.cvm .vc-like{width:44px;height:44px}}

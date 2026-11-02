@@ -910,6 +910,8 @@ export function legalSheet(kind) {
       lic('Airwindows', t('lic.aw.sub'), '<p>© Chris Johnson (Airwindows)</p><p>' + t('lic.mit') + '</p>') +
       lic('ureq', t('lic.ureq.sub'), '<p>© Martin Algesten ' + t('lic.andContrib') + '</p><p>' + t('lic.ureq.text') + '</p>') +
       lic('rustls · rcgen · RustCrypto sha2', t('lic.tls.sub'), '<p>© rustls, rcgen, RustCrypto ' + t('lic.andContrib') + '</p><p>' + t('lic.tls.text') + '</p>') +
+      lic('FFmpeg · ffmpeg.wasm', t('lic.ff.sub'), '<p>© FFmpeg developers; © Jerome Wu (ffmpeg.wasm)</p><p>' + t('lic.ff.text') + '</p>') +
+      lic('lamejs · mp4-muxer', t('lic.lame.sub'), '<p>© LAME developers, Alex Zhukov; © Vanilagy</p><p>' + t('lic.lame.text') + '</p>') +
       lic('whisper.cpp · Whisper', t('lic.wc.sub'), '<p>© Georgi Gerganov; © OpenAI</p><p>' + t('lic.mit') + '</p><p>' + t('lic.wh.text') + '</p>') +
       lic('TensorFlow.js', t('lic.tf.sub'), '<p>© Google LLC</p><p>' + t('lic.tf.text') + '</p>') +
       lic('@tonejs/midi', t('lic.tm.sub'), '<p>© Yotam Mann</p><p>' + t('lic.mit') + '</p>') +

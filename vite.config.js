@@ -108,7 +108,7 @@ export default defineConfig(({ mode }) => ({
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
   plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode), packsOut()],
   // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна
-  optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web'] },
+  optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web', '@ffmpeg/ffmpeg', '@ffmpeg/util'] }, // FFmpeg: рабочий поток обёртки — своим файлом
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
   // воркеры alphaTab сжимаются так же, как основной код
   worker: { format: 'es', plugins: () => [lightWebWorker(mode)], rolldownOptions: { output: { minify: true } } },

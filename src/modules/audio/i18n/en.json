@@ -252,5 +252,8 @@
   "rpre.def": "Reset: 50 · 75 · 90 · 100",
   "shareRec": "Share",
   "shareFail": "Could not share the recording",
-  "stems.packHint": "Separation needs a model — the “Vocals and instrumental” pack, downloaded once."
+  "stems.packHint": "Separation needs a model — the “Vocals and instrumental” pack, downloaded once.",
+  "shareAs": "Share as…",
+  "convertTo": "Convert…",
+  "shareAsHint": "The file in this format is also added to the library"
 }

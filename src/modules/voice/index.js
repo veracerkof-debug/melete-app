@@ -356,7 +356,12 @@ function drawSpec(x, rate) {
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const y = (d) => H - (Math.max(0, Math.min(1, (d + 90) / 90)) * (H - 2));
   // сетка: 100 Гц, 1 кГц, 10 кГц
-  g.fillStyle = l3; [100, 1000, 10000].forEach((f) => { const xx = ((Math.log10(f) - lo) / (hi - lo)) * W; if (xx > 0 && xx < W) g.fillRect(xx, 0, 1, H); });
+  // линии — ниже времени записи (оно лежит поверх спектра) и проявляются плавно, не перечёркивая цифры
+  const gy = Math.min(H * 0.45, 84), gr = g.createLinearGradient(0, gy, 0, gy + 48);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, l3);
+  g.fillStyle = l3; g.save(); g.fillStyle = gr;
+  [100, 1000, 10000].forEach((f) => { const xx = ((Math.log10(f) - lo) / (hi - lo)) * W; if (xx > 0 && xx < W) g.fillRect(xx, gy, 1, H - gy); });
+  g.restore();
   if (m.style === 'bars') {
     const bw = W / NB;
     for (let b = 0; b < NB; b++) { const yy = y(M.spec[b]); g.fillStyle = M.spec[b] > -6 ? '#D2463F' : tint; g.fillRect(b * bw + 1, yy, Math.max(1, bw - 2), H - yy); }
