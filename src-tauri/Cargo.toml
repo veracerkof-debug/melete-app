@@ -31,6 +31,11 @@ serde_json = "1"
 # приём файлов по протоколу LocalSend (src/localsend.rs): маленький HTTP-сервер и адреса сетевых интерфейсов
 tiny_http = "0.12"
 local-ip-address = "0.6"
+# связь с телефоном по TLS (src/sync.rs): свой сертификат компьютера (rcgen), отпечаток SHA-256 (sha2) — телефон
+# запоминает его при сопряжении и дальше верит только ему; rustls с ring — тот же, что уже есть у ureq
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rcgen = { version = "0.13", default-features = false, features = ["ring", "pem"] }
+sha2 = "0.10"
 # шумоподавление DeepFilterNet3 (src/denoise.rs): модель внутри крейта, выполнение — tract (чистый Rust); крейт на crates.io
 # отстал (0.2.5), берётся из репозитория по метке v0.5.6
 deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "978576aa8400552a4ce9730838c635aa30db5e61", default-features = false, features = ["tract", "default-model"] }

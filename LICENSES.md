@@ -46,6 +46,7 @@
 | [ureq](https://github.com/algesten/ureq) 2 — © Martin Algesten и др. | Windows: скачивание обновления из релиза Melete на GitHub (`src-tauri/src/update.rs`) | MIT / Apache-2.0 |
 | [Airwindows](https://github.com/airwindows/airwindows) Galactic, Verbity2 — © Chris Johnson (Airwindows) | Ревербы пространств — вариант dev (`src/audio/wl/airwin.worklet.js`, порт на JS) | MIT |
 | [tiny_http](https://github.com/tiny-http/tiny-http) 0.12 — © tiny-http contributors; [local-ip-address](https://github.com/EstebanBorai/local-ip-address) 0.6 — © Esteban Borai | Windows: приём файлов с телефона по протоколу [LocalSend](https://github.com/localsend/protocol) (`src-tauri/src/localsend.rs`): HTTP-сервер и адреса сетевых интерфейсов | MIT / Apache-2.0 |
+| [rustls](https://github.com/rustls/rustls) 0.23 — © rustls contributors; [rcgen](https://github.com/rustls/rcgen) 0.13 — © rcgen contributors; [sha2](https://github.com/RustCrypto/hashes) 0.10 — © RustCrypto Developers | Windows: шифрованная связь с телефоном (`src-tauri/src/sync.rs`): TLS, свой сертификат компьютера, отпечаток SHA-256 | Apache-2.0 / MIT / ISC |
 | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) 1.4.4 — © Kazuhiko Arase | Windows: QR-код раздачи песен в своей сети (`src/core/screens/panel.js`, docs/guest-web.md); QR Code — товарный знак DENSO WAVE | MIT |
 | [whisper.cpp](https://github.com/ggerganov/whisper.cpp) (крейт `whisper-rs` 0.16, статическая сборка cmake) — © Georgi Gerganov; модель [Whisper large-v3-turbo](https://huggingface.co/ggerganov/whisper.cpp) (`ggml-large-v3-turbo-q5_0.bin`, 574 МБ) — © OpenAI | Windows: текст песни из записи (`src-tauri/src/lyrics.rs`, `src/audio/lyrics.js`): по отделённому вокалу, строки со временем в плеере, в песню, файл .lrc; модель скачивается при сборке установщика (`build/models.json`, `platform: windows`) и лежит в ресурсах программы; в APK и веб не входит | MIT; модель — MIT |
 | [realfft](https://github.com/HEnquist/realfft), [rustfft](https://github.com/ejmahler/RustFFT) (крейты Rust) | Windows: быстрое преобразование Фурье для спектра и обратного STFT в движке дорожек | MIT / Apache-2.0 |
@@ -70,6 +71,7 @@
 | Vite, Vitest, @capacitor/cli | MIT |
 | @playwright/test — сквозные проверки в браузере (tests/e2e) | Apache-2.0 |
 | @coderline/alphatab-vite — подключение воркеров alphaTab при сборке | MPL-2.0 |
+| axe-core — проверка доступности в сквозных проверках (tests/e2e/a11y.spec.js) | MPL-2.0 |
 
 ## Демо-набор
 Папка `public/demo/` — демо-набор (ставится при регистрации; убирается в «Песнях» и в «Данных и копиях»). Ноты в PDF — Mutopia Project

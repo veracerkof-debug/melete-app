@@ -114,13 +114,15 @@ export const isDemoSong = (s) => !!s && (isDemo(s.id) || isDemoText(s.title, s.n
 let NAMES = null;
 // Имена демо-файлов на трёх языках (без расширения, в нижнем регистре); dicts — словари ядра { ru, uz, en }
 export function demoFileNames(dicts) {
-  if (NAMES) return NAMES;
+  const n = Object.keys(dicts || {}).length; // словари подгружаются лениво: набор имён — заново, когда языков стало больше
+  if (NAMES && NAMES.n === n) return NAMES;
   const out = new Set();
   Object.values(dicts || {}).forEach((d) => {
     const t = (k) => d[k] || '';
     DEMO_SONGS.forEach((s) => ['demo.file.tab', 'demo.file.score', 'demo.track.full', 'demo.track.minus'].forEach((k) => t(k) && out.add((s.title + ' — ' + t(k)).toLowerCase())));
     PIECES.forEach((p) => t('demo.piece.' + p.key) && out.add(t('demo.piece.' + p.key).toLowerCase()));
   });
+  out.n = n;
   return (NAMES = out);
 }
 // Имя файла (с расширением, с «(2)» от повторов) — демо?

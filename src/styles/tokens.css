@@ -5,7 +5,7 @@
 :root {
   --bg: #F3F2EE; --cell: #FFFFFF; --ink: #161514; --l2: #6F6C66; --l3: #C6C3BC;
   --sep: rgba(60,55,45,.15); --fill: rgba(120,115,105,.12); --fill2: rgba(120,115,105,.2);
-  --tint: #9C7242; --tint-text: #765A38; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
+  --tint: #946B3E; --tint-text: #765A38; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
   --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;

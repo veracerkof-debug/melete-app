@@ -7,7 +7,7 @@ import { PARTS, pickParts, applyParts, partsOf, mergeTools } from './backupparts
 import { fileSongs } from './files.js';
 import { LS_T, lockDevice } from './device.js';
 import { stripDemo, isDemoFile } from './demo.js';
-import { CORE_DICTS } from '../i18n/index.js';
+import { CORE_DICTS, loadAllLangs } from '../i18n/index.js';
 
 export const backupBy = (app) => ((app.store.state.settings.profile || {}).name || '').trim();
 export const backupInfo = (app, at = Date.now()) => ({ by: backupBy(app), at, app: 'Melete' });
@@ -36,6 +36,7 @@ const fromB64 = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (l
 
 // Текст копии из выбранных частей; files — с файлами песен
 export async function backupData(app, parts = PARTS, { files = false } = {}) {
+  await loadAllLangs(); // демо-файлы на любом языке — мимо копии
   const p = pickParts(stripDemo(app.store.state), parts, { tools: parts.includes('settings') ? readTools() : null }); // без демо
   if (files && parts.includes('songs')) {
     p.files = [];
@@ -50,6 +51,7 @@ export async function backupData(app, parts = PARTS, { files = false } = {}) {
 
 // Загрузить выбранные части копии p. → { sessions: новых занятий, files: добавлено файлов, tools: настройки инструментов изменились }
 export async function restoreParts(app, p, parts) {
+  await loadAllLangs();
   p = stripDemo(p); // демо из копий не возвращается
   const before = app.store.allSessions().length, use = parts.filter((k) => partsOf(p).includes(k));
   app.store.replaceState(applyParts(app.store.state, p, use));

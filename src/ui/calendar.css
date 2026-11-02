@@ -12,7 +12,7 @@
 .cwd,.crow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
 .cwd span{text-align:center;font-size:12px;font-weight:600;color:var(--l2);padding:4px 0 6px}
 .cday{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;padding:4px 2px 8px;border-radius:12px;color:var(--ink);background:none;border:0;cursor:pointer;min-width:0}
-.cday.out{color:var(--l3)}
+.cday.out{color:var(--l2);font-weight:400}
 .cdn{width:30px;height:30px;line-height:30px;border-radius:50%;text-align:center;font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
 .cday.today .cdn{color:var(--tint-text);font-weight:700}
 .cday.sel .cdn{background:var(--ink);color:var(--bg);font-weight:700}

@@ -3,6 +3,7 @@ import './styles/base.css';
 // Стили сессии — до стилей модулей, как в прототипе: правила окон модулей уточняют общие правила сессии
 import './ui/session.css';
 import { boot } from './core/index.js';
+import { loadLang, guessLang } from './i18n/index.js';
 import { installDesk } from './ui/desk.js';
 import './styles/desk.css';
 // Движение (переходы, отклик) — после стилей экранов, чтобы перекрыть их старые анимации
@@ -11,4 +12,5 @@ import './styles/motion.css';
 import './styles/mono.css';
 
 installDesk(); // режим компьютера (html.desk) — до первой отрисовки
-boot(document.getElementById('app'));
+// язык интерфейса — до первой отрисовки (без мелькания русского)
+loadLang(guessLang()).finally(() => boot(document.getElementById('app')));

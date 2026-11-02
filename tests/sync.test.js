@@ -25,8 +25,9 @@ const bytes = (n, v) => new Blob([new Uint8Array(n).fill(v)]);
 
 // транспорт: запросы телефона идут прямо в обработчик компьютера
 function link(pcCtx, incoming = new Map()) {
-  return async (method, url, { key = '', json = null, bin = false } = {}) => {
+  return async (method, url, { key = '', json = null, bin = false, withFp = false } = {}) => {
     const u = new URL(url);
+    if (withFp) return { data: await link(pcCtx, incoming)(method, url, { key, json, bin }), fp: 'ab'.repeat(32) };
     if (u.pathname === '/melete/v1/hello') return { app: 'melete', v: 1, name: 'PC' };
     const r = await handleRequest(pcCtx, { method, path: u.pathname, query: Object.fromEntries(u.searchParams), key, json: json ? JSON.parse(JSON.stringify(json)) : null }, incoming);
     if (r.status >= 400) throw Object.assign(new Error('http ' + r.status), { status: r.status });
@@ -43,9 +44,9 @@ describe('связь телефона и компьютера: план файл
     expect(p.delTheirs).toEqual(['e']);    // было у обоих, я удалил — удалить у них
   });
   it('адрес с компьютера в любом виде', () => {
-    expect(baseOf('192.168.1.5')).toBe('http://192.168.1.5:' + PORT);
-    expect(baseOf(' 192,168,1,5 ')).toBe('http://192.168.1.5:' + PORT);
-    expect(baseOf('http://10.0.0.2:8000/')).toBe('http://10.0.0.2:8000');
+    expect(baseOf('192.168.1.5')).toBe('https://192.168.1.5:' + PORT);
+    expect(baseOf(' 192,168,1,5 ')).toBe('https://192.168.1.5:' + PORT);
+    expect(baseOf('http://10.0.0.2:8000/')).toBe('https://10.0.0.2:8000'); // компьютер говорит только по TLS
     expect(baseOf('')).toBeNull();
   });
   it('дорожки синхронизируются, модули Библии — нет', () => {
@@ -89,6 +90,8 @@ describe('связь телефона и компьютера: целиком', 
     const p = await pair('192.168.1.5', '482 913', 'Телефон', H);
     expect(p.key).toMatch(/^[0-9a-f]{32}$/);
     expect(pcOf().name).toBe('PC');
+    expect(pcOf().fp).toBe('ab'.repeat(32)); // отпечаток сертификата, через который выдан ключ
+    expect(pcOf().v).toBe(3);
     expect(Object.keys(pcCtx.mem.peers)).toEqual([p.key]);
   });
 
@@ -190,6 +193,29 @@ describe('порт DEV', () => {
     if (PORT === PORT_DEV) expect(pc.addr).toBe('http://192.168.1.5:' + PORT_DEV);
     expect(JSON.parse(store).pc.v).toBe(2);
     delete globalThis.localStorage;
+  });
+});
+
+import { oldPc, fpCheck } from '../src/core/sync.js';
+import { Capacitor } from '@capacitor/core';
+import { vi } from 'vitest';
+describe('связь по TLS с отпечатком', () => {
+  it('телефон: сопряжение без отпечатка (до 02.11) снимается один раз, адрес остаётся для формы', () => {
+    let store = JSON.stringify({ pc: { addr: 'http://192.168.1.5:' + PORT, key: 'k', name: 'PC', v: 2 } });
+    globalThis.localStorage = { getItem: () => store, setItem: (_, v) => { store = v; } };
+    const nat = vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    try {
+      expect(pcOf()).toBeNull();
+      expect(JSON.parse(store).pc).toBeUndefined();
+      expect(oldPc()).toBe('192.168.1.5');
+      // новое сопряжение (v: 3, отпечаток) — остаётся
+      store = JSON.stringify({ pc: { addr: 'https://192.168.1.5:' + PORT, key: 'k', name: 'PC', v: 3, fp: 'ab'.repeat(32) } });
+      expect(pcOf().fp).toBe('ab'.repeat(32));
+    } finally { nat.mockRestore(); delete globalThis.localStorage; }
+  });
+  it('проверочный код — первые 8 знаков отпечатка', () => {
+    expect(fpCheck('1a2b3c4d' + '0'.repeat(56))).toBe('1A2B 3C4D');
+    expect(fpCheck('')).toBe('');
   });
 });
 

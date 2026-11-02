@@ -156,15 +156,22 @@ export const closeTopSheet = () => { const s = stack.at(-1); if (!s) return fals
 
 /* ---------- сообщение ---------- */
 
-export function toast(msg) {
+// opts.action + opts.onAction — кнопка в сообщении (дольше на экране, нажимается)
+export function toast(msg, opts = {}) {
   if (!msg || !String(msg).trim()) return; // «Минимал» без текста: сообщение без слов не показывается
   document.querySelectorAll('.toast').forEach((x) => x.remove()); // новое сообщение сменяет старое сразу
   const el = document.createElement('div');
-  el.className = 'toast';
+  el.className = 'toast' + (opts.action ? ' act' : '');
   el.setAttribute('role', 'status');
   el.textContent = msg;
+  if (opts.action) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toastbtn'; b.textContent = opts.action;
+    b.addEventListener('click', () => { leave(el, 160); try { opts.onAction && opts.onAction(); } catch { /* */ } });
+    el.appendChild(b);
+  }
   document.body.appendChild(el);
-  setTimeout(() => leave(el, 240), 2400);
+  setTimeout(() => leave(el, 240), opts.action ? 7000 : 2400);
 }
 
 /* ---------- подтверждение ---------- */

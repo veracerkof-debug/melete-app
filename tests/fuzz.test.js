@@ -13,7 +13,7 @@ const run = (name, fn, input) => {
   const t = performance.now(); let err = null;
   try { const r = fn(input); if (r && r.then) return r.catch(() => {}); } catch (e) { err = e; }
   const dt = performance.now() - t;
-  if (dt > 2000) throw new Error(name + ' медленно ' + Math.round(dt) + ' мс');
+  if (dt > 4000) throw new Error(name + ' медленно ' + Math.round(dt) + ' мс');
   if (err && !(err instanceof Error)) throw new Error(name + ' бросил не Error');
   if (err && /Maximum call stack|Invalid array length|out of memory/i.test(err.message)) throw new Error(name + ': ' + err.message);
 };

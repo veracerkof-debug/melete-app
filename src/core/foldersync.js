@@ -8,7 +8,7 @@ import { saveSong, emptySong } from './library.js';
 import { normKey } from './share.js';
 import { uid } from './time.js';
 import { isDemoFile, isDemoName, isDemoSong, isDemoText } from './demo.js';
-import { CORE_DICTS } from '../i18n/index.js';
+import { CORE_DICTS, loadAllLangs } from '../i18n/index.js';
 import { log, logErr } from './log.js';
 
 const KEY = 'practice.v1.folder';
@@ -45,6 +45,7 @@ export function initFolder(app) {
   }
 
   async function sync() {
+    await loadAllLangs(); // демо-файлы на любом языке — мимо папки
     if (!avail || busy) return null;
     if (!state.ok && !(await status()).ok) return null;
     busy = true; emit();

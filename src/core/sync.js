@@ -13,10 +13,10 @@
 // компьютер (он сообщает, что умеет), а сам синхронизируется в фоне (settings.syncAuto, вкл) — только в тишине;
 // компьютер берёт записи телефона в свою фоновую очередь (autostems.js, режим — как просил телефон: rec.want) и
 // результаты приходят при следующей синхронизации. Компьютера нет дольше суток — телефон считает сам.
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { pickParts, applyParts } from './backupparts.js';
 import { stripDemo, isDemoFile } from './demo.js';
-import { CORE_DICTS } from '../i18n/index.js';
+import { CORE_DICTS, loadAllLangs } from '../i18n/index.js';
 import { log } from './log.js';
 
 // Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
@@ -77,11 +77,12 @@ export function planFiles(mine, theirs, last = []) {
   mine.forEach((x) => { if (hB.has(x.id) && x.h && hB.get(x.id) && hB.get(x.id) !== x.h) out.meta.push(x.id); });
   return out;
 }
-// Адрес «192.168.1.5» / «192.168.1.5:53319» / с запятыми → http://192.168.1.5:53319
+// Адрес «192.168.1.5» / «192.168.1.5:53319» / с запятыми → https://192.168.1.5:53319 (компьютер говорит только по TLS)
 export function baseOf(addr) {
   let s = String(addr || '').trim().replace(/\s+/g, '').replace(/,/g, '.').replace(/\/+$/, '');
   if (!s) return null;
-  if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
+  s = s.replace(/^http:\/\//i, 'https://');
+  if (!/^https:\/\//i.test(s)) s = 'https://' + s;
   try { const u = new URL(s); if (!u.port) u.port = String(PORT); return u.origin; } catch { return null; }
 }
 export const newCode = (rnd = Math.random) => String(Math.floor(rnd() * 900000) + 100000);
@@ -93,6 +94,8 @@ const b64 = {
 };
 export { b64 };
 
+// Проверочный код отпечатка — первые 8 знаков группами: одинаковый на экранах компьютера и телефона
+export const fpCheck = (fp) => (fp ? String(fp).slice(0, 8).toUpperCase().replace(/(.{4})/, '$1 ') : '');
 const readLS = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
 const writeLS = (v) => { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch { /* нет места */ } };
 
@@ -105,6 +108,7 @@ export const PAIR_TRIES = 5, PAIR_LOCK = 60000;
 const pairGuard = { fails: 0, until: 0 };
 export const resetPairGuard = () => { pairGuard.fails = 0; pairGuard.until = 0; };
 export async function handleRequest(ctx, req, incoming = new Map()) {
+  if (req.path === '/melete/v1/sync') await loadAllLangs(); // демо-файлы на любом языке — мимо обмена; опрос ансамбля не ждёт
   const { app, mem } = ctx;
   if (req.path === '/melete/v1/pair') {
     const t = (ctx.now || Date.now)();
@@ -214,7 +218,7 @@ export function createSyncServer(app, { isDesktop }) {
         unErr = await listen('sync-error', (e) => { log('sync', 'порт занят: ' + e.payload, 'w'); state = { ...state, on: false, code: '', err: 'port' }; mem.on = false; writeLS({ peers: mem.peers, on: false }); emit(); });
       }
       const r = await invoke('sync_start');
-      state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '' };
+      state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '', fp: r.fp || '' };
       mem.on = true; writeLS({ peers: mem.peers, on: true });
       log('sync', 'связь с телефоном включена: ' + state.ips.join(', '));
       emit();
@@ -235,13 +239,22 @@ export function createSyncServer(app, { isDesktop }) {
 
 /* ---------- телефон: клиент ---------- */
 
-// HTTP: на телефоне — нативный (страница по https, компьютер — http в своей сети), в браузере — fetch
-export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000 } = {}) {
+// HTTP: на телефоне — нативный TLS с закреплённым отпечатком компьютера (SyncHttpPlugin.java), в браузере — fetch.
+// pin: отпечаток, которому верить; '' — любой (только при сопряжении); не задан — отпечаток подключённого компьютера.
+// withFp — вернуть { data, fp }: отпечаток, который предъявил компьютер
+let SyncHttp = null;
+export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000, pin, withFp = false } = {}) {
   const headers = { 'Content-Type': 'application/json', ...(key ? { 'X-Melete-Key': key } : {}) };
   if (Capacitor.isNativePlatform()) {
-    const r = await CapacitorHttp.request({ method, url, headers, data: json || undefined, responseType: bin ? 'arraybuffer' : 'json', connectTimeout: 6000, readTimeout: timeout });
+    if (pin === undefined) { const pc = readLS().pc; pin = pc && pc.fp && url.startsWith(pc.addr) ? pc.fp : null; }
+    if (pin == null) throw Object.assign(new Error('pin'), { reason: 'repair' }); // нет отпечатка — не слать ключ кому попало
+    SyncHttp ??= registerPlugin('SyncHttp');
+    let r;
+    try { r = await SyncHttp.request({ method, url, headers, body: json ? JSON.stringify(json) : null, bin, pin, connectTimeout: 6000, readTimeout: timeout }); }
+    catch (e) { throw Object.assign(new Error(String(e && e.message)), e && (e.code === 'pin' || e.code === 'tls') ? { reason: e.code } : {}); }
     if (r.status >= 400) throw Object.assign(new Error('http ' + r.status), { status: r.status });
-    return bin ? b64.to(typeof r.data === 'string' ? r.data : '') : (typeof r.data === 'string' ? JSON.parse(r.data || '{}') : r.data);
+    const data = bin ? b64.to(r.data || '') : JSON.parse(r.data || '{}');
+    return withFp ? { data, fp: r.fp || '' } : data;
   }
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), timeout);
   try {
@@ -251,15 +264,24 @@ export async function http(method, url, { key = '', json = null, bin = false, ti
   } finally { clearTimeout(tm); }
 }
 
-// Сопряжение до 30.10 у Melete DEV шло на общий порт 53319 — теперь у DEV свой; запись переезжает один раз
+// Сопряжение до 30.10 у Melete DEV шло на общий порт 53319 — теперь у DEV свой; запись переезжает один раз.
+// С 02.11 связь — по TLS с отпечатком (v: 3): прежнее сопряжение без отпечатка на телефоне не годится — один раз
+// подключиться заново (адрес остаётся в форме, нужен только код; oldPc)
 export const pcOf = () => {
   const m = readLS(), pc = m.pc || null;
   if (pc && !pc.v) {
     if (PORT === PORT_DEV && /:53319$/.test(pc.addr || '')) pc.addr = pc.addr.replace(/:53319$/, ':' + PORT_DEV);
     pc.v = 2; writeLS(m);
   }
+  if (pc && (pc.v || 0) < 3 && Capacitor.isNativePlatform()) {
+    m.old = { addr: pc.addr, name: pc.name }; delete m.pc; writeLS(m);
+    log('sync', 'связь стала защищённой — нужно подключиться заново');
+    return null;
+  }
   return pc;
 };
+// Прежнее сопряжение без TLS (pcOf его снял): адрес для формы → «192.168.1.5» или ''
+export const oldPc = () => { const o = readLS().old; return o && o.addr ? String(o.addr).replace(/^https?:\/\//, '').replace(':' + PORT, '') : ''; };
 export const forgetPc = () => { const m = readLS(); delete m.pc; writeLS(m); };
 
 // Сопряжение: адрес и код с экрана компьютера → ключ. → { name }
@@ -267,12 +289,15 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   const base = baseOf(addr);
   if (!base) throw Object.assign(new Error('addr'), { reason: 'addr' });
   let hello;
-  try { hello = await H('GET', base + '/melete/v1/hello', { timeout: 6000 }); } catch { throw Object.assign(new Error('unreachable'), { reason: 'unreachable' }); }
+  try { hello = await H('GET', base + '/melete/v1/hello', { timeout: 6000, pin: '' }); } catch (e) { throw Object.assign(new Error('unreachable'), { reason: e && e.reason === 'tls' ? 'tls' : 'unreachable' }); }
   if (!hello || hello.app !== 'melete') throw Object.assign(new Error('not melete'), { reason: 'unreachable' });
-  let r;
-  try { r = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName } }); } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : e.status === 429 ? 'wait' : 'off' }); }
+  // отпечаток — того сертификата, через который выдан ключ: дальше телефон верит только ему
+  let r, fp = '';
+  try { const x = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName }, pin: '', withFp: true }); r = x && x.data && 'fp' in x ? x.data : x; fp = (x && x.fp) || ''; } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : e.status === 429 ? 'wait' : 'off' }); }
+  if (Capacitor.isNativePlatform() && !/^[0-9a-f]{64}$/.test(fp)) throw Object.assign(new Error('no fp'), { reason: 'unreachable' });
   const m = readLS();
-  m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 2 };
+  delete m.old;
+  m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };
   writeLS(m);
   log('sync', 'сопряжено с компьютером');
   return m.pc;
@@ -282,6 +307,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
 // может отказать, если у него звучит музыка), stop() — прервать между кусками (у телефона зазвучало), want — какие
 // дорожки нужны телефону (уходит с записью). → итог { songs, sessions, up, down, removed, meta }
 export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
+  await loadAllLangs(); // демо-файлы на любом языке не синхронизируются
   pcOf(); // переезд адреса DEV (выше)
   const m = readLS(), pc = m.pc;
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });

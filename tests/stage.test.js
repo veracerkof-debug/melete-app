@@ -75,3 +75,15 @@ describe('автопрокрутка', () => {
     expect(itemOf(ev, song, []).dur).toBe(3600);
   });
 });
+
+import { stageFont } from '../src/core/screens/stage.js';
+describe('сцена: размер текста', () => {
+  it('куплет целиком по высоте, строка по ширине, не больше A+', () => {
+    const v = 'a\nb\nc\nd\n\ne\nf';
+    expect(stageFont(v, 1000, 400, 100, 1.5)).toBe(Math.floor(400 / (4 * 1.5)));
+    expect(stageFont(v, 1000, 4000, 30, 1.5)).toBe(30);
+    expect(stageFont('x'.repeat(100), 1000, 4000, 64)).toBe(Math.floor(1000 / 61));
+    expect(stageFont('x'.repeat(100), 300, 4000, 64)).toBe(12);
+    expect(stageFont(Array(60).fill('строка').join('\n'), 1000, 500, 40, 1.5)).toBe(16);
+  });
+});

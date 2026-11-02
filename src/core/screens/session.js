@@ -407,7 +407,8 @@ export function createSessionScreen(app) {
     sheet(() => snav(groupName(st(), id)) + '<div class="group">' +
       (canPure ? it('pure', t('pm.pure')) : '') +
       (multi ? it('full', t('pm.full')) : '') +
-      (sz === 'full' || sz === 'half' ? it('addb', t('pm.addBottom')) + (sz === 'half' ? it('addr', t('pm.addRight')) : '') : '') +
+      // низкий экран (альбомный телефон): не больше двух окон — иначе по 49 px на окно
+      (lowScreen() ? (sz === 'full' ? it('addb', t('pm.addBottom')) : '') : sz === 'full' || sz === 'half' ? it('addb', t('pm.addBottom')) + (sz === 'half' ? it('addr', t('pm.addRight')) : '') : '') +
       (multi ? it('swap', t('pm.swap')) : '') + it('schemes', t('pm.schemes')) + (multi ? it('close', t('pm.close'), 'danger') : '') + '</div>' +
       '<p class="ftr">' + t('pm.hint') + '</p>',
     (el, sh) => el.addEventListener('click', (e) => {
@@ -427,6 +428,7 @@ export function createSessionScreen(app) {
     }));
   }
 
+  function lowScreen() { return typeof innerHeight === 'number' && innerHeight < 420 && innerWidth > innerHeight; }
   function layoutSheet() {
     const prev = (l) => '<div class="lprev2">' + lpos(l).map((g) => '<i style="grid-area:' + g + '"></i>').join('') + '</div>';
     const OPT = [['H', t('lay.half')], ['Q', t('lay.quarters')], ['S', t('lay.strips')]];

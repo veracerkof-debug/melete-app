@@ -99,16 +99,18 @@ function closeNote(open, key, tk, tr, div) {
 
 // Лёгкий обход XML без DOM: open(path, attrs), close(path) для каждого тега
 function walkXml(text, open, close) {
-  const re = /<(\/?)([\w:.-]+)([^>]*?)(\/?)>/g, stack = [];
+  // пути считаются по ходу (не join на каждый тег): глубоко вложенный чужой файл — линейно, а не квадратично
+  const re = /<(\/?)([\w:.-]+)([^>]*?)(\/?)>/g, stack = [], paths = [''];
+  const at = () => paths[paths.length - 1];
   let m;
   while ((m = re.exec(text))) {
     const [, end, tag, rest, self] = m;
-    if (end) { stack.pop(); close && close(stack.join('/') + '/' + tag); continue; }
-    stack.push(tag);
+    if (end) { stack.pop(); paths.length > 1 && paths.pop(); close && close(at() + '/' + tag); continue; }
+    stack.push(tag); paths.push(at() + (at() ? '/' : '') + tag);
     const attrs = {};
     rest.replace(/([\w:.-]+)="([^"]*)"/g, (_, k, v) => { attrs[k] = v.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;/g, "'"); return ''; });
-    open(stack.join('/'), attrs, tag);
-    if (self) { stack.pop(); close && close(stack.join('/') + '/' + tag); }
+    open(at(), attrs, tag);
+    if (self) { stack.pop(); paths.pop(); close && close(at() + '/' + tag); }
   }
 }
 export function readAls(text) {

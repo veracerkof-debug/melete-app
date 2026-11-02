@@ -21,10 +21,10 @@ export const devKind = (d) => KIND[d && d.type] || 'other';
 /* ---------- Android ---------- */
 
 function nativeEngine() {
-  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set() };
+  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set(), route: new Set() };
   // уровень: кусочек сигнала для спектра (int16, моно) → Float32Array
   const toF = (e) => { if (e && e.pcm) { const u = unb64(e.pcm), n = u.length >> 1, x = new Float32Array(n); for (let i = 0; i < n; i++) { const v = u[2 * i] | (u[2 * i + 1] << 8); x[i] = (v > 32767 ? v - 65536 : v) / 32768; } e.samples = x; } return e; };
-  ['level', 'pos', 'end', 'devices', 'lost'].forEach((k) => V.addListener(k, (e) => { if (k === 'level') toF(e); subs[k].forEach((fn) => fn(e)); }));
+  ['level', 'pos', 'end', 'devices', 'lost', 'route'].forEach((k) => V.addListener(k, (e) => { if (k === 'level') toF(e); subs[k].forEach((fn) => fn(e)); }));
   return {
     native: true,
     on: (k, fn) => { subs[k].add(fn); return () => subs[k].delete(fn); },
@@ -89,8 +89,20 @@ async function assemble(path, extra = []) {
   return { wav: encodeWav(ch, sr, 32), sec: n / sr, sr, nc, at: parts[parts.length - 1].at || Date.now() };
 }
 
+// Свободное место для записей (IndexedDB): оценка браузера; не знает — считаем, что хватает
+const MIN_FREE = 100 * 1048576;
+async function freeBytes() {
+  try { const e = await navigator.storage.estimate(); return e && e.quota ? e.quota - (e.usage || 0) : Infinity; } catch { return Infinity; }
+}
+// Что за вход на самом деле открыт: имя, частота, каналы (по настройкам дорожки)
+function infoOf(stream) {
+  const tr = stream && stream.getAudioTracks()[0];
+  if (!tr) return null;
+  const s = (tr.getSettings && tr.getSettings()) || {};
+  return { id: s.deviceId || '', name: tr.label || '', rate: s.sampleRate || 0, channels: s.channelCount || 0 };
+}
 function webEngine() {
-  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set() };
+  const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set(), route: new Set() };
   const emit = (k, e) => subs[k].forEach((fn) => fn(e));
   const mem = new Map(); // путь → WAV, если IndexedDB нет
   let rec = null, audio = null;
@@ -121,15 +133,25 @@ function webEngine() {
       return { inputs, outputs: 'setSinkId' in HTMLMediaElement.prototype ? map('audiooutput') : [] };
     },
     async start({ deviceId, stereo, raw, monitor }) {
-      const c = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' }), nc = stereo || deviceId === 'display' ? 2 : 1;
+      const nc = stereo || deviceId === 'display' ? 2 : 1;
+      // места мало — не начинать: запись, оборвавшаяся на середине, хуже, чем честный отказ сразу
+      if (!monitor && (await freeBytes()) < MIN_FREE) throw Object.assign(new Error('space'), { message: 'space' });
       let stream;
+      const why = (e) => (e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable');
       try { stream = await openStream(deviceId, nc, raw); }
-      catch (e) { c.close(); throw Object.assign(new Error('mic'), { message: e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable' }); }
+      catch (e) { throw Object.assign(new Error('mic'), { message: why(e) }); }
+      // контекст — на родной частоте входа (USB-микрофон 44,1 или 96 кГц пишется без пересчёта); не умеет — как выйдет
+      const set0 = (stream.getAudioTracks()[0] && stream.getAudioTracks()[0].getSettings && stream.getAudioTracks()[0].getSettings()) || {};
+      const AC = window.AudioContext || window.webkitAudioContext;
+      let c;
+      try { c = set0.sampleRate ? new AC({ latencyHint: 'balanced', sampleRate: set0.sampleRate }) : new AC({ latencyHint: 'balanced' }); }
+      catch { c = new AC({ latencyHint: 'balanced' }); }
       if (c.state !== 'running') { try { await c.resume(); } catch { /* попробуем так */ } }
-      const src = c.createMediaStreamSource(stream), path = 'rec-' + Date.now() + '.wav', sr = c.sampleRate;
+      let src = c.createMediaStreamSource(stream);
+      const path = 'rec-' + Date.now() + '.wav', sr = c.sampleRate;
       let frames = 0, paused = false, seq = 0, pend = [], pendN = 0, lastFlush = 0, node = null, sp = null, ended = false;
       const memParts = [];
-      let rec0done = null;
+      let rec0done = null, rec0node = null;
       const drained = () => new Promise((res) => { rec0done = res; setTimeout(res, 400); });
       const flush = async (force) => {
         if (!pendN || (!force && performance.now() - lastFlush < 2000)) return;
@@ -155,22 +177,44 @@ function webEngine() {
         node.port.onmessage = (e) => { if (e.data === 'done') { if (rec0done) rec0done(); } else onChunk(e.data); };
         const mute = c.createGain(); mute.gain.value = 0; // узел должен тянуться выходом, звук — в тишину
         src.connect(node).connect(mute).connect(c.destination);
+        rec0node = node;
       } catch {
         // запасной путь: ScriptProcessor (старые движки без AudioWorklet)
         sp = c.createScriptProcessor(4096, nc, nc);
         sp.onaudioprocess = (e) => onChunk(Array.from({ length: nc }, (_, k) => Float32Array.from(e.inputBuffer.getChannelData(Math.min(k, e.inputBuffer.numberOfChannels - 1)))));
         src.connect(sp); sp.connect(c.destination);
       }
-      // вход пропал (выдернули USB, Bluetooth отключился, закрыли вкладку-источник) — записанное сохраняется
-      stream.getAudioTracks().forEach((t) => { t.onended = () => { if (rec && !ended) { ended = true; emit('lost', { reason: 'device' }); } }; });
-      rec = { c, stream, src, node, sp, path, sr, nc, memParts, flush, drained, get frames() { return frames; }, setPaused: (v) => { paused = v; } };
+      // вход пропал (выдернули USB, Bluetooth отключился): открыть встроенный микрофон и писать дальше в тот же файл,
+      // как на Android; не вышло (или это был звук экрана) — бережно закончить, записанное сохраняется
+      const sink = () => rec0node || sp;
+      const watch = (st) => st.getAudioTracks().forEach((tr) => { tr.onended = async () => {
+        if (!rec || ended || rec.stream !== st) return;
+        if (deviceId !== 'display') {
+          try {
+            const s2 = await openStream(-1, nc, raw), src2 = c.createMediaStreamSource(s2);
+            try { src.disconnect(); } catch { /* уже */ }
+            src2.connect(sink()); src = src2; rec.stream = s2; rec.src = src2; watch(s2);
+            emit('lost', { reason: 'device', switched: true, dev: infoOf(s2) });
+            return;
+          } catch { /* встроенного нет */ }
+        }
+        ended = true; emit('lost', { reason: 'device' });
+      }; });
+      watch(stream);
+      // система «усыпила» звук (звонок, другое приложение взяло вход) — разбудить; не просыпается — сказать
+      c.onstatechange = () => { if (rec && rec.c === c && c.state === 'suspended') c.resume().catch(() => emit('lost', { reason: 'suspended', soft: true })); };
+      // место кончается во время записи — остановить, пока всё записанное цело
+      const spaceT = monitor ? 0 : setInterval(async () => { if (rec && rec.c === c && !ended && (await freeBytes()) < MIN_FREE / 3) { ended = true; emit('lost', { reason: 'space' }); } }, 10000);
+      rec = { c, stream, src, node, sp, path, sr, nc, memParts, flush, drained, spaceT, get frames() { return frames; }, setPaused: (v) => { paused = v; } };
       if (!monitor) REC.voice = true;
-      return { rate: sr, channels: nc };
+      return { rate: sr, channels: nc, path, dev: infoOf(stream) };
     },
     async pause(on) { if (rec) rec.setPaused(on); },
     async stop() {
       const r = rec; rec = null; REC.voice = false;
       if (!r) throw new Error('idle');
+      if (r.spaceT) clearInterval(r.spaceT);
+      r.c.onstatechange = null;
       // дождаться последних отсчётов из потока звука (недописанный кусок)
       if (r.node) { const d = r.drained(); r.node.port.postMessage('stop'); await d; r.node.port.onmessage = null; }
       else await new Promise((res) => setTimeout(res, 120));

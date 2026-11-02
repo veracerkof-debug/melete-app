@@ -2,7 +2,7 @@
 import { initTama } from '../ui/tama.js';
 import { webIcon, iconOf, setAppIcon, ICON_BY_MASCOT } from './appicon.js';
 import { Capacitor } from '@capacitor/core';
-import { t, initI18n, getLang, CORE_DICTS } from '../i18n/index.js';
+import { t, initI18n, getLang, CORE_DICTS, loadAllLangs } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
@@ -34,6 +34,7 @@ import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
 import { toast, confirm } from '../ui/index.js';
+import { startEdgeFade } from '../ui/edgefade.js';
 import { initBridge } from './bridge.js';
 import { startLog, log } from './log.js';
 import { startDiag, provide as dProvide, count as dCount, gauge as dGauge, time as dTime, event as dEvent } from './diag.js';
@@ -66,6 +67,7 @@ import { initWhatsNew } from './screens/whatsnew.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
+  try { startEdgeFade(); } catch { /* не страшно */ }
   startLog(APP_VERSION + ' · ' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/[\d.]+/g) || []).join(' · '));
   startDiag(); // диагностика (diag.js): приложение само считает, как работает — экран «Диагностика»
   // Часы устройства: пока сбиты, новые записи о занятиях не подтверждаются
@@ -77,7 +79,8 @@ export function boot(root) {
   const writeFail = (where) => (e) => {
     const n = Date.now(); if (n - writeFailAt < 60000) return; writeFailAt = n;
     try { log('store', 'запись не прошла (' + where + '): ' + (e && (e.name || e.message)), 'e'); } catch { /* */ }
-    setTimeout(() => { try { toast(t('data.noSpace')); } catch { /* */ } }, 0);
+    // «Освободить место» — медиатека, крупные файлы сверху
+    setTimeout(() => { try { toast(t('data.noSpace'), { action: t('data.free'), onAction: () => { device.audio = { ...(device.audio || {}), sortOnce: 'size' }; import('./screens/tools.js').then((m) => m.openToolView(app, 'audio')); } }); } catch { /* */ } }, 0);
   };
   onDeviceWriteFail(writeFail('настройки'));
   const store = createStore({ clockBad: () => !!(clock && clock.bad), onWriteFail: writeFail('данные') });
@@ -307,7 +310,7 @@ export function boot(root) {
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)
   if (restored && !store.state.settings.demo) removeDemoFiles(app).catch(() => {});
   // копии демо, вернувшиеся из папки или с другого устройства, — убрать (и из папки)
-  app.files.ready.then(() => cleanDemoCopies(app, CORE_DICTS)).then((n) => { if (n) { log('demo', 'убраны копии демо: ' + n); if (app.render) app.render(); } }).catch(() => {});
+  app.files.ready.then(() => loadAllLangs()).then(() => cleanDemoCopies(app, CORE_DICTS)).then((n) => { if (n) { log('demo', 'убраны копии демо: ' + n); if (app.render) app.render(); } }).catch(() => {});
   createMixerDrawer(app);
   // Играет, но не слышно (микшер, громкость устройства) — уведомление внизу
   initNoSound(app);
