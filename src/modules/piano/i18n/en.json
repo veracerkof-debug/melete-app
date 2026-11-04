@@ -105,5 +105,6 @@
   "perf": "Sound quality",
   "perf.full": "Studio",
   "perf.eco": "Lite",
-  "perf.hint": "Studio (default): all voices, pad unison, four reverb spaces. Lite is for weak devices: fewer voices, simpler pads, one reverb, always a large buffer."
+  "perf.hint": "Studio (default): all voices, pad unison, four reverb spaces. Lite is for weak devices: fewer voices, simpler pads, one reverb, always a large buffer.",
+  "lines": "Voice lines"
 }

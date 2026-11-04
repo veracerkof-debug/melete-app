@@ -138,3 +138,6 @@
 :is(.tview.pure,.pfull) .pbar,:is(.tview.pure,.pfull) .lastnote,:is(.tview.pure,.pfull) .psyn,:is(.tview.pure,.pfull) .hlp{display:none!important}
 :is(.tview.pure,.pfull) .pwrap{justify-content:stretch}
 :is(.tview.pure,.pfull) .kbs{flex:1!important;gap:0}
+/* линии голосов над клавишами (src/ui/voicelines.js): касания проходят сквозь */
+.pvl{display:block;width:100%;height:90px;flex:none;pointer-events:none;margin:0 0 4px;order:-1}
+.tview.pure .pvl,.pfull .pvl{display:none}

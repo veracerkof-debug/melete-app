@@ -53,7 +53,7 @@ const fileUrl = (rel) => (ctx.packs && ctx.packs.url ? ctx.packs.url(rel) : new 
 const packable = () => !!(ctx.packs && ctx.packs.meta && ctx.packs.meta('ffmpeg'));
 // без FFmpeg формат недоступен: только им пишется, или система его не пишет
 const needsFF = (k) => !!(FORMATS[k].ffmpeg || S.can[k] === false);
-async function checkFF() { S.ffOk = await ffAvailable(fileUrl); if (S.ffOk && !S.ff) S.ff = createFFmpeg(fileUrl); if (!S.ffOk && S.ff) { S.ff.terminate(); S.ff = null; } render(); }
+async function checkFF() { S.ffOk = await ffAvailable(fileUrl); if (S.ffOk && !S.ff) S.ff = createFFmpeg(fileUrl); if (!S.ffOk && S.ff) { S.ff.terminate(); S.ff = null; if (S.ff2) { S.ff2.terminate(); S.ff2 = null; } } render(); }
 
 /* ---------- очередь ---------- */
 
@@ -115,34 +115,42 @@ async function run({ share = false } = {}) {
   if (!jobs.length) return;
   if (needsFF(o.fmt) && !hasFF()) { needFF(); return; }
   S.busy = true; S.abort = new AbortController(); render();
-  const ff = hasFF() ? S.ff : null, results = [];
+  const results = [], taken = new Set(ctx.files.list('audio').map((x) => x.name));
   const groups = o.join && jobs.length > 1 ? [jobs] : jobs.map((j) => [j]);
-  for (const g of groups) {
-    if (S.abort.signal.aborted) break;
+  // M4A и Opus — системными кодировщиками (на телефоне — аппаратные, в разы быстрее FFmpeg), если звук помещается
+  // в память целиком (≈ до 17 мин стерео); длиннее — FFmpeg «файл → файл»
+  const sysOk = (g) => (o.fmt === 'm4a' || o.fmt === 'opus') && S.can[o.fmt] !== false && g.every((j) => j.dur || /\.wav$/i.test(j.name)) &&
+    g.reduce((a, j) => a + (j.dur ? j.dur * 48000 * 2 * 4 : j.size * 2), 0) < 400 * 1048576;
+  // несколько файлов — по два сразу (у телефона много ядер, FFmpeg занимает одно); второй FFmpeg — свой
+  const lanes = hasFF() && groups.length > 1 && (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1;
+  if (lanes > 1 && !S.ff2) S.ff2 = createFFmpeg(fileUrl);
+  const one = async (g, ff) => {
     g.forEach((j) => { j.state = 'run'; j.p = 0; j.err = ''; j.stage = 'read'; });
     paint();
-    const t0 = performance.now();
+    const t0 = performance.now(), sys = !!ff && sysOk(g);
     try {
       const out = await convert(g.map((j) => ({ blob: j.blob, name: j.name })), o, {
-        ffmpeg: ff, join: g.length > 1, signal: S.abort.signal,
+        ffmpeg: ff, viaJs: sys || !ff, join: g.length > 1, signal: S.abort.signal,
         onStep: (s) => {
-          const p = s.stage === 'encode' ? (ff ? s.p || 0 : 0.3 + 0.7 * (s.p || 0)) : s.stage === 'read' ? 0.02 : s.stage === 'scan' ? 0 : 0.2;
+          const p = s.stage === 'encode' ? (ff && !sys ? s.p || 0 : 0.3 + 0.7 * (s.p || 0)) : s.stage === 'read' ? 0.02 : s.stage === 'scan' ? 0 : 0.2;
           g.forEach((j) => { j.stage = s.stage; j.p = Math.max(j.stage === s.stage ? j.p : 0, p); });
           paint();
         },
       });
-      const taken = new Set(ctx.files.list('audio').map((x) => x.name));
       for (const r of out) {
         // имя занято (повторная конвертация) — «имя (2).mp3»
         for (let k = 2, b = r.name.replace(/(\.[^.]+)$/, ''), ext = r.name.slice(b.length); taken.has(r.name); k++) r.name = b + ' (' + k + ')' + ext;
         taken.add(r.name);
         const id = 'cv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
         await ctx.files.add({ id, name: r.name, size: r.size, type: r.blob.type, kind: 'audio', created: Date.now(), blob: r.blob, dur: r.dur, conv: { src: g.map((j) => j.id).filter(Boolean), fmt: r.fmt } });
-        results.push({ id, name: r.name, blob: r.blob, size: r.size, fmt: r.fmt });
+        const rec = { id, name: r.name, blob: r.blob, size: r.size, fmt: r.fmt };
+        results.push(rec);
+        g.forEach((j, k) => { if (k === 0) (j.out = j.out || []).push(rec); });
       }
-      g.forEach((j, k) => { j.state = 'done'; j.p = 1; j.out = k === 0 ? results.slice(results.length - out.length) : []; j.joined = k > 0; });
-      const ms = performance.now() - t0;
-      ctx.log('конвертер: ' + g.length + ' → ' + o.fmt.toUpperCase() + (ff ? ' (FFmpeg)' : '') + ', ' + Math.round(ms) + ' мс');
+      g.forEach((j, k) => { j.state = 'done'; j.p = 1; if (k > 0) { j.out = []; j.joined = true; } });
+      const ms = performance.now() - t0, d = out.reduce((a, r) => a + (r.dur || 0), 0);
+      // в журнал — скорость (× к длине записи): по отчётам видно, где медленно
+      ctx.log('конвертер: ' + g.length + ' → ' + o.fmt.toUpperCase() + (ff && !sys ? ' (FFmpeg)' : ' (система)') + ', ' + Math.round(ms) + ' мс, ' + Math.round(d) + ' с звука, ×' + (d / Math.max(0.001, ms / 1000)).toFixed(1));
       if (ctx.diag && ctx.diag.time) ctx.diag.time('convert', ms);
     } catch (e) {
       const cancel = e && e.reason === 'cancel';
@@ -151,7 +159,10 @@ async function run({ share = false } = {}) {
       if (e && (e.reason === 'ffmpeg' || e.reason === 'decode') && !hasFF()) needFF(errText(e));
     }
     paint();
-  }
+  };
+  let next = 0;
+  const lane = async (ff) => { while (next < groups.length && !S.abort.signal.aborted) { const g = groups[next++]; g.forEach((j) => (j.out = null)); await one(g, ff); } };
+  await Promise.all(Array.from({ length: lanes }, (_, i) => lane(hasFF() ? (i ? S.ff2 : S.ff) : null)));
   S.busy = false; S.abort = null;
   render();
   if (results.length) {

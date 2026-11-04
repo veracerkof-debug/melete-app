@@ -12,6 +12,7 @@ import { pianoPatch, pianoLayer, PRESETS } from '../../audio/synth.js';
 import { synBody, synBind, synthSheet } from './synth-panel.js';
 import { kbHTML, lastWhite } from '../../ui/keyboard.js';
 import { mName } from '../../music/notes.js';
+import { voiceLines } from '../../ui/voicelines.js';
 
 import meta, { ICON } from './meta.js';
 const I = {
@@ -20,6 +21,7 @@ const I = {
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/></svg>',
   dual: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="7" rx="1.5"/><rect x="3.5" y="13" width="17" height="7" rx="1.5"/></svg>',
   rot: '<svg viewBox="0 0 24 24"><rect x="7" y="3.5" width="10" height="17" rx="2"/><path d="M20.5 8.5a6 6 0 0 1-3 5.2M3.5 15.5a6 6 0 0 1 3-5.2"/></svg>',
+  lines: '<svg viewBox="0 0 24 24"><path d="M4 20V13c0-3 3-3 3-6V4M12 20v-5c0-2 4-3 4-6V4M20 20V4"/></svg>',
 };
 
 let host = null, ctx = null, size = 'full', ro = null, unbindSyn = () => {}, unsubShared = () => {};
@@ -33,7 +35,11 @@ let lastFit = 0; // сколько белых клавиш помещалось 
 
 const P = () => ctx.store.all();
 const rotated = () => false; // поворачивается весь экран (rotate ниже), клавиатура внутри окна — нет
-const panelOn = () => size === 'full' && !P().dual; // панель эффектов — всегда, кроме двух рядов
+// линии голосов над клавишами (src/ui/voicelines.js) — отдельный режим, включается кнопкой (слово автора 04.11: графика
+// и ручки на телефоне вместе не помещаются): вместо панели звука — линии, ручки — шторкой по кнопке «Звук»
+const linesOn = () => !!P().vl && size !== 'strip';
+const panelOn = () => size === 'full' && !P().dual && !linesOn(); // панель эффектов — кроме двух рядов и режима линий
+let vl = null;
 
 /* ---------- разметка ---------- */
 
@@ -56,12 +62,12 @@ function view() {
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
     (panelOn() ? '' : pk('data-x="psound"', I.wave, t('sound'))) +
     (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20h12M9 20l2-12h2l2 12" style="fill:none;stroke:currentColor;stroke-width:2"/>' + (hold.mode === 2 ? '<circle cx="12" cy="5" r="2" style="fill:currentColor"/>' : '') + '</svg></i><span class="bt">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</span></button>' +
-      pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + '</div></div>';
+      pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + (size !== 'strip' ? pk('data-x="plines"', I.lines, t('lines'), linesOn()) : '') + '</div></div>';
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
   const kb = (m) => kbHTML(m, nw, hl ? hl.pcs : null, hl ? hl.root : null, ctx.keyLabel);
   const syn = panelOn() ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
-  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
-    '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
+  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn || linesOn() ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
+    (linesOn() ? '<canvas class="pvl" aria-hidden="true"></canvas>' : '') + '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
   return rot ? '<div class="protbox"><div class="prot' + (p.rotDir === 'l' ? ' l' : '') + '">' + inner + '</div></div>' : inner;
 }
 
@@ -79,15 +85,41 @@ function layout() {
   const n = parseInt(kbs[0].style.getPropertyValue('--n'), 10) || 8, bar = host.querySelector('.pbar'), hl = host.querySelector('.hlp');
   // полный экран: клавиши — на всю высоту (две клавиатуры — пополам), без панели и полей
   if (host.closest('.tview.pure, .pfull')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
+  const cvl = host.querySelector('.pvl');
   const used = (bar ? bar.offsetHeight + 8 : 0) + (hl ? hl.offsetHeight + 6 : 0) + 24, avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
   // в малых окнах сессии клавиши выше (до 7 ширин, как настоящие ≈ 6,4): иначе узкое окно оставляет пустую половину
   let kh = Math.round(Math.max(96, Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340)));
   // с панелью эффектов — клавиши ровно в нижней половине, панель занимает всё, что выше
   if (ps) kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used) * 0.5)));
+  // режим линий — как с панелью: клавиши в нижней части, всё, что выше, — линии (не меньше 60 px)
+  if (cvl) {
+    kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used - 60 * (kbs.length > 1 ? 1 : 1)) / kbs.length - (kbs.length > 1 ? 8 : 0), (H - used) * (kbs.length > 1 ? 0.33 : 0.5))));
+    cvl.style.height = Math.max(60, Math.floor(H - used - kh * kbs.length - (kbs.length > 1 ? 8 : 0) - 4)) + 'px';
+  }
   kbs.forEach((k) => (k.style.height = kh + 'px'));
   markHeld();
+  linesLayout();
 }
+
+// x середины клавиши m над холстом (дробная высота — между соседними клавишами); нижний ряд при двух рядах
+let keyX = new Map();
+function linesLayout() {
+  const cv = host && host.querySelector('.pvl');
+  if (!cv) { if (vl) { vl.destroy(); vl = null; } return; }
+  const r = cv.getBoundingClientRect(), kb = [...host.querySelectorAll('.kbs .kb')].pop();
+  keyX = new Map();
+  if (kb) kb.querySelectorAll('[data-m]').forEach((k) => { const b = k.getBoundingClientRect(); keyX.set(+k.dataset.m, b.left + b.width / 2 - r.left); });
+  const xOf = (m) => {
+    const a = Math.floor(m), f = m - a, x0 = keyX.get(a), x1 = keyX.get(a + 1);
+    if (x0 == null) { const ks = [...keyX.keys()]; if (!ks.length) return 0; const lo = Math.min(...ks), hi = Math.max(...ks); return m < lo ? -8 : m > hi ? r.width + 8 : 0; }
+    return x1 == null || !f ? x0 : x0 + (x1 - x0) * f;
+  };
+  if (!vl || vl.cv !== cv) { if (vl) vl.destroy(); vl = voiceLines(cv, { dir: 'up', span: 2.6, xOf, width: 2.6 }); vl.cv = cv; }
+  else { vl.set('xOf', xOf); vl.layout(); }
+}
+const vOn = (id, m, v) => { if (vl) vl.on(id, m, v); };
+const vOff = (id) => { if (vl) vl.off(id); };
 
 function markHeld() {
   host.querySelectorAll('.kb [data-m]').forEach((k) => { k.classList.toggle('held', hold.k.has(+k.dataset.m)); if (lit.has(+k.dataset.m)) k.classList.add('down'); });
@@ -116,6 +148,7 @@ function noteOn(k, pid) {
   ctx.audio.synth.on(m, key, { bus: 'piano' });
   showNote(m);
   ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 });
+  vOn(key, m, 0.8);
   return key;
 }
 
@@ -123,6 +156,7 @@ function noteOff(p) {
   p.el.classList.remove('down');
   ctx.audio.synth.off(p.key);
   ctx.midi.ev({ k: 'off', id: p.key });
+  vOff(p.key);
 }
 
 /* ---------- MIDI: клавиатура и воспроизведение записи ---------- */
@@ -139,9 +173,10 @@ function midiIn(e) {
   if (e.k === 'on') {
     if (!ctx.audio.unlock()) return;
     const m = Math.max(0, Math.min(127, Math.round(e.m))), key = 'mi' + e.id;
-    if (mi.has(e.id)) { syn.off(mi.get(e.id).key, true); light(mi.get(e.id).m, -1); }
+    if (mi.has(e.id)) { syn.off(mi.get(e.id).key, true); light(mi.get(e.id).m, -1); vOff(mi.get(e.id).key); }
     syn.on(m, key, { bus: 'piano', vel: e.v });
     mi.set(e.id, { key, m });
+    vOn(key, m, e.v);
     light(m, 1);
     showNote(m);
   } else if (e.k === 'off') {
@@ -150,18 +185,19 @@ function midiIn(e) {
     mi.delete(e.id);
     if (e.r) syn.release(v.key); else syn.off(v.key);
     light(v.m, -1);
+    vOff(v.key);
   }
 }
 function midiStop() {
   if (!ctx) return;
-  mi.forEach((v) => { ctx.audio.synth.off(v.key); light(v.m, -1); });
+  mi.forEach((v) => { ctx.audio.synth.off(v.key); light(v.m, -1); vOff(v.key); });
   mi.clear();
 }
 
 // Sustain → Hold → выкл. Из Hold — удержанные ноты отпускаются долгим хвостом
 function holdToggle() {
   hold.mode = (hold.mode + 1) % PEDAL.length;
-  if (hold.mode !== 2) { hold.k.forEach((key) => { ctx.audio.synth.release(key); ctx.midi.ev({ k: 'off', id: key, r: true }); }); hold.k.clear(); }
+  if (hold.mode !== 2) { hold.k.forEach((key) => { ctx.audio.synth.release(key); ctx.midi.ev({ k: 'off', id: key, r: true }); vOff(key); }); hold.k.clear(); }
   ctx.midi.ev({ k: 'ped', v: hold.mode === 1 ? 1 : 0 });
   ctx.ui.toast(ctx.t('pedal.' + PEDAL[hold.mode]));
 }
@@ -177,8 +213,8 @@ function bind() {
     if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
     if (hold.mode === 2) { // Hold: нажатие включает ноту, повторное — выключает
       const m = +k.dataset.m;
-      if (hold.k.has(m)) { syn.off(hold.k.get(m)); ctx.midi.ev({ k: 'off', id: hold.k.get(m) }); hold.k.delete(m); k.classList.remove('held'); }
-      else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 }); }
+      if (hold.k.has(m)) { syn.off(hold.k.get(m)); ctx.midi.ev({ k: 'off', id: hold.k.get(m) }); vOff(hold.k.get(m)); hold.k.delete(m); k.classList.remove('held'); }
+      else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 }); vOn(key, m, 0.8); }
       return;
     }
     ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) });
@@ -191,7 +227,7 @@ function bind() {
     if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) }); }
   });
   // Sustain: отпущенная клавиша не глушится — звук уходит долгим хвостом
-  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); ctx.midi.ev({ k: 'off', id: p.key, r: true }); } else noteOff(p); ptr.delete(e.pointerId); };
+  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); ctx.midi.ev({ k: 'off', id: p.key, r: true }); vOff(p.key); } else noteOff(p); ptr.delete(e.pointerId); };
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
 
@@ -212,6 +248,7 @@ function bind() {
     if (a === 'psound') synthSheet(ctx);
     else if (a === 'phold') { holdToggle(); render(); }
     else if (a === 'pdual') { p.dual = !p.dual; ctx.store.save(); render(); }
+    else if (a === 'plines') { p.vl = !linesOn(); ctx.store.save(); render(); }
     // Поворот — только по кнопке: выкл → вправо → влево → выкл (сам по наклону телефона больше не переворачивается)
     else if (a === 'prot') {
       if (!p.rot) { p.rot = true; p.rotDir = 'r'; } else if (p.rotDir !== 'l') p.rotDir = 'l'; else p.rot = false;
@@ -258,6 +295,7 @@ export default {
     ptr.forEach((p) => ctx.audio.synth.off(p.key));
     ptr.clear();
     midiStop(); // ноты с MIDI-клавиатуры не остаются звучать
+    if (vl) { vl.destroy(); vl = null; }
     // Hold переживает закрытие окна: удержанные ноты звучат, пока занимаются другим инструментом
     // (выключить — кнопкой Hold, когда пианино снова открыто, или звуком пианино в микшере)
     host = null;

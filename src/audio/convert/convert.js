@@ -103,12 +103,13 @@ function encodeInWorker(fmt, ch, sr, opts, onProgress) {
 
 // Одно задание: sources — [{ blob, name }] (несколько и join — склеить в один файл), opts — { fmt, bits, kbps, rate,
 // chan, trim: [a, b], speed, semi, vol, fadeMs, gap }. → [{ name, blob, dur, fmt }]; onStep({ stage, i, n, p })
-export async function convert(sources, opts, { onStep = () => {}, ffmpeg = null, join = false, signal = null } = {}) {
+export async function convert(sources, opts, { onStep = () => {}, ffmpeg = null, join = false, signal = null, viaJs = false } = {}) {
   const f = FORMATS[opts.fmt];
   if (!f) throw Object.assign(new Error('format'), { reason: 'format' });
   const base0 = (nm) => String(nm || 'audio').replace(/\.[^.]+$/, '');
   // Есть FFmpeg — всё через него, «файл → файл»: без раскрытия в память, длина не ограничена
-  if (ffmpeg && ffmpeg.convert) {
+  // viaJs — нарочно системными кодеками (M4A/Opus коротких записей быстрее так), FFmpeg — только прочитать непонятное
+  if (ffmpeg && ffmpeg.convert && !viaJs) {
     const groups = join && sources.length > 1 ? [sources] : sources.map((s) => [s]), res = [];
     for (let gi = 0; gi < groups.length; gi++) {
       const g = groups[gi], i = join ? 0 : gi;

@@ -13,7 +13,8 @@ import { kFilters } from '../vocal.js';
 const CORE = 'models/ffmpeg/ffmpeg-core.js', WASM = 'models/ffmpeg/ffmpeg-core.wasm';
 // кодек и контейнер по формату; o — { kbps, bits }
 const ARGS = {
-  mp3: (o) => ['-c:a', 'libmp3lame', '-b:a', o.kbps + 'k'],
+  // -q 5 (compression_level) — стандарт LAME: вдвое быстрее самого точного, на 192–320 кбит/с на слух не отличить
+  mp3: (o) => ['-c:a', 'libmp3lame', '-b:a', o.kbps + 'k', '-compression_level', '5'],
   m4a: (o) => ['-c:a', 'aac', '-b:a', o.kbps + 'k', '-movflags', '+faststart'],
   opus: (o) => ['-c:a', 'opus', '-strict', '-2', '-b:a', o.kbps + 'k'],
   vorbis: (o) => ['-c:a', 'libvorbis', '-b:a', o.kbps + 'k'],
@@ -29,6 +30,8 @@ const EXT = { mp3: 'mp3', m4a: 'm4a', opus: 'ogg', vorbis: 'ogg', wma: 'wma', ac
 const RATES = { mp3: [32000, 44100, 48000], opus: [48000], ac3: [32000, 44100, 48000], wma: [22050, 32000, 44100, 48000] };
 export const FF_OUT = Object.keys(ARGS);
 
+// сколько входа держать в памяти FFmpeg целиком: 64 МБ на каждый ГБ памяти устройства (8 ГБ → 512 МБ ≈ 46 мин WAV)
+const memCap = () => Math.min(640, 64 * ((typeof navigator !== 'undefined' && navigator.deviceMemory) || 4)) * 1048576;
 const nearest = (list, r) => list.reduce((b, x) => (Math.abs(x - r) < Math.abs(b - r) ? x : b), list[0]);
 export function ffRate(fmt, src, want) { const r = want || src || 48000, ok = RATES[fmt]; return ok && !ok.includes(r) ? nearest(ok, r) : r; }
 // atempo принимает 0,5…100 — дробим на множители, чтобы и 0,25 работало
@@ -40,7 +43,7 @@ const num = (x) => (Math.round(x * 1e6) / 1e6).toString();
 // канала; стробирование (−70 LUFS и −10 LU) — здесь. Пик — volumedetect на той же ветке до K-фильтра.
 export function meterGraph(sr) {
   const [a, b] = kFilters(sr), bq = (c) => 'biquad=b0=' + c[0] + ':b1=' + c[1] + ':b2=' + c[2] + ':a0=1:a1=' + c[3] + ':a2=' + c[4];
-  return ['asplit[mp][mk];[mp]volumedetect,anullsink;[mk]aformat=sample_fmts=dblp', bq(a), bq(b), 'asetnsamples=n=' + Math.round(sr / 10) + ':p=0', 'astats=metadata=1:reset=1:measure_perchannel=RMS_level:measure_overall=none', 'ametadata=print'];
+  return ['asplit[mp][mk];[mp]volumedetect,anullsink;[mk]aformat=sample_fmts=dblp', bq(a), bq(b), 'asetnsamples=n=' + Math.round(sr / 10) + ':p=0', 'astats=metadata=1:reset=1:measure_perchannel=RMS_level:measure_overall=none', 'ametadata=print:file=/meter.txt'];
 }
 export function gateLufs(lines) {
   const subs = []; let cur = null;
@@ -93,14 +96,29 @@ export function createFFmpeg(url) {
   const kill = () => { if (ff) { try { ff.terminate(); } catch { /* уже */ } } ff = null; loading = null; };
   let mounted = 0;
   // подключить файлы (без копирования) → пути внутри FFmpeg
+  // Входные файлы: в память FFmpeg одной копией (чтение в 7 раз быстрее, чем кусками из Blob, и файл читается
+  // 2–3 раза: сведения, замер, запись), если помещаются; большие — подключаются как есть (WORKERFS, без копии)
   async function mount(x, files) {
     const dir = '/in' + (++mounted);
     await x.createDir(dir);
-    const named = files.map((b, i) => new File([b.blob], i + '.' + ((/\.([a-z0-9]{1,5})$/i.exec(b.name || '') || [0, 'bin'])[1]).toLowerCase(), { type: b.blob.type || '' }));
+    const name = (b, i) => i + '.' + ((/\.([a-z0-9]{1,5})$/i.exec(b.name || '') || [0, 'bin'])[1]).toLowerCase();
+    const total = files.reduce((a, b) => a + (b.blob.size || 0), 0);
+    if (total <= memCap()) {
+      try {
+        const paths = [];
+        for (let i = 0; i < files.length; i++) { const p = dir + '/' + name(files[i], i); await x.writeFile(p, new Uint8Array(await files[i].blob.arrayBuffer())); paths.push(p); }
+        return { dir, paths, mem: true };
+      } catch { for (let i = 0; i < files.length; i++) await x.deleteFile(dir + '/' + name(files[i], i)).catch(() => {}); }
+    }
+    const named = files.map((b, i) => new File([b.blob], name(b, i), { type: b.blob.type || '' }));
     await x.mount('WORKERFS', { files: named }, dir);
     return { dir, paths: named.map((f) => dir + '/' + f.name) };
   }
-  async function unmount(x, dir) { try { await x.unmount(dir); } catch { /* нет */ } try { await x.deleteDir(dir); } catch { /* нет */ } }
+  async function unmount(x, dir) {
+    try { await x.unmount(dir); } catch { /* в памяти — не подключали */ }
+    try { for (const e of await x.listDir(dir)) if (!e.isDir) await x.deleteFile(dir + '/' + e.name); } catch { /* нет */ }
+    try { await x.deleteDir(dir); } catch { /* нет */ }
+  }
   // выполнить и собрать журнал
   async function exec(x, args, { timeTo = 0, onProgress = null, signal = null, keep = false } = {}) {
     const lines = [];
@@ -167,11 +185,14 @@ export function createFFmpeg(url) {
           const lufs = mode === 'peak' ? null : +mode;
           // замер — по тому же звуку, что пойдёт в файл (после разреза, каналов, темпа), на частоте источника
           const g = lufs == null ? head + [...body, 'volumedetect'].join(',') + '[o]' : head + [...body, 'aresample=' + srcRate].join(',') + ',' + meterGraph(srcRate).join(',') + '[o]';
-          const r = await exec(x, [...input, '-filter_complex', g, '-map', '[o]', '-f', 'null', '-'], { timeTo: outDur, onProgress: (p) => onProgress(p * 0.3), signal, keep: lufs != null });
+          const r = await exec(x, [...input, '-filter_complex', g, '-map', '[o]', '-f', 'null', '-'], { timeTo: outDur, onProgress: (p) => onProgress(p * 0.3), signal });
           const s = r.lines.join('\n'), mx = /max_volume:\s*(-?[\d.]+) dB/.exec(s);
           if (lufs == null) { if (mx) vol = ['volume=' + num(-1 - +mx[1]) + 'dB']; }
           else {
-            const m = gateLufs(r.lines);
+            // кадры замера — из файла (а не тысячами строк журнала через поток)
+            let mt = [];
+            try { mt = new TextDecoder().decode(await x.readFile('/meter.txt')).split('\n'); await x.deleteFile('/meter.txt'); } catch { /* нет файла */ }
+            const m = gateLufs(mt.concat(r.lines));
             if (isFinite(m.lufs)) {
               const gain = lufs - m.lufs, pk = m.peak == null ? 0 : m.peak;
               vol = ['volume=' + num(gain) + 'dB'];
