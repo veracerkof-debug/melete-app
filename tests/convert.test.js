@@ -103,3 +103,31 @@ describe('конвертер: обработка', () => {
     expect(f[0]).toBe(0); expect(f[999]).toBe(0); expect(f[500]).toBe(1);
   });
 });
+
+describe('FFmpeg: разбор журнала и замер громкости', async () => {
+  const { parseProbe, gateLufs, chainFor, ffRate } = await import('../src/audio/convert/ffmpeg.js');
+  it('сведения о входе', () => {
+    const p = parseProbe(["Input #0, wav, from '/in1/0.wav':", '  Duration: 00:40:00.00, bitrate: 1536 kb/s', '  Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 48000 Hz, stereo, s16, 1536 kb/s']);
+    expect(p).toMatchObject({ dur: 2400, rate: 48000, channels: 2, audio: true, video: false });
+    expect(parseProbe(['  Duration: 00:00:05.50', '  Stream #0:0: Video: h264', '  Stream #0:1: Audio: aac (LC), 44100 Hz, mono, fltp'])).toMatchObject({ dur: 5.5, rate: 44100, channels: 1, video: true });
+  });
+  it('LUFS по кадрам 100 мс: стробирование BS.1770', () => {
+    // синус −15,25 дБ RMS в обоих каналах → −12,93 LUFS (как loudness() в vocal.js)
+    const lines = [];
+    for (let i = 0; i < 100; i++) lines.push('[Parsed_ametadata_9 @ 0x1] frame:' + i + ' pts:' + i * 4800, '[Parsed_ametadata_9 @ 0x1] lavfi.astats.1.RMS_level=-15.25', '[Parsed_ametadata_9 @ 0x1] lavfi.astats.2.RMS_level=-15.25');
+    lines.push('[Parsed_volumedetect_2 @ 0x2] max_volume: -12.2 dB');
+    const m = gateLufs(lines);
+    expect(m.lufs).toBeCloseTo(-12.93, 1);
+    expect(m.peak).toBe(-12.2);
+    expect(gateLufs(['frame:0', 'lavfi.astats.1.RMS_level=-inf']).lufs).toBe(-Infinity);
+  });
+  it('фильтры: каналы, темп, тон; частоты кодеков', () => {
+    expect(chainFor({ chan: 'mono' }, 48000, 2)).toEqual(['pan=mono|c0=0.5*c0+0.5*c1']);
+    expect(chainFor({ chan: 'mono' }, 48000, 1)).toEqual([]);
+    expect(chainFor({ speed: 0.25 }, 48000)).toEqual(['atempo=0.5', 'atempo=0.5']);
+    expect(chainFor({ semi: 12 }, 48000)[0]).toBe('asetrate=96000');
+    expect(ffRate('mp3', 96000, 0)).toBe(48000);
+    expect(ffRate('opus', 44100, 0)).toBe(48000);
+    expect(ffRate('flac', 96000, 0)).toBe(96000);
+  });
+});

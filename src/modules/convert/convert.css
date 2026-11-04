@@ -1,43 +1,78 @@
-/* Конвертер: список файлов — рабочая поверхность; формат и качество строкой; полоса кнопок внизу */
-.cvm{height:100%;display:flex;flex-direction:column;min-height:0}
-.cvm .cvlist{flex:1;min-height:0;overflow:auto;padding:4px 2px 8px;display:flex;flex-direction:column;gap:6px}
-.cvm .cvrow{display:flex;align-items:center;gap:8px;padding:8px 6px 8px 12px;border-radius:14px;background:var(--fill)}
-.cvm .cvn{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+/* Конвертер: карточки файлов — рабочая поверхность; внизу одна панель — плитки форматов, качество, значки обработки,
+   большая кнопка. Всё — токены темы (работает в каждом стиле), цели касания ≥ 40 px. */
+.cvm{height:100%;display:flex;flex-direction:column;min-height:0;--cv-r:16px}
+.cvm svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* список */
+.cvm .cvlist{flex:1;min-height:0;overflow:auto;padding:4px 2px 10px;display:flex;flex-direction:column;gap:8px}
+.cvm .cvc{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 6px 10px 10px;border-radius:var(--cv-r);background:var(--fill);overflow:hidden;touch-action:pan-y;transition:background .2s}
+.cvm .cvic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint);flex:none}
+.cvm .cvc.done .cvic{background:color-mix(in srgb,#3E8B55 16%,transparent);color:#3E8B55}
+.cvm .cvc.err .cvic{background:color-mix(in srgb,#C0392B 14%,transparent);color:#C0392B}
+.cvm .cvn{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;line-height:1.25}
 .cvm .cvn b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cvm .cvn span{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cvm .cvok{color:#3E8B55}
+.cvm .cvn>span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px}
+.cvm .cvn>span svg{width:15px;height:15px;stroke-width:2.4}
+.cvm .cvok{color:#3E8B55;font-weight:600}
 .cvm .cverr{color:#C0392B;white-space:normal!important}
-.cvm .cvbar{display:block;height:4px;border-radius:2px;background:var(--sep);overflow:hidden;margin-top:4px}
-.cvm .cvbar b{display:block;height:100%;background:var(--tint);transition:width .2s linear}
-.cvm .cvx{font-size:22px;line-height:1;color:var(--l2)}
-.cvm .cvrow .ic svg,.cvm .vc-like svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.cvm .cvempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;text-align:center}
-.cvm .cvempty p{margin:0;max-width:340px}
-.cvm .cvadd{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.cvm .cvbig{min-height:52px;padding:0 20px;border:0;border-radius:16px;background:var(--fill);color:var(--ink);font:600 15px var(--font);cursor:pointer}
-.cvm .cvopts{flex:none;padding:6px 2px 4px;display:flex;flex-direction:column;gap:6px}
-.cvm .cvfmts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.cvm .cvrun{color:var(--tint);font-weight:600}
+.cvm .cvbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--sep)}
+.cvm .cvbar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:calc(var(--p,0)*100%);background:var(--tint);transition:width .25s linear}
+.cvm .cvbtn{flex:none;width:44px;height:44px;border:0;border-radius:50%;background:none;color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.cvm .cvbtn.cvx{font-size:24px;line-height:1;color:var(--l2)}
+.cvm .cvaddrow{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border:1.5px dashed var(--sep);border-radius:var(--cv-r);background:none;color:var(--l2);font:600 14.5px var(--font);cursor:pointer}
+/* пусто */
+.cvm .cvempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center}
+.cvm .cvhero{width:76px;height:76px;border-radius:24px;display:grid;place-items:center;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint);margin-bottom:4px}
+.cvm .cvhero svg{width:40px;height:40px;stroke-width:1.6}
+.cvm .cvempty>b{font-size:19px;font-weight:700}
+.cvm .cvempty p{margin:0 0 8px;max-width:320px;font-size:14px}
+.cvm .cvadd{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:400px}
+.cvm .cvbig{flex:1 1 150px;min-height:56px;padding:0 16px;border:0;border-radius:var(--cv-r);background:var(--fill);color:var(--ink);font:600 15px var(--font);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer}
+.cvm .cvbig svg{color:var(--tint)}
+.cvm .cvpack{margin-top:6px;border:0;background:none;color:var(--tint);font:600 13.5px var(--font);min-height:40px;padding:0 8px;cursor:pointer}
+/* панель */
+.cvm .cvpanel{flex:none;display:flex;flex-direction:column;gap:10px;padding:10px 2px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--sep)}
+.cvm .cvfmts{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 2px 0;scroll-snap-type:x proximity}
 .cvm .cvfmts::-webkit-scrollbar{display:none}
-.cvm .cvf{flex:none;min-width:52px;min-height:40px;padding:0 12px;border:0;border-radius:999px;background:var(--fill);color:var(--ink);font:600 13.5px var(--font);letter-spacing:.02em;cursor:pointer}
-.cvm .cvf.on{background:var(--tint);color:var(--on-tint)}
-.cvm .cvf.ff{color:var(--l2);background:none;box-shadow:inset 0 0 0 1px var(--sep)}
-.cvm .cvq{display:flex;align-items:center;gap:8px}
-.cvm .cvq .l2{flex:none;font-size:12.5px;min-width:52px}
+.cvm .cvt{flex:none;min-width:74px;min-height:56px;padding:6px 10px;border:0;border-radius:14px;background:var(--fill);color:var(--ink);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;cursor:pointer;scroll-snap-align:start;transition:background .15s,color .15s}
+.cvm .cvt b{font:700 15.5px var(--font);letter-spacing:.02em}
+.cvm .cvt span{font-size:11.5px;color:var(--l2);white-space:nowrap}
+.cvm .cvt.on{background:var(--tint);color:var(--on-tint)}
+.cvm .cvt.on span{color:var(--on-tint)}
+.cvm .cvt.lock{background:none;box-shadow:inset 0 0 0 1.5px var(--sep)}
+.cvm .cvt.lock b{color:var(--l2)}
+.cvm .cvt.more{min-width:60px;align-items:center}
+.cvm .cvq{display:flex;align-items:center;gap:10px;min-height:36px}
+.cvm .cvq .l2{flex:none;font-size:12.5px;min-width:56px}
 .cvm .cvq .seg{flex:1;min-width:0}
-.cvm .cvproc{border:0;background:none;padding:2px 0;text-align:left;font-size:12.5px;min-height:28px;cursor:pointer}
-.cvm .cvbot{flex:none;display:flex;align-items:center;gap:8px;padding:8px 2px calc(4px + env(safe-area-inset-bottom,0px))}
-.cvm .vc-like{flex:none;width:48px;height:48px;border:0;border-radius:50%;background:var(--fill);color:var(--ink);display:grid;place-items:center;cursor:pointer}
-.cvm .vc-like:disabled,.cvm .cvgo:disabled{opacity:.4;cursor:default}
-.cvm .cvgo{flex:1;min-width:0;min-height:52px;padding:0 14px;border:0;border-radius:999px;background:var(--tint);color:var(--on-tint);font:600 15.5px var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cvm .cvchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.cvm .cvchips::-webkit-scrollbar{display:none}
+.cvm .cvchip{flex:none;display:flex;align-items:center;gap:6px;min-height:40px;padding:0 12px 0 10px;border:0;border-radius:999px;background:var(--fill);color:var(--ink);font:500 13.5px var(--font);cursor:pointer;white-space:nowrap}
+.cvm .cvchip svg{width:18px;height:18px;color:var(--l2)}
+.cvm .cvchip.on{background:color-mix(in srgb,var(--tint) 16%,var(--fill));color:var(--tint);font-weight:600}
+.cvm .cvchip.on svg{color:var(--tint)}
+.cvm .cvchip.cvreset{padding:0 14px;font-size:20px;color:var(--l2)}
+.cvm .cvchip:disabled{opacity:.45}
+.cvm .cvbot{display:flex;align-items:center;gap:8px}
+.cvm .cvgo{flex:1;min-width:0;min-height:54px;padding:0 16px;border:0;border-radius:999px;background:var(--tint);color:var(--on-tint);font:700 16px var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cvm .cvgo.stop{background:var(--fill);color:var(--ink)}
+.cvm .cvgo:disabled{opacity:.4;cursor:default}
+.cvm .cvround{flex:none;width:54px;height:54px;border:0;border-radius:50%;background:var(--fill);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+/* малые окна */
 .cvm .cvs{height:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:6px;flex-wrap:wrap}
 .cvm .cvs .cvgo{flex:0 1 auto;min-height:44px}
+@container (max-height: 420px){.cvm .cvc{min-height:54px;padding:6px}.cvm .cvic{width:36px;height:36px}.cvm .cvt{min-height:48px}.cvm .cvgo{min-height:46px}.cvm .cvround{width:46px;height:46px}.cvm .cvpanel{gap:6px;padding-top:6px}}
 /* шторки */
 .cvl .st,.cvp .st{display:block;font-size:12.5px;color:var(--l2)}
-.cvl.on .grow{font-weight:600}
-.cvchk{color:var(--tint);font-weight:700}
+.cvl{gap:12px}
+.cvlic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--fill);color:var(--l2);flex:none}
+.cvlic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cvlic.on{background:var(--tint);color:var(--on-tint)}
+.cvchk{color:var(--tint)}
+.cvchk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .cvp .cvtrim{gap:12px}
 .cvp .cvtrim label{flex:1;display:flex;flex-direction:column;gap:4px}
 .cvp .inp.num{width:100%;box-sizing:border-box}
 .cvp .cvh{display:flex;justify-content:space-between;align-items:center}
-.cvp input[type=range]{width:100%;accent-color:var(--tint)}
-@container (max-height: 380px){.cvm .cvgo{min-height:44px}.cvm .vc-like{width:44px;height:44px}}
+.cvp input[type=range]{width:100%;accent-color:var(--tint);min-height:40px}
+.cvpick .grow>span:first-child{color:var(--ink)}

@@ -1,58 +1,98 @@
-// Конвертер (DECISIONS 2026-11-02): любые записи и видео из медиатеки и из памяти устройства → нужный формат.
-// Рабочая поверхность — список файлов; под ним формат и качество одной строкой; внизу — добавить · обработка ·
-// конвертировать. Обработка (разрез, объединение, каналы, частота, скорость, высота, громкость, края) — шторкой.
-// Исходники не меняются: результат — новые файлы в медиатеке (поле conv: { src }), «Поделиться» — сразу.
-// Из медиатеки: ctx.openIn('convert', { inbox: { ids, fmt, share } }) — файлы в список, share — сразу конвертировать
-// и отдать через «Поделиться» (меню файла «Поделиться как…»). Движок — src/audio/convert/convert.js.
+// Конвертер (DECISIONS 2026-11-02, переделка 04.11): любые записи и видео из медиатеки и из памяти устройства → нужный
+// формат. Рабочая поверхность — карточки файлов (длина, формат, размер; во время работы — ход в процентах; готово —
+// «Поделиться»; смахнуть влево — убрать). Внизу — одна панель: плитки форматов, качество, обработка значками и большая
+// кнопка «Конвертировать N → MP3». Обработка (разрез, громкость, темп и тон, каналы, частота, объединение, края) — по
+// значку, своей короткой шторкой; она не запоминается между запусками: каждый раз — «как есть», пока не задано иначе
+// (раньше заданный когда-то разрез тихо обрезал следующие файлы).
+// Движок: есть FFmpeg (пакет на телефоне, встроен на компьютере) — «файл → файл» без раскрытия в память, длина не
+// ограничена; нет — системные кодеки (src/audio/convert/convert.js). Исходники не меняются: результат — новые файлы в
+// медиатеке (conv: { src, fmt }), «Поделиться» — сразу. Из медиатеки: ctx.openIn('convert', { inbox: { ids, fmt, share } }).
 import './convert.css';
 import meta from './meta.js';
 import { FORMATS, canEncode } from '../../audio/convert/encode.js';
 import { convert } from '../../audio/convert/convert.js';
 import { ffAvailable, createFFmpeg } from '../../audio/convert/ffmpeg.js';
 
-const MAIN = ['mp3', 'wav', 'flac', 'm4a', 'opus', 'aiff']; // без пакета — эти
-const FF = ['alac', 'vorbis', 'wma', 'ac3']; // только с пакетом FFmpeg (AMR он читает, но не пишет)
-const LABEL = { mp3: 'MP3', wav: 'WAV', flac: 'FLAC', m4a: 'M4A', opus: 'OPUS', aiff: 'AIFF', alac: 'ALAC', vorbis: 'OGG', wma: 'WMA', ac3: 'AC3', amr: 'AMR' };
-const SHARE = '<svg viewBox="0 0 24 24"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11v8.5h12V11"/></svg>';
-const OPT_DEF = { fmt: 'mp3', kbps: 256, bits: 24, rate: 0, chan: 'keep', speed: 1, semi: 0, vol: { mode: 'keep', db: 0 }, trim: null, join: false, gap: 0, fadeMs: 0 };
+const MAIN = ['mp3', 'm4a', 'wav', 'flac', 'opus', 'aiff'];
+const MORE = ['alac', 'vorbis', 'wma', 'ac3'];
+const LABEL = { mp3: 'MP3', wav: 'WAV', flac: 'FLAC', m4a: 'M4A', opus: 'OPUS', aiff: 'AIFF', alac: 'ALAC', vorbis: 'OGG', wma: 'WMA', ac3: 'AC3' };
+const I = {
+  share: '<svg viewBox="0 0 24 24"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11v8.5h12V11"/></svg>',
+  wave: '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>',
+  film: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M10 9.5v5l4-2.5z"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  lib: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  folder: '<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>',
+  ok: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  // обработка
+  trim: '<svg viewBox="0 0 24 24"><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><path d="M8.6 8 20 18M8.6 16 20 6"/></svg>',
+  vol: '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></svg>',
+  speed: '<svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 4-5"/></svg>',
+  chan: '<svg viewBox="0 0 24 24"><circle cx="8.5" cy="12" r="4.5"/><circle cx="15.5" cy="12" r="4.5"/></svg>',
+  rate: '<svg viewBox="0 0 24 24"><path d="M3 12h2l2-6 3 12 3-9 2 5 2-2h4"/></svg>',
+  join: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="7" height="8" rx="2"/><rect x="14" y="8" width="7" height="8" rx="2"/><path d="M10 12h4"/></svg>',
+  fade: '<svg viewBox="0 0 24 24"><path d="M3 18 9 7h6l6 11"/></svg>',
+};
+const QDEF = { fmt: 'mp3', kbps: 256, bits: 24 }; // запоминается только формат и качество
+const PDEF = () => ({ chan: 'keep', rate: 0, speed: 1, semi: 0, vol: { mode: 'keep', db: 0 }, trim: null, join: false, gap: 0, fadeMs: 0 });
 
-let host = null, ctx = null, size = 'full', onClick = null, onChange = null;
-// очередь: { key, id?, name, blob, size, dur?, video?, state: 'wait'|'run'|'done'|'err', p, out?: [{ id, name, blob }], err }
-const S = { q: [], busy: false, abort: null, can: {}, stage: '', ffOk: false, ff: null, offPacks: null };
-const st = () => { const s = ctx.store.all(); s.opt = { ...OPT_DEF, ...(s.opt || {}), vol: { ...OPT_DEF.vol, ...((s.opt || {}).vol || {}) } }; return s; };
-const opt = () => st().opt;
+let host = null, ctx = null, size = 'full', onClick = null, off = [];
+// очередь: { key, id?, name, blob, size, dur?, video?, ext, state: 'wait'|'run'|'done'|'err', p, stage, out?: [...], err }
+const S = { q: [], busy: false, abort: null, can: {}, ffOk: null, ff: null, offPacks: null, p: PDEF() };
+const st = () => { const s = ctx.store.all(); s.opt = { ...QDEF, ...(s.opt || {}) }; return s; };
+const q = () => st().opt;
 const t = (k, v) => ctx.t(k, v), esc = (s) => ctx.ui.esc(s);
 const big = () => size === 'full' || size === 'half';
-const mb = (n) => (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',') + ' ' + t('mb');
-const dur = (s) => { if (!s) return ''; const m = Math.floor(s / 60), x = Math.round(s - m * 60); return m + ':' + String(x).padStart(2, '0'); };
-const hasFF = () => S.ffOk;
+const mb = (n) => (n >= 1073741824 ? (n / 1073741824).toFixed(1).replace('.', ',') + ' ' + t('gb') : (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',') + ' ' + t('mb'));
+const hms = (s) => { if (!s || !isFinite(s)) return ''; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+// «1:30» → 90, «1:02:30» → 3750, «95.5» → 95,5; не разобрать — null
+const parseTime = (x) => { const a = String(x).split(':').map((v) => +v); if (a.some((v) => !isFinite(v) || v < 0)) return null; return a.reduce((s, v) => s * 60 + v, 0); };
+const extOf = (nm) => ((/\.([a-z0-9]{1,5})$/i.exec(nm || '') || [0, ''])[1]).toUpperCase();
+const hasFF = () => !!S.ffOk;
 const fileUrl = (rel) => (ctx.packs && ctx.packs.url ? ctx.packs.url(rel) : new URL(rel, document.baseURI).href);
-// есть ли ядро FFmpeg (пакет скачан или файлы в сборке)
+const packable = () => !!(ctx.packs && ctx.packs.meta && ctx.packs.meta('ffmpeg'));
+// без FFmpeg формат недоступен: только им пишется, или система его не пишет
+const needsFF = (k) => !!(FORMATS[k].ffmpeg || S.can[k] === false);
 async function checkFF() { S.ffOk = await ffAvailable(fileUrl); if (S.ffOk && !S.ff) S.ff = createFFmpeg(fileUrl); if (!S.ffOk && S.ff) { S.ff.terminate(); S.ff = null; } render(); }
 
 /* ---------- очередь ---------- */
 
 let keyN = 0;
+// длительность — по метаданным (элемент audio/video), без чтения файла целиком
+function probeDur(j) {
+  if (j.dur) return;
+  const el = document.createElement(j.video ? 'video' : 'audio'), url = URL.createObjectURL(j.blob);
+  let done = false;
+  const fin = (d) => { if (done) return; done = true; URL.revokeObjectURL(url); el.removeAttribute('src'); if (d && isFinite(d)) { j.dur = d; paintRow(j); } };
+  el.preload = 'metadata';
+  el.onloadedmetadata = () => fin(el.duration);
+  el.onerror = () => fin(0);
+  setTimeout(() => fin(0), 6000);
+  el.src = url;
+}
 function addRecords(recs) {
   recs.forEach((r) => {
-    if (!r || !r.blob || S.q.some((x) => x.id && x.id === r.id)) return;
-    S.q.push({ key: ++keyN, id: r.id, name: r.name || 'audio', blob: r.blob, size: r.size || r.blob.size, dur: r.dur, video: /^video\//.test(r.type || ''), state: 'wait', p: 0 });
+    if (!r || !r.blob || (r.id && S.q.some((x) => x.id === r.id))) return;
+    const j = { key: ++keyN, id: r.id, name: r.name || 'audio', blob: r.blob, size: r.size || r.blob.size, dur: r.dur, video: /^video\//.test(r.type || r.blob.type || ''), state: 'wait', p: 0 };
+    j.ext = extOf(j.name);
+    S.q.push(j);
+    probeDur(j);
   });
   render();
 }
 function pickFiles() {
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.multiple = true; inp.accept = 'audio/*,video/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aif,.aiff,.wma,.ac3,.amr,.mp4,.mov,.mkv,.webm,.3gp,.caf';
+  inp.type = 'file'; inp.multiple = true; inp.accept = 'audio/*,video/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aif,.aiff,.wma,.ac3,.amr,.mp4,.mov,.mkv,.webm,.3gp,.caf,.ape,.wv,.mka';
   inp.onchange = () => { addRecords([...inp.files].map((f) => ({ name: f.name, blob: f, size: f.size, type: f.type }))); };
   inp.click();
 }
 function libSheet() {
   const { ui } = ctx, picked = new Set();
-  const list = () => ctx.files.list('audio').filter((r) => r.blob && !(S.q.some((x) => x.id === r.id))).sort((a, b) => (b.created || 0) - (a.created || 0));
+  const list = () => ctx.files.list('audio').filter((r) => r.blob && !S.q.some((x) => x.id === r.id)).sort((a, b) => (b.created || 0) - (a.created || 0));
   ui.sheet(() => {
     const L = list();
     return ui.snav(t('libTitle'), { right: '<button class="link b r" data-lpick' + (picked.size ? '' : ' disabled') + '>' + t('libPick', { n: picked.size }) + '</button>' }) +
-      (L.length ? '<div class="group">' + L.map((r) => '<button class="cell act cvl' + (picked.has(r.id) ? ' on' : '') + '" data-lid="' + esc(r.id) + '" aria-pressed="' + picked.has(r.id) + '"><span class="grow">' + esc(r.name) + '<span class="st l2">' + [dur(r.dur), mb(r.size || r.blob.size), /^video\//.test(r.type || '') ? t('video') : ''].filter(Boolean).join(' · ') + '</span></span>' + (picked.has(r.id) ? '<span class="cvchk" aria-hidden="true">✓</span>' : '') + '</button>').join('') + '</div>'
+      (L.length ? '<div class="group">' + L.map((r) => '<button class="cell act cvl' + (picked.has(r.id) ? ' on' : '') + '" data-lid="' + esc(r.id) + '" aria-pressed="' + picked.has(r.id) + '"><span class="cvlic' + (picked.has(r.id) ? ' on' : '') + '" aria-hidden="true">' + (picked.has(r.id) ? I.ok : /^video\//.test(r.type || '') ? I.film : I.wave) + '</span><span class="grow">' + esc(r.name) + '<span class="st l2">' + [hms(r.dur), extOf(r.name), mb(r.size || r.blob.size)].filter(Boolean).join(' · ') + '</span></span></button>').join('') + '</div>'
         : '<p class="ftr">' + t('libEmpty') + '</p>');
   }, (el, sh) => el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-lid]');
@@ -65,48 +105,54 @@ function libSheet() {
 
 function errText(e) {
   const r = e && e.reason;
-  if (r === 'decode') return t('err.decode', { type: String(e.type || '?').toUpperCase() });
-  if (r === 'memory' || r === 'ffmpeg' || r === 'cancel' || r === 'ffmpeg-run') return t('err.' + r);
+  if (r === 'decode') return t(hasFF() ? 'err.decodeFF' : 'err.decode', { type: String(e.type || '?').toUpperCase() });
+  if (r === 'noaudio' || r === 'ffmpeg' || r === 'cancel' || r === 'ffmpeg-run') return t('err.' + r);
   return t('err.other', { msg: String((e && e.message) || e) });
 }
 async function run({ share = false } = {}) {
   if (S.busy) return;
-  const o = { ...opt() }, jobs = S.q.filter((x) => x.state !== 'done');
+  const o = { ...q(), ...S.p, vol: { ...S.p.vol } }, jobs = S.q.filter((x) => x.state !== 'done');
   if (!jobs.length) return;
-  if (FORMATS[o.fmt].ffmpeg && !hasFF()) { needFF(); return; }
+  if (needsFF(o.fmt) && !hasFF()) { needFF(); return; }
   S.busy = true; S.abort = new AbortController(); render();
   const ff = hasFF() ? S.ff : null, results = [];
   const groups = o.join && jobs.length > 1 ? [jobs] : jobs.map((j) => [j]);
   for (const g of groups) {
     if (S.abort.signal.aborted) break;
-    g.forEach((j) => { j.state = 'run'; j.p = 0; j.err = ''; });
+    g.forEach((j) => { j.state = 'run'; j.p = 0; j.err = ''; j.stage = 'read'; });
     paint();
     const t0 = performance.now();
     try {
       const out = await convert(g.map((j) => ({ blob: j.blob, name: j.name })), o, {
         ffmpeg: ff, join: g.length > 1, signal: S.abort.signal,
-        onStep: (s) => { S.stage = s.stage; const j = g[Math.min(s.i, g.length - 1)]; j.p = s.stage === 'encode' ? 0.3 + 0.7 * (s.p || 0) : s.stage === 'read' ? 0.05 : 0.2; paint(); },
+        onStep: (s) => {
+          const p = s.stage === 'encode' ? (ff ? s.p || 0 : 0.3 + 0.7 * (s.p || 0)) : s.stage === 'read' ? 0.02 : s.stage === 'scan' ? 0 : 0.2;
+          g.forEach((j) => { j.stage = s.stage; j.p = Math.max(j.stage === s.stage ? j.p : 0, p); });
+          paint();
+        },
       });
       const taken = new Set(ctx.files.list('audio').map((x) => x.name));
       for (const r of out) {
-        // имя занято (MP3 → MP3, повторная конвертация) — «имя (2).mp3»
+        // имя занято (повторная конвертация) — «имя (2).mp3»
         for (let k = 2, b = r.name.replace(/(\.[^.]+)$/, ''), ext = r.name.slice(b.length); taken.has(r.name); k++) r.name = b + ' (' + k + ')' + ext;
         taken.add(r.name);
         const id = 'cv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
         await ctx.files.add({ id, name: r.name, size: r.size, type: r.blob.type, kind: 'audio', created: Date.now(), blob: r.blob, dur: r.dur, conv: { src: g.map((j) => j.id).filter(Boolean), fmt: r.fmt } });
-        results.push({ id, name: r.name, blob: r.blob });
+        results.push({ id, name: r.name, blob: r.blob, size: r.size, fmt: r.fmt });
       }
-      g.forEach((j, k) => { j.state = 'done'; j.p = 1; j.out = k === 0 ? out.map((r, i) => results[results.length - out.length + i]) : []; });
-      ctx.log('конвертер: ' + g.length + ' → ' + o.fmt.toUpperCase() + ', ' + Math.round(performance.now() - t0) + ' мс');
-      if (ctx.diag) ctx.diag.time && ctx.diag.time('convert', performance.now() - t0);
+      g.forEach((j, k) => { j.state = 'done'; j.p = 1; j.out = k === 0 ? results.slice(results.length - out.length) : []; j.joined = k > 0; });
+      const ms = performance.now() - t0;
+      ctx.log('конвертер: ' + g.length + ' → ' + o.fmt.toUpperCase() + (ff ? ' (FFmpeg)' : '') + ', ' + Math.round(ms) + ' мс');
+      if (ctx.diag && ctx.diag.time) ctx.diag.time('convert', ms);
     } catch (e) {
-      g.forEach((j) => { j.state = e && e.reason === 'cancel' ? 'wait' : 'err'; j.err = errText(e); j.p = 0; });
-      if (!(e && e.reason === 'cancel')) ctx.log('конвертер: ошибка ' + (e && (e.reason || e.message)), 'w');
-      if (e && (e.reason === 'ffmpeg' || e.reason === 'decode' || e.reason === 'memory') && !hasFF()) needFF(errText(e));
+      const cancel = e && e.reason === 'cancel';
+      g.forEach((j) => { j.state = cancel ? 'wait' : 'err'; j.err = errText(e); j.p = 0; });
+      if (!cancel) ctx.log('конвертер: ошибка ' + (e && (e.reason || e.message)) + (e && e.log ? ' | ' + String(e.log).slice(-300) : ''), 'w');
+      if (e && (e.reason === 'ffmpeg' || e.reason === 'decode') && !hasFF()) needFF(errText(e));
     }
     paint();
   }
-  S.busy = false; S.abort = null; S.stage = '';
+  S.busy = false; S.abort = null;
   render();
   if (results.length) {
     ctx.ui.toast(t('doneLib'));
@@ -115,123 +161,170 @@ async function run({ share = false } = {}) {
 }
 async function shareFiles(list) {
   for (const r of list) {
-    try { await ctx.sendFile(new Uint8Array(await r.blob.arrayBuffer()), r.name, r.name, r.blob.type); } catch (e) { ctx.logErr && ctx.logErr(e); }
+    try { await ctx.sendFile(new Uint8Array(await r.blob.arrayBuffer()), r.name, r.name, r.blob.type); } catch (e) { if (ctx.logErr) ctx.logErr(e); }
   }
 }
-// Нужен FFmpeg: на телефоне — предложить скачать пакет; там, где пакета не бывает (веб), — сказать
+// Нужен FFmpeg: на телефоне — предложить скачать пакет; где пакета не бывает (веб) — сказать
 function needFF(text) {
-  if (ctx.packs && ctx.packs.meta && ctx.packs.meta('ffmpeg')) { if (text) ctx.ui.toast(text); ctx.packs.ask('ffmpeg'); return; }
+  if (packable()) { if (text) ctx.ui.toast(text); ctx.packs.ask('ffmpeg'); return; }
   ctx.ui.toast(text || t('noFF'));
 }
 
-/* ---------- обработка ---------- */
+/* ---------- обработка: значки и короткие шторки ---------- */
 
-function procSummary() {
-  const o = opt(), parts = [];
-  if (o.trim) parts.push(t('p.trim'));
-  if (o.join && S.q.length > 1) parts.push(t('p.join'));
-  if (o.chan !== 'keep') parts.push(t('p.' + o.chan));
-  if (o.rate) parts.push((o.rate / 1000).toString().replace('.', ',') + ' ' + t('hz'));
-  if (o.speed !== 1) parts.push('×' + String(o.speed).replace('.', ','));
-  if (o.semi) parts.push((o.semi > 0 ? '+' : '') + o.semi + ' ♮');
-  if (o.vol.mode !== 'keep') parts.push(o.vol.mode === 'gain' ? (o.vol.db > 0 ? '+' : '') + o.vol.db + ' дБ' : o.vol.mode === 'peak' ? t('p.peak') : String(o.vol.mode).replace('-', '−') + ' LUFS');
-  if (o.fadeMs) parts.push(t('p.fade'));
-  return parts;
+const PROC = ['trim', 'vol', 'speed', 'chan', 'rate', 'join', 'fade'];
+const dash = (x) => String(x).replace('-', '−').replace('.', ',');
+// значение обработки строкой (или '' — не задано)
+function procVal(k) {
+  const p = S.p;
+  if (k === 'trim') return p.trim ? hms(p.trim[0]) + '–' + (p.trim[1] != null ? hms(p.trim[1]) : '∞') : '';
+  if (k === 'vol') return p.vol.mode === 'keep' ? '' : p.vol.mode === 'gain' ? (p.vol.db > 0 ? '+' : '') + dash(p.vol.db) + ' ' + t('db') : p.vol.mode === 'peak' ? t('p.peak') : dash(p.vol.mode) + ' LUFS';
+  if (k === 'speed') return [p.speed !== 1 ? '×' + dash(p.speed) : '', p.semi ? (p.semi > 0 ? '+' : '−') + Math.abs(p.semi) + ' ' + t('p.st') : ''].filter(Boolean).join(' ');
+  if (k === 'chan') return p.chan === 'keep' ? '' : t('p.' + p.chan);
+  if (k === 'rate') return p.rate ? dash(p.rate / 1000) + ' ' + t('hz') : '';
+  if (k === 'join') return p.join && S.q.length > 1 ? t('p.on') + (p.gap ? ', ' + dash(p.gap) + ' ' + t('sec') : '') : '';
+  if (k === 'fade') return p.fadeMs ? t('p.on') : '';
+  return '';
 }
-function procSheet() {
+function chipsHTML() {
+  return '<div class="cvchips" role="group" aria-label="' + esc(t('proc')) + '">' + PROC.filter((k) => k !== 'join' || S.q.length > 1).map((k) => {
+    const v = procVal(k);
+    return '<button type="button" class="cvchip' + (v ? ' on' : '') + '" data-proc="' + k + '"' + (S.busy ? ' disabled' : '') + ' aria-label="' + esc(t('p.' + k) + (v ? ': ' + v : '')) + '">' + I[k] + '<span>' + esc(v || t('p.' + k)) + '</span></button>';
+  }).join('') + (PROC.some((k) => procVal(k)) && !S.busy ? '<button type="button" class="cvchip cvreset" data-preset-reset aria-label="' + esc(t('p.reset')) + '">×</button>' : '') + '</div>';
+}
+function procSheet(k) {
   const { ui } = ctx;
-  ui.sheet(() => {
-    const o = opt(), n = S.q.length;
-    const num = (k, val, ph, step = '0.1') => '<input class="inp num" type="number" inputmode="decimal" min="0" step="' + step + '" data-n="' + k + '" value="' + (val == null || val === '' ? '' : val) + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">';
-    return ui.snav(t('proc')) + '<div class="cvp">' +
-      '<div class="hdr">' + t('p.trim') + '</div><div class="group"><div class="cell cvtrim"><label><span class="l2">' + t('p.from') + '</span>' + num('t0', o.trim ? o.trim[0] : '', '0') + '</label><label><span class="l2">' + t('p.to') + '</span>' + num('t1', o.trim && o.trim[1] !== Infinity ? o.trim[1] : '', '∞') + '</label></div></div><p class="ftr">' + t('p.trimHint') + '</p>' +
-      (n > 1 ? '<div class="group"><div class="cell"><span class="grow"><span>' + t('p.join') + '</span><span class="st l2">' + t('p.joinHint') + '</span></span>' + ui.sw('join', o.join, t('p.join')) + '</div>' + (o.join ? '<label class="cell"><span class="grow">' + t('p.gap') + '</span>' + num('gap', o.gap || '', '0') + '</label>' : '') + '</div>' : '') +
-      '<div class="hdr">' + t('p.chan') + '</div><div class="group"><div class="cellcol">' + ui.seg('chan', [['keep', t('p.keep')], ['mono', t('p.mono')], ['stereo', t('p.stereo')], ['left', t('p.left')], ['right', t('p.right')]], o.chan, t('p.chan')) + '</div></div>' +
-      '<div class="hdr">' + t('p.rate') + '</div><div class="group"><div class="cellcol">' + ui.seg('rate', [['0', t('p.keep')], ['44100', '44,1'], ['48000', '48'], ['96000', '96']], String(o.rate), t('p.rate')) + '</div></div>' +
-      '<div class="hdr">' + t('p.speed') + '</div><div class="group"><label class="cellcol"><span class="cvh"><span>×</span><b class="num" id="cv-speed">' + String(o.speed).replace('.', ',') + '</b></span><input type="range" min="0.5" max="2" step="0.05" value="' + o.speed + '" data-r="speed" aria-label="' + esc(t('p.speed')) + '"></label></div>' +
-      '<div class="hdr">' + t('p.semi') + '</div><div class="group"><label class="cellcol"><span class="cvh"><span></span><b class="num" id="cv-semi">' + (o.semi > 0 ? '+' : '') + o.semi + '</b></span><input type="range" min="-12" max="12" step="1" value="' + o.semi + '" data-r="semi" aria-label="' + esc(t('p.semi')) + '"></label></div>' +
-      '<div class="hdr">' + t('p.vol') + '</div><div class="group"><div class="cellcol">' + ui.seg('vol', [['keep', t('p.keep')], ['gain', '±' + ' дБ'], ['peak', t('p.peak')], ['-14', '−14 LUFS'], ['-16', '−16'], ['-23', '−23']], String(o.vol.mode), t('p.vol')) + '</div>' +
-      (o.vol.mode === 'gain' ? '<label class="cellcol"><span class="cvh"><span>' + t('p.gain') + '</span><b class="num" id="cv-db">' + (o.vol.db > 0 ? '+' : '') + o.vol.db + '</b></span><input type="range" min="-24" max="24" step="0.5" value="' + o.vol.db + '" data-r="db" aria-label="' + esc(t('p.gain')) + '"></label>' : '') + '</div>' +
-      '<div class="group"><div class="cell"><span class="grow"><span>' + t('p.fade') + '</span><span class="st l2">' + t('p.fadeHint') + '</span></span>' + ui.sw('fade', !!o.fadeMs, t('p.fade')) + '</div></div>' +
-      '<div class="group"><button class="cell act" data-preset-reset>' + t('p.reset') + '</button></div></div>';
-  }, (el, sh) => {
-    const save = (redraw) => { ctx.store.save(); if (redraw) sh.update(); render(); };
+  const num = (n, val, ph, step = '0.1') => '<input class="inp num" type="number" inputmode="decimal" min="0" step="' + step + '" data-n="' + n + '" value="' + (val == null || val === '' ? '' : val) + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">';
+  const range = (r, min, max, step, val, show) => '<label class="cellcol"><span class="cvh"><span class="l2">' + esc(t('p.' + r)) + '</span><b class="num" data-show="' + r + '">' + esc(show) + '</b></span><input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" data-r="' + r + '" aria-label="' + esc(t('p.' + r)) + '"></label>';
+  // выбор одного из списка — строки с пояснением и галочкой (полоса из шести вариантов на телефоне не читается)
+  const pick = (key, opts, cur) => '<div class="group" role="radiogroup">' + opts.map(([v, a, b]) => '<button class="cell act cvpick" data-pick="' + key + '" data-v="' + v + '" role="radio" aria-checked="' + (String(cur) === v) + '"><span class="grow"><span>' + esc(a) + '</span>' + (b ? '<span class="st l2">' + esc(b) + '</span>' : '') + '</span>' + (String(cur) === v ? '<span class="cvchk">' + I.ok + '</span>' : '') + '</button>').join('') + '</div>';
+  const body = () => {
+    const p = S.p;
+    // время — «1:30», «90» или «1:02:30»
+    const tin = (n, val, ph) => '<input class="inp num" type="text" autocomplete="off" spellcheck="false" data-n="' + n + '" value="' + (val ? hms(val) : '') + '" placeholder="' + esc(ph) + '" aria-label="' + esc(ph) + '">';
+    if (k === 'trim') return '<div class="group"><div class="cell cvtrim"><label><span class="l2">' + t('p.from') + '</span>' + tin('t0', p.trim ? p.trim[0] : 0, '0:00') + '</label><label><span class="l2">' + t('p.to') + '</span>' + tin('t1', p.trim && p.trim[1] != null ? p.trim[1] : 0, t('p.end')) + '</label></div></div><p class="ftr">' + t('p.trimHint') + '</p>';
+    if (k === 'vol') return pick('vol', [['keep', t('p.keep'), t('p.keepVol')], ['peak', t('p.peak'), t('p.peakSub')], ['-14', '−14 LUFS', t('p.l14')], ['-16', '−16 LUFS', t('p.l16')], ['-23', '−23 LUFS', t('p.l23')], ['gain', t('p.gain'), t('p.gainSub')]], String(p.vol.mode)) +
+      (p.vol.mode === 'gain' ? '<div class="group">' + range('gain', -24, 24, 0.5, p.vol.db, (p.vol.db > 0 ? '+' : '') + dash(p.vol.db) + ' ' + t('db')) + '</div>' : '') + '<p class="ftr">' + t('p.volHint') + '</p>';
+    if (k === 'speed') return '<div class="group">' + range('tempo', 0.5, 2, 0.05, p.speed, '×' + dash(p.speed)) + range('semi', -12, 12, 1, p.semi, (p.semi > 0 ? '+' : '') + dash(p.semi)) + '</div><p class="ftr">' + t('p.speedHint') + '</p>';
+    if (k === 'chan') return pick('chan', [['keep', t('p.keep'), ''], ['mono', t('p.mono'), t('p.monoSub')], ['stereo', t('p.stereo'), t('p.stereoSub')], ['left', t('p.left'), t('p.leftSub')], ['right', t('p.right'), t('p.rightSub')]], p.chan);
+    if (k === 'rate') return '<div class="group"><div class="cellcol">' + ui.seg('rate', [['0', t('p.keep')], ['44100', '44,1'], ['48000', '48'], ['96000', '96']], String(p.rate), t('p.rate')) + '</div></div><p class="ftr">' + t('p.rateHint') + '</p>';
+    if (k === 'join') return '<div class="group"><div class="cell"><span class="grow"><span>' + t('p.joinOn') + '</span><span class="st l2">' + t('p.joinHint') + '</span></span>' + ui.sw('join', p.join, t('p.join')) + '</div>' + (p.join ? '<label class="cell"><span class="grow">' + t('p.gap') + '</span>' + num('gap', p.gap || '', '0') + '</label>' : '') + '</div>';
+    if (k === 'fade') return '<div class="group"><div class="cell"><span class="grow"><span>' + t('p.fade') + '</span><span class="st l2">' + t('p.fadeHint') + '</span></span>' + ui.sw('fade', !!p.fadeMs, t('p.fade')) + '</div></div>';
+    return '';
+  };
+  ui.sheet(() => ui.snav(t('p.' + k)) + '<div class="cvp">' + body() + '</div>', (el, sh) => {
+    const upd = () => render();
     el.addEventListener('input', (e) => {
-      const r = e.target.dataset.r, o = opt();
+      const r = e.target.dataset.r, p = S.p;
       if (!r) return;
-      const v = +e.target.value;
-      if (r === 'speed') { o.speed = v; el.querySelector('#cv-speed').textContent = String(v).replace('.', ','); }
-      else if (r === 'semi') { o.semi = v; el.querySelector('#cv-semi').textContent = (v > 0 ? '+' : '') + v; }
-      else if (r === 'db') { o.vol.db = v; el.querySelector('#cv-db').textContent = (v > 0 ? '+' : '') + v; }
-      ctx.store.save();
+      const v = +e.target.value, show = el.querySelector('[data-show="' + r + '"]');
+      if (r === 'tempo') { p.speed = v; show.textContent = '×' + dash(v); }
+      else if (r === 'semi') { p.semi = v; show.textContent = (v > 0 ? '+' : '') + dash(v); }
+      else if (r === 'gain') { p.vol.db = v; show.textContent = (v > 0 ? '+' : '') + dash(v) + ' ' + t('db'); }
+      upd();
     });
     el.addEventListener('change', (e) => {
-      const o = opt(), d = e.target.dataset;
+      const p = S.p, d = e.target.dataset;
       if (d.n) {
-        const v = e.target.value === '' ? null : Math.max(0, +e.target.value);
-        if (d.n === 'gap') o.gap = v || 0;
+        const raw = String(e.target.value).trim().replace(',', '.');
+        const v = raw === '' ? null : d.n === 'gap' ? Math.max(0, +raw || 0) : parseTime(raw);
+        if (d.n === 'gap') p.gap = v || 0;
         else {
-          const a = d.n === 't0' ? v : o.trim ? o.trim[0] : null, b = d.n === 't1' ? v : o.trim && o.trim[1] !== Infinity ? o.trim[1] : null;
-          o.trim = a == null && b == null ? null : [a || 0, b == null ? Infinity : Math.max(b, (a || 0) + 0.1)];
+          const a = d.n === 't0' ? v : p.trim ? p.trim[0] : null, b = d.n === 't1' ? v : p.trim ? p.trim[1] : null;
+          p.trim = !a && b == null ? null : [a || 0, b == null ? null : Math.max(b, (a || 0) + 0.1)];
         }
-        save(false); return;
+        upd(); return;
       }
-      if (e.target.matches('input[type=range]')) { render(); return; }
-      if (e.target.type === 'checkbox') { if (e.target.dataset.sw === 'join') o.join = e.target.checked; else if (e.target.dataset.sw === 'fade') o.fadeMs = e.target.checked ? 20 : 0; save(true); }
+      if (e.target.type === 'checkbox') { if (d.sw === 'join') p.join = e.target.checked; else if (d.sw === 'fade') p.fadeMs = e.target.checked ? 20 : 0; sh.update(); upd(); }
     });
     el.addEventListener('click', (e) => {
-      if (e.target.closest('[data-preset-reset]')) { const o = opt(); Object.assign(o, { chan: 'keep', rate: 0, speed: 1, semi: 0, vol: { mode: 'keep', db: 0 }, trim: null, join: false, gap: 0, fadeMs: 0 }); save(true); return; }
-      const b = e.target.closest('[data-seg] [data-v]');
+      const pk = e.target.closest('[data-pick]');
+      const b = pk || e.target.closest('[data-seg] [data-v]');
       if (!b) return;
-      const k = b.closest('[data-seg]').dataset.seg, v = b.dataset.v, o = opt();
-      if (k === 'chan') o.chan = v;
-      else if (k === 'rate') o.rate = +v;
-      else if (k === 'vol') o.vol.mode = v === 'keep' || v === 'gain' || v === 'peak' ? v : +v;
-      save(true);
+      const sg = pk ? pk.dataset.pick : b.closest('[data-seg]').dataset.seg, v = b.dataset.v, p = S.p;
+      if (sg === 'chan') p.chan = v;
+      else if (sg === 'rate') p.rate = +v;
+      else if (sg === 'vol') p.vol.mode = v === 'keep' || v === 'gain' || v === 'peak' ? v : +v;
+      sh.update(); upd();
     });
   });
 }
 
 /* ---------- экран ---------- */
 
+function subHTML(j) {
+  if (j.state === 'err') return '<span class="cverr">' + esc(j.err) + '</span>';
+  if (j.state === 'done') {
+    if (j.joined) return '<span class="cvok">' + esc(t('joined')) + '</span>';
+    const r = (j.out || [])[0];
+    return '<span class="cvok">' + I.ok + esc(r ? [LABEL[r.fmt] || '', mb(r.size)].join(' · ') : t('doneLib')) + '</span>';
+  }
+  if (j.state === 'run') return '<span class="cvrun num">' + esc(t('stage.' + (j.stage || 'read'))) + (j.stage === 'encode' || j.stage === 'scan' ? ' · ' + Math.round(j.p * 100) + ' %' : '') + '</span>';
+  return '<span class="l2">' + [hms(j.dur), j.ext, mb(j.size)].filter(Boolean).join(' · ') + '</span>';
+}
 function rowHTML(j) {
-  const sub = j.state === 'err' ? '<span class="cverr">' + esc(j.err) + '</span>'
-    : j.state === 'done' ? '<span class="cvok">✓ ' + esc((j.out || []).map((r) => r.name).join(', ') || t('doneLib')) + '</span>'
-      : '<span class="l2">' + [dur(j.dur), mb(j.size), j.video ? t('video') : ''].filter(Boolean).join(' · ') + '</span>';
-  return '<div class="cvrow ' + j.state + '" data-key="' + j.key + '">' +
-    '<div class="cvn"><b>' + esc(j.name) + '</b>' + sub + (j.state === 'run' ? '<i class="cvbar"><b style="width:' + Math.round(j.p * 100) + '%"></b></i>' : '') + '</div>' +
-    (j.state === 'done' && j.out && j.out.length ? '<button class="ic sm" data-share="' + j.key + '" aria-label="' + esc(t('share')) + '">' + SHARE + '</button>' : '') +
-    (S.busy ? '' : '<button class="ic sm cvx" data-rm="' + j.key + '" aria-label="' + esc(t('remove')) + '">×</button>') + '</div>';
+  return '<div class="cvc ' + j.state + '" data-key="' + j.key + '">' +
+    '<span class="cvic" aria-hidden="true">' + (j.video ? I.film : I.wave) + '</span>' +
+    '<div class="cvn"><b>' + esc(j.name) + '</b>' + subHTML(j) + '</div>' +
+    (j.state === 'done' && j.out && j.out.length ? '<button class="cvbtn" data-share="' + j.key + '" aria-label="' + esc(t('share')) + '">' + I.share + '</button>' : '') +
+    (S.busy ? '' : '<button class="cvbtn cvx" data-rm="' + j.key + '" aria-label="' + esc(t('remove')) + '">×</button>') +
+    (j.state === 'run' ? '<i class="cvbar" style="--p:' + j.p + '"></i>' : '') + '</div>';
 }
 function fmtHTML() {
-  const o = opt(), f = FORMATS[o.fmt], ff = hasFF();
-  const chip = (k) => { const off = (FORMATS[k].ffmpeg || S.can[k] === false) && !ff; return '<button type="button" class="cvf' + (o.fmt === k ? ' on' : '') + (off ? ' ff' : '') + '" data-fmt="' + k + '" aria-pressed="' + (o.fmt === k) + '"' + (off ? ' aria-label="' + esc(LABEL[k] + ', ' + t('needFF')) + '"' : '') + '>' + LABEL[k] + '</button>'; };
-  const q = f.lossless ? (f.bits || []).map((b) => ['b' + b, b === 32 ? '32 float' : b + ' ' + t('bit')]) : (f.kbps || []).map((k) => ['k' + k, String(k)]);
+  const o = q(), f = FORMATS[o.fmt], ff = hasFF();
+  const list = MAIN.concat(MAIN.includes(o.fmt) ? [] : [o.fmt]);
+  const tile = (k) => { const lock = needsFF(k) && !ff; return '<button type="button" class="cvt' + (o.fmt === k ? ' on' : '') + (lock ? ' lock' : '') + '" data-fmt="' + k + '" aria-pressed="' + (o.fmt === k) + '" aria-label="' + esc(LABEL[k] + ', ' + t('cap.' + k) + (lock ? ', ' + t('needFF') : '')) + '"><b>' + LABEL[k] + '</b><span>' + t('cap.' + k) + '</span></button>'; };
+  const qs = f.lossless ? (f.bits || []).map((b) => ['b' + b, b === 32 ? '32 float' : b + ' ' + t('bit')]) : (f.kbps || []).map((k) => ['k' + k, String(k)]);
   const cur = f.lossless ? 'b' + (f.bits && f.bits.includes(o.bits) ? o.bits : (f.bits || [16])[0]) : 'k' + (f.kbps && f.kbps.includes(o.kbps) ? o.kbps : (f.kbps || [192]).at(-2) || 192);
-  return '<div class="cvfmts" role="group" aria-label="' + esc(t('fmt')) + '">' + MAIN.map(chip).join('') + FF.map(chip).join('') + '</div>' +
-    (q.length ? '<div class="cvq"><span class="l2">' + (f.lossless ? t('lossless') : t('kbps')) + '</span>' + ctx.ui.seg('cvq', q, cur, t('quality')) + '</div>' : '');
+  return '<div class="cvfmts" role="group" aria-label="' + esc(t('fmt')) + '">' + list.map(tile).join('') +
+    '<button type="button" class="cvt more" data-x="more" aria-label="' + esc(t('more')) + '"><b>···</b><span>' + t('more') + '</span></button></div>' +
+    (qs.length ? '<div class="cvq"><span class="l2">' + (f.lossless ? t('depth') : t('kbps')) + '</span>' + ctx.ui.seg('cvq', qs, cur, t('quality')) + '</div>' : '<div class="cvq"><span class="l2">' + t('lossless') + '</span></div>');
+}
+function moreSheet() {
+  const { ui } = ctx;
+  ui.sheet(() => ui.snav(t('more')) + '<div class="group">' + MORE.map((k) => '<button class="cell act" data-mf="' + k + '"><span class="grow"><b>' + LABEL[k] + '</b><span class="st l2">' + t('cap.' + k) + '</span></span>' + (needsFF(k) && !hasFF() ? '<span class="l2">' + t('needFF') + '</span>' : q().fmt === k ? '<span class="cvchk">' + I.ok + '</span>' : '') + '</button>').join('') + '</div>',
+    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-mf]'); if (!b) return; sh.close(); pickFmt(b.dataset.mf); }));
+}
+function pickFmt(k) {
+  if (needsFF(k) && !hasFF()) { needFF(); return; }
+  q().fmt = k; ctx.store.save(); render();
+}
+function goLabel() {
+  const n = S.q.filter((j) => j.state !== 'done').length, o = q();
+  if (S.busy) { const run = S.q.find((j) => j.state === 'run'); return t('cancel') + (run && run.p ? ' · ' + Math.round(run.p * 100) + ' %' : ''); }
+  if (!n) return t('go') + ' → ' + LABEL[o.fmt];
+  return (S.p.join && n > 1 ? t('goJoin', { n }) : ctx.tn('goN', n)) + ' → ' + LABEL[o.fmt];
+}
+function emptyHTML() {
+  return '<div class="cvempty"><span class="cvhero" aria-hidden="true">' + meta.icon + '</span><b>' + t('emptyTitle') + '</b><p class="l2">' + t('empty') + '</p>' +
+    '<div class="cvadd"><button class="cvbig" data-x="lib">' + I.lib + '<span>' + t('fromLib') + '</span></button><button class="cvbig" data-x="files">' + I.folder + '<span>' + t('fromFiles') + '</span></button></div>' +
+    (S.ffOk === false && packable() ? '<button class="cvpack" data-x="pack">' + t('packHint') + '</button>' : '') + '</div>';
 }
 function html() {
-  const n = S.q.length, proc = procSummary();
+  const n = S.q.length;
   if (!big()) {
-    return '<div class="cvs ' + size + '"><b class="num">' + (n ? ctx.tn('st.n', n) : t('st.idle')) + '</b>' +
-      '<button class="cvgo" data-x="' + (S.busy ? 'stop' : 'go') + '"' + (n || S.busy ? '' : ' disabled') + '>' + t(S.busy ? 'cancel' : 'go') + ' · ' + LABEL[opt().fmt] + '</button></div>';
+    return '<div class="cvs ' + size + '"><span class="num l2">' + (n ? ctx.tn('st.n', n) : t('st.idle')) + '</span>' +
+      '<button class="cvgo" data-x="' + (S.busy ? 'stop' : n ? 'go' : 'files') + '">' + esc(n || S.busy ? goLabel() : t('add')) + '</button></div>';
   }
-  return '<div class="cvlist">' + (n ? S.q.map(rowHTML).join('') :
-    '<div class="cvempty"><p class="l2">' + t('empty') + '</p><div class="cvadd"><button class="cvbig" data-x="lib">' + t('fromLib') + '</button><button class="cvbig" data-x="files">' + t('fromFiles') + '</button></div></div>') + '</div>' +
-    '<div class="cvopts">' + fmtHTML() + (proc.length ? '<button class="cvproc l2" data-x="proc">' + esc(t('procOn', { list: proc.join(', ') })) + '</button>' : '') + '</div>' +
-    '<div class="cvbot">' +
-    '<button class="vc-like" data-x="addmenu" aria-label="' + esc(t('add')) + '"' + (S.busy ? ' disabled' : '') + '><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>' +
-    '<button class="vc-like" data-x="proc" aria-label="' + esc(t('proc')) + '"' + (S.busy ? ' disabled' : '') + '><svg viewBox="0 0 24 24"><path d="M5 4v6M5 14v6M12 4v2M12 10v10M19 4v10M19 18v2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="19" cy="16" r="2"/></svg></button>' +
-    '<button class="cvgo" data-x="' + (S.busy ? 'stop' : 'go') + '"' + (n || S.busy ? '' : ' disabled') + '>' + (S.busy ? t('cancel') : t('go') + ' → ' + LABEL[opt().fmt]) + '</button>' +
-    (S.q.some((j) => j.state === 'done') && !S.busy ? '<button class="vc-like" data-x="shareall" aria-label="' + esc(t('shareAll')) + '">' + SHARE + '</button>' : '') + '</div>';
+  return '<div class="cvlist" data-noswipe-root>' + (n ? S.q.map(rowHTML).join('') +
+    (S.busy ? '' : '<button class="cvaddrow" data-x="addmenu">' + I.plus + '<span>' + t('addMore') + '</span></button>') : emptyHTML()) + '</div>' +
+    '<div class="cvpanel">' + fmtHTML() + chipsHTML() +
+    '<div class="cvbot">' + '<button class="cvgo' + (S.busy ? ' stop' : '') + '" data-x="' + (S.busy ? 'stop' : 'go') + '"' + (n || S.busy ? '' : ' disabled') + '>' + esc(goLabel()) + '</button>' +
+    (S.q.some((j) => j.state === 'done' && j.out && j.out.length) && !S.busy ? '<button class="cvround" data-x="shareall" aria-label="' + esc(t('shareAll')) + '">' + I.share + '</button>' : '') + '</div></div>';
 }
 function render() { if (host) host.innerHTML = '<div class="cvm ' + size + '">' + html() + '</div>'; }
-// во время работы — перерисовать только строки (кнопки под пальцем не прыгают)
+function paintRow(j) {
+  if (!host) return;
+  const row = host.querySelector('.cvc[data-key="' + j.key + '"]');
+  if (row) { const tmp = document.createElement('div'); tmp.innerHTML = rowHTML(j); row.replaceWith(tmp.firstChild); }
+}
+// во время работы — перерисовать только строки и надпись кнопки (кнопки под пальцем не прыгают)
 function paint() {
   if (!host) return;
-  S.q.forEach((j) => { const row = host.querySelector('.cvrow[data-key="' + j.key + '"]'); if (row) { const tmp = document.createElement('div'); tmp.innerHTML = rowHTML(j); row.replaceWith(tmp.firstChild); } });
-  if (!big()) render();
+  if (!big()) { render(); return; }
+  S.q.forEach(paintRow);
+  const go = host.querySelector('.cvgo');
+  if (go) go.textContent = goLabel();
 }
 function addMenu() {
   const { ui } = ctx;
@@ -240,9 +333,10 @@ function addMenu() {
     const a = e.target.closest('[data-a]');
     if (!a) return;
     sh.close();
-    if (a.dataset.a === 'lib') libSheet(); else if (a.dataset.a === 'files') pickFiles(); else { S.q = []; render(); }
+    if (a.dataset.a === 'lib') libSheet(); else if (a.dataset.a === 'files') pickFiles(); else { S.q = []; S.p = PDEF(); render(); }
   }));
 }
+function removeKey(key) { S.q = S.q.filter((j) => String(j.key) !== String(key)); if (S.q.length < 2) S.p.join = false; render(); }
 
 // какие форматы система пишет сама (M4A и Opus — WebCodecs; без них — пакет FFmpeg)
 async function probe() {
@@ -259,6 +353,34 @@ function takeInbox() {
   if (box.share) run({ share: true });
 }
 
+// Смахнуть карточку влево — убрать из списка (кнопка «×» остаётся)
+function swipeRows(el) {
+  let s = null;
+  const down = (e) => {
+    const c = e.target.closest('.cvc');
+    if (!c || S.busy || e.pointerType === 'mouse' || e.target.closest('button')) { s = null; return; }
+    s = { c, x: e.clientX, y: e.clientY, id: e.pointerId, on: false };
+  };
+  const move = (e) => {
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y;
+    if (!s.on && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5 && dx < 0) s.on = true;
+    if (s.on) { s.c.style.transform = 'translateX(' + Math.min(0, dx) + 'px)'; s.c.style.opacity = String(Math.max(0.3, 1 + dx / 300)); }
+  };
+  const up = (e) => {
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x, c = s.c, was = s.on;
+    s = null;
+    if (was && dx < -90) { c.style.transition = 'transform .15s, opacity .15s'; c.style.transform = 'translateX(-110%)'; c.style.opacity = '0'; setTimeout(() => removeKey(c.dataset.key), 150); }
+    else if (was) { c.style.transition = 'transform .2s'; c.style.transform = ''; c.style.opacity = ''; }
+  };
+  el.addEventListener('pointerdown', down);
+  el.addEventListener('pointermove', move);
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  return () => { el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+}
+
 export default {
   ...meta,
   status: (c) => (S.busy ? c.t('st.busy') : S.q.length ? c.tn('st.n', S.q.length) : c.t('st.idle')),
@@ -266,15 +388,14 @@ export default {
     host = el; ctx = c; size = sz;
     onClick = (e) => {
       const f = e.target.closest('[data-fmt]');
-      if (f && !S.busy) {
-        const k = f.dataset.fmt;
-        if ((FORMATS[k].ffmpeg || S.can[k] === false) && !hasFF()) { needFF(); return; }
-        opt().fmt = k; ctx.store.save(); render(); return;
-      }
+      if (f) { if (!S.busy) pickFmt(f.dataset.fmt); return; }
       const sg = e.target.closest('[data-seg="cvq"] [data-v]');
-      if (sg) { const v = sg.dataset.v; if (v[0] === 'b') opt().bits = +v.slice(1); else opt().kbps = +v.slice(1); ctx.store.save(); render(); return; }
+      if (sg) { const v = sg.dataset.v; if (v[0] === 'b') q().bits = +v.slice(1); else q().kbps = +v.slice(1); ctx.store.save(); render(); return; }
+      const pr = e.target.closest('[data-proc]');
+      if (pr) { procSheet(pr.dataset.proc); return; }
+      if (e.target.closest('[data-preset-reset]')) { S.p = PDEF(); render(); return; }
       const rm = e.target.closest('[data-rm]');
-      if (rm) { S.q = S.q.filter((j) => String(j.key) !== rm.dataset.rm); render(); return; }
+      if (rm) { removeKey(rm.dataset.rm); return; }
       const sh = e.target.closest('[data-share]');
       if (sh) { const j = S.q.find((x) => String(x.key) === sh.dataset.share); if (j && j.out) shareFiles(j.out); return; }
       const x = e.target.closest('[data-x]');
@@ -285,10 +406,12 @@ export default {
       else if (a === 'lib') libSheet();
       else if (a === 'files') pickFiles();
       else if (a === 'addmenu') addMenu();
-      else if (a === 'proc') procSheet();
+      else if (a === 'more') moreSheet();
+      else if (a === 'pack') needFF();
       else if (a === 'shareall') shareFiles(S.q.flatMap((j) => j.out || []));
     };
     host.addEventListener('click', onClick);
+    off = [swipeRows(host)];
     render();
     probe();
     checkFF();
@@ -296,5 +419,5 @@ export default {
     takeInbox();
   },
   resize(sz) { size = sz; render(); },
-  unmount() { if (host) host.removeEventListener('click', onClick); host = null; }, // работа идёт и дальше: результат — в медиатеку
+  unmount() { if (host) host.removeEventListener('click', onClick); off.forEach((f) => f()); off = []; host = null; }, // работа идёт и дальше: результат — в медиатеку
 };

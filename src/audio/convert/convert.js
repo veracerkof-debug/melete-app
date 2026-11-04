@@ -5,17 +5,10 @@ import { sniff } from './containers.js';
 import { FORMATS, canEncode } from './encode.js';
 import { toLevel } from '../vocal.js';
 
-// Сколько памяти займёт раскодированный звук (float32): по типу и размеру файла, грубо и с запасом
-const GROW = { wav: 2, aiff: 2, flac: 3.5, caf: 2 };
-export function decodedBytes(info, size) { return size * (GROW[info.type] || 24); }
-// Предел раскодированного звука в памяти: слабый телефон — 300 МБ, иначе 900 МБ
-export const memLimit = () => ((navigator.deviceMemory || 4) <= 4 ? 300 : 900) * 1048576;
-
-// Прочитать файл (Blob) → { ch: [Float32Array], sr, info }. Ошибка с reason: 'decode' (система не умеет — нужен FFmpeg),
-// 'memory' (слишком большой для памяти устройства без FFmpeg)
+// Прочитать файл (Blob) → { ch: [Float32Array], sr, info }. Ошибка с reason: 'decode' (система не умеет — нужен FFmpeg).
+// Предела по длине нет: не хватило памяти системе — та же ошибка, и конвертер предлагает FFmpeg (он работает «файл → файл»).
 export async function readAudio(blob, { ffmpeg = null } = {}) {
   const u8 = new Uint8Array(await blob.arrayBuffer()), info = sniff(u8);
-  if (decodedBytes(info, u8.length) > memLimit()) { if (ffmpeg) return ffmpeg.decode(u8, info); throw Object.assign(new Error('memory'), { reason: 'memory' }); }
   const rate = info.rate >= 8000 && info.rate <= 384000 ? info.rate : 48000;
   try {
     const oc = new OfflineAudioContext(1, 1, rate), buf = await oc.decodeAudioData(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
@@ -31,7 +24,8 @@ export async function readAudio(blob, { ffmpeg = null } = {}) {
 /* ---------- обработка (каналы Float32Array) ---------- */
 
 export function trim(ch, sr, a = 0, b = Infinity) {
-  const n = ch[0].length, i0 = Math.max(0, Math.min(n, Math.round(a * sr))), i1 = Math.max(i0, Math.min(n, Math.round((b === Infinity ? n / sr : b) * sr)));
+  // конец не задан (null, ∞) — до конца записи
+  const n = ch[0].length, i0 = Math.max(0, Math.min(n, Math.round((+a || 0) * sr))), i1 = Math.max(i0, Math.min(n, b == null || !isFinite(b) ? n : Math.round(b * sr)));
   return ch.map((x) => x.slice(i0, i1));
 }
 // mode: 'keep' | 'mono' | 'stereo' | 'left' | 'right'
@@ -112,6 +106,19 @@ function encodeInWorker(fmt, ch, sr, opts, onProgress) {
 export async function convert(sources, opts, { onStep = () => {}, ffmpeg = null, join = false, signal = null } = {}) {
   const f = FORMATS[opts.fmt];
   if (!f) throw Object.assign(new Error('format'), { reason: 'format' });
+  const base0 = (nm) => String(nm || 'audio').replace(/\.[^.]+$/, '');
+  // Есть FFmpeg — всё через него, «файл → файл»: без раскрытия в память, длина не ограничена
+  if (ffmpeg && ffmpeg.convert) {
+    const groups = join && sources.length > 1 ? [sources] : sources.map((s) => [s]), res = [];
+    for (let gi = 0; gi < groups.length; gi++) {
+      const g = groups[gi], i = join ? 0 : gi;
+      onStep({ stage: 'read', i, n: sources.length, name: g[0].name, p: 0 });
+      const r = await ffmpeg.convert(g, opts, { join: g.length > 1, signal, onStage: (st) => onStep({ stage: st, i, n: sources.length, p: 0 }), onProgress: (p) => onStep({ stage: 'encode', i, n: sources.length, p }) });
+      const name = base0(g[0].name) + (g.length > 1 ? ' +' + (g.length - 1) : '') + '.' + f.ext;
+      res.push({ name, blob: new Blob([r.data], { type: f.mime }), dur: r.dur, fmt: opts.fmt, size: r.data.length });
+    }
+    return res;
+  }
   const viaFF = f.ffmpeg || !(await canEncode(opts.fmt, { channels: opts.chan === 'mono' ? 1 : 2, rate: outRate(opts.fmt, 48000, opts.rate), kbps: opts.kbps })).ok;
   if (viaFF && !ffmpeg) throw Object.assign(new Error('ffmpeg'), { reason: 'ffmpeg' });
   const stop = () => { if (signal && signal.aborted) throw Object.assign(new Error('cancel'), { reason: 'cancel' }); };

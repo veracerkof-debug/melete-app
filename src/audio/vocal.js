@@ -63,7 +63,7 @@ export const vocalLim = (ch, sr, p) => runDsp(ch, sr, p, 'lim');
 /* ---------- громкость: ITU-R BS.1770-4 ---------- */
 
 // K-фильтр (полка +4 дБ над ~1,7 кГц и срез ~38 Гц) для любой частоты дискретизации — формулы pyloudnorm
-function kFilters(sr) {
+export function kFilters(sr) {
   const f0 = 1681.974450955533, G = 3.999843853973347, Q = 0.7071752369554196;
   let K = Math.tan((Math.PI * f0) / sr), Vh = Math.pow(10, G / 20), Vb = Math.pow(Vh, 0.4996667741545416), a0 = 1 + K / Q + K * K;
   const s1 = [(Vh + (Vb * K) / Q + K * K) / a0, (2 * (K * K - Vh)) / a0, (Vh - (Vb * K) / Q + K * K) / a0, (2 * (K * K - 1)) / a0, (1 - K / Q + K * K) / a0];
