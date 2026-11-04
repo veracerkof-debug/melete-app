@@ -187,7 +187,7 @@ function procVal(k) {
   return '';
 }
 function chipsHTML() {
-  return '<div class="cvchips" role="group" aria-label="' + esc(t('proc')) + '">' + PROC.filter((k) => k !== 'join' || S.q.length > 1).map((k) => {
+  return '<div class="cvchips hscroll" role="group" aria-label="' + esc(t('proc')) + '">' + PROC.filter((k) => k !== 'join' || S.q.length > 1).map((k) => {
     const v = procVal(k);
     return '<button type="button" class="cvchip' + (v ? ' on' : '') + '" data-proc="' + k + '"' + (S.busy ? ' disabled' : '') + ' aria-label="' + esc(t('p.' + k) + (v ? ': ' + v : '')) + '">' + I[k] + '<span>' + esc(v || t('p.' + k)) + '</span></button>';
   }).join('') + (PROC.some((k) => procVal(k)) && !S.busy ? '<button type="button" class="cvchip cvreset" data-preset-reset aria-label="' + esc(t('p.reset')) + '">×</button>' : '') + '</div>';
@@ -276,7 +276,7 @@ function fmtHTML() {
   const tile = (k) => { const lock = needsFF(k) && !ff; return '<button type="button" class="cvt' + (o.fmt === k ? ' on' : '') + (lock ? ' lock' : '') + '" data-fmt="' + k + '" aria-pressed="' + (o.fmt === k) + '" aria-label="' + esc(LABEL[k] + ', ' + t('cap.' + k) + (lock ? ', ' + t('needFF') : '')) + '"><b>' + LABEL[k] + '</b><span>' + t('cap.' + k) + '</span></button>'; };
   const qs = f.lossless ? (f.bits || []).map((b) => ['b' + b, b === 32 ? '32 float' : b + ' ' + t('bit')]) : (f.kbps || []).map((k) => ['k' + k, String(k)]);
   const cur = f.lossless ? 'b' + (f.bits && f.bits.includes(o.bits) ? o.bits : (f.bits || [16])[0]) : 'k' + (f.kbps && f.kbps.includes(o.kbps) ? o.kbps : (f.kbps || [192]).at(-2) || 192);
-  return '<div class="cvfmts" role="group" aria-label="' + esc(t('fmt')) + '">' + list.map(tile).join('') +
+  return '<div class="cvfmts hscroll" role="group" aria-label="' + esc(t('fmt')) + '">' + list.map(tile).join('') +
     '<button type="button" class="cvt more" data-x="more" aria-label="' + esc(t('more')) + '"><b>···</b><span>' + t('more') + '</span></button></div>' +
     (qs.length ? '<div class="cvq"><span class="l2">' + (f.lossless ? t('depth') : t('kbps')) + '</span>' + ctx.ui.seg('cvq', qs, cur, t('quality')) + '</div>' : '<div class="cvq"><span class="l2">' + t('lossless') + '</span></div>');
 }
