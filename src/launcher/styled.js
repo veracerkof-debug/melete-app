@@ -34,9 +34,23 @@ export function asciiClock(el, hh, mm) {
   el.replaceChildren(grid);
 }
 
-// полоса знаками: [██████░░░░]
-const bar = (f, n = 12) => { const k = Math.round(Math.max(0, Math.min(1, f)) * n); return '█'.repeat(k) + '░'.repeat(n - k); };
-const prompt = (cmd) => h('div', { class: 'l-cli l-cli-dim' }, h('span', { class: 'l-cli-p' }, 'elachiston:~$'), ' ' + cmd);
+// «Командная строка» — как PowerShell (слово автора 02.11.2026): приглашение PS C:\>, команда жёлтым, параметры
+// серым; вывод — таблицами Format-Table (заголовок и ----), списками Format-List (Имя : значение), ход — Write-Progress
+// (голубой блок, жёлтые буквы, [oooo    ]), выбор — как подтверждение PowerShell: [П] Почта
+const prompt = (cmd, ...params) => h('div', { class: 'l-cli l-ps' }, h('span', { class: 'l-ps-pr' }, 'PS C:\\> '), h('span', { class: 'l-ps-cmd' }, cmd),
+  ...params.map((x) => h('span', { class: x.startsWith('-') ? 'l-ps-par' : 'l-ps-arg' }, ' ' + x)));
+const psBar = (f, n = 22) => { const k = Math.round(Math.max(0, Math.min(1, f)) * n); return '[' + 'o'.repeat(k) + ' '.repeat(n - k) + ']'; };
+// Write-Progress: голубой блок с жёлтыми буквами
+const progress = (activity, status, f) => h('div', { class: 'l-ps-prog', 'aria-hidden': 'true' },
+  h('div', {}, ' ' + activity), h('div', {}, '    ' + status), h('div', {}, '    ' + psBar(f)));
+// таблица Format-Table: заголовки, черта из дефисов, строки; ширина столбца — по самому длинному
+function psTable(cols, rows) {
+  const w = cols.map((c, i) => Math.max(c.length, ...rows.map((r) => String(r[i]).length)));
+  const line = (r) => r.map((x, i) => String(x).padEnd(w[i])).join(' ').trimEnd();
+  return [h('div', { class: 'l-cli l-ps-head' }, line(cols)), h('div', { class: 'l-cli l-ps-head' }, line(w.map((n) => '-'.repeat(n)))), ...rows.map((r) => h('div', { class: 'l-cli' }, line(r)))];
+}
+// Format-List: «Имя : значение», двоеточия по одной линии
+const psList = (pairs) => { const w = Math.max(...pairs.map(([k]) => k.length)); return pairs.map(([k, v, cls]) => h('div', { class: 'l-cli' }, h('span', { class: 'l-ps-key' }, k.padEnd(w) + ' : '), h('span', { class: cls || '' }, v))); };
 
 const money = (n) => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('ru-RU').replace(/ /g, ' ');
 
@@ -256,23 +270,25 @@ export function styledMake(id, ctx) {
   }
   if (id === 'cli') {
     return {
-      clock: () => h('div', { class: 'clock-wrap', onclick: (e) => { if (!e.currentTarget.dataset.suppress) handlers.onGesture('clockTap'); } }, prompt('date'), h('div', { class: 'clock' })),
+      clock: () => h('div', { class: 'clock-wrap', onclick: (e) => { if (!e.currentTarget.dataset.suppress) handlers.onGesture('clockTap'); } }, prompt('Get-Date', '-Format', 'HH:mm'), h('div', { class: 'clock' })),
       tracker: () => {
         const d = prefs.tracker ? trackerData() : null;
         if (!d || (!d.practice && !d.live && !d.reading?.ref)) return null;
         const p = d.practice, lv = d.live, rd = d.reading;
-        const box = h('button', { class: 'l-tracker l-cli-box', onclick: go(lv?.session ? 'session' : 'free'), 'aria-label': 'Melete' }, prompt('melete --week'));
-        if (lv) box.append(h('div', { class: 'l-cli' }, h('span', { class: 'l-cli-p' }, '● '), lv.session ? t('tr.live') : t('tr.playing')));
-        if (p) box.append(h('div', { class: 'l-cli' }, '[', h('span', { class: 'l-cli-p' }, bar(p.progress)), `] ${fmtDur(p.total, t)} / ${fmtDur(p.goal, t)}`));
-        // неделя клетками: день — знак по минутам (пусто · ░ ▒ ▓ █), сегодня — акцентом
+        const box = h('button', { class: 'l-tracker l-cli-box', onclick: go(lv?.session ? 'session' : 'free'), 'aria-label': 'Melete' }, prompt('Get-Practice', '-Week'));
+        if (lv) box.append(...psList([['Status', lv.session ? t('tr.live') : t('tr.playing'), 'l-ps-ok']]));
+        // неделя: Write-Progress и таблица минут по дням (сегодня — жёлтым)
         if (p) {
-          const days = t('heat.days').split(','), tdy = (new Date().getDay() + 6) % 7, max = Math.max(3600, ...p.per);
-          const shade = (v) => (v <= 0 ? '·' : ' ░▒▓█'[Math.min(4, 1 + Math.floor((v / max) * 3.999))]);
-          box.append(h('div', { class: 'l-cli l-cli-dim' }, days.map((d) => d.padEnd(3)).join('')),
-            h('div', { class: 'l-cli' }, ...p.per.map((v, i) => h('span', { class: i === tdy ? 'l-cli-p' : '' }, (shade(v) + shade(v)).padEnd(3)))),
-            h('div', { class: 'l-cli l-cli-dim' }, `// ${t('tr.ofGoal', { goal: fmtDur(p.goal, t) }).replace(/ · .*$/, '')}: ${Math.round(clamp01(p.progress) * 100)}%`));
+          box.append(progress(t('ring.practice'), `${fmtDur(p.total, t)} / ${fmtDur(p.goal, t)} · ${Math.round(clamp01(p.progress) * 100)}%`, p.progress));
+          const days = t('heat.days').split(','), tdy = (new Date().getDay() + 6) % 7;
+          const rows = psTable(days.map((d) => d.slice(0, 2)), [p.per.map((v) => String(Math.round((v || 0) / 60)))]);
+          const last = rows[rows.length - 1];
+          // сегодняшний столбец — выделен: строка таблицы перестраивается по клеткам
+          const cells = p.per.map((v) => String(Math.round((v || 0) / 60)).padEnd(2));
+          last.replaceChildren(...cells.map((c, k) => h('span', { class: k === tdy ? 'l-ps-cmd' : '' }, c + (k < 6 ? ' ' : ''))));
+          box.append(...rows);
         }
-        if (rd?.ref) box.append(h('div', { class: 'l-cli' }, h('span', { class: 'l-cli-p' }, rd.done >= rd.total ? '[✓] ' : '[ ] '), `bible ${rd.ref}`));
+        if (rd?.ref) box.append(...psList([[t('tr.reading'), rd.ref], ['Done', rd.done >= rd.total ? 'True' : 'False', rd.done >= rd.total ? 'l-ps-ok' : 'l-ps-dim']]));
         box.longPress = () => handlers.onBlockHold('tracker');
         return box;
       },
@@ -280,23 +296,24 @@ export function styledMake(id, ctx) {
         const b = walletBalance();
         if (b == null) return h('div', { class: 'l-balance', hidden: true });
         return h('button', { class: 'l-balance l-cli-box', onclick: (e) => { if (!e.currentTarget.dataset.suppress) handlers.onWallet(); }, 'aria-label': t('bal.title') },
-          prompt('wallet'), h('div', { class: 'l-cli' }, hasLock() ? '*** ***' : `${money(b)} ${t('bal.cur')}`));
+          prompt('(Get-Wallet).Balance'), h('div', { class: 'l-cli' }, hasLock() ? '********' : `${money(b)} ${t('bal.cur')}`));
       },
       apps: () => {
         const list = ctx.renderList();
         if (!list.classList.contains('l-apps')) return list; // колесо — само по себе, без строк подсказки
-        list.prepend(prompt('tree ~'));
-        list.classList.add('l-tree-v');
-        list.append(h('div', { class: 'l-cli' }, h('span', { class: 'l-cli-p' }, '~$ '), h('i', { class: 'l-cli-cur', 'aria-hidden': 'true' })));
+        // Get-ChildItem: Mode — d---- у папки, -a--- у приложения (ставит CSS), дальше — приглашение с курсором
+        list.prepend(prompt('Get-ChildItem'), ...psTable(['Mode ', 'Name'], []));
+        list.classList.add('l-ps-ls');
+        list.append(h('div', { class: 'l-cli l-ps' }, h('span', { class: 'l-ps-pr' }, 'PS C:\\> '), h('i', { class: 'l-cli-cur', 'aria-hidden': 'true' })));
         return list;
       },
-      // значки внизу — словами в скобках: [тел] [смс]
+      // значки внизу — как выбор в подтверждении PowerShell: [П] Почта  [М] Музыка
       dock: () => {
         const el = ctx.renderDock();
         el.querySelectorAll('.l-dock-btn').forEach((b) => {
-          const full = (b.getAttribute('aria-label') || '').toLowerCase().trim(), name = full.length > 9 ? full.slice(0, 8) + '…' : full;
+          const full = (b.getAttribute('aria-label') || '').trim(), name = full.length > 9 ? full.slice(0, 8) + '…' : full;
           b.classList.add('l-cli-key');
-          b.replaceChildren('[', h('b', {}, name || '·'), ']');
+          b.replaceChildren('[', h('b', {}, (name[0] || '·').toUpperCase()), '] ', name);
         });
         return el;
       },

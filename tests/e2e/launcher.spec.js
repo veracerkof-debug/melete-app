@@ -12,6 +12,12 @@ async function open(page, prefs = {}) {
   await page.waitForTimeout(600);
 }
 
+// поле поиска во «Всех приложениях» по умолчанию скрыто — лупа в заголовке открывает его
+async function drawerFind(page, q) {
+  if (await page.locator('.l-drawer.nosearch').count()) await page.locator('.l-d-find').click();
+  await page.locator('.l-drawer .l-search').fill(q);
+}
+
 // удержание пустого места (мышью: у края экрана жесты не начинаются — там «Назад» системы)
 async function hold(page, x = 60, y = 600) {
   await page.mouse.move(x, y);
@@ -114,7 +120,7 @@ test('скрыть приложение: из «Всех приложений» 
   await open(page);
   await page.keyboard.press('ArrowUp');
   await expect(page.locator('.l-drawer')).toHaveClass(/open/);
-  await page.locator('.l-drawer .l-search').fill('муз'); // «Музыка» — в папке, во «Всех» её нет; поиск находит
+  await drawerFind(page, 'муз'); // «Музыка» — в папке, во «Всех» её нет; поиск находит
   const app = page.locator('.l-d-app', { hasText: 'Музыка' });
   const box = await app.boundingBox();
   await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
@@ -133,7 +139,7 @@ test('скрыть приложение: из «Всех приложений» 
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await page.keyboard.press('ArrowUp');
-  await page.locator('.l-drawer .l-search').fill('муз');
+  await drawerFind(page, 'муз');
   await expect(page.locator('.l-d-app', { hasText: 'Музыка' })).toHaveCount(1);
   expect(errors).toEqual([]);
 });
@@ -168,14 +174,14 @@ test('кошелёк: новый — пустой; пример из прежн�
 test('переименовать приложение: новое название везде, поиск — и по старому; пустое — снова системное', async ({ page, errors }) => {
   await open(page);
   await page.keyboard.press('ArrowUp');
-  await page.locator('.l-drawer .l-search').fill('карт');
+  await drawerFind(page, 'карт');
   const box = await page.locator('.l-d-app', { hasText: 'Карты' }).boundingBox();
   await page.mouse.move(box.x + 30, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
   await page.locator('.l-sheet .l-field input').fill('Дорога');
   await page.keyboard.press('Escape');
-  await page.locator('.l-drawer .l-search').fill('дор');
+  await drawerFind(page, 'дор');
   await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1);
-  await page.locator('.l-drawer .l-search').fill('карт');
+  await drawerFind(page, 'карт');
   await expect(page.locator('.l-d-app', { hasText: 'Дорога' })).toHaveCount(1); // по системному названию тоже
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-app .label', { hasText: 'Дорога' })).toHaveCount(1); // и на главном
@@ -198,7 +204,7 @@ test('текст не выделяется: главный, настройки, 
   expect(await sel(page.locator('.l-sheet h2'))).toBe('none');
   await page.keyboard.press('Escape');
   await page.keyboard.press('ArrowUp');
-  await page.locator('.l-drawer .l-search').fill('а');
+  await drawerFind(page, 'а');
   expect(await sel(page.locator('.l-d-app').first())).toBe('none');
   expect(await sel(page.locator('.l-drawer .l-search'))).toBe('text');
   await page.keyboard.press('Escape');
@@ -213,9 +219,9 @@ test('папки: «Все» без приложений из папок; гал
   await page.keyboard.press('ArrowUp');
   // в браузере все ссылки разложены по папкам-примерам — «Все» пусто, поиск находит
   await expect(page.locator('.l-d-app')).toHaveCount(0);
-  await page.locator('.l-drawer .l-search').fill('карт');
+  await drawerFind(page, 'карт');
   await expect(page.locator('.l-d-app', { hasText: 'Карты' })).toHaveCount(1);
-  await page.locator('.l-drawer .l-search').fill('');
+  await drawerFind(page, '');
   // папка «Связь» (первая): галочками убрать «Почту» — она появится во «Всех»
   const tab1 = page.locator('.l-d-tab.fold').first();
   await tab1.click();
@@ -343,7 +349,7 @@ test('смахнуть вверх — все приложения с поиск�
   await page.mouse.move(200, 380, { steps: 6 });
   await page.mouse.up();
   await expect(page.locator('.l-drawer')).toHaveClass(/open/);
-  await page.locator('.l-drawer .l-search').fill('mel');
+  await drawerFind(page, 'mel');
   await expect(page.locator('.l-d-app')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-drawer')).not.toHaveClass(/open/);
@@ -615,7 +621,7 @@ test('«Фокус»: переключатель в настройках; «Се
   await page.locator('.l-seg button', { hasText: 'Фокус' }).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.l-now')).toBeVisible();
-  await expect(page.locator('.l-now')).toContainText('Сегодня потрачено');
+  await expect(page.locator('.l-now')).toContainText('Потрачено');
   await expect(page.locator('.l-now')).toContainText('45 000');
   await expect(page.locator('.l-home > .l-tracker:not([hidden])')).toHaveCount(0);
   // раскладка автора — на месте
@@ -625,13 +631,17 @@ test('«Фокус»: переключатель в настройках; «Се
   expect(errors).toEqual([]);
 });
 
-test('«Фокус»: смахнуть вверх — сразу поиск; находит действия и разделы настроек; поиск в настройках', async ({ page, errors }) => {
+test('«Фокус»: смахнуть вверх — без клавиатуры, поиск по лупе; находит действия и разделы настроек; поиск в настройках', async ({ page, errors }) => {
   await open(page, { variant: 'claude' });
   await page.keyboard.press('ArrowUp');
+  // клавиатура сама не выезжает, поле скрыто — лупа в заголовке
+  await expect(page.locator('.l-drawer .l-search')).toBeHidden();
+  await expect(page.locator('.l-drawer .l-search')).not.toBeFocused();
+  await page.locator('.l-d-find').click();
   await expect(page.locator('.l-drawer .l-search')).toBeFocused();
   await page.keyboard.type('кош');
   await expect(page.locator('.l-find', { hasText: 'Кошелёк' })).toHaveCount(1);
-  await page.locator('.l-drawer .l-search').fill('стиль');
+  await drawerFind(page, 'стиль');
   await page.locator('.l-find', { hasText: 'Стиль' }).click();
   await expect(page.locator('.l-sheet .l-set-find')).toHaveValue('Стиль');
   await expect(page.locator('.l-sheet .l-styles')).toBeVisible();
@@ -657,5 +667,64 @@ test('крест в стилях — на своём месте: полоса, �
   const hgt = await page.locator('.l-cross.at-center svg').evaluate((e) => e.getBoundingClientRect().height);
   expect(hgt).toBeGreaterThanOrEqual(80);
   expect(hgt).toBeLessThanOrEqual(170);
+  expect(errors).toEqual([]);
+});
+
+test('характер стиля на всех экранах: кошелёк и блокнот получают стиль, «Все приложения» появляются в манере стиля', async ({ page, errors }) => {
+  await open(page, { style: 'tele', mono: false });
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer.stag')).toHaveCount(1);
+  await expect(page.locator('.l-drawer.stag')).toHaveCount(0, { timeout: 2000 }); // снимается сам
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  await page.keyboard.press('ArrowRight');
+  const notes = page.frameLocator('iframe.l-notes');
+  await expect(notes.locator('html')).toHaveAttribute('data-page', 'notes');
+  await expect(notes.locator('html')).toHaveAttribute('data-style', 'tele');
+  await page.evaluate(() => window.__launcherBack());
+  await page.waitForTimeout(500);
+  await page.evaluate(() => window.__homeFocus());
+  await page.keyboard.press('ArrowLeft');
+  const money = page.frameLocator('iframe.l-money:not(.l-notes)');
+  await expect(money.locator('html')).toHaveAttribute('data-style', 'tele');
+  await expect(money.locator('html')).toHaveAttribute('data-page', 'money');
+  await expect(money.locator('#l-char')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test('поле поиска во «Всех приложениях»: по умолчанию скрыто, включается в настройках; жест «Поиск» и буквы — открывают', async ({ page, errors }) => {
+  await open(page);
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer .l-search')).toBeHidden();
+  await expect(page.locator('.l-d-find')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowDown'); // «Поиск» — поле видно и в фокусе
+  await expect(page.locator('.l-drawer .l-search')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.keyboard.press('w'); // буква с клавиатуры — сразу в поиск
+  await expect(page.locator('.l-drawer .l-search')).toHaveValue('w');
+  await page.keyboard.press('Escape');
+  await open(page, { drawerSearch: true });
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.l-drawer .l-search')).toBeVisible();
+  await expect(page.locator('.l-drawer .l-search')).not.toBeFocused();
+  await expect(page.locator('.l-d-find')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('переключатели в настройках во всех стилях: касание меняет и значение, и вид', async ({ page, errors }) => {
+  for (const style of ['classic', 'strip', 'soft', 'term', 'menu', 'cli', 'inst', 'panel', 'tele', 'cont', 'diary']) {
+    await open(page, { style, mono: style === 'tele' });
+    await hold(page, 200, 14);
+    await page.locator('.l-set-tabs button', { hasText: 'Главный' }).click();
+    const row = page.locator('.l-sheet [role=switch]').first();
+    const look = () => row.locator('.l-sw').evaluate((e) => { const c = getComputedStyle(e), b = getComputedStyle(e, '::before'), i = e.querySelector('i'); return [c.backgroundColor, b.content, i ? getComputedStyle(i).transform : ''].join('|'); });
+    const v0 = await row.getAttribute('aria-checked'), l0 = await look();
+    await row.click();
+    await page.waitForTimeout(350);
+    expect(await page.locator('.l-sheet [role=switch]').first().getAttribute('aria-checked'), style).not.toBe(v0);
+    expect(await look(), style).not.toBe(l0);
+  }
   expect(errors).toEqual([]);
 });

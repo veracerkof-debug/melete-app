@@ -37,7 +37,9 @@ export function mountDrawer(container, { onChange }) {
     h('div', { class: 'l-d-head' },
       h('button', { class: 'l-d-grip', 'aria-label': t('ui.close'), onclick: closeDrawer }),
       h('div', { class: 'l-d-title' }, titleName = h('span', { class: 'l-d-name' }, t('drawer.title')), 
-        isNative() ? null : h('button', { class: 'l-d-link', onclick: () => addWebLink() }, t('drawer.addLink'))),
+        isNative() ? null : h('button', { class: 'l-d-link', onclick: () => addWebLink() }, t('drawer.addLink')),
+        // поле поиска скрыто (prefs.drawerSearch) — лупа открывает его
+        h('button', { class: 'l-d-find', 'aria-label': t('drawer.search'), html: iconSVG('search'), onclick: () => showSearch(true) })),
       search),
     // папки — значками справа, низ свободен: список идёт до самого низа
     h('div', { class: 'l-d-body' }, list, tabs = h('div', { class: 'l-d-rail', role: 'tablist', 'aria-orientation': 'vertical' })));
@@ -341,6 +343,13 @@ export function openFolder(id) {
   });
 }
 
+let stagT;
+// поле поиска: видно, если включено в настройках или поиск попросили (лупа, смахивание «Поиск», буква с клавиатуры)
+function showSearch(focusNow, want = false) {
+  const on = prefs.drawerSearch === true || want || focusNow;
+  drawer.classList.toggle('nosearch', !on);
+  if (focusNow) { search.focus(); }
+}
 export function openDrawer(focus = false) {
   if (open) return;
   open = true;
@@ -350,8 +359,11 @@ export function openDrawer(focus = false) {
   // поиск сверху (под заголовком) или внизу — под рукой
   if (L.search === 'bottom') drawer.append(search); else drawer.querySelector('.l-d-head').append(search);
   search.value = '';
+  showSearch(false, focus);
   fill();
   list.scrollTop = 0;
+  // открыли не пальцем (пальцем список уже на виду) — строки появляются по очереди, в манере стиля (character.css)
+  if (drawer.style.visibility !== 'visible') { drawer.classList.add('stag'); clearTimeout(stagT); stagT = setTimeout(() => drawer.classList.remove('stag'), 700); }
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   setCover('bottom', true);
@@ -375,6 +387,7 @@ export function closeDrawer() {
 
 export function typeIntoSearch(ch) {
   openDrawer(true);
+  showSearch(false, true);
   search.value += ch;
   search.focus();
   fill();

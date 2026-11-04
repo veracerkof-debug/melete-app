@@ -13,8 +13,8 @@ export const STYLES = [
   { id: 'term', accent: '#3DDC84', align: 'left', clock: 'mono', mono: true },
   // светлые панели, узкая полоса значков слева, папки раскрываются деревом
   { id: 'menu', accent: '#C94F92', align: 'left', clock: 'onest', clockW: 300 },
-  // командная строка: только текст и символы, курсор мигает, часы и графика — знаками
-  { id: 'cli', accent: '#3CF27A', align: 'left', mono: true, text: true },
+  // командная строка — PowerShell: синяя консоль, PS C:\>, таблицы, Write-Progress, без рамок (pwsh.css)
+  { id: 'cli', accent: '#F9F1A5', align: 'left', mono: true, text: true },
   // светло-серый корпус, оранжевые кнопки, часы ЖК-индикатором, чёрные ручки со стрелкой (Braun, приборные плитки)
   { id: 'inst', accent: '#F26A1B', align: 'left' },
   // светлые панели на чёрном: крупная цифра слева, график справа
