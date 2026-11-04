@@ -88,6 +88,8 @@ export async function createStretchPlayer(c, dest) {
     const CH = Math.min(2, buf.numberOfChannels), L = toI16(buf.getChannelData(0));
     await yieldUI();
     const R = CH > 1 ? toI16(buf.getChannelData(1)) : L.slice();
+    // звук уже раскодирован — отдать его тому, кто рисует волну (до переноса в узел: после него массивы пусты)
+    try { if (p.onPcm) p.onPcm(L, R, buf.sampleRate); } catch { /* волна — не главное */ }
     return { L, R, len: buf.length };
   }
   async function reset() {

@@ -62,7 +62,9 @@ export async function createBufferPlayer(c, dest) {
   async function decode(blob) {
     const buf = await c.decodeAudioData(await blob.arrayBuffer());
     const n = buf.numberOfChannels;
-    return { L: toI16(buf.getChannelData(0)), R: toI16(buf.getChannelData(Math.min(1, n - 1))), len: buf.length };
+    const L = toI16(buf.getChannelData(0)), R = toI16(buf.getChannelData(Math.min(1, n - 1)));
+    try { if (p.onPcm) p.onPcm(L, R, buf.sampleRate); } catch { /* волна — не главное */ }
+    return { L, R, len: buf.length };
   }
   function reset() { stopLive(); playing = false; pos = 0; ended = false; cancel(timer); timer = 0; }
 

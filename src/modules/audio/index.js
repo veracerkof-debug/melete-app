@@ -561,7 +561,11 @@ async function engineLoad(t) {
     AU.engFor = t; AU.loadKey = key;
     AU.loadP = (async () => {
       try {
+        // волна — из того же раскодированного звука, что идёт в движок (второй раз файл не раскодируется)
+        AU.eng.onPcm = set.length || isVideo(t) ? null : (L, R, sr) => { if (t.pkv !== PKV) { setPeaks(t, peaksOf([L, R], L.length, 32768), L.length / sr); if (AU.cur === t) repaintWave(); } };
         if (set.length) { AU.partsFor = t; await AU.eng.loadParts(blobsOf(set), mixOf(t)); } else { AU.partsFor = null; await AU.eng.load(t.blob); }
+        AU.eng.onPcm = null;
+        if (needPeaks(t)) computePeaks(t); // дорожки или движок не отдал звук — посчитать отдельно
         if (AU.engFor !== t || AU.cur !== t) return false; // пока грузили — выбрали другое
         ctx.log('движок: файл ' + t.id + (set.length ? ' (дорожки ' + set.length + ')' : '') + ', ' + Math.round(AU.eng.duration) + ' с');
         AU.eng.playbackRate = AU.rate;
@@ -739,44 +743,57 @@ function autoAudio() {
 
 /* ---------- волна ---------- */
 
+// Волна — средняя громкость (RMS) столбика в децибелах, 36 дБ ниже самого громкого — пусто: тихое и громкое
+// различимы. По пикам длинная запись выглядела сплошной стеной: в каждый столбик (секунды звука) попадает
+// громкий пик. PKV — версия расчёта: волны, посчитанные по-старому, пересчитываются.
+const PKV = 2, NPK = 480, RANGE = 36;
+function peaksOf(ch, len, full = 1) {
+  const step = Math.max(1, Math.floor(len / NPK)), hop = Math.max(1, Math.floor(step / 512)), out = new Float32Array(NPK);
+  let mx = 0;
+  for (let i = 0; i < NPK; i++) {
+    const s = i * step, e = Math.min(len, s + step);
+    let sum = 0, n = 0;
+    for (let j = s; j < e; j += hop) for (const d of ch) { const v = d[j] / full; sum += v * v; n++; }
+    const r = n ? Math.sqrt(sum / n) : 0;
+    out[i] = r; if (r > mx) mx = r;
+  }
+  if (!mx) return Array(NPK).fill(0);
+  return Array.from(out, (r) => { const db = 20 * Math.log10(r / mx + 1e-9); return Math.round(Math.max(0, Math.min(1, (db + RANGE) / RANGE)) * 100) / 100; });
+}
+function setPeaks(t, pk, dur) { t.peaks = pk; t.pkv = PKV; if (dur) t.dur = dur; t._busy = false; ctx.files.save(t); }
+// перерисовать только волну (кнопки и остальное не трогать)
+function repaintWave() { const w = host && host.querySelector('#wform'); if (!w) { render(); return; } const tmp = document.createElement('div'); tmp.innerHTML = wformHTML(wfCls(w)); w.replaceWith(tmp.firstChild); }
+const needPeaks = (t) => !t.peaks || (t.peaks.length && t.pkv !== PKV);
+
 async function computePeaks(t) {
-  if (t.peaks || t._busy) return;
+  if (!needPeaks(t) || t._busy) return;
   // У видео волну не строим: файл большой, а целиком декодировать звук ради картинки дорого — вместо волны шкала
-  if (isVideo(t)) { t.peaks = []; ctx.files.save(t); return; }
+  if (isVideo(t)) { t.peaks = []; t.pkv = PKV; ctx.files.save(t); return; }
+  // открытую запись раскодирует движок плеера — волна придёт оттуда (onPcm), второй раз не раскодируем
+  if (t === AU.cur && AU.loadP && AU.engFor === t) return;
   t._busy = true;
   try {
     const C = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext, oc = new C(1, 8000, 8000);
     const buf = await oc.decodeAudioData(await t.blob.arrayBuffer());
-    t.dur = buf.duration;
-    const N = 480, ch = [];
+    const ch = [];
     for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c));
-    const len = ch[0].length, step = Math.max(1, Math.floor(len / N)), pk = [];
-    let mx = 0;
-    for (let i = 0; i < N; i++) {
-      let m = 0;
-      const s = i * step, e = Math.min(len, s + step);
-      for (let j = s; j < e; j += 4) for (const d of ch) { const v = Math.abs(d[j]); if (v > m) m = v; }
-      pk.push(m);
-      if (m > mx) mx = m;
-    }
-    t.peaks = pk.map((v) => Math.round((v / (mx || 1)) * 100) / 100);
-    t._busy = false;
-    ctx.files.save(t);
-  } catch { t.peaks = []; t._busy = false; }
-  render();
+    setPeaks(t, peaksOf(ch, ch[0].length), buf.duration);
+  } catch { t.peaks = []; t.pkv = PKV; t._busy = false; }
+  if (t === AU.cur) repaintWave(); else render();
 }
 
 let queueBusy = false;
 async function queuePeaks() {
   if (queueBusy) return;
   queueBusy = true;
-  try { for (const t of tracks().slice()) if (!t.peaks && !t._busy) await computePeaks(t); } catch { /* ignore */ }
+  try { for (const t of tracks().slice()) if (needPeaks(t) && !t._busy) await computePeaks(t); } catch { /* ignore */ }
   queueBusy = false;
 }
 
 function wformHTML(cls) {
   const t = AU.cur, d = pl().duration || 0, { t: tr } = ctx;
   if (!t.peaks) { computePeaks(t); return '<div class="wform ' + cls + ' wait" id="wform"><span class="l2">' + tr('waveWait') + '</span><i class="wfhead" id="wfhead"></i></div>'; }
+  if (t.pkv !== PKV && t.peaks.length) computePeaks(t); // старая волна видна, пока считается новая
   const flat = !t.peaks.length, pk = flat ? Array(120).fill(0.15) : t.peaks, N = pk.length;
   let p = '';
   pk.forEach((v, i) => { const hh = Math.max(1.5, v * 46); p += 'M' + (i + 0.5) + ' ' + (50 - hh) + 'V' + (50 + hh); });
