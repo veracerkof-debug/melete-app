@@ -2101,5 +2101,7 @@
   "crs.toList": "К урокам",
   "crs.pass": "Урок пройден",
   "crs.notYet": "Для зачёта нужно {p}",
-  "crs.again": "Ещё раз"
+  "crs.again": "Ещё раз",
+  "remind.chPushy": "навязчиво",
+  "remind.chCal": "календарь"
 }

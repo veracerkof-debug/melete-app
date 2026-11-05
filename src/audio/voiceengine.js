@@ -5,6 +5,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { encodeWav } from './voicefx.js';
 import { REC } from './recstate.js';
+import { log } from '../core/log.js';
 
 const V = Capacitor.isNativePlatform() ? registerPlugin('Voice') : null;
 const CHUNK = 768 * 1024;
@@ -146,7 +147,7 @@ function webEngine() {
       let c;
       try { c = set0.sampleRate ? new AC({ latencyHint: 'balanced', sampleRate: set0.sampleRate }) : new AC({ latencyHint: 'balanced' }); }
       catch { c = new AC({ latencyHint: 'balanced' }); }
-      if (c.state !== 'running') { try { await c.resume(); } catch { /* попробуем так */ } }
+      if (c.state !== 'running') { try { await c.resume(); } catch (e) { log('voice', 'звук записи не запустился сразу: ' + ((e && e.name) || e) + ' — пробуем дальше', 'w'); } }
       let src = c.createMediaStreamSource(stream);
       const path = 'rec-' + Date.now() + '.wav', sr = c.sampleRate;
       let frames = 0, paused = false, seq = 0, pend = [], pendN = 0, lastFlush = 0, node = null, sp = null, ended = false;
@@ -262,7 +263,7 @@ function webEngine() {
       this.stopPlay();
       const u8 = await this.read(path), url = URL.createObjectURL(new Blob([u8], { type: 'audio/wav' }));
       audio = new Audio(url);
-      if (deviceId && deviceId !== -1 && audio.setSinkId) { try { await audio.setSinkId(deviceId); } catch { /* выход по умолчанию */ } }
+      if (deviceId && deviceId !== -1 && audio.setSinkId) { try { await audio.setSinkId(deviceId); } catch (e) { log('voice', 'выбранный выход недоступен — звучит выход по умолчанию: ' + ((e && e.name) || e), 'w'); } }
       audio.currentTime = from;
       audio.ontimeupdate = () => emit('pos', { sec: audio.currentTime });
       audio.onended = () => { emit('end', { done: true }); URL.revokeObjectURL(url); };

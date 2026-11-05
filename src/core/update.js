@@ -127,7 +127,7 @@ export function createUpdater(app) {
   async function safeCopy() {
     try { app.store.save(); } catch { /* */ }
     if (app.snapshots) await app.snapshots.take('update', { build: s.info ? s.info.build : 0 });
-    if (app.folder && app.folder.state && app.folder.state.ok && app.folder.saveBackup) { try { await app.folder.saveBackup(); } catch { /* копия на устройстве уже есть */ } }
+    if (app.folder && app.folder.state && app.folder.state.ok && app.folder.saveBackup) { try { await app.folder.saveBackup(); } catch (e) { log('upd', 'копия в папку Melete перед обновлением не сохранена (копия на устройстве есть): ' + ((e && e.message) || e), 'w'); } }
   }
   // Установка (данные остаются; копия — на всякий случай)
   async function install() {

@@ -2079,5 +2079,7 @@
   "crs.toList": "To lessons",
   "crs.pass": "Lesson passed",
   "crs.notYet": "{p} needed to pass",
-  "crs.again": "Again"
+  "crs.again": "Again",
+  "remind.chPushy": "persistent",
+  "remind.chCal": "calendar"
 }

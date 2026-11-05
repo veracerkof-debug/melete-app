@@ -2043,5 +2043,7 @@
   "crs.toList": "Darslarga",
   "crs.pass": "Dars oʻtildi",
   "crs.notYet": "Oʻtish uchun {p} kerak",
-  "crs.again": "Yana bir bor"
+  "crs.again": "Yana bir bor",
+  "remind.chPushy": "qatʼiy",
+  "remind.chCal": "taqvim"
 }

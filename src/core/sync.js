@@ -97,7 +97,7 @@ export { b64 };
 // Проверочный код отпечатка — первые 8 знаков группами: одинаковый на экранах компьютера и телефона
 export const fpCheck = (fp) => (fp ? String(fp).slice(0, 8).toUpperCase().replace(/(.{4})/, '$1 ') : '');
 const readLS = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
-const writeLS = (v) => { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch { /* нет места */ } };
+const writeLS = (v) => { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch (e) { log('sync', 'состояние связи не сохранено (нет места?): ' + (e && e.name), 'w'); } };
 
 /* ---------- компьютер: обработка запросов телефона ---------- */
 
@@ -184,7 +184,7 @@ const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.li
 // Компьютер: сервер в Rust ↔ этот обработчик. → { start, stop, state, forget(key), subscribe }
 export function createSyncServer(app, { isDesktop }) {
   const avail = isDesktop();
-  const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch { /* */ } });
+  const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null;
   const mem = readLS(), incoming = new Map();
   const core = () => import('@tauri-apps/api/core');
@@ -382,7 +382,7 @@ const DAY = 86400000, MIN = 60000;
 // Зазвучало — синхронизация прерывается между кусками и продолжится позже. Ручная кнопка — через run (одна за раз).
 export function createSyncClient(app, { H = http, now = () => Date.now() } = {}) {
   const S = () => app.store.state.settings, subs = new Set();
-  const emit = () => subs.forEach((fn) => { try { fn(); } catch { /* */ } });
+  const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   let busy = false, lastTry = 0, fails = 0, last = null, timer = 0;
   const pcWork = () => S().pcWork !== false, syncAuto = () => S().syncAuto !== false;
   const quiet = () => !app.auto || !app.auto.quiet || app.auto.quiet();
@@ -418,7 +418,8 @@ export function createSyncClient(app, { H = http, now = () => Date.now() } = {})
   async function tick() {
     if (busy || !pcOf() || !syncAuto() || !quiet()) return;
     if (now() - lastTry < interval()) return;
-    try { await run(() => {}, { auto: true, stop: () => !quiet() }); } catch { /* повторится */ }
+    // не вышло — повторится позже (реже); первая неудача подряд — в журнал, чтобы отчёт показал причину
+    try { await run(() => {}, { auto: true, stop: () => !quiet() }); } catch (e) { if (fails === 1) log('sync', 'фоновая синхронизация не удалась: ' + (e.reason || e.message || e), 'w'); }
   }
   return {
     waits, run, tick, quiet,

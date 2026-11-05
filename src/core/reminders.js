@@ -12,6 +12,7 @@
 import { Capacitor } from '@capacitor/core';
 import { dayKey, weekday } from './time.js';
 import { log, errText } from './log.js';
+import { t } from '../i18n/index.js';
 
 export const STYLES = ['classic', 'pushy', 'custom', 'quiet'];
 export const LEADS = [5, 60, 120, 180]; // минуты до времени занятий
@@ -124,7 +125,7 @@ async function channels(P) {
   const mk = (id, name, importance, vibration) => P.createChannel({ id, name, importance, visibility: 1, vibration }).catch((e) => log('remind', 'канал ' + id + ': ' + errText(e), 'w'));
   ['remind', 'remind-loud'].forEach((id) => P.deleteChannel({ id }).catch(() => {})); // прежние каналы
   await mk(CHANNELS.classic, 'Melete', 4, false);
-  await mk(CHANNELS.pushy, 'Melete · навязчиво', 4, true);
+  await mk(CHANNELS.pushy, 'Melete · ' + t('remind.chPushy'), 4, true); // название видно в настройках Android — на языке приложения
 }
 
 // Точные будильники (Android 12+): разрешены — напоминания приходят минута в минуту; нет — обычным способом
@@ -176,7 +177,7 @@ export async function rescheduleEvents(list) {
     await P.cancel({ notifications: Array.from({ length: EV_N }, (_, i) => ({ id: EV0 + i })) });
     if (!list.length) return 0;
     if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'события: уведомления не разрешены', 'w'); return 0; }
-    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: EV_CH, name: 'Melete · календарь', importance: 4, visibility: 1, vibration: true }).catch(() => {});
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: EV_CH, name: 'Melete · ' + t('remind.chCal'), importance: 4, visibility: 1, vibration: true }).catch(() => {});
     const exact = await exactAllowed();
     await P.schedule({ notifications: list.slice(0, EV_N).map((x, i) => ({ id: EV0 + i, ...note({ title: x.title, body: x.body }), schedule: { at: new Date(x.ts), allowWhileIdle: true },
       channelId: EV_CH, autoCancel: true, isExactNotification: exact })) });

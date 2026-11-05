@@ -15,7 +15,8 @@ function fire() {
   for (const [id, x] of timers) {
     if (t < x.at) continue;
     if (x.every) { x.at += x.every; if (x.at < t) x.at = t + x.every; } else timers.delete(id); // проспали несколько периодов — не навёрстываем
-    try { x.fn(); } catch { /* ошибка одного таймера не ломает остальные */ }
+    // ошибка одного таймера не ломает остальные, но и не пропадает: в общий журнал (обработчик ошибок окна)
+    try { x.fn(); } catch (e) { (globalThis.reportError || console.error)(e); }
   }
   if (!timers.size && iv) { clearInterval(iv); iv = 0; }
 }
