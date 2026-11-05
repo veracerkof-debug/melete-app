@@ -122,7 +122,10 @@ async function run({ share = false } = {}) {
   const sysOk = (g) => (o.fmt === 'm4a' || o.fmt === 'opus') && S.can[o.fmt] !== false && g.every((j) => j.dur || /\.wav$/i.test(j.name)) &&
     g.reduce((a, j) => a + (j.dur ? j.dur * 48000 * 2 * 4 : j.size * 2), 0) < 400 * 1048576;
   // несколько файлов — по два сразу (у телефона много ядер, FFmpeg занимает одно); второй FFmpeg — свой
-  const lanes = hasFF() && groups.length > 1 && (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1;
+  // только небольшие (до 120 МБ): большие записи по два сразу делят память и чтение — каждая идёт медленнее, чем по
+  // одной (отчёт автора 05.11: второй и четвёртый файл «еле тащились»)
+  const small = groups.every((g) => g.reduce((a, j) => a + (j.size || 0), 0) <= 120 * 1048576);
+  const lanes = hasFF() && small && groups.length > 1 && (navigator.hardwareConcurrency || 2) >= 4 ? 2 : 1;
   if (lanes > 1 && !S.ff2) S.ff2 = createFFmpeg(fileUrl);
   const one = async (g, ff) => {
     g.forEach((j) => { j.state = 'run'; j.p = 0; j.err = ''; j.stage = 'read'; });

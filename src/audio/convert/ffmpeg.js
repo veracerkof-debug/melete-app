@@ -30,8 +30,9 @@ const EXT = { mp3: 'mp3', m4a: 'm4a', opus: 'ogg', vorbis: 'ogg', wma: 'wma', ac
 const RATES = { mp3: [32000, 44100, 48000], opus: [48000], ac3: [32000, 44100, 48000], wma: [22050, 32000, 44100, 48000] };
 export const FF_OUT = Object.keys(ARGS);
 
-// сколько входа держать в памяти FFmpeg целиком: 64 МБ на каждый ГБ памяти устройства (8 ГБ → 512 МБ ≈ 46 мин WAV)
-const memCap = () => Math.min(640, 64 * ((typeof navigator !== 'undefined' && navigator.deviceMemory) || 4)) * 1048576;
+// сколько входа держать в памяти FFmpeg целиком: 160 МБ на каждый ГБ памяти устройства, до 1,2 ГБ (8 ГБ → ≈ 105 мин WAV
+// 48 кГц стерео); копия передаётся FFmpeg (не дублируется). Больше — чтение кусками из Blob (медленнее, но без предела)
+const memCap = () => Math.min(1200, 160 * ((typeof navigator !== 'undefined' && navigator.deviceMemory) || 4)) * 1048576;
 const nearest = (list, r) => list.reduce((b, x) => (Math.abs(x - r) < Math.abs(b - r) ? x : b), list[0]);
 export function ffRate(fmt, src, want) { const r = want || src || 48000, ok = RATES[fmt]; return ok && !ok.includes(r) ? nearest(ok, r) : r; }
 // atempo принимает 0,5…100 — дробим на множители, чтобы и 0,25 работало
