@@ -11,14 +11,34 @@ export const setLabels = (o) => Object.assign(LBL, o);
 
 // Звук: A — ctx.audio (unlock, playChord, playSeq)
 export function createSound(getA) {
-  let ids = [], pg = null, nk = 0;
+  let ids = [], pg = null, nk = 0, pulse = null;
   const at = (sec, fn) => { ids.push(after(Math.max(0, sec) * 1000, fn)); };
   const A = () => { const a = getA(); return a && a.unlock() ? a : null; };
   const LEAD = 0.06; // упреждение ударов: всё в одном подходе стартует через LEAD от «сейчас»
   // нота с силой нажатия (vel 0…1) — громкость в схемах динамики
   const note = (a, m, dur, vel) => { const k = 'bk' + nk++; a.synth.on(m, k, { bus: 'theory', vel }); at(dur, () => a.synth.off(k)); };
   const S = {
-    stop() { ids.forEach(cancel); ids = []; if (pg) { try { pg.disconnect(); } catch { /* уже отключён */ } pg = null; } },
+    stop() { ids.forEach(cancel); ids = []; if (pg) { try { pg.disconnect(); } catch { /* уже отключён */ } pg = null; } if (pulse) { pulse.stop(); pulse = null; } },
+    // Пульсы (учебник, «ритм становится нотой»): ratios — числа отношения, base — единица, ударов в секунду. Каждый
+    // голос — поезд коротких импульсов (периодическая волна из равных гармоник): медленно — щелчки, быстро — тон.
+    // Узлы создаются раз, скорость меняется параметром плавно
+    pulses(ratios, base) {
+      const a = A(); if (!a) return null; S.stop();
+      const bus = a.bus('theory'); if (!bus) return null;
+      const c = bus.context, out = c.createGain(), lp = c.createBiquadFilter(), t = c.currentTime;
+      lp.type = 'lowpass'; lp.frequency.value = 5000; out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(0.5, t + 0.08);
+      lp.connect(out).connect(bus);
+      const n = 1024, re = new Float32Array(n), im = new Float32Array(n);
+      for (let k = 1; k < n; k++) re[k] = 1 / Math.sqrt(k);
+      const wave = c.createPeriodicWave(re, im, { disableNormalization: false });
+      const os = ratios.map((r) => { const o = c.createOscillator(), g = c.createGain(); o.setPeriodicWave(wave); o.frequency.value = base * r; g.gain.value = 0.9 / ratios.length; o.connect(g).connect(lp); o.start(t); return o; });
+      const me = {
+        set(b) { const now = c.currentTime; os.forEach((o, i) => o.frequency.setTargetAtTime(Math.min(4000, b * ratios[i]), now, 0.04)); },
+        stop() { const now = c.currentTime; out.gain.cancelScheduledValues(now); out.gain.setValueAtTime(out.gain.value, now); out.gain.linearRampToValueAtTime(0, now + 0.08); os.forEach((o) => { try { o.stop(now + 0.12); } catch { /* */ } }); after(200, () => { try { out.disconnect(); } catch { /* */ } }); if (pulse === me) pulse = null; },
+      };
+      pulse = me;
+      return me;
+    },
     // Ритм: hits — [время с, вид удара (perc.js), сила]; notes — [время, midi | [midi], длит., сила]; marks — [время, fn]
     // Удары — по часам контекста (точно), ноты и подсветка — через часы звука, с тем же упреждением
     play({ hits = [], notes = [], marks = [] } = {}) {

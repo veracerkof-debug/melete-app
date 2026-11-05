@@ -43,6 +43,8 @@ chords: `
 <p>Major and minor differ by one note — the third. A [[sus|sus chord]] has no third at all; a fourth takes its place (Csus4: C–F–G). It sounds open, neither major nor minor.</p>
 <p>In the major scale there are major triads on degrees I, IV and V, minor ones on II, III and VI, and a diminished one on VII. In C major: C, Dm, Em, F, G, Am, B°.</p>
 ${lab('triads')}
+<p><b>A chord on the circle.</b> Lay the twelve semitones around a circle like a clock, and a chord becomes a shape. Major is steps of 4 and 3 semitones, minor 3 and 4: mirror-image triangles. The augmented triad splits the circle into three equal parts (4 + 4), the diminished seventh into four (3 + 3 + 3) — that is why there are so few of them and they sound “at home nowhere”. Build a chord by tapping notes — the circle names it.</p>
+${lab('chroma')}
 <h3>Inversions</h3>
 <p>The notes of a chord can be rearranged. With the root at the bottom it is root position. With the third at the bottom it is the first [[inversion|inversion]]; with the fifth, the second. Song charts write this with a slash: C/E is C major with E in the bass, C/G is C major with G in the bass. Classical theory gives inversions their own names: the [[sixth|sixth chord]] (third at the bottom) and the six-four chord (fifth at the bottom). Inversions let chords move into each other smoothly, without needless leaps.</p>
 ${lab('chord')}
@@ -73,6 +75,8 @@ scales: `
 <p>Playing the white keys from C to C gives major. Playing the same white keys from D to D gives another [[mode|mode]], Dorian. From E it is Phrygian, from F Lydian, from G Mixolydian, from A Aeolian (natural minor), from B Locrian. The notes are the same; the main note changes — and with it the mood.</p>
 <p>It is simpler to think of it this way: a mode is major or minor with one changed degree. Dorian is minor with a raised sixth degree. Lydian is major with a raised fourth (♯4). Mixolydian is major with a lowered seventh (♭7).</p>
 ${lab('scale')}
+<p><b>A scale on the circle.</b> On the same circle a scale is a polygon, and its structure is the steps around it: whole, whole, half… Rotate the shape and you get the same scale from another note; the modes of one scale are the same shape started from another corner. Symmetric scales show at once: whole-tone is a regular hexagon, diminished an octagon of alternating steps.</p>
+${lab('chromascale')}
 <h3>The brightness ladder</h3>
 <p>The seven modes can be arranged from the brightest to the darkest. At the top is Lydian, below it Ionian (major), Mixolydian, Dorian, Aeolian, Phrygian, and Locrian at the bottom. With each step down, one degree drops a semitone — and the sound grows darker. The five middle modes share degrees I, IV and V — these are the [[tonalDeg|tonal degrees]], the support of the mode.</p>
 ${lab('bright')}

@@ -157,7 +157,7 @@ export function createBook(ctx, L, { save }) {
     const lab = LABS[el.dataset.lab]; if (!lab) return;
     // настройка урока (data-cfg) — поверх исходного состояния схемы
     if (!states.has(el.dataset.k)) states.set(el.dataset.k, Object.assign(JSON.parse(JSON.stringify(lab.st)), el.dataset.cfg ? JSON.parse(decodeURIComponent(el.dataset.cfg)) : {}));
-    try { el.innerHTML = lab.render(states.get(el.dataset.k)); } catch (e) { ctx.log('учебник: схема ' + el.dataset.lab + ' — ' + (e && e.message), 'w'); el.innerHTML = ''; }
+    try { el.innerHTML = lab.render(states.get(el.dataset.k)); if (lab.mounted) lab.mounted(states.get(el.dataset.k), el); } catch (e) { ctx.log('учебник: схема ' + el.dataset.lab + ' — ' + (e && e.message), 'w'); el.innerHTML = ''; }
     if (focus) { const f = el.querySelector('[data-in="' + focus + '"]'); if (f) { f.focus(); try { f.setSelectionRange(f.value.length, f.value.length); } catch { /* select */ } } }
   }
   const coerce = (old, v) => (typeof old === 'number' ? +v : v);
@@ -204,6 +204,8 @@ export function createBook(ctx, L, { save }) {
         if (sb) { const k = sb.parentElement.dataset.seg; st[k] = coerce(st[k], sb.dataset.v); if (lab.set) lab.set(st, k); drawLab(el); return; }
         const key = t.closest('[data-midi]');
         if (key) { if (ctx.audio.unlock()) ctx.audio.playNote(+key.dataset.midi, { bus: 'theory', dur: 1 }); if (lab.tap && lab.tap(st, +key.dataset.midi) !== false) { drawLab(el); return; } key.classList.add('hit'); setTimeout(() => key.classList.remove('hit'), 250); return; }
+        const cp = t.closest('[data-cpc]'); // нота хроматического круга (labs8.js)
+        if (cp) { if (lab.on(st, 'cpc:' + cp.dataset.cpc, el) !== false) drawLab(el); return; }
         const ci = t.closest('[data-ci]');
         if (ci) { if (lab.on(st, 'ci:' + ci.dataset.ci + (ci.dataset.min ? ':m' : ''), el) !== false) drawLab(el); return; }
         const a = t.closest('[data-a]');

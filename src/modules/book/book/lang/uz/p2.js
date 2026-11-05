@@ -99,6 +99,8 @@ ${lab('ivmode')}
 <p>[[triad|Uchtovushlar]]: major (K3 + k3), minor (k3 + K3), kamaytirilgan (k3 + k3) va orttirilgan (K3 + K3). Ularning tovushlari asosiy ton (prima), tersiya toni va kvinta toni deb ataladi. Alohida — [[sus|sus-akkordlar]], ularda tersiya oʻrnida kvarta turadi: ochiq yangraydi va na majorga, na minorga intiladi. Har bir uchtovush turining oʻz xarakteri bor: major — kuch va yorugʻlik, minor — gʻam va oʻy, kamaytirilgan — xavotir, orttirilgan — «tuman», sehrlanganlik.</p>
 <p>Major pogʻonalarida major uchtovushlar (I, IV, V), minorlar (II, III, VI) va bitta kamaytirilgan (VII) turadi. Garmonik minorda — I va IV da minor, V va VI da major, II va VII da kamaytirilgan, III da orttirilgan: aynan koʻtarilgan VII pogʻona major dominantani va orttirilgan uchtovushni beradi. Kamaytirilgan va orttirilgan uchtovushlar beqaror va tonikaga intiladi.</p>
 ${lab('triads')}
+<p><b>Doiradagi akkord.</b> Oʻn ikki yarim tonni soat kabi doira boʻylab joylashtiring — akkord shaklga aylanadi. Major — 4 va 3 yarim ton qadamlari, minor — 3 va 4: koʻzgudagi uchburchaklar. Orttirilgan uchtovush doirani uch teng qismga boʻladi (4 + 4), kamaytirilgan septakkord — toʻrtga (3 + 3 + 3). Akkordni notalarga teginib yigʻing — doira uni oʻzi nomlaydi.</p>
+${lab('chroma')}
 <h3>Aylanmalar</h3>
 <p>Asosiy koʻrinishda asos pastda. [[inversion|Birinchi aylanmada]] pastda tersiya, ikkinchisida — kvinta, uchinchisida (septakkordda) — septima. Klassik garmoniyada aylanmalarning oʻz nomlari va raqamlanishi bor — basdan intervallar boʻyicha: uchtovush 5/3, [[sixth|sekstakkord]] 6 (pastda tersiya), kvartsekstakkord 6/4 (pastda kvinta); septakkordda — kvintsekstakkord 6/5, terskvartakkord 4/3 va sekundakkord 2. Jazda xuddi shu narsa qiya chiziq bilan yoziladi: C/E — do major sekstakkordi, C/G — kvartsekstakkord. Aylanmalar ovozlar silliq yurishi va bas chiziqlari uchun kerak.</p>
 ${lab('chord')}
@@ -146,6 +148,8 @@ ${two('Levayn', 'Ota-ona gammalar uchta emas, [[parent4|toʻrtta]]: major, melod
 <h3>Major ladlari</h3>
 <p>C-major tovushlari D dan D gacha chalinsa, doriy [[mode|lad]] chiqadi, E dan — frigiy va hokazo. Tovushlar oʻsha, markaz oʻzgaradi — xarakter ham. Ladni bitta pogʻonasi oʻzgargan major yoki minor deb oʻylash qulayroq: doriy — katta sekstali minor, lidiy — ♯4 li major, miksolidiy — ♭7 li major. Xalq musiqasida bu ladlar jazdan ancha oldin yashagan va xarakterli pogʻonalarning oʻz nomlari bor: doriy seksta, frigiy sekunda, lidiy kvarta, miksolidiy septima.</p>
 ${lab('scale')}
+<p><b>Doiradagi gamma.</b> Oʻsha doirada gamma — koʻpburchak, uning tuzilishi — doira boʻylab qadamlar: ton, ton, yarim ton… Shaklni burib, oʻsha gammani boshqa notadan olasiz. Simmetrik gammalar darhol koʻrinadi: butun tonli — muntazam oltiburchak, kamaytirilgan — sakkizburchak.</p>
+${lab('chromascale')}
 <h3>Yorqinlik zinapoyasi</h3>
 <p>Bitta asosdan yettita lad yorqinlik boʻyicha joylashtiriladi: lidiydan lokriygacha har keyingisi aniq bitta pogʻonani pasaytiradi. Zinapoya pogʻonalarini bosib, yorugʻlik bir notadan qanday ketishini tinglash mumkin. Beshta oʻrta ladda — ioniy, doriy, frigiy, miksolidiy, eoliyda — 1, 4 va 5 pogʻonalar bir xil: bular [[tonalDeg|tonal pogʻonalar]], tayanch; 2, 3, 6 va 7 oʻzgaradi va ladni belgilaydi. Lidiy (♯4) va lokriy (♭5) bu tayanchni buzadi — shuning uchun ular zinapoyaning eng «chetida», oʻrtasi esa — doriy.</p>
 ${lab('bright')}

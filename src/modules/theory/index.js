@@ -13,6 +13,7 @@ import { chordsOf, familiesOf, ladderOf, degreesOf, colorNote, familyOfType, par
 import { chroma } from '../../music/analyze.js';
 import { keyShift, keyTo, diatonic, transposeLine, capoOptions } from '../../music/keycalc.js';
 import { tonicName, keyLabel } from '../../music/transpose.js';
+import { chromaSVG, chordSteps } from '../../ui/chroma.js';
 
 import meta, { ICON } from './meta.js';
 const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals'];
@@ -183,26 +184,11 @@ const STEP_SHORT = { 1: 'stp.1', 2: 'stp.2', 3: 'stp.3', 4: 'stp.4' };
 // между соседними — шаг (п, т, 1½); тоника — крупнее; нота, отличающая лад от мажора или минора, — в кольце.
 // Касание ноты гаммы — лад от этой ноты (те же ноты, другой центр)
 function ringSVG(sc, k) {
-  const { t } = ctx, C = 120, R = 86, ang = (x) => ((x * 30 - 90) * Math.PI) / 180, P = (r, x) => [C + r * Math.cos(ang(x)), C + r * Math.sin(ang(x))];
-  const f = (n) => n.toFixed(1), c = colorNote(sc.type), colorSet = new Set(c ? k.pcs.filter((p, i) => c.notes.includes(k.degs[i])) : []);
-  const name = (p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : SH[p]; };
-  let s = '<svg viewBox="0 0 240 240" class="sring" role="group" aria-label="' + ctx.ui.esc(k.root + ' ' + scaleName(sc.type)) + '">';
-  s += '<circle cx="' + C + '" cy="' + C + '" r="' + R + '" class="sr-base"/>';
-  // многоугольник гаммы
-  s += '<polygon class="sr-poly" points="' + k.pcs.map((p) => P(R, p).map(f).join(',')).join(' ') + '"/>';
-  // шаги между соседними нотами
-  k.pcs.forEach((p, i) => {
-    const st = k.steps[i], mid = p + st / 2, [x, y] = P(R - 24, mid);
-    s += '<text x="' + f(x) + '" y="' + f(y) + '" class="sr-step' + (st === 1 ? ' h' : st >= 3 ? ' w' : '') + '" text-anchor="middle" dominant-baseline="central">' + t(STEP_SHORT[st] || 'stp.2') + '</text>';
-  });
-  for (let p = 0; p < 12; p++) {
-    const inS = k.pcs.includes(p), [x, y] = P(R, p), [lx, ly] = P(R + 20, p), root = p === k.rootPc;
-    s += '<g class="sr-n' + (inS ? ' on' : '') + (root ? ' r' : '') + (colorSet.has(p) ? ' c' : '') + '" data-x="sring" data-pc="' + p + '" role="button" aria-label="' + name(p) + '">' +
-      '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + (root ? 11 : inS ? 8.5 : 3.5) + '"/>' +
-      (inS ? '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="middle" dominant-baseline="central" class="sr-d">' + k.degs[k.pcs.indexOf(p)].replace(/[♭♯]/g, '') + '</text>' : '') +
-      '<text x="' + f(lx) + '" y="' + f(ly) + '" text-anchor="middle" dominant-baseline="central" class="sr-l">' + name(p) + '</text></g>';
-  }
-  return s + '<text x="' + C + '" y="' + (C - 6) + '" text-anchor="middle" class="sr-c1">' + k.root + '</text><text x="' + C + '" y="' + (C + 13) + '" text-anchor="middle" class="sr-c2">' + scaleName(sc.type) + '</text></svg>';
+  // тот же хроматический круг, что у аккордов (ui/chroma.js): фигура гаммы, шаги внутри, ступени в кружках
+  const name = (p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : SH[p]; }, c = colorNote(sc.type);
+  const mark = new Set(c ? k.pcs.filter((p, i) => c.notes.includes(k.degs[i])) : []);
+  return '<div class="srwrap">' + chromaSVG({ pcs: k.pcs, name, mark, sub: (p) => k.degs[k.pcs.indexOf(p)], steps: 'scale', stepTxt: (st) => ctx.t(STEP_SHORT[st] || 'stp.2'),
+    center: [k.root, ctx.ui.esc(scaleName(sc.type))], label: ctx.ui.esc(k.root + ' ' + scaleName(sc.type)), cls: 'sring' }) + '</div>';
 }
 function schemeHTML(sc) {
   const { t, ui } = ctx, th = TH(), k = scaleInfo(sc.pc, sc.type), fam = familyOfType(sc.type), vw = th.sview || 'rel';
@@ -281,8 +267,17 @@ function chordsHTML() {
   }
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (k.pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
     '<div class="hscroll">' + CHORDS.map((c) => '<button class="pill" data-x="ctype" data-v="' + c[0] + '" aria-pressed="' + (c[0] === k.id) + '" aria-label="' + ui.esc(t('chord.' + c[0])) + '">' + (c[1] || 'maj') + '</button>').join('') + '</div>' +
-    '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + fretHTML(new Set(k.pcs), k.pc, 15) +
+    '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + chordCircle(k, desc) + fretHTML(new Set(k.pcs), k.pc, 15) +
     '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) + '</div>' + bookLink('chords') + '</div>';
+}
+
+// Аккорд на хроматическом круге: фигура, шаги дугами («+4», «+3»), формула «4 + 3 = мажорное трезвучие»; касание
+// ноты — звук ноты, середины круга — аккорд (слово автора 05.11.2026)
+function chordCircle(k, desc) {
+  const nameOf = (p) => { const i = k.pcs.indexOf(p); return i >= 0 ? k.notes[i] : SH[p]; }, sub = (p) => k.form[k.pcs.indexOf(p)];
+  const st = chordSteps(k.pcs);
+  return '<div class="crwrap" data-x="cplay">' + chromaSVG({ pcs: k.pcs, name: nameOf, sub, steps: 'chord', center: [k.name, ''], label: k.name }) + '</div>' +
+    '<div class="crform"><span>' + st.join(' + ') + ' = ' + ctx.ui.esc(desc) + '</span></div>';
 }
 
 /* ---------- интервалы ---------- */
@@ -527,6 +522,11 @@ function bind() {
     if (km) { KC().from.minor = km.dataset.v === '1'; ctx.store.save(); render(); return; }
     const sv = e.target.closest('[data-seg="sview"] [data-v]');
     if (sv) { TH().sview = sv.dataset.v; ctx.store.save(); render(); return; }
+    // нота аккорда на хроматическом круге — её звук (середина круга — весь аккорд, data-x="cplay" обёртки)
+    const sn = e.target.closest('.srwrap [data-cpc]');
+    if (sn) { act('sring', { dataset: { pc: sn.dataset.cpc } }); return; }
+    const cn = e.target.closest('.crwrap [data-cpc]');
+    if (cn) { const th = TH(), k = chordInfo(th.croot || 0, th.ctype), i = k.pcs.indexOf(+cn.dataset.cpc); if (i >= 0 && ctx.audio.unlock()) ctx.audio.playSeq([k.midis[i]], { step: 0.6 }); return; }
     const x = e.target.closest('[data-x]');
     if (x) act(x.dataset.x, x);
   };

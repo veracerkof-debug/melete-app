@@ -2,6 +2,7 @@
 // base.js — строки схем и оболочки, названия (интервалы, аккорды, гаммы) и общий словарь терминов; главы — в pN.js по частям.
 export default {
   S: {
+    'cr.more': "At least three notes needed", 'cr.none': "No such chord in the reference", 'cr.play': "Chord", 'cr.arp': "One by one", 'cr.reset': "Reset", 'cr.hint': "Tap a note on the circle to add or remove it: the circle names the chord.", 'cr.st1': "H", 'cr.st2': "W", 'cr.st3': "1½", 'cr.st4': "2", 'pu.title': "When rhythm becomes a note", 'pu.ratio': "Ratio", 'pu.rhythm': "Rhythm", 'pu.note': "Note", 'pu.hz': "Hz", 'pu.hits': "beats per second", 'pu.speed': "Speed", 'pu.play': "Listen", 'pu.stop': "Stop", 'pu.hint': "Move the slider right: the beats get faster — past 20 per second they merge into a tone, and the same numbers sound as a chord.", 'cr.r.fifth': "fifth", 'cr.r.fourth': "fourth", 'cr.r.third': "major third", 'cr.r.major': "major triad", 'cr.r.minor': "minor triad", 'cr.r.octave': "octave",
     'bk.title': 'Textbook', 'bk.lead': 'Two sections: classical theory as taught at music school, and jazz theory. Examples sound; terms in the text are links: a tap opens the definition.',
     'bk.part6': 'Jazz foundations', 'bk.sec.school': 'Classical theory', 'bk.sec.jazz': 'Jazz theory', 'bk.secs': 'Textbook section',
     'bk.sub.school': 'Fundamentals and harmony as taught at music school: notes, rhythm, mode, intervals, chords, keys.', 'bk.sub.jazz': 'Jazz harmony and language: seventh chords and modes, ii–V–I, voicings, reharmonisation, improvisation, forms, Latin.',

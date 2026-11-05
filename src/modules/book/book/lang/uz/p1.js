@@ -122,6 +122,8 @@ export const CH = [
 <h3>Obertonlar</h3>
 <p>Tor, truba yoki ovoz tovushi — bitta chastota emas. Asosiy ton bilan birga qoʻshimcha tovushlar — [[overtone|obertonlar]] — yangraydi, ularning chastotasi 2, 3, 4 va undan koʻp marta yuqori. Alohida ular deyarli eshitilmaydi, lekin ularning aralashmasi skripkani fleytadan ajratadi: bu tembrning oʻzi. Obertonlar qatori doim bir xil: oktava, kvinta, kvarta, katta tersiya, kichik tersiya, keyin esa intervallar tobora maydalashadi. Qatorning birinchi olti tovushi major uchtovushni hosil qiladi — tabiatning oʻzi eng barqaror akkordni koʻrsatadi.</p>
 ${lab('overtones')}
+<p><b>Ritm notaga aylanganda.</b> Balandlik va ritm — turli tezlikdagi bitta hodisa. Uchta puls bir xil vaqtda 4, 5 va 6 marta ursin: sekin bu poliritm, uni qoʻl bilan chalish mumkin. Tezlashtirsangiz, soniyasiga taxminan 20 zarbada quloq alohida zarbalarni ajratmay qoʻyadi va tonni eshitadi — 4 : 5 : 6 nisbati esa major uchtovush boʻlib yangraydi, yuqoridagi obertonlar beradigan oʻsha akkord. 2 : 3 — kvinta, 3 : 4 — kvarta, 1 : 2 — oktava: ritmdagi oddiy sonlar — garmoniyadagi oddiy intervallar.</p>
+${lab('pulse')}
 <h3>Nota yoʻli</h3>
 <p>Notalar [[staff|nota yoʻliga]] — pastdan yuqoriga sanaladigan besh parallel chiziqqa yoziladi. Nota chiziqda yoki chiziqlar orasida turadi; nota yoʻlidan yuqori va pastda u qisqa qoʻshimcha chiziqlarga qoʻyiladi. Nota nota yoʻlida qancha baland tursa, tovush shuncha baland. Yarimtalik, chorak va undan qisqa notalarning tayoqchasi bor: uchinchi chiziqdan pastdagi notalarda u kallakning oʻng tomonidan yuqoriga, uchinchi chiziq va undan yuqoridagilarda — chap tomonidan pastga yoʻnaladi.</p>
 <h3>Tovushlar nomi</h3>

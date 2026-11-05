@@ -11,6 +11,8 @@ sound: `
 <h3>Overtones</h3>
 <p>A string does not sound as one single tone. Along with the main sound, quiet extra sounds ring out — [[overtone|overtones]], 2, 3 or 4 times higher. Their mix makes the timbre: this is why a violin does not sound like a flute. The first overtones together form a major chord — the most stable chord in music.</p>
 ${lab('overtones')}
+<p><b>When rhythm becomes a note.</b> Pitch and rhythm are one phenomenon at different speeds. Let three pulses beat 4, 5 and 6 times in the same span: slowly it is a polyrhythm you can tap with your hands. Speed it up, and around 20 beats per second the ear stops hearing separate beats and hears a tone — and the ratio 4 : 5 : 6 sounds as a major triad, the same one the overtones give above. 2 : 3 is a fifth, 3 : 4 a fourth, 1 : 2 an octave: simple numbers in rhythm are simple intervals in harmony.</p>
+${lab('pulse')}
 <h3>The staff</h3>
 <p>Notes are written on the [[staff|staff]] — five lines counted from the bottom up. A note sits on a line or in a space between lines; very high and very low notes get short extra lines called ledger lines. The higher the note, the higher the sound. The thin line attached to a note is the stem: on low notes it points up, on high notes it points down.</p>
 <h3>Note names</h3>

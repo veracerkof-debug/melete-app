@@ -43,6 +43,8 @@ chords: `
 <p>Major va minor bitta nota — tersiya bilan farq qiladi. [[sus|Sus-akkordda]] tersiya umuman yoʻq, uning oʻrnida kvarta turadi (Csus4: do–fa–sol). U ochiq yangraydi, na major, na minor.</p>
 <p>Major gammada I, IV va V pogʻonalarda major uchtovushlar, II, III va VI da — minorlar, VII da — kamaytirilgan turadi. Do majorda: C, Dm, Em, F, G, Am, B°.</p>
 ${lab('triads')}
+<p><b>Doiradagi akkord.</b> Oʻn ikki yarim tonni soat kabi doira boʻylab joylashtiring — akkord shaklga aylanadi. Major — 4 va 3 yarim ton qadamlari, minor — 3 va 4: koʻzgudagi uchburchaklar. Orttirilgan uchtovush doirani uch teng qismga boʻladi (4 + 4), kamaytirilgan septakkord — toʻrtga (3 + 3 + 3). Akkordni notalarga teginib yigʻing — doira uni oʻzi nomlaydi.</p>
+${lab('chroma')}
 <h3>Aylanmalar</h3>
 <p>Akkord tovushlarining oʻrnini almashtirish mumkin. Pastda asos boʻlsa — bu asosiy koʻrinish. Pastda tersiya boʻlsa — birinchi [[inversion|aylanma]], kvinta boʻlsa — ikkinchisi. Qoʻshiq toʻplamlarida bu qiya chiziq bilan yoziladi: C/E — basda mi bilan do major, C/G — basda sol bilan. Klassik nazariyada aylanmalarning oʻz nomlari bor: [[sixth|sekstakkord]] (pastda tersiya) va kvartsekstakkord (pastda kvinta). Aylanmalar akkordlar bir-biriga ortiqcha sakrashlarsiz, ravon oʻtishi uchun kerak.</p>
 ${lab('chord')}
@@ -73,6 +75,8 @@ scales: `
 <p>Oq klavishlar do dan do gacha chalinsa, major chiqadi. Oʻsha oq klavishlar re dan re gacha chalinsa — boshqa [[mode|lad]], doriy chiqadi. Mi dan — frigiy, fa dan — lidiy, sol dan — miksolidiy, lya dan — eoliy (tabiiy minor), si dan — lokriy. Tovushlar oʻsha, bosh nota oʻzgaradi — u bilan kayfiyat ham.</p>
 <p>Bunday oʻylash osonroq: lad — bitta pogʻonasi oʻzgargan major yoki minor. Doriy — oltinchi pogʻonasi baland minor. Lidiy — toʻrtinchisi koʻtarilgan major (♯4). Miksolidiy — yettinchisi pasaytirilgan major (♭7).</p>
 ${lab('scale')}
+<p><b>Doiradagi gamma.</b> Oʻsha doirada gamma — koʻpburchak, uning tuzilishi — doira boʻylab qadamlar: ton, ton, yarim ton… Shaklni burib, oʻsha gammani boshqa notadan olasiz. Simmetrik gammalar darhol koʻrinadi: butun tonli — muntazam oltiburchak, kamaytirilgan — sakkizburchak.</p>
+${lab('chromascale')}
 <h3>Yorqinlik zinapoyasi</h3>
 <p>Yettita ladni eng yorugʻidan eng qorongʻisigacha tizish mumkin. Yuqorida lidiy, pastroqda ioniy (major), miksolidiy, doriy, eoliy, frigiy va eng pastda lokriy. Har bir qadam pastga bitta pogʻona yarim tonga pasayadi — va yangrash qorongʻilashadi. Beshta oʻrta ladning I, IV va V pogʻonalari bir xil — bular [[tonalDeg|tonal pogʻonalar]], lad tayanchi.</p>
 ${lab('bright')}

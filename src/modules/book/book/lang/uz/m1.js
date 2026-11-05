@@ -11,6 +11,8 @@ sound: `
 <h3>Obertonlar</h3>
 <p>Tor bitta tovush bilan yangramaydi: asosiy tovush bilan birga ohista qoʻshimcha tovushlar — [[overtone|obertonlar]] — yangraydi, ular 2, 3, 4 marta yuqori. Ularning aralashmasi tembrni hosil qiladi: shuning uchun skripka fleytaga oʻxshamaydi. Birinchi obertonlar birga major akkordni beradi — musiqadagi eng barqaror akkordni.</p>
 ${lab('overtones')}
+<p><b>Ritm notaga aylanganda.</b> Balandlik va ritm — turli tezlikdagi bitta hodisa. Uchta puls bir xil vaqtda 4, 5 va 6 marta ursin: sekin bu poliritm, uni qoʻl bilan chalish mumkin. Tezlashtirsangiz, soniyasiga taxminan 20 zarbada quloq alohida zarbalarni ajratmay qoʻyadi va tonni eshitadi — 4 : 5 : 6 nisbati esa major uchtovush boʻlib yangraydi, yuqoridagi obertonlar beradigan oʻsha akkord. 2 : 3 — kvinta, 3 : 4 — kvarta, 1 : 2 — oktava: ritmdagi oddiy sonlar — garmoniyadagi oddiy intervallar.</p>
+${lab('pulse')}
 <h3>Nota yoʻli</h3>
 <p>Notalar [[staff|nota yoʻliga]] yoziladi — bu pastdan yuqoriga sanaladigan besh chiziq. Nota chiziqda yoki chiziqlar orasida turadi; juda baland va past notalar uchun qisqa qoʻshimcha chiziqlar chiziladi. Nota qancha baland tursa, tovush shuncha baland. Notadagi tayoqcha past notalarda yuqoriga, baland notalarda pastga qaraydi.</p>
 <h3>Tovushlar nomi</h3>

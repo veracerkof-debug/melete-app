@@ -198,3 +198,24 @@ test('учебник: уровни — новичку «Первые шаги»,
   void errors;
 });
 
+
+// Хроматический круг и «ритм становится нотой» (05.11.2026): аккорд собирается касанием нот, круг называет его;
+// пульсы 4:5:6 — ползунок ведёт от ударов к тону (подпись в Гц и нотах)
+test('учебник: аккорд на круге и ритм → нота', async ({ page, melete, errors }) => {
+  await melete.open();
+  await open(melete, page, 'book', { book: { ch: 'chords' } });
+  const cr = page.locator('.blab[data-lab="chroma"]');
+  await cr.scrollIntoViewIfNeeded();
+  await expect(cr.locator('.crform')).toContainText('4 + 3');
+  await cr.locator('[data-cpc="11"]').click();
+  await expect(cr.locator('.crform')).toContainText('4 + 3 + 4');
+  await open(melete, page, 'book', { book: { ch: 'sound' } });
+  const pu = page.locator('.blab[data-lab="pulse"]');
+  await pu.scrollIntoViewIfNeeded();
+  await pu.locator('[data-a="go"]').click();
+  await expect(pu.locator('.pu-rate')).toContainText('ударов');
+  await pu.locator('[data-pu]').fill('0.8');
+  await expect(pu.locator('.pu-rate')).toContainText('Гц');
+  await pu.locator('[data-a="stop"]').click();
+  expect(errors).toEqual([]);
+});

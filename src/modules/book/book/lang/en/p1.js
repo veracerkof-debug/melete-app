@@ -123,6 +123,8 @@ export const CH = [
 <h3>Overtones</h3>
 <p>The sound of a string, a trumpet or a voice is not a single frequency. Together with the fundamental sound partials — [[overtone|overtones]] — at 2, 3, 4 and more times its frequency. Separately they are hardly audible, but their mix is what tells a violin from a flute: this is timbre. The overtone series is always the same: octave, fifth, fourth, major third, minor third, then ever smaller intervals. The first six notes of the series form a major triad — nature itself suggests the most stable chord.</p>
 ${lab('overtones')}
+<p><b>When rhythm becomes a note.</b> Pitch and rhythm are one phenomenon at different speeds. Let three pulses beat 4, 5 and 6 times in the same span: slowly it is a polyrhythm you can tap with your hands. Speed it up, and around 20 beats per second the ear stops hearing separate beats and hears a tone — and the ratio 4 : 5 : 6 sounds as a major triad, the same one the overtones give above. 2 : 3 is a fifth, 3 : 4 a fourth, 1 : 2 an octave: simple numbers in rhythm are simple intervals in harmony.</p>
+${lab('pulse')}
 <h3>The staff</h3>
 <p>Notes are written on the [[staff|staff]] — five parallel lines counted from the bottom up. A note sits on a line or in a space; above and below the staff it goes on short ledger lines. The higher the note on the staff, the higher the sound. Half notes, quarters and shorter values have a stem: below the third line it goes up on the right of the notehead, on the third line and above it goes down on the left.</p>
 <h3>Note names</h3>
