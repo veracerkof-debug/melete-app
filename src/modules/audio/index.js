@@ -850,6 +850,19 @@ function songTitles(t, except) {
   return fileSongs(t).map((id) => all.find((s) => s.id === id)).filter(Boolean).filter((s) => s.id !== except).map((s) => esc(s.title));
 }
 
+// Соседняя запись в том же порядке, что в списке медиатеки (сортировка и поиск), по кругу; играет сразу.
+// Метроном и пэды не трогаются — идут дальше вместе с записью
+function remoteStep(d) {
+  let list = tracks().slice();
+  if (ML.q) { const q = foldQ(ML.q); list = list.filter((x) => foldQ(x.name).includes(q)); }
+  const so = { date: (a, b) => (b.created || 0) - (a.created || 0), name: (a, b) => a.name.localeCompare(b.name, ctx.lang()), size: (a, b) => (b.size || 0) - (a.size || 0), dur: (a, b) => (b.dur || 0) - (a.dur || 0) };
+  list.sort(so[ML.sort] || so.date);
+  if (!list.length) return;
+  const i = AU.cur ? list.findIndex((x) => x.id === AU.cur.id) : -1, x = list[(i + d + list.length) % list.length];
+  load(x); playEl();
+  if (host) render();
+}
+
 function libHTML() {
   const { t, tn } = ctx;
   let list = tracks().slice();
@@ -1631,6 +1644,8 @@ export default {
   drop(fs) { if (host) onFile({ target: { files: fs } }); else dropped = fs; },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    // пульт снаружи (браслет, часы, наушники — core/player.js): название записи и соседняя запись в порядке списка
+    if (c.remote) c.remote({ title: () => (AU.cur && !pl().paused ? String(AU.cur.name || '').replace(/\.[a-z0-9]{2,5}$/i, '') : null), next: () => remoteStep(1), prev: () => remoteStep(-1) });
     { const a = c.store.all(); if (a.sortOnce) { ML.sort = a.sortOnce; delete a.sortOnce; c.store.save(); } } // «Освободить место» — крупные сверху
     ensureEl(c);
     input = document.createElement('input');

@@ -179,6 +179,8 @@ export function makeCtx(app, mod) {
     mountTool: (id, el, size = 'half') => { const m = moduleById(id); return m && isOn(app.store.state.settings, id) ? mountModule(app, m, el, size) : null; },
     // Игра любого инструмента (события midi.ev: on / mv / off / ped): fn(id, e); → отписка
     onPlay: (fn) => { (app.playTaps || (app.playTaps = new Set())).add(fn); return () => app.playTaps.delete(fn); },
+    // Пульт снаружи (медиасессия — браслет, часы, наушники; core/player.js): { title() — что звучит или null, next(), prev() }
+    remote: (o) => { (app.remote || (app.remote = {}))[mod.id] = o; },
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)

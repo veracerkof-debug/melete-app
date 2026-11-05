@@ -2047,5 +2047,7 @@
   "remind.chPushy": "qatʼiy",
   "remind.chCal": "taqvim",
   "diag.f.oom": "Tizim ilovani ekranda yopdi: {n}",
-  "diag.h.oom": "Odatda — xotira yetishmasligi (uzun yozuv, konvertatsiya, koʻp ochiq ilovalar). Jurnalda — qancha xotira band boʻlgani."
+  "diag.h.oom": "Odatda — xotira yetishmasligi (uzun yozuv, konvertatsiya, koʻp ochiq ilovalar). Jurnalda — qancha xotira band boʻlgani.",
+  "rm.metro": "Metronom {meter} · {bpm} BPM",
+  "rm.drone": "Pedlar {sound} · {note}"
 }

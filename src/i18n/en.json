@@ -2083,5 +2083,7 @@
   "remind.chPushy": "persistent",
   "remind.chCal": "calendar",
   "diag.f.oom": "Closed by the system while on screen: {n}",
-  "diag.h.oom": "Usually low memory (long recording, conversion, many open apps). The log shows how much memory was in use."
+  "diag.h.oom": "Usually low memory (long recording, conversion, many open apps). The log shows how much memory was in use.",
+  "rm.metro": "Metronome {meter} · {bpm} BPM",
+  "rm.drone": "Pads {sound} · {note}"
 }

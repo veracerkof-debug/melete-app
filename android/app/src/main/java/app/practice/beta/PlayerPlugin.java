@@ -29,6 +29,9 @@ public class PlayerPlugin extends Plugin {
     @Override
     public void load() { inst = this; }
 
+    @Override
+    protected void handleOnDestroy() { MediaCtl.release(); super.handleOnDestroy(); }
+
     static boolean playing() { return state.optBoolean("playing", true); }
     static boolean sounding() { return state.optBoolean("sounding", false); }
     static String label(String k, String def) {
@@ -67,6 +70,7 @@ public class PlayerPlugin extends Plugin {
         Context c = getContext();
         KeepAliveService.refresh(c);
         FloatService.refresh();
+        MediaCtl.update(c, state); // медиасессия: браслет, часы, наушники, педали
         if (!floatOn || !sounding()) c.stopService(new Intent(c, FloatService.class));
         call.resolve();
     }
