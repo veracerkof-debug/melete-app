@@ -2019,6 +2019,7 @@
   "idea.subject": "Melete — idea",
   "idea.thanks": "Thank you for the idea",
   "report.crashWhat": "The app closed unexpectedly",
+  "variant.none": "No variants to choose right now — everything is decided.",
   "variant.title": "Variants",
   "variant.sub": "Development version only",
   "variant.intro": "All variants of new things are here. Testers get only the one the author chose, without a switch.",

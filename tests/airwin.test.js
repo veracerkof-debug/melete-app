@@ -32,7 +32,7 @@ describe('варианты', () => {
     const V = await import('../src/core/variants.js');
     expect(V.DEV).toBe(false);
     V.setVariant({}, 'tabs', 'icons');
-    expect(V.variant('tabs')).toBe('labels');
+    expect(V.variant('tabs')).toBe(null); // подписи вкладок — решено, не вариант
     expect(V.variant('verb')).toBe(null); // ревербы — обычная настройка звука, не вариант
     vi.unstubAllGlobals();
   });

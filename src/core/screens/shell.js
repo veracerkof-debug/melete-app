@@ -41,6 +41,8 @@ export function createShell(app, root) {
   const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
+  // у вкладок — значок и подпись (слово автора 05.11.2026): любой инструмент, перенесённый во вкладки, подписан
+  document.documentElement.classList.add('tablabels');
 
   const tabName = (k) => (TAB_ICONS[k] ? t('nav.' + k) : moduleName(moduleById(k)));
   const renderTabs = () => {

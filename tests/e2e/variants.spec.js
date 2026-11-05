@@ -23,11 +23,10 @@ test('варианты и ревербы Airwindows', async ({ page, melete, err
   // раздел «Варианты» (сборка у себя — канал dev)
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-act="variants"]'); await page.waitForTimeout(400);
-  const seg = page.locator('.sheet [data-seg="var-tabs"]');
-  await expect(seg.locator('[data-v="labels"]')).toHaveAttribute('aria-pressed', 'true');
-  await seg.locator('[data-v="icons"]').click();
-  await expect(seg.locator('[data-v="icons"]')).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.variants')).tabs)).toBe('icons');
+  // подписи вкладок решены (05.11.2026): вариантов нет, вкладки — со значком и подписью
+  await expect(page.locator('.sheet')).toContainText('вариантов на выбор нет');
+  await expect(page.locator('html.tablabels')).toHaveCount(1);
+  await expect(page.locator('.tabbar .tab .tl').first()).toBeVisible();
   // звук пространств — обычная настройка звука (не вариант)
   const al = await page.evaluate(async () => (await import('/src/audio/perf.js')).verbAlgo());
   expect(al).toBe('melete');

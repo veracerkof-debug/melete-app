@@ -470,7 +470,7 @@ function toolSheet() {
   const list = PLAY_TOOLS.filter((id) => ctx.hasTool(id));
   if (!list.length) { ctx.ui.toast(t('err.fail')); return; }
   let cur = list.includes(st().playTool) ? st().playTool : list[0], h = null, tm = 0;
-  // вкладки — значки инструментов, у выбранного — и название (место — полосе записи)
+  // вкладки — значок и название инструмента (слово автора 05.11.2026: и значки, и надписи)
   const tabs = () => list.map((id) => { const x = ctx.midi.tool(id) || { name: id, icon: '' }; return '<button class="lptt' + (id === cur ? ' on' : '') + '" data-tt="' + id + '" aria-pressed="' + (id === cur) + '" aria-label="' + ui.esc(x.name) + '">' + (x.icon || '') + '<span>' + ui.esc(x.name) + '</span></button>'; }).join('');
   const recBtn = () => { const s = parts.capState(); return '<span class="lprdot' + (s ? ' ' + s : '') + '"></span>' + ui.esc(t(s === 'wait' ? 'cap.wait' : s === 'rec' ? 'cap.stop' : 'cap.go')); };
   const mount = (el) => {
