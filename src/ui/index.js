@@ -193,5 +193,21 @@ export function confirm(title, text, yes) {
   });
 }
 
+// Согласие с галочкой: окно не закрывается ни касанием мимо, ни «Назад», пока галочка не поставлена и не нажато «Продолжить»
+export function agree(title, text, check, yes) {
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.className = 'ask agree';
+    d.innerHTML = '<div class="alert" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="ab"><h3>' + esc(title) + '</h3><p>' + esc(text) + '</p>' +
+      '<label class="agchk"><input type="checkbox" data-k="chk"><span>' + esc(check) + '</span></label></div>' +
+      '<div class="abtns"><button data-k="yes" disabled>' + esc(yes) + '</button></div></div>';
+    document.body.appendChild(d);
+    const box = d.querySelector('[data-k="chk"]'), btn = d.querySelector('[data-k="yes"]');
+    box.addEventListener('change', () => { btn.disabled = !box.checked; });
+    btn.addEventListener('click', () => { if (!box.checked) return; leave(d, 160); resolve(true); });
+    box.focus();
+  });
+}
+
 export { loader };
-export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, leave, loader };
+export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, agree, leave, loader };

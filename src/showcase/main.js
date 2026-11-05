@@ -26,7 +26,7 @@ function preseed() {
   const createdAt = new Date(2025, 0, 2).getTime();
   const profile = { name: NAME[lang], instruments: ['guitar', 'vocal'], level: 'amateur', priorHours: 420, createdAt };
   profile.sig = profileSeal(profile);
-  localStorage.setItem(LS, JSON.stringify({ version: 1, songs: [], sessions: [], updatedAt: 0, settings: { configured: true, tosOk: TOS_VER, lang, webHello: true, upOk: 1, profile, goalMin: 300, showcase: true } }));
+  localStorage.setItem(LS, JSON.stringify({ version: 1, songs: [], sessions: [], updatedAt: 0, settings: { configured: true, tosOk: TOS_VER, lang, webHello: true, upOk: 2, profile, goalMin: 300, showcase: true } }));
 }
 
 /* ---------- история занятий (выдуманная, но живая на вид) ---------- */

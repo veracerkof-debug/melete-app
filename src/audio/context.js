@@ -5,6 +5,7 @@ import { makeSpace, loadReverbWorklet, SPACES, SPACE_DEF } from './spaces.js';
 export { SPACES, SPACE_DEF };
 import { loadAirWorklet } from './airsound.js';
 import { installClock } from './clock.js';
+import { log } from '../core/log.js';
 
 // Режим звука: 'fast' — быстрый отклик, 'bal' — баланс, 'smooth' — без треска
 const LATENCY = { fast: 'interactive', bal: 'balanced', smooth: 'playback' };
@@ -36,6 +37,15 @@ export function getContext(mode = 'bal') {
     ctxKind = outKind || 'phone';
     loadAirWorklet(ctx); // движок воздушных голосов (airsound.js) — грузится сразу, ноты до готовности идут узлами
     installClock(ctx); // часы звука для планировщиков — не засыпают при погашенном экране (clock.js)
+    // Система может заморозить звук (звонок, другой проигрыватель, долго в фоне): в журнал и сразу оживить — кнопки
+    // в приложении показывают «звучит», значит должно звучать. Пауза из шторки (held) — не трогать
+    const c0 = ctx;
+    c0.addEventListener('statechange', () => {
+      if (ctx !== c0) return;
+      const st = c0.state;
+      log('audio', 'контекст: ' + st + (held ? ' (пауза из шторки)' : '') + (typeof document !== 'undefined' && document.hidden ? ', в фоне' : ''));
+      if (st !== 'running' && st !== 'closed' && !held) setTimeout(() => { if (ctx === c0 && c0.state !== 'running' && !held) c0.resume().then(() => log('audio', 'контекст снова идёт'), (e) => log('audio', 'контекст не оживает: ' + (e && e.name), 'w')); }, 400);
+    });
     // Компрессор — только ловить пики, без пережатия: мягкое колено, низкая степень. У компрессора Web Audio есть
     // скрытое усиление (makeup): чем ниже порог, тем сильнее он поднимает всё и упирается в 0 dBFS — отсюда искажения
     // на большой громкости. Порог выше, а после него — запас (trim), чтобы выход не клиппило
@@ -56,8 +66,12 @@ export function getContext(mode = 'bal') {
 // «играть» в приложении (release)
 let held = false;
 export const isHeld = () => held;
+const holdSubs = new Set();
+export const onHold = (fn) => { holdSubs.add(fn); return () => holdSubs.delete(fn); };
 export function hold(on) {
+  const was = held;
   held = !!on;
+  if (was !== held) holdSubs.forEach((fn) => { try { fn(held); } catch (e) { (globalThis.reportError || console.error)(e); } });
   const c = peekContext();
   if (!c || c.state === 'closed') return;
   (held ? c.suspend() : c.resume()).catch(() => {});

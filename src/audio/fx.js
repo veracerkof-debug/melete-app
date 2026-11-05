@@ -34,7 +34,7 @@ export const advancedBands = () => [band('highpass', 40, 0.7, false), band('lows
 // Полный набор настроек (всё в нуле — прозрачно)
 export const FX_DEF = () => ({
   mode: null, simple: simpleBands(), adv: advancedBands(),
-  comp: 0, drive: 0, trem: 0, tremRate: 5, tremShape: 'wave', tremDiv: 'free', delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, chorusType: 'chorus', rev: 0, revType: 'hall',
+  comp: 0, drive: 0, trem: 0, tremRate: 5, tremShape: 'wave', tremDiv: 'free', tremSoft: 0.5, delay: 0, delayTime: 0.3, delayFb: 0.35, chorus: 0, chorusType: 'chorus', rev: 0, revType: 'hall',
 });
 export const FX_KEYS = ['comp', 'drive', 'trem', 'delay', 'chorus', 'rev']; // силы 0…1
 // Тремоло — «волна» громкости (автор 29.10.2026): форма — плавная волна или пульс (мягко обрывается и возвращается);
@@ -53,15 +53,19 @@ const syncWatch = () => {
   else if (!synced.size && syncTm) { cancel(syncTm); syncTm = 0; }
 };
 // Пульс: мягкий прямоугольник (нечётные гармоники с убыванием) — громкость держится, коротко обрывается и
-// возвращается без щелчка; одна волна на контекст
+// возвращается без щелчка. Мягкость (tremSoft, 0…1): 0 — края резкие («выключатель»), 1 — почти волна; по умолчанию 0,5 —
+// как было. Волны — на контекст и шаг мягкости (21 вид)
 const pulses = new WeakMap();
-function pulseWave(c) {
-  if (!pulses.has(c)) {
-    const n = 8, re = new Float32Array(n), im = new Float32Array(n);
-    for (let k = 1; k < n; k += 2) im[k] = (4 / (Math.PI * k)) * Math.exp(-k / 6);
-    pulses.set(c, c.createPeriodicWave(re, im));
+export const softTau = (soft) => 1.2 + (1 - soft) * 10.8;
+function pulseWave(c, soft = 0.5) {
+  if (!pulses.has(c)) pulses.set(c, new Map());
+  const m = pulses.get(c), key = Math.round(Math.max(0, Math.min(1, soft)) * 20);
+  if (!m.has(key)) {
+    const n = 24, re = new Float32Array(n), im = new Float32Array(n), tau = softTau(key / 20);
+    for (let k = 1; k < n; k += 2) im[k] = (4 / (Math.PI * k)) * Math.exp(-k / tau);
+    m.set(key, c.createPeriodicWave(re, im));
   }
-  return pulses.get(c);
+  return m.get(key);
 }
 export const CHORUS_TYPES = ['chorus', 'flanger', 'phaser']; // вид модуляции: хор (задержка ~20 мс), фленджер (короткая с обратной связью), фейзер (всепропускающие)
 
@@ -89,6 +93,7 @@ export function normalizeFx(fx) {
   o.adv = (Array.isArray(o.adv) && o.adv.length ? o.adv.slice(0, BANDS_MAX) : d.adv).map(normalizeBand);
   FX_KEYS.forEach((k) => { o[k] = Math.round(clamp(o[k], 0, 1) * 100) / 100; });
   o.tremRate = Math.round(clamp(o.tremRate, 0.5, 12) * 10) / 10;
+  o.tremSoft = Math.round(clamp(o.tremSoft ?? 0.5, 0, 1) * 100) / 100;
   if (!TREM_SHAPES.includes(o.tremShape)) o.tremShape = 'wave';
   if (!(o.tremDiv in TREM_DIVS)) o.tremDiv = 'free';
   o.delayTime = Math.round(clamp(o.delayTime, 0.05, 1.5) * 1000) / 1000;
@@ -303,7 +308,8 @@ export function createFxChain(c, fx, { space = null } = {}) {
     }
     if (S.trem) {
       ramp(S.trem.lfo.frequency, tremHz(cur, tempoOf()));
-      if (S.trem.shape !== cur.tremShape) { S.trem.shape = cur.tremShape; if (cur.tremShape === 'pulse') S.trem.lfo.setPeriodicWave(pulseWave(c)); else S.trem.lfo.type = 'sine'; }
+      const shp = cur.tremShape === 'pulse' ? 'pulse:' + Math.round(cur.tremSoft * 20) : 'wave';
+      if (S.trem.shape !== shp) { S.trem.shape = shp; if (cur.tremShape === 'pulse') S.trem.lfo.setPeriodicWave(pulseWave(c, cur.tremSoft)); else S.trem.lfo.type = 'sine'; }
       ramp(S.trem.depth.gain, cur.trem * 0.5); ramp(S.trem.g.gain, 1 - cur.trem * 0.5);
     }
     if (cur.trem > 0 && cur.tremDiv !== 'free') synced.add(api); else synced.delete(api);

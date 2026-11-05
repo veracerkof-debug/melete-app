@@ -33,7 +33,7 @@ import { initScreenOn } from './screenon.js';
 import { createClock } from './clock.js';
 import { clockNotice } from './screens/clock.js';
 import { BUSES } from '../audio/mixer.js';
-import { toast, confirm } from '../ui/index.js';
+import { toast, confirm, agree } from '../ui/index.js';
 import { startEdgeFade } from '../ui/edgefade.js';
 import { initBridge } from './bridge.js';
 import { startLog, log } from './log.js';
@@ -176,9 +176,10 @@ export function boot(root) {
 
   // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
   async function confirmUpload() {
-    if (store.state.settings.upOk) return true;
-    if (!(await confirm(t('upload.title'), t('upload.text'), t('upload.ok')))) return false;
-    store.state.settings.upOk = 1;
+    // 2 — согласие с ответственностью (галочка, 05.11.2026); прежнее «Понятно» (1) спрашивается один раз заново
+    if (store.state.settings.upOk >= 2) return true;
+    await agree(t('upload.title'), t('upload.text'), t('upload.agree'), t('upload.ok'));
+    store.state.settings.upOk = 2;
     store.settingsChanged();
     return true;
   }

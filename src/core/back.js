@@ -11,6 +11,7 @@ const click = (sel) => { const b = document.querySelector(sel); if (b) { b.click
 export function backStep(app) {
   // уходящие с анимацией (.leaving) уже закрыты — их не трогаем
   const ask = document.querySelector('.ask:not(#tosGate):not(.leaving)');
+  if (ask && ask.classList.contains('agree')) return true; // согласие с галочкой: «Назад» его не закрывает
   if (ask) return click('.ask:not(#tosGate):not(.leaving) [data-k="no"]') || (leave(ask, 160), true);
   if (document.getElementById('tosGate')) return false; // соглашение без ответа не закрывается
   if (document.getElementById('onboard')) return click('#onboard [data-obback]') || false;

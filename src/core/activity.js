@@ -7,6 +7,7 @@ import { esc, toast, leave } from '../ui/index.js';
 import { openMic } from '../audio/mic.js';
 import { touch, noteHeard, idleAction, markAsked, confirmPlaying, saveActive, QUIET_MS } from './session.js';
 import { tamaOf } from './tama.js';
+import { engine as voiceEngine, devKind } from '../audio/voiceengine.js';
 
 export const MIC_TICK_MS = 250;
 
@@ -89,10 +90,28 @@ export function createActivity(app, { soundingAudio }) {
   // говорить, как идёт занятие: на статистику его слух не влияет
   const presence = () => !!st().micPresence;
   const tamaEar = () => { const tm = tamaOf(st()); return tm.on && tm.listen; };
-  const wantMic = () => (presence() || tamaEar()) && !off() && !micErr && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
+  // Bluetooth-наушники: открытый микрофон переводит их в режим гарнитуры звонка (моно, узкая полоса) — звук и приложения,
+  // и чужих проигрывателей становится «как в телефоне». Фоновое слушание ради учёта не стоит этого: при Bluetooth
+  // микрофон не открывается (запись и инструменты, которым он нужен, открывают его сами по кнопке)
+  let btOut = false, btTold = false, btAt = 0;
+  async function btCheck() {
+    btAt = Date.now();
+    try {
+      const { outputs } = await voiceEngine().devices();
+      const was = btOut;
+      btOut = (outputs || []).some((d) => devKind(d) === 'bt' && d.type !== 'bt_sco');
+      if (btOut && !was && mic) micStop();
+      if (btOut && !btTold && (presence() || tamaEar())) { btTold = true; toast(t('presence.bt')); }
+      if (!btOut) btTold = false;
+    } catch { /* нет списка устройств — как раньше */ }
+  }
+  try { voiceEngine().on('devices', btCheck); } catch { /* без движка — без проверки */ }
+  const wantMic = () => (presence() || tamaEar()) && !off() && !micErr && !btOut && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
   async function micStart() {
     if (mic || opening) return;
     opening = true;
+    if (Date.now() - btAt > 5000) await btCheck();
+    if (btOut) { opening = false; return; }
     try {
       mic = await openMic(app.device.mix?.mode);
     } catch (e) {

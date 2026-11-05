@@ -48,6 +48,7 @@ export function createFxPanel({ get, set, profile }) {
     '<div class="hdr">' + esc(t('fx.trem')) + '</div><div class="group">' +
     slider('trem', t('fx.tremDepth'), fx.trem, 0, 1, 0.05, pc(fx.trem)) +
     '<div class="cell fxtypes">' + seg('tshape', TREM_SHAPES.map((k) => [k, t('fx.ts.' + k)]), fx.tremShape, t('fx.tremShape')) + '</div>' +
+    (fx.tremShape === 'pulse' ? slider('tremSoft', t('fx.tremSoft'), fx.tremSoft, 0, 1, 0.05, pc(fx.tremSoft)) : '') +
     '<div class="cell fxtypes">' + seg('tdiv', TREM_DIV_ORDER.map((k) => [k, t('fx.td.' + k)]), fx.tremDiv, t('fx.tremDiv')) + '</div>' +
     '<div data-tremrate' + (fx.tremDiv === 'free' ? '' : ' hidden') + '>' + slider('tremRate', t('fx.tremRate'), fx.tremRate, 0.5, 12, 0.1, fx.tremRate + ' ' + t('fx.hz')) + '</div>' +
     '<div class="cell fxwave"><i class="' + fx.tremShape + '" style="--per:' + (1 / Math.max(0.2, fx.tremDiv === 'free' ? fx.tremRate : 2)).toFixed(3) + 's;--d:' + fx.trem + '"></i></div></div>' +

@@ -1,7 +1,7 @@
 // Звуковой движок: единый AudioContext, шины и микшер, синтезатор, пэды, метроном, микрофон.
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
 import { createLoadMeter } from './load.js';
-import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock, hold, isHeld } from './context.js';
+import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock, hold, isHeld, onHold } from './context.js';
 import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
@@ -121,6 +121,8 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     mixer, synth, drone, metro,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя
     release: () => { if (isHeld()) hold(false); }, // «играть» в приложении снимает паузу из шторки (player.js)
+    held: () => isHeld(),
+    onHold, // fn(held) — пауза из шторки поставлена или снята: модули показывают, что звук стоит
     held: isHeld,
     ready: () => !!peekContext(),
     now,

@@ -1,5 +1,6 @@
 // Микрофон — только по явному разрешению пользователя; поток используется лишь для анализа на устройстве.
 import { getContext } from './context.js';
+import { log } from '../core/log.js';
 
 export const FFT = 4096;
 
@@ -15,6 +16,7 @@ export async function openMic(mode) {
   } catch (e) {
     throw Object.assign(new Error('mic'), { reason: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' });
   }
+  log('audio', 'микрофон открыт (анализ)');
   const src = c.createMediaStreamSource(stream), analyser = c.createAnalyser();
   analyser.fftSize = FFT;
   src.connect(analyser); // не на выход — только анализ
@@ -23,6 +25,6 @@ export async function openMic(mode) {
     analyser,
     sampleRate: c.sampleRate,
     read() { analyser.getFloatTimeDomainData(buf); return buf; },
-    stop() { stream.getTracks().forEach((t) => t.stop()); try { src.disconnect(); } catch { /* ignore */ } },
+    stop() { log('audio', 'микрофон закрыт'); stream.getTracks().forEach((t) => t.stop()); try { src.disconnect(); } catch { /* ignore */ } },
   };
 }

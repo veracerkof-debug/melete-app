@@ -1,5 +1,5 @@
-// Пэды (автор 29.10.2026): плитка звучит созвучием из настроек, жест по плитке — созвучие (↑ мажор, ↓ минор, ← квинта,
-// → sus4), повторное касание звучащей — стоп; квинтовый круг; «пиано» — одна октава, «Играть» (пока держат, несколько пальцев) и «Держать»
+// Пэды (автор 29.10.2026, жесты — 05.11.2026): касание — тоника с квинтой, жест по плитке — созвучие (← мажор, → минор,
+// ↑ sus4+2, ↓ гармонический минор), повторное касание звучащей — стоп; квинтовый круг; «пиано» — одна октава, «Играть» (пока держат, несколько пальцев) и «Держать»
 import { test, expect } from './melete.js';
 
 test('пэды: жесты созвучий и режим «пиано»', async ({ page, melete, errors }) => {
@@ -7,19 +7,27 @@ test('пэды: жесты созвучий и режим «пиано»', async
   await melete.free('F', ['drone']);
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   const T = '.session .pane[data-tool="drone"] ';
-  // касание A — звучит с квинтой (умолчание), подпись A5
+  // касание A — тоника с квинтой (умолчание), подпись — просто нота
   await melete.swipe(T + '.dtile[data-v="9"]', 0, 0, { steps: 1 });
-  expect(await melete.text(T + '.dtile.on')).toBe('A5');
-  // вниз по C — до минор; вверх — мажор; вправо — sus4
-  await melete.swipe(T + '.dtile[data-v="0"]', 0, 60);
-  expect(await melete.text(T + '.dtile.on')).toBe('Cm');
-  await melete.swipe(T + '.dtile[data-v="0"]', 0, -60);
-  expect(await melete.text(T + '.dtile.on')).toBe('C');
+  expect(await melete.text(T + '.dtile.on .dn')).toBe('A');
+  expect(await melete.count(T + '.dtile.on .csf')).toBe(0);
+  // по C: влево — мажор, вправо — минор (словом), вверх — sus4+2, вниз — гармонический минор
+  await melete.swipe(T + '.dtile[data-v="0"]', -60, 0);
+  expect(await melete.text(T + '.dtile.on .csf')).toBe('мажор');
   await melete.swipe(T + '.dtile[data-v="0"]', 60, 0);
-  expect(await melete.text(T + '.dtile.on')).toBe('Csus4');
+  expect(await melete.text(T + '.dtile.on .csf')).toBe('минор');
+  await melete.swipe(T + '.dtile[data-v="0"]', 0, -60);
+  expect(await melete.text(T + '.dtile.on .csf')).toBe('sus4+2');
+  await melete.swipe(T + '.dtile[data-v="0"]', 0, 60);
+  expect(await melete.text(T + '.dtile.on .csf')).toBe('гарм. минор');
   // касание звучащей — стоп
   await melete.swipe(T + '.dtile[data-v="0"]', 0, 0, { steps: 1 });
   expect(await melete.count(T + '.dtile.on')).toBe(0);
+  // волна громкости — кнопка на полосе включает тремоло шины пэдов
+  await page.click(T + '[data-x="dwave"]');
+  await expect(page.locator(T + '[data-x="dwave"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click(T + '[data-x="dwave"]');
+  await expect(page.locator(T + '[data-x="dwave"]')).toHaveAttribute('aria-pressed', 'false');
   // «пиано»: две клавиши двумя пальцами — обе звучат, отпустили — тишина
   await page.click(T + '[data-x="dmode"]'); // сетка → круг
   await page.click(T + '[data-x="dmode"]'); // круг → пиано

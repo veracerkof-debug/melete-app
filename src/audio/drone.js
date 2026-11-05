@@ -1,4 +1,4 @@
-// Пэды и дрон: тёплый, пэд, смычок, хор, стекло, тампура. Слои по октавам, созвучия, плавная смена нот.
+// Пэды и дрон: тёплый, смычок, хор, стекло, тампура (и воздушные). Слои по октавам, созвучия, плавная смена нот.
 // Настройки — объект device.drone (как в прототипе).
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
@@ -7,16 +7,27 @@ import { every, cancel } from './clock.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
 // Первыми — воздушные для поклонения (airsound.js): воздух, свет, тепло, хор
-export const SOUNDS = { wair: 0.5, wlight: 0.5, wwarm: 0.5, wchoir: 0.5, soft: 0.7, pad: 0.45, bow: 0.85, choir: 0.5, glass: 0.9, tanpura: 0.7 };
+// «Пэд» (пила) убран по слову автора 05.11.2026 — сохранённый «pad» становится «Тёплым» (normalizeDrone)
+export const SOUNDS = { wair: 0.5, wlight: 0.5, wwarm: 0.5, wchoir: 0.5, soft: 0.7, bow: 0.85, choir: 0.5, glass: 0.9, tanpura: 0.7 };
 const AIRS = { wair: 'air', wlight: 'light', wwarm: 'warm', wchoir: 'choir' };
 // Созвучия: интервалы от нажатой ноты
-export const CHORDS = { root: [0], fifth: [0, 7], maj: [0, 4, 7], min: [0, 3, 7], sus4: [0, 5, 7], dim: [0, 3, 6] }; // dim — из квинтового круга
-export const CHORD_SET = ['root', 'fifth', 'maj', 'min', 'sus4']; // в настройках (уменьшённый — только кругом)
+// sus42 — тоника, секунда, кварта, квинта; hmin — «гармонический минор» в понимании автора (05.11.2026): тоника и квинта,
+// повышенная на полтона. sus4 остаётся для старых пресетов, dim — из квинтового круга
+export const CHORDS = { root: [0], fifth: [0, 7], maj: [0, 4, 7], min: [0, 3, 7], sus42: [0, 2, 5, 7], hmin: [0, 8], sus4: [0, 5, 7], dim: [0, 3, 6] };
+export const CHORD_SET = ['fifth', 'root', 'maj', 'min', 'sus42', 'hmin']; // созвучие касания (в настройках)
+// Жесты по плитке (автор 05.11.2026): влево — мажор, вправо — минор, вверх — sus4+2, вниз — гармонический минор
+export const DIRS = { left: 'maj', right: 'min', up: 'sus42', down: 'hmin' };
+// Чувствительность жеста: сколько пикселей провести, чтобы сменилось созвучие
+export const SENS = { low: 40, mid: 24, high: 12 };
 export const LAYERS = [2, 3, 4]; // октавы слоёв: низкий, средний, высокий
 
 // Дополняет настройки значениями по умолчанию (прототип: DC())
 export function normalizeDrone(d) {
-  if (!d.chord) d.chord = d.fifth === false ? 'root' : 'fifth';
+  if (!d.chord || !CHORDS[d.chord]) d.chord = d.fifth === false ? 'root' : 'fifth';
+  if (d.sound === 'pad' || !(d.sound in SOUNDS)) d.sound = 'soft';
+  if (d.gest == null) d.gest = true;      // созвучия жестом по плитке; выкл — только касание
+  if (!SENS[d.sens]) d.sens = 'mid';
+  if (d.wave == null) d.wave = 0.7;       // сила «волны громкости» при включении (сама волна — эффекты шины пэдов, fx.js)
   if (d.bright == null) d.bright = SOUNDS[d.sound] ?? 0.7;
   if (d.move == null) d.move = 0.5;
   if (d.width == null) d.width = 0.5;
@@ -46,7 +57,7 @@ export function tanpuraPattern(d) {
   const Ls = LAYERS.filter((o) => d.layers[o]);
   if (!Ls.length) return null;
   const base = 12 * (Ls[0] + 1) + d.pc;
-  return { layers: Ls, pat: [d.chord === 'root' || d.chord === 'sus4' ? base + 5 : base + 7, base + 12, base + 12, base] };
+  return { layers: Ls, pat: [d.chord === 'root' || d.chord === 'sus4' || d.chord === 'sus42' ? base + 5 : d.chord === 'hmin' ? base + 8 : base + 7, base + 12, base + 12, base] };
 }
 
 export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
@@ -54,7 +65,11 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   let nodes = null, over = {};
   const keys = new Map();
   const mf = (m) => midiFreq(m, getA4());
-  const level = () => getSettings().vol * mixer.value('drone');
+  // Шина пэдов микшера: громкость и выключение шины, её эффекты (волна громкости, эквалайзер…). Посылы в пространства —
+  // через пост-фейдерные точки шины: ползунок и выключение глушат и хвост
+  const level = () => getSettings().vol;
+  const out = () => mixer.bus('drone') || masterNode();
+  const wet = (type) => (mixer.wet ? mixer.wet('drone', type) : null);
   const KEY_K = 0.7; // несколько клавиш сразу — каждая тише, сумма не перегружает
 
   function pluck(c, dest, m, t, lvl) {
@@ -119,10 +134,10 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   // Голос: d — настройки с нотой и созвучием; att — нарастание (клавиши — быстрее), k — доля громкости
   function voice(c, d, att, k = 1) {
     const t = c.currentTime, master = c.createGain();
-    master.connect(masterNode());
+    master.connect(out());
     // воздушным пэдам зал нужен всегда, хотя бы немного
     const hall = AIRS[d.sound] ? Math.max(0.45, d.hall) : d.hall;
-    const send = sendToReverb(master, d.rev), hallS = hall > 0 ? sendToHall(master, hall) : null;
+    const send = sendToReverb(master, d.rev, wet('hall')), hallS = hall > 0 ? sendToHall(master, hall, wet('cathedral')) : null;
     master.gain.setValueAtTime(0, t);
     master.gain.linearRampToValueAtTime(level() * k, t + Math.max(0.05, att));
     const os = [], v = { g: master, os, send, hallS, k, timer: null };
@@ -131,7 +146,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     const base = 250 * Math.pow(20, d.bright), lp = c.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = base;
-    lp.Q.value = d.sound === 'pad' ? 1.3 : 0.5;
+    lp.Q.value = 0.5;
     lp.connect(master);
     const amp = c.createGain();
     amp.gain.value = 1;
@@ -166,13 +181,13 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     // в моно (маленькая Bluetooth-колонка, телефон, зал) пара исчезает и громкость не «качает» — раньше две
     // расстроенные копии, сложенные в один канал, раз в секунду гасили друг друга
     const det = 2 + d.width * 16, sideK = Math.min(0.6, d.width * 1.1);
-    const lvlK = { pad: 0.05, bow: 0.07, choir: 0.045, glass: 0.12 }[d.sound] || 0.11;
+    const lvlK = { bow: 0.07, choir: 0.045, glass: 0.12 }[d.sound] || 0.11;
     const side = sideK > 0.01 ? sideInto(c, amp) : null;
     droneNotes(d).forEach(([m, lvl]) => {
       const f = mf(m);
       [[0, 1.4], ...(side ? [[det, sideK], [-det, -sideK]] : [])].forEach(([dt, k], i) => {
         const o = c.createOscillator();
-        if (d.sound === 'pad' || d.sound === 'choir') o.type = 'sawtooth';
+        if (d.sound === 'choir') o.type = 'sawtooth';
         else if (d.sound === 'glass') o.type = 'sine';
         else o.setPeriodicWave(wave(c, d.sound === 'bow' ? 'bow' : 'warm'));
         o.frequency.value = f;
@@ -217,7 +232,11 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   const keyAtt = (d) => Math.min(d.fade, 0.3), keyRel = (d) => Math.max(0.5, Math.min(d.fade, 2));
   const keySet = (pc) => ({ ...normalizeDrone(getSettings()), pc, chord: 'root' });
 
+  // Подписчики: что-то включили, выключили или сменили не из окна пэдов (пульт, часы, сцена) — окно перерисуется
+  const subs = new Set();
+  const changed = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   const dr = {
+    subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     get on() { return !!nodes; },
     // звучит ли хоть что-то: пэд или клавиши
     get sounding() { return !!nodes || keys.size > 0; },
@@ -231,6 +250,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       over = o ? { ...o } : {};
       const d = { ...normalizeDrone(getSettings()), ...over };
       nodes = voice(c, d, d.fade);
+      changed();
     },
 
     // Затухание за fade секунд (по умолчанию 1,2 с)
@@ -238,6 +258,14 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       if (!nodes) return;
       release(nodes, fade);
       nodes = null;
+      changed();
+    },
+
+    // Тональность пэда (пульт, часы: «вперёд/назад» — полутон): то же созвучие, плавный переход
+    tonic(pc) {
+      const d = getSettings();
+      d.pc = ((Math.round(pc) % 12) + 12) % 12;
+      if (nodes) dr.swap(over); else changed();
     },
 
     retune() {
@@ -266,12 +294,14 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       const d = keySet(pc);
       if (keys.has(pc)) release(keys.get(pc), 0.15);
       keys.set(pc, voice(c, d, att ?? keyAtt(d), KEY_K));
+      changed();
     },
     keyOff(pc, fade) {
       const v = keys.get(pc);
       if (!v) return;
       release(v, fade ?? keyRel(normalizeDrone(getSettings())));
       keys.delete(pc);
+      changed();
     },
     keysOff(fade) { [...keys.keys()].forEach((pc) => dr.keyOff(pc, fade)); },
     get held() { return new Set(keys.keys()); },
@@ -286,7 +316,6 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
       if (nodes.hallS) nodes.hallS.gain.setTargetAtTime(x, nodes.hallS.context.currentTime, 0.1); else if (x > 0) dr.swap();
     },
   };
-  mixer.subscribe(() => dr.vol());
   return dr;
 }
 

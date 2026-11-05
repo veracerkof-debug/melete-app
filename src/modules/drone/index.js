@@ -1,32 +1,39 @@
 // Пэды и дрон: 12 нот, слои по октавам, тембры, созвучия, характер звука, плавная смена нот, пресеты.
 // Перенесено из legacy/practice.html (droneHTML, droneSheet, обработчики dpad/dstop/dlayer).
-// Два вида (решение автора 29.10.2026): сетка — плитка звучит созвучием, жест по плитке выбирает его (вверх — мажор,
-// вниз — минор, влево — квинта, вправо — sus4), звучащая плитка «дышит»; «пиано» — одна октава крупно, клавиша звучит
+// Два вида (решение автора 29.10.2026): сетка — плитка звучит созвучием, жест по плитке выбирает его (05.11.2026: касание —
+// тоника с квинтой, влево — мажор, вправо — минор, вверх — sus4+2, вниз — гармонический минор; жесты выключаются,
+// чувствительность — в настройках), звучащая плитка «дышит»; «пиано» — одна октава крупно, клавиша звучит
 // всеми включёнными слоями, «Играть» — пока держат (аккорды несколькими пальцами), «Держать» — касание вкл/выкл.
 import './drone.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { SOUNDS, CHORDS, CHORD_SET, LAYERS, normalizeDrone } from '../../audio/drone.js';
+import { SOUNDS, CHORD_SET, LAYERS, DIRS, SENS, normalizeDrone } from '../../audio/drone.js';
+import { TREM_DIV_ORDER } from '../../audio/fx.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
 import meta, { ICON } from './meta.js';
 const GRID_ICON = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>';
 const CIRCLE_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.5v4.3M12 16.2v4.3M3.5 12h4.3M16.2 12h4.3"/></svg>';
+const WAVE_ICON = '<svg viewBox="0 0 24 24"><path d="M3 12c1.5-5 3-5 4.5 0s3 5 4.5 0 3-5 4.5 0 3 5 4.5 0"/></svg>';
 const KEYS_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v14M12 5v14M16 5v14"/><path d="M8 5v8M12 5v8M16 5v8" stroke-width="3.2"/></svg>';
 const SH = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
-// Подпись созвучия на плитке: C, Cm, C5, Csus4; тоника — одна нота
-const SUF = { root: '', fifth: '5', maj: '', min: 'm', sus4: 'sus4', dim: '°' };
-// Жест по плитке → созвучие (как у аккордовой панели студии: вверх/вниз — главное, вбок — оттенки)
-const DIRS = { up: 'maj', down: 'min', left: 'fifth', right: 'sus4' };
-const SWIPE = 22;
+// Подпись созвучия на плитке (автор 05.11.2026): нота — просто C, D, E; мажор и минор — словом под нотой
+const WORD = { maj: 'lab.maj', min: 'lab.min', hmin: 'lab.hmin' };
+const SYM = { sus42: 'sus4+2', sus4: 'sus4', dim: '°' };
+const sufOf = (ch) => (WORD[ch] ? ctx.t(WORD[ch]) : SYM[ch] || '');
+// Круг — символами аккордов (как подписи секторов): C, Cm, C°
+const CSUF = { maj: '', min: 'm', dim: '°' };
+// Волна громкости пэдов — эффекты шины пэдов микшера (fx.js): включить — сила из настроек пэдов
+const FX = () => ctx.audio.mixer.fx('drone');
+const setFx = (patch) => ctx.audio.mixer.setFx('drone', patch);
 const WHITE = [0, 2, 4, 5, 7, 9, 11], BLACK = [[1, 1], [3, 2], [6, 4], [8, 5], [10, 6]]; // чёрная — после белой №
 // Что сохраняется в пресет пэдов
 const PRESET_KEYS = ['sound', 'chord', 'bright', 'move', 'width', 'fade', 'rev', 'hall', 'air', 'vol', 'layers', 'xfade'];
 
 let host = null, ctx = null, size = 'full';
-let onClick = null, onDown = null, onMove = null, onUp = null;
+let onClick = null, onDown = null, onMove = null, onUp = null, offs = [], raf = 0;
 let drag = null, lastPtr = 0; // ведение по плитке сетки; время последнего касания (клик после него — не клавиатура)
 const fingers = new Map(); // «пиано», «Играть»: палец → клавиша
 
@@ -40,7 +47,7 @@ const keysView = () => viewOf() === 'keys';
 const NEXT_VIEW = { grid: 'circle', circle: 'keys', keys: 'grid' };
 const VIEW_ICON = { grid: GRID_ICON, circle: CIRCLE_ICON, keys: KEYS_ICON };
 const noteHTML = (n) => n.replace('♯', '<span class="acc">♯</span>');
-const tileLabel = (i, ch) => noteHTML(SH[i]) + (SUF[ch] ? '<span class="csf">' + SUF[ch] + '</span>' : '');
+const tileLabel = (i, ch) => '<span class="dn">' + noteHTML(SH[i]) + '</span>' + (sufOf(ch) ? '<span class="csf">' + sufOf(ch) + '</span>' : '');
 
 function gridHTML(cls) {
   const { t } = ctx, d = D(), on = DR().on, cur = DR().chord;
@@ -105,14 +112,14 @@ function circleSVG() {
         (deg ? '<text class="deg" x="' + cx + '" y="' + dy.toFixed(2) + '" font-size="' + (fs * 0.48).toFixed(1) + '">' + deg + '</text>' : '') + '</g>';
     }
   });
-  const label = on ? (CHORDS[cur] ? SH[d.pc] + (SUF[cur] || '') : SH[d.pc]) : C_MAJ[k];
+  const label = on ? SH[d.pc] + (CSUF[cur] || '') : C_MAJ[k];
   return '<div class="dcirc" role="group" aria-label="' + t('circle') + '"><svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid meet">' + out +
     '<g class="dctr' + (on ? ' on' : '') + '" data-x="dctr" role="button" aria-label="' + (on ? t('stop') : t('circle.key', { k: C_MAJ[k] })) + '"><circle r="24"/><text y="1">' + label + '</text></g></svg></div>';
 }
 // Аккорд круга: касание — звучит (плавный переход с прошлого), звучащий — стоп
 function playRing(ring, i) {
   const pc = rootOf(ring, i), d = D();
-  if (DR().on && d.pc === pc && DR().chord === ring) { DR().stop(); render(); return; }
+  if (DR().on && d.pc === pc && DR().chord === ring) { if (isHeld()) unlocked(); else DR().stop(); render(); return; }
   if (!unlocked()) return;
   d.pc = pc;
   ctx.store.save();
@@ -126,11 +133,13 @@ function view() {
   const layers = '<div class="layers" role="group" aria-label="' + t('layers') + '">' + LAYERS.map((o) => '<button class="lay' + (d.layers[o] ? ' on' : '') +
     '" data-x="dlayer" data-v="' + o + '" aria-pressed="' + !!d.layers[o] + '" aria-label="' + t('layer.' + o + '.full') + '">' + t('layer.' + o) + '</button>').join('') + '</div>';
   const mode = ui.icb('data-x="dmode"', VIEW_ICON[NEXT_VIEW[v]], t('mode.' + NEXT_VIEW[v]), 'plain');
+  const wv = FX().trem > 0;
+  const wave = '<button class="dwv' + (wv ? ' on' : '') + '" data-x="dwave" aria-pressed="' + wv + '" aria-label="' + t('wave') + '">' + WAVE_ICON + '</button>';
   const latch = kv ? '<button class="dlatch' + (d.latch ? ' on' : '') + '" data-x="dlatch" aria-pressed="' + !!d.latch + '">' + t(d.latch ? 'latch.on' : 'latch.off') + '</button>' : '';
   const surf = (g) => (kv ? keysHTML() : v === 'circle' && size !== 'strip' ? circleSVG() : gridHTML(g));
   if (size === 'quarter') return '<div class="dwrap">' + surf('g3') + '<div class="dbar q">' + stop + '</div></div>';
   if (size === 'strip') return '<div class="srow2 dstrip">' + surf('g6') + stop + '</div>';
-  return '<div class="dwrap' + (kv ? ' kv' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain') + layers + latch + stop + mode + '</div></div>';
+  return '<div class="dwrap' + (kv ? ' kv' : '') + (isHeld() ? ' held' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain') + layers + latch + wave + stop + mode + '</div></div>';
 }
 
 function render() {
@@ -147,13 +156,31 @@ function droneSheet() {
   const body = () => ui.snav(t('set.title')) + presetRow(api, d.preset, []) +
     '<div class="hdr" style="margin-top:4px">' + t('timbre') + '</div><div class="dsnd" role="group" aria-label="' + t('timbre') + '">' + Object.keys(SOUNDS).map((k) => '<button class="dsb' +
       (d.sound === k ? ' on' : '') + '" data-ds="' + k + '" aria-pressed="' + (d.sound === k) + '"><b>' + t('snd.' + k) + '</b><span>' + t('snd.' + k + '.d') + '</span></button>').join('') + '</div>' +
-    '<div class="hdr">' + t('chord') + '</div><div class="group"><div class="cellcol">' + ui.seg('dch', CHORD_SET.map((k) => [k, t('ch.' + k)]), d.chord, t('chord')) +
-    '</div></div><p class="ftr">' + t('chord.ftr') + '</p>' +
+    '<div class="hdr">' + t('chord') + '</div><div class="dchs" role="group" aria-label="' + t('chord') + '">' + CHORD_SET.map((k) => '<button class="dch' + (d.chord === k ? ' on' : '') +
+      '" data-dch="' + k + '" aria-pressed="' + (d.chord === k) + '">' + t('ch.' + k) + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('gest') + '</span>' + ui.sw('dgest', d.gest, t('gest')) + '</div>' +
+      (d.gest ? '<div class="cellcol"><span>' + t('sens') + '</span><div style="margin-top:8px">' + ui.seg('dsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), d.sens, t('sens')) + '</div></div>' : '') +
+    '</div><p class="ftr">' + t(d.gest ? 'chord.ftr' : 'chord.ftrOff') + '</p>' +
+    waveHTML() +
     '<div class="hdr">' + t('character') + '</div><div class="group sgroup">' + sl('bright', 0, 1, 0.01, P) + sl('move', 0, 1, 0.01, P) + sl('width', 0, 1, 0.01, P) + '</div>' +
     '<div class="hdr">' + t('space') + '</div><div class="group sgroup">' + sl('fade', 0.2, 6, 0.1, SF) + sl('rev', 0, 1, 0.01, P) + sl('vol', 0, 1, 0.01, P) + '</div>' +
     // поклонение: длинный зал (отдельная реверберация ~7 с) и «Air» — тихий шум, настроенный по нотам созвучия
     '<div class="hdr">' + t('worship') + '</div><div class="group sgroup">' + sl('hall', 0, 1, 0.01, P) + sl('air', 0, 1, 0.01, P) + '</div><p class="ftr">' + t('worship.ftr') + '</p>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>';
+  // Волна громкости («мягкий выключатель»): вкл, сила, форма (волна / пульс), мягкость краёв пульса, частота — свободно или
+  // в такт метронома. Звук — тремоло шины пэдов (fx.js), то же видно в эффектах микшера
+  function waveHTML() {
+    const f = FX(), on = f.trem > 0, HZ = (v) => t('u.hz', { n: ctx.num(+v, 1) });
+    const wsl = (k, lab, v, min, max, step, txt) => '<div class="sslider"><div class="ssl"><span>' + lab + '</span><b class="num" id="dw-' + k + '">' + txt +
+      '</b></div><input type="range" class="range" data-dw="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" aria-label="' + lab + '"></div>';
+    return '<div class="hdr">' + t('wave') + '</div><div class="group"><div class="cell"><span class="grow">' + t('wave.on') + '</span>' + ui.sw('dwave', on, t('wave.on')) + '</div></div>' +
+      (on ? '<div class="group sgroup">' + wsl('trem', t('wave.depth'), f.trem, 0.05, 1, 0.05, P(f.trem)) +
+        (f.tremShape === 'pulse' ? wsl('tremSoft', t('wave.soft'), f.tremSoft, 0, 1, 0.05, P(f.tremSoft)) : '') +
+        (f.tremDiv === 'free' ? wsl('tremRate', t('wave.rate'), f.tremRate, 0.5, 12, 0.1, HZ(f.tremRate)) : '') + '</div>' +
+        '<div class="group"><div class="cellcol"><span>' + t('wave.shape') + '</span><div style="margin-top:8px">' + ui.seg('dwshape', [['wave', t('wave.s.wave')], ['pulse', t('wave.s.pulse')]], f.tremShape, t('wave.shape')) + '</div></div>' +
+        '<div class="cellcol"><span>' + t('wave.div') + '</span><div style="margin-top:8px">' + ui.seg('dwdiv', TREM_DIV_ORDER.map((k) => [k, t('wave.d.' + k)]), f.tremDiv, t('wave.div')) + '</div></div></div>' : '') +
+      '<p class="ftr">' + t('wave.ftr') + '</p>';
+  }
   ui.sheet(body, (el, sh) => {
     let rt = 0;
     const later = () => { clearTimeout(rt); rt = setTimeout(() => DR().retune(), 350); };
@@ -178,9 +205,20 @@ function droneSheet() {
         return;
       }
       if ((b = g('[data-ds]'))) { d.preset = null; d.sound = b.dataset.ds; d.bright = SOUNDS[d.sound]; changed(); DR().retune(); }
-      else if ((b = g('[data-seg="dch"] [data-v]'))) { d.chord = b.dataset.v; d.fifth = d.chord !== 'root'; changed(); if (DR().on) DR().swap(); }
+      else if ((b = g('[data-dch]'))) { d.chord = b.dataset.dch; d.fifth = d.chord !== 'root'; changed(); if (DR().on) DR().swap(); }
+      else if ((b = g('[data-seg="dsens"] [data-v]'))) { d.sens = b.dataset.v; changed(); }
+      else if ((b = g('[data-seg="dwshape"] [data-v]'))) { setFx({ tremShape: b.dataset.v }); changed(); }
+      else if ((b = g('[data-seg="dwdiv"] [data-v]'))) { setFx({ tremDiv: b.dataset.v }); changed(); }
     });
     el.addEventListener('input', (e) => {
+      const wk = e.target.dataset.dw;
+      if (wk) { // волна: сила, мягкость, частота — сразу в звук, подпись рядом
+        const v = +e.target.value, lab = el.querySelector('#dw-' + wk);
+        if (wk === 'trem') { d.wave = v; ctx.store.save(); }
+        setFx({ [wk]: v });
+        if (lab) lab.textContent = wk === 'tremRate' ? t('u.hz', { n: ctx.num(v, 1) }) : P(v);
+        return;
+      }
       const k = e.target.dataset.dk;
       if (!k) return;
       d[k] = +e.target.value;
@@ -192,18 +230,27 @@ function droneSheet() {
       else if (k === 'hall') DR().setHall(d.hall);
       else if (k !== 'fade') later();
     });
-    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'dxf') { d.xfade = e.target.checked; ctx.store.save(); } });
+    el.addEventListener('change', (e) => {
+      const k = e.target.dataset.sw;
+      if (k === 'dxf') { d.xfade = e.target.checked; ctx.store.save(); }
+      else if (k === 'dgest') { d.gest = e.target.checked; changed(); }
+      else if (k === 'dwave') { setFx({ trem: e.target.checked ? d.wave : 0 }); changed(); }
+    });
   });
 }
 
 /* ---------- жесты ---------- */
 
-const unlocked = () => { if (ctx.audio.unlock()) return true; ctx.ui.toast(ctx.t('noAudio')); return false; };
-const dirOf = (dx, dy) => (Math.hypot(dx, dy) < SWIPE ? null : Math.abs(dy) >= Math.abs(dx) ? (dy < 0 ? 'up' : 'down') : dx < 0 ? 'left' : 'right');
+// Звук разрешён; пауза из шторки снимается касанием пэда — человек взялся играть
+const unlocked = () => { if (ctx.audio.unlock()) { ctx.audio.release(); return true; } ctx.ui.toast(ctx.t('noAudio')); return false; };
+const isHeld = () => !!(ctx.audio.held && ctx.audio.held());
+const dirOf = (dx, dy) => (!D().gest || Math.hypot(dx, dy) < SENS[D().sens] ? null : Math.abs(dy) >= Math.abs(dx) ? (dy < 0 ? 'up' : 'down') : dx < 0 ? 'left' : 'right');
 
 // Сетка: касание — нота созвучием из настроек (звучащая — стоп); ведение по плитке — созвучие жестом, слышно сразу
 function padDown(e, tile) {
-  const i = +tile.dataset.v, d = D(), was = DR().on && d.pc === i;
+  // на паузе из шторки касание звучащей плитки — «продолжить», а не «стоп»
+  const i = +tile.dataset.v, d = D(), held = isHeld(), was = DR().on && d.pc === i && !held;
+  if (held && DR().on && d.pc === i) { unlocked(); drag = { i, tile, id: e.pointerId, x: e.clientX, y: e.clientY, was: false, ch: DR().chord }; tile.classList.add('down'); return; }
   try { tile.setPointerCapture(e.pointerId); } catch { /* */ }
   drag = { i, tile, id: e.pointerId, x: e.clientX, y: e.clientY, was, ch: was ? DR().chord : d.chord };
   tile.classList.add('down');
@@ -257,9 +304,10 @@ function keyMark() {
   if (st) { st.disabled = !DR().sounding; st.classList.toggle('live', DR().sounding); }
 }
 function keyDown(e, k) {
+  const paused = isHeld();
   if (!unlocked()) return;
   const pc = +k.dataset.dk;
-  if (D().latch) { DR().held.has(pc) ? DR().keyOff(pc) : DR().keyOn(pc); keyMark(); return; }
+  if (D().latch) { if (paused && DR().held.has(pc)) { keyMark(); return; } DR().held.has(pc) ? DR().keyOff(pc) : DR().keyOn(pc); keyMark(); return; }
   try { host.setPointerCapture(e.pointerId); } catch { /* */ }
   fingers.set(e.pointerId, pc);
   if (!DR().held.has(pc)) DR().keyOn(pc);
@@ -368,7 +416,8 @@ function bind() {
     if (a === 'dpad') {
       if (performance.now() - lastPtr < 1500) return; // касание — в pointerdown; здесь — только клавиатура (Enter, пробел)
       const i = +x.dataset.v;
-      if (DR().on && d.pc === i) DR().stop();
+      if (DR().on && d.pc === i && isHeld()) unlocked();
+      else if (DR().on && d.pc === i) DR().stop();
       else {
         if (!unlocked()) return;
         d.pc = i;
@@ -387,6 +436,7 @@ function bind() {
     } else if (a === 'dmode') { stopAll(); d.view = NEXT_VIEW[viewOf()]; ctx.store.save(); render(); }
     else if (a === 'dlatch') { d.latch = !d.latch; DR().keysOff(); fingers.clear(); ctx.store.save(); render(); }
     else if (a === 'dset') droneSheet();
+    else if (a === 'dwave') { setFx({ trem: FX().trem > 0 ? 0 : d.wave }); render(); }
   };
   host.addEventListener('click', onClick);
 }
@@ -398,9 +448,16 @@ export default {
     host = el; ctx = c; size = sz;
     render();
     bind();
+    // звук сменили не отсюда (часы, пульт, сцена), пауза из шторки, возврат из фона — окно показывает то, что на самом деле
+    const later = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (host && !drag && !fingers.size && !spin && !snapAnim) render(); }); };
+    const onVis = () => { if (!document.hidden) later(); };
+    document.addEventListener('visibilitychange', onVis);
+    offs = [DR().subscribe(later), ctx.audio.onHold ? ctx.audio.onHold(later) : () => {}, () => document.removeEventListener('visibilitychange', onVis)];
   },
   resize(sz) { size = sz; render(); },
   unmount() {
+    offs.forEach((f) => f()); offs = [];
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
     if (host && onClick) {
       host.removeEventListener('click', onClick);
       host.removeEventListener('pointerdown', onDown);

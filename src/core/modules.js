@@ -128,7 +128,7 @@ export function makeCtx(app, mod) {
     sendFile: async (u8, name, title, type) => { const { sendFile } = await import('./screens/share.js'); return sendFile(u8, name, title, type); },
     confirmUpload: () => app.confirmUpload(),
     // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
-    uploadOk: () => !!app.store.state.settings.upOk,
+    uploadOk: () => app.store.state.settings.upOk >= 2,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
     // Текст песни (с аккордами) — записать; → true, если песня есть
