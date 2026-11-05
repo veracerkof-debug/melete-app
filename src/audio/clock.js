@@ -38,6 +38,6 @@ export async function installClock(c) {
     node.port.onmessage = fire;
     ready = true;
     if (iv) { clearInterval(iv); iv = 0; ensure(); }
-  } catch { node = null; }
+  } catch (e) { node = null; (globalThis.reportError || console.error)(new Error('часы звука не загрузились: ' + (e && e.message ? String(e.message).slice(0, 120) : e))); }
 }
 export const clockReady = () => ready;

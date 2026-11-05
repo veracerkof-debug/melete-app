@@ -123,6 +123,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     target: 'es2022',
+    // звуковые модули (AudioWorklet) — всегда отдельными файлами: маленький сборка встроила бы как data:, а политика
+    // безопасности (index.html, script-src) data: не пускает — часы звука, измеритель нагрузки и захват записи молча не грузились
+    assetsInlineLimit: (file) => (/(\.worklet|loadprobe)\.js$/.test(file) ? false : undefined),
     chunkSizeWarningLimit: 1300, // alphaTab (~1,2 МБ) грузится отдельно, только при открытии табулатуры
     // вторая страница — гостевая страница раздачи в своей сети (docs/guest-web.md): её отдаёт программа для Windows
     rollupOptions: { input: { main: 'index.html', guest: 'guest.html' } },
