@@ -27,7 +27,9 @@ test('партии: игра на MIDI-клавиатуре — новая па�
   await melete.free('F', ['looper']);
   await melete.click('[data-x="main"]'); await page.waitForTimeout(500); // петля 4 такта (90 bpm ≈ 10,7 с)
   await melete.click('[data-x="padd"]'); await page.waitForTimeout(400);
-  await page.locator('.hmenu button').nth(3).click(); await page.waitForTimeout(300);
+  await page.locator('.hmenu button').nth(3).click(); await page.waitForTimeout(600); // «Сыграть на инструменте» — шторка
+  await melete.click('.lprecb'); await page.waitForTimeout(200);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(500); // шторку закрыли — запись круга идёт дальше
   await expect(page.locator('.lpcap')).toHaveCount(1);
   // ждём начала круга и играем три ноты через MIDI-вход лупера
   await page.waitForFunction(() => !document.querySelector('.lpcap.wait'), null, { timeout: 15000 });
@@ -89,5 +91,28 @@ test('«В лупер»: проект — партиями, дорожки за�
   await page.evaluate(() => document.querySelector('[data-act="free"]')?.click()); await page.waitForTimeout(2500);
   await expect(page.locator('.lprow.layer')).toHaveCount(1);
   await expect(page.locator('.lpslot.on')).toHaveText('2'); // в первой — партии (сохранены), дорожки — во вторую
+  expect(errors).toEqual([]);
+});
+
+// Звук инструмента слоем (05.11.2026): пианино в шторке лупера, «Записать круг» — слой со звуком и выключенная партия нот
+test('партии: пианино в шторке — звук слоем и ноты партией', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await melete.open({ settings: { metro: { bpm: 240, num: 4, den: 4, sub: 1 } }, tools: { looper: { metro: false, view: 'parts', bars: 4 } } });
+  await melete.free('F', ['looper']);
+  await melete.click('[data-x="main"]'); await page.waitForTimeout(500); // петля 4 такта по 240 — 4 с
+  await melete.click('[data-x="padd"]'); await page.waitForTimeout(400);
+  await page.locator('.hmenu button').nth(3).click();
+  await expect(page.locator('.lptool[data-tool="piano"]')).toHaveCount(1, { timeout: 10_000 });
+  await melete.click('.lprecb');
+  await page.waitForFunction(() => document.querySelector('.lprecb .lprdot.rec'), null, { timeout: 10_000 });
+  for (const m of [60, 64, 67, 72]) {
+    const c = await melete.centre('.lptool [data-m="' + m + '"]', 0.5, 0.85);
+    await page.mouse.move(c[0], c[1]); await page.mouse.down(); await page.waitForTimeout(250); await page.mouse.up(); await page.waitForTimeout(80);
+  }
+  await page.waitForFunction(() => !document.querySelector('.lprecb.on'), null, { timeout: 15_000 });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(500);
+  await expect(page.locator('.lprow.layer')).toHaveCount(1);
+  await expect(page.locator('.lprow[data-tr].off')).toHaveCount(1); // ноты — выключенной партией
+  await melete.click('[data-x="stop"]');
   expect(errors).toEqual([]);
 });

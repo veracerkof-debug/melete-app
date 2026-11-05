@@ -88,6 +88,9 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       return (nodes[name] = g);
     },
 
+    // Выход шины после её эффектов — для отвода (лупер пишет звук инструмента слоем, span.js); null — звука нет
+    out(name) { mixer.bus(name); return chains[name] ? chains[name].output : null; },
+
     // Пост-фейдерная точка посыла шины в пространство ('hall' — общая реверберация, 'cathedral', 'room', 'plate'):
     // узел с громкостью шины перед пространством. Голоса шлют свои посылы сюда (context.js: sendToHall(…, via)) —
     // ползунок и выключение шины глушат и хвост реверберации. null — контекста ещё нет

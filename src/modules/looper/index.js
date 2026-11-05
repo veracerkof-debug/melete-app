@@ -12,6 +12,7 @@ import { encodeWav } from '../../audio/voicefx.js';
 import { onHold, holdMenu, holdRepeat } from '../../ui/hold.js';
 import { swipe } from '../../ui/gestures.js';
 import { createParts, BARS, PIECES, PLACES } from './parts.js';
+import { after, cancel } from '../../audio/clock.js';
 
 import meta, { ICON } from './meta.js';
 const I = {
@@ -454,10 +455,51 @@ function addMenu(anchor) {
       if (!lp.state.len && !parts.byRec()) lp.setLoop(parts.planSec());
       render(); parts.follow(); parts.edit(tr.id);
     } })),
-    { icon: I.keys, label: t('part.play'), run: () => { if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; } if (parts.capArm()) ctx.ui.toast(t('capArm')); render(); } },
+    { icon: I.keys, label: t('part.play'), run: () => toolSheet() },
     { icon: I.file, label: t('part.file'), run: () => filePicker() },
     ...(parts.oldProjects().length ? [{ icon: I.parts, label: t('part.proj'), run: () => projPicker() }] : []),
   ], t('add'));
+}
+// «Сыграть на инструменте» (слово автора 05.11.2026): инструмент приложения в шторке, петля играет; «Записать круг» —
+// с начала следующего круга звук инструмента ложится слоем, ноты — выключенной партией рядом. Окно инструмента —
+// то же, что во вкладке (ctx.mountTool): его звук, настройки и эффекты. MIDI-клавиатура пишется так же
+const PLAY_TOOLS = ['piano', 'drone', 'glider', 'theremin'];
+function toolSheet() {
+  const { t, ui } = ctx;
+  if (!ctx.audio.unlock()) { fail(new Error('nosound')); return; }
+  const list = PLAY_TOOLS.filter((id) => ctx.hasTool(id));
+  if (!list.length) { ctx.ui.toast(t('err.fail')); return; }
+  let cur = list.includes(st().playTool) ? st().playTool : list[0], h = null, tm = 0;
+  // вкладки — значки инструментов, у выбранного — и название (место — полосе записи)
+  const tabs = () => list.map((id) => { const x = ctx.midi.tool(id) || { name: id, icon: '' }; return '<button class="lptt' + (id === cur ? ' on' : '') + '" data-tt="' + id + '" aria-pressed="' + (id === cur) + '" aria-label="' + ui.esc(x.name) + '">' + (x.icon || '') + '<span>' + ui.esc(x.name) + '</span></button>'; }).join('');
+  const recBtn = () => { const s = parts.capState(); return '<span class="lprdot' + (s ? ' ' + s : '') + '"></span>' + ui.esc(t(s === 'wait' ? 'cap.wait' : s === 'rec' ? 'cap.stop' : 'cap.go')); };
+  const mount = (el) => {
+    const box = el.querySelector('.lptool');
+    if (h) { try { h.unmount(); } catch (e) { ctx.logErr(e); } h = null; }
+    box.innerHTML = '';
+    h = ctx.mountTool(cur, box, 'half');
+  };
+  ui.sheet(() => ui.snav(t('play.title')) + '<div class="lptop"><div class="lptabs hscroll" role="group" aria-label="' + ui.esc(t('play.title')) + '">' + tabs() + '</div>' +
+    '<button class="lprecb" data-x="cap" aria-live="polite" title="' + ui.esc(t('play.hint')) + '">' + recBtn() + '</button></div><div class="lptool"></div>', (el) => {
+    mount(el);
+    const btn = el.querySelector('[data-x="cap"]');
+    const tick = () => { const s = parts.capState() || ''; if (btn.dataset.s !== s) { btn.dataset.s = s; btn.innerHTML = recBtn(); btn.classList.toggle('on', !!s); } tm = after(150, tick); };
+    tick();
+    el.addEventListener('click', (e) => {
+      const tb = e.target.closest('[data-tt]');
+      if (tb) {
+        if (parts.capState()) return; // во время записи инструмент не меняется
+        cur = tb.dataset.tt; st().playTool = cur; ctx.store.save();
+        el.querySelectorAll('[data-tt]').forEach((b) => { const on = b.dataset.tt === cur; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+        mount(el);
+        return;
+      }
+      if (e.target.closest('[data-x="cap"]')) {
+        if (parts.capState()) { parts.capDone(); return; }
+        if (parts.capArm({ tool: cur })) render();
+      }
+    });
+  }, { tall: true, onClose: () => { cancel(tm); if (h) { try { h.unmount(); } catch (e) { ctx.logErr(e); } h = null; } render(); } });
 }
 // Проекты прежней студии и ансамбля — петлёй в свободную петлю
 function projPicker() {

@@ -100,7 +100,7 @@
   "takePrev": "Oldingi dubl",
   "takeNext": "Keyingi dubl",
   "takeDrop": "{n}-dublni oʻchirish",
-  "part.play": "Asbobda chalishdan",
+  "part.play": "Asbobda chalish",
   "capArm": "Keyingi aylanadan — pianino, pedlar, glayder, termenvoks yoki MIDI-klaviaturada chaling",
   "capWait": "aylanani kutmoqda",
   "capRec": "yozmoqda",
@@ -117,5 +117,14 @@
     "{n} partiya"
   ],
   "untitled": "Nomsiz",
-  "help.6": "«Partiyalar» koʻrinishi: «+» — zarblar, notalar, akkordlar, asbobda chalish yoki mediatekadan yozuv; qatorga bosish — keyingi taktdan yoqish/oʻchirish, ushlab turish — tahrirlash."
+  "help.6": "«Partiyalar» koʻrinishi: «+» — zarblar, notalar, akkordlar, asbobda chalish yoki mediatekadan yozuv; qatorga bosish — keyingi taktdan yoqish/oʻchirish, ushlab turish — tahrirlash.",
+  "play.title": "Halqaga chalish",
+  "play.hint": "Halqa chalmoqda. «Doirani yozish» — keyingi doira boshidan asbob ovozi qatlam boʻlib, notalar — yonida partiya boʻlib (oʻchiq) yoziladi.",
+  "cap.go": "Doirani yozish",
+  "cap.wait": "Doirani kutmoqda…",
+  "cap.stop": "Yozmoqda — toʻxtatish",
+  "capLayer": "{tool}",
+  "capNotes": "Notalar: {tool}",
+  "capBoth": "Qatlam va notalar: {n} ta nota",
+  "capTool": "Asbob"
 }

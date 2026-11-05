@@ -102,7 +102,7 @@
   "takePrev": "Previous take",
   "takeNext": "Next take",
   "takeDrop": "Delete take {n}",
-  "part.play": "From playing an instrument",
+  "part.play": "Play an instrument",
   "capArm": "From the next loop start — play piano, pads, glider, theremin or a MIDI keyboard",
   "capWait": "waiting",
   "capRec": "recording",
@@ -120,5 +120,14 @@
     "{n} parts"
   ],
   "untitled": "Untitled",
-  "help.6": "Parts view: “+” adds drums, notes, chords, playing an instrument or a library recording; tap a row to switch it on/off from the next bar, hold to edit."
+  "help.6": "Parts view: “+” adds drums, notes, chords, playing an instrument or a library recording; tap a row to switch it on/off from the next bar, hold to edit.",
+  "play.title": "Play into the loop",
+  "play.hint": "The loop is playing. “Record a cycle” — from the next cycle the instrument sound becomes a layer, the notes a part next to it (off).",
+  "cap.go": "Record a cycle",
+  "cap.wait": "Waiting for the cycle…",
+  "cap.stop": "Recording — stop",
+  "capLayer": "{tool}",
+  "capNotes": "Notes: {tool}",
+  "capBoth": "Layer and notes: {n} notes",
+  "capTool": "Instrument"
 }

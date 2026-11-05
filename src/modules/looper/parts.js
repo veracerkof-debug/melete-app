@@ -7,6 +7,7 @@
 import { newProject, newTrack, newClip, newData, normalizeProject, clipsOf, dataBeats, clipNotes, BARS_MAX, diatonicChords, setChord, addPlayedNote } from '../../music/project.js';
 import { after, cancel } from '../../audio/clock.js';
 import { createSequencer } from '../../audio/sequencer.js';
+import { recordSpan } from '../../audio/span.js';
 
 export const BARS = [4, 8, 16, 32];
 const KINDS = ['drums', 'notes', 'chords'];
@@ -180,16 +181,25 @@ export function createParts(ctx, lp, hooks) {
   // глайдере, терменвоксе или MIDI-клавиатуре, ложится нотами в новую партию (по сетке шестнадцатых); один круг или до
   // «стоп». Время — по тому, что музыкант слышит: момент игры минус задержка выхода. Звук партии — по инструменту
   const INST = { piano: 'piano', drone: 'wair', glider: 'wflute', theremin: 'sine', midi: 'piano' };
+  // Звук инструмента слоем (слово автора 05.11.2026): инструмент в шторке лупера, с начала круга пишется и звук его
+  // шины после эффектов (слой — как слышно), и ноты (партия рядом, выключена — можно включить, сменить звук, поправить)
   let cap = null;
-  function capArm() {
+  function capArm(opt = {}) {
     if (cap) { capDone(); return; }
     const c0 = lp.clock;
     if (!c0 || !(lp.state.state === 'play' || lp.state.state === 'dub')) { hooks.play(); }
     const c = lp.clock;
     if (!c) return false;
     const now = c.ctx.currentTime, k = Math.ceil((now - c.t0) / c.len - 1e-3);
-    cap = { start: c.t0 + k * c.len, len: c.len, held: new Map(), notes: [], tool: null, off: ctx.onPlay(capEv), tm: 0 };
-    cap.tm = after((cap.start + cap.len - now) * 1000 + 30, capDone);
+    cap = { start: c.t0 + k * c.len, len: c.len, held: new Map(), notes: [], tool: opt.tool || null, off: ctx.onPlay(capEv), tm: 0, span: null };
+    // звук: окно круга, сдвинутое на задержку выхода (играют под то, что слышат); отвод шины — только слушает
+    const bus = opt.tool && BUS[opt.tool], src = bus && ctx.audio.mixer.out && ctx.audio.mixer.out(bus);
+    if (src) {
+      const lat = c.ctx.outputLatency || 0;
+      cap.lat = lat;
+      cap.span = recordSpan(c.ctx, src, cap.start + lat, Math.round(cap.len * c.ctx.sampleRate)).catch((e) => { ctx.logErr(e); return null; });
+    }
+    cap.tm = after((cap.start + cap.len + (cap.lat || 0) - now) * 1000 + 60, capDone);
     after(Math.max(0, (cap.start - now) * 1000 + 20), () => hooks.render()); // «ждёт круга» → «пишет игру»
     hooks.render();
     return true;
@@ -201,24 +211,42 @@ export function createParts(ctx, lp, hooks) {
     if (e.k === 'on' && e.m != null) { if (t < -0.12) return; cap.tool = cap.tool || id; cap.held.set(e.id, { m: Math.round(e.m), v: e.v == null ? 0.8 : e.v, t: Math.max(0, t) }); }
     else if (e.k === 'off') { const h = cap.held.get(e.id); if (!h) return; cap.held.delete(e.id); cap.notes.push({ ...h, d: Math.max(0.05, Math.min(cap.len, t) - h.t) }); }
   }
-  function capDone() {
+  const BUS = { piano: 'piano', drone: 'drone', glider: 'glider', theremin: 'glider' };
+  const quiet = (b) => { let s = 0; for (let i = 0; i < b.length; i += 8) s += b[i] * b[i]; return Math.sqrt(s / Math.max(1, b.length / 8)) < 0.002; };
+  async function capDone() {
     if (!cap) return;
     const k = cap; cap = null;
     cancel(k.tm); try { k.off(); } catch { /* */ }
     const end = Math.min(k.len, capNow() - k.start);
     k.held.forEach((h) => k.notes.push({ ...h, d: Math.max(0.05, end - h.t) }));
-    if (!k.notes.length) { ctx.ui.toast(ctx.t('capNone')); hooks.render(); return; }
+    // звук инструмента: остановить отвод (если «стоп» раньше конца круга) и положить слоем
+    let layered = false;
+    if (k.span) {
+      const sp = await k.span;
+      if (sp) {
+        sp.stop();
+        const buf = await Promise.race([sp.done, new Promise((r) => after(1500, () => r(null)))]);
+        if (buf && !quiet(buf)) {
+          try { lp.addLayer(buf, { name: ctx.t('capLayer', { tool: toolName(k.tool) }), src: 'tool' }); layered = true; }
+          catch (e) { ctx.ui.toast(ctx.t(e && e.reason === 'layers' ? 'err.layers' : 'err.fail')); }
+        }
+      }
+    }
+    if (!k.notes.length) { if (!layered) ctx.ui.toast(ctx.t('capNone')); hooks.render(); return; }
     const p = ensure(); fit(p);
     const spb = p.spb, beats = p.region.b, bars = Math.max(1, Math.round(beats / p.num));
-    const tr = newTrack('notes', p.tracks.length, { inst: INST[k.tool] || 'piano', name: ctx.t('capName') });
+    // со слоем звука ноты — выключенной партией рядом (иначе звучало бы дважды)
+    const tr = newTrack('notes', p.tracks.length, { inst: INST[k.tool] || 'piano', name: layered ? ctx.t('capNotes', { tool: toolName(k.tool) }) : ctx.t('capName'), mute: layered });
     const d = newData('notes', bars), total = bars * p.num;
     k.notes.forEach((n) => { if (n.t < k.len) addPlayedNote(d, total, n.t / spb, n.d / spb, n.m, n.v, 0.25); });
     p.tracks.push(tr);
     const c = newClip(p, tr, 0, beats, d); c.loop = true; p.clips.push(c);
     normalizeProject(p); ctx.projects.save(p);
     key = ''; follow(); hooks.render();
-    ctx.ui.toast(ctx.t('capDone', { n: k.notes.length }));
+    ctx.ui.toast(layered ? ctx.t('capBoth', { n: k.notes.length }) : ctx.t('capDone', { n: k.notes.length }));
   }
+  const toolName = (id) => { const x = id && ctx.midi && ctx.midi.tool ? ctx.midi.tool(id) : null; return (x && x.name) || ctx.t('capTool'); };
+  const capState = () => (!cap ? null : (lp.clock && lp.clock.ctx.currentTime < cap.start ? 'wait' : 'rec'));
   // MIDI-клавиатура прямо в лупере: звук пианино и запись в партию с игры
   function midi(e) {
     const syn = ctx.audio.synth;
@@ -317,7 +345,7 @@ export function createParts(ctx, lp, hooks) {
 
   return {
     importProject, importStems, inbox, oldProjects, freeSlot,
-    renderLoop, beat, capArm, capDone, midi,
+    renderLoop, beat, capArm, capDone, capState, midi,
     get cap() { return cap ? { wait: (lp.clock ? lp.clock.ctx.currentTime : 0) < cap.start } : null; },
     seq, proj, fit, follow, ensure, toggleTrack, toggleLayer, pending, addPart, removePart, dupPart, edit, addFile, name, notesOf, clipOf, nextBar,
     loopBars, byRec, lenSec, planSec,
