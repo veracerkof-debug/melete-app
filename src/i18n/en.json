@@ -2081,5 +2081,7 @@
   "crs.notYet": "{p} needed to pass",
   "crs.again": "Again",
   "remind.chPushy": "persistent",
-  "remind.chCal": "calendar"
+  "remind.chCal": "calendar",
+  "diag.f.oom": "Closed by the system while on screen: {n}",
+  "diag.h.oom": "Usually low memory (long recording, conversion, many open apps). The log shows how much memory was in use."
 }

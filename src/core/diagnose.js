@@ -38,6 +38,8 @@ export function diagnose(state, env = {}, now = Date.now()) {
   if (fr >= 3 || (lt && p95(lt) > 400 && lt.n >= 20)) add('freeze', fr >= 10 ? 'bad' : 'warn', { n: fr, max: Math.round(lt ? lt.max : 0) });
   // Вылеты и ошибки
   if ((c['app.crash'] || 0) > 0) add('crash', 'bad', { n: c['app.crash'] });
+  // система закрыла приложение на экране (нехватка памяти, ресурсы) — не падение кода, но работа обрывается
+  if ((c['app.oom'] || 0) > 0) add('oom', 'warn', { n: c['app.oom'] });
   const errs = {};
   Object.entries(c).forEach(([k, v]) => { if (k.startsWith('log.e.')) errs[k.slice(6)] = v; });
   const ne = Object.values(errs).reduce((s, v) => s + v, 0);
@@ -78,7 +80,7 @@ export function weekly(state, now = Date.now()) {
     freezeMax: t['ui.longtask'] ? Math.round(t['ui.longtask'].max) : 0,
     errors: Object.entries(c).filter(([k]) => k.startsWith('log.e.')).reduce((s, [, v]) => s + v, 0),
     warns: Object.entries(c).filter(([k]) => k.startsWith('log.w.')).reduce((s, [, v]) => s + v, 0),
-    crashes: c['app.crash'] || 0,
+    crashes: c['app.crash'] || 0, oom: c['app.oom'] || 0, closed: c['app.closed'] || 0,
     start: t['app.start'] ? num(avg(t['app.start']) / 1000) : null,
     modload: t['mod.load'] ? num(avg(t['mod.load']) / 1000) : null,
     stems: (g['job.stems.x'] && num(avg(g['job.stems.x']))) || null,

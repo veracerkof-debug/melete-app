@@ -6,6 +6,7 @@ import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, toast, leave } from '../../ui/index.js';
 import { reportText, sendReport, REPORT_EMAIL } from '../report.js';
 import { log, logErr, crashedLast, crashSeen } from '../log.js';
+import { count as dCount } from '../diag.js';
 
 export function reportSheet(app) {
   let withLog = true, shown = false;
@@ -92,6 +93,20 @@ export function ideaSheet(app) {
   });
 }
 
+// Что значит причина закрытия от Android: crash — падение кода или «не отвечает»; oom — система закрыла, пока
+// приложение было на экране или в работе (нехватка памяти, сигнал); closed — закрыл человек или приложение было в фоне.
+// В журнал — с подробностями: на экране ли было, сколько памяти занимало (PSS) — по ним видно, что вызвало закрытие.
+export function exitVerdict(x) {
+  if (!x) return { kind: 'crash', lvl: 'w', text: 'неизвестно' };
+  const mb = (k) => (k ? Math.round(k / 1024) + ' МБ' : '?');
+  const fg = x.importance != null && x.importance <= 125, det = [x.kind || x.reason, x.desc ? '«' + x.desc + '»' : '', x.importance != null ? (fg ? 'на экране' : 'в фоне') + ' (' + x.importance + ')' : '', x.pss ? 'память ' + mb(x.pss) : ''].filter(Boolean).join(', ');
+  if (x.reason === 'crash' || (!x.reason && x.java)) return { kind: 'crash', lvl: 'e', text: 'падение: ' + det };
+  if (!x.kind) return { kind: 'closed', lvl: 'i', text: (x.reason || 'неизвестно') + (det ? ' — ' + det : '') };
+  const userish = ['user', 'stopped', 'permission'].includes(x.kind) || /remove task|swipe|stop|recents/i.test(x.desc || '');
+  if (userish || !fg) return { kind: 'closed', lvl: 'i', text: 'закрыто человеком или в фоне: ' + det };
+  return { kind: 'oom', lvl: 'w', text: 'система закрыла приложение на экране (память или ресурсы): ' + det };
+}
+
 // После неожиданного закрытия — одно предложение отправить отчёт (через пару секунд после запуска)
 // Android: только настоящее падение (система называет причину закрытия) — закрытое человеком (смахнул, «Остановить»,
 // всплывающее окно) не спрашивается (решение автора 25.10.2026)
@@ -102,7 +117,10 @@ export async function crashOffer(app) {
     let x = null;
     try { x = await registerPlugin('Report').lastExit(); } catch { /* старая сборка — не спрашивать */ }
     const real = x && (x.reason ? x.reason === 'crash' : x.java);
-    log('app', 'прошлое закрытие: ' + ((x && x.reason) || (x && x.java ? 'падение Java' : 'неизвестно')));
+    const v = exitVerdict(x);
+    log('app', 'прошлое закрытие: ' + v.text, v.lvl);
+    // не падение (закрыл человек, приложение было в фоне) — из счёта вылетов убрать; нехватка памяти — отдельно
+    if (v.kind !== 'crash') { dCount('app.crash', -1); dCount(v.kind === 'oom' ? 'app.oom' : 'app.closed'); }
     if (!real) return;
   }
   setTimeout(() => {

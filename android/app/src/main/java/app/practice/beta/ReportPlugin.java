@@ -35,8 +35,33 @@ public class ReportPlugin extends Plugin {
                 ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
                 List<ApplicationExitInfo> l = am.getHistoricalProcessExitReasons(getContext().getPackageName(), 0, 1);
                 if (l != null && !l.isEmpty()) {
-                    int x = l.get(0).getReason();
+                    ApplicationExitInfo e = l.get(0);
+                    int x = e.getReason();
                     reason = x == ApplicationExitInfo.REASON_CRASH || x == ApplicationExitInfo.REASON_CRASH_NATIVE || x == ApplicationExitInfo.REASON_ANR ? "crash" : "other";
+                    // подробности — чтобы отличать падение от нехватки памяти и закрытия человеком (отчёты 05.11.2026)
+                    String kind;
+                    switch (x) {
+                        case ApplicationExitInfo.REASON_CRASH: kind = "crash"; break;
+                        case ApplicationExitInfo.REASON_CRASH_NATIVE: kind = "native"; break;
+                        case ApplicationExitInfo.REASON_ANR: kind = "anr"; break;
+                        case ApplicationExitInfo.REASON_LOW_MEMORY: kind = "lowmem"; break;
+                        case ApplicationExitInfo.REASON_SIGNALED: kind = "signal"; break;
+                        case ApplicationExitInfo.REASON_USER_REQUESTED: kind = "user"; break;
+                        case ApplicationExitInfo.REASON_USER_STOPPED: kind = "stopped"; break;
+                        case ApplicationExitInfo.REASON_EXIT_SELF: kind = "self"; break;
+                        case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE: kind = "excess"; break;
+                        case ApplicationExitInfo.REASON_DEPENDENCY_DIED: kind = "dependency"; break;
+                        case ApplicationExitInfo.REASON_PERMISSION_CHANGE: kind = "permission"; break;
+                        case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE: kind = "init"; break;
+                        default: kind = "other";
+                    }
+                    r.put("kind", kind);
+                    r.put("code", x);
+                    r.put("desc", e.getDescription() == null ? "" : e.getDescription());
+                    r.put("importance", e.getImportance()); // 100 — на экране, 125 — служба на переднем плане, выше — фон
+                    r.put("pss", e.getPss()); // КБ
+                    r.put("rss", e.getRss());
+                    r.put("at", e.getTimestamp());
                 }
             } catch (Exception ignored) { }
         }

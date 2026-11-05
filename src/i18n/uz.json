@@ -2045,5 +2045,7 @@
   "crs.notYet": "Oʻtish uchun {p} kerak",
   "crs.again": "Yana bir bor",
   "remind.chPushy": "qatʼiy",
-  "remind.chCal": "taqvim"
+  "remind.chCal": "taqvim",
+  "diag.f.oom": "Tizim ilovani ekranda yopdi: {n}",
+  "diag.h.oom": "Odatda — xotira yetishmasligi (uzun yozuv, konvertatsiya, koʻp ochiq ilovalar). Jurnalda — qancha xotira band boʻlgani."
 }
