@@ -49,3 +49,18 @@ test('вкладки: инструмент вниз и обратно; Студ�
   expect(await melete.count('[data-open-tool="studio"]')).toBe(1);
   expect(errors).toEqual([]);
 });
+
+// Смахивание между нижними вкладками (автор 06.11.2026): влево — следующая, вправо — предыдущая; по тексту Библии — главы
+test('смахивание: нижние вкладки', async ({ page, melete, errors }) => {
+  await melete.open();
+  const cur = () => page.evaluate(() => document.querySelector('.tabbar .tab[aria-current="page"]')?.dataset.tab);
+  const order = await page.evaluate(() => [...document.querySelectorAll('.tabbar .tab')].map((x) => x.dataset.tab));
+  expect(await cur()).toBe(order[0]);
+  await melete.swipe('#main', -170, 0, { fy: 0.3 });
+  expect(await cur()).toBe(order[1]);
+  await melete.swipe('#main', 170, 0, { fy: 0.3 });
+  expect(await cur()).toBe(order[0]);
+  await melete.swipe('#main', 170, 0, { fy: 0.3 }); // первая — дальше некуда
+  expect(await cur()).toBe(order[0]);
+  expect(errors).toEqual([]);
+});

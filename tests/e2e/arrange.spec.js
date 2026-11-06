@@ -94,3 +94,36 @@ test('занятие: кнопка полного экрана видна в к�
   await expect(page.locator('.ws .pane.pfull')).toHaveCount(0);
   await expect(btn).toBeVisible();
 });
+
+// Блоки главной разной высоты (слово автора 06.11.2026, «переносятся некорректно»): поднятый блок остаётся под пальцем,
+// не меняется с соседом туда-сюда, отпущенный — встаёт на новое место
+test('блоки главной: перенос — блок под пальцем, порядок меняется', async ({ page, melete, errors }) => {
+  await melete.open();
+  const ids = () => page.evaluate(() => [...document.querySelectorAll('[data-hb]')].map((x) => x.dataset.hb));
+  const before = await ids();
+  expect(before.length).toBeGreaterThan(2);
+  const last = before[before.length - 1];
+  const el = page.locator('[data-hb="' + last + '"]');
+  await el.scrollIntoViewIfNeeded();
+  const b = await el.boundingBox();
+  const fx = b.x + 20, fy = b.y + 12;
+  await page.mouse.move(fx, fy); await page.mouse.down(); await page.waitForTimeout(650);
+  // ведём вверх медленно; на каждом шаге точка блока под пальцем — та же (±12 px)
+  let y = fy;
+  const dev = [];
+  for (let i = 0; i < 30; i++) {
+    y -= 12;
+    if (y < 120) break;
+    await page.mouse.move(fx, y, { steps: 2 });
+    const r = await el.boundingBox();
+    // точка блока под пальцем: из-за «приподнятого» масштаба 1,04 (от середины) — поправка
+    const px = r.x + r.width / 2 + (20 - b.width / 2) * 1.04, py = r.y + r.height / 2 + (12 - b.height / 2) * 1.04;
+    dev.push(Math.round(Math.hypot(px - fx, py - y)));
+  }
+  expect(Math.max(...dev), dev.join(',')).toBeLessThan(10);
+  {
+  }
+  await page.mouse.up(); await page.waitForTimeout(500);
+  const after = await ids();
+  expect(after.indexOf(last)).toBeLessThan(before.indexOf(last));
+});

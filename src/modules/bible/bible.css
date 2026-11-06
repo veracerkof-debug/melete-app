@@ -4,6 +4,8 @@
 .bbar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .bpick{min-height:40px;padding:0 12px;border-radius:999px;background:var(--fill);font-weight:600;font-size:15px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
 .bgrow{flex:1}
+.bbar>.ic,.btr{flex:none}
+.bbar .bpick{flex:0 1 auto;min-width:56px}
 .bmark.on{background:var(--tint);color:var(--on-tint)}
 .btext{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 6px 28px;font-family:Georgia,"Noto Serif","Times New Roman",serif;font-size:var(--bfs,18px);line-height:1.62;color:var(--ink);
   -webkit-user-select:text;user-select:text}

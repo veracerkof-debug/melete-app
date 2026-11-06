@@ -233,7 +233,8 @@ export function createSessionScreen(app) {
     if (list.length > 1) {
       const comp = document.createElement('div');
       comp.className = 'comp ' + size;
-      comp.innerHTML = '<div class="csw">' + list.map((x) => '<button class="cswb' + (x === m ? ' on' : '') + '" data-csub="' + x.id + '" aria-pressed="' + (x === m) + '" aria-label="' + esc(subName(x)) + '">' +
+      if (!['piano', 'glider', 'drone'].includes(g)) comp.dataset.swtabs = ''; // смахивание — соседняя глава (не там, где играют пальцами)
+      comp.innerHTML = '<div class="csw" role="tablist">' + list.map((x) => '<button class="cswb' + (x === m ? ' on' : '') + '" data-csub="' + x.id + '" role="tab" aria-selected="' + (x === m) + '" aria-label="' + esc(subName(x)) + '">' +
         x.icon + (big ? '<span>' + esc(subName(x)) + '</span>' : '') + '</button>').join('') + '</div><div class="cbody"></div>';
       frame.appendChild(comp);
       host = comp.querySelector('.cbody');

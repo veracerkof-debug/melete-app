@@ -10,7 +10,7 @@ function render() {
   if (!host) return;
   if (inner) { inner.unmount(); inner = null; }
   const { t, ui } = ctx, l = on(), c = cur();
-  host.innerHTML = '<div class="comp ' + size + '"><div class="tswrow"><div class="tsw" role="tablist">' + l.map((id) => '<button class="tswb' + (id === c ? ' on' : '') + '" data-trch="' + id + '" role="tab" aria-selected="' + (id === c) + '">' + t('ch.' + id) + '</button>').join('') +
+  host.innerHTML = '<div class="comp ' + size + '" data-swtabs><div class="tswrow"><div class="tsw" role="tablist">' + l.map((id) => '<button class="tswb' + (id === c ? ' on' : '') + '" data-trch="' + id + '" role="tab" aria-selected="' + (id === c) + '">' + t('ch.' + id) + '</button>').join('') +
     '</div><button class="tsets" data-trsets aria-label="' + ui.esc(t('sets')) + '" title="' + ui.esc(t('sets')) + '">⋯</button></div><div class="cbody"></div></div>';
   const body = host.querySelector('.cbody');
   if (!c) { body.innerHTML = '<p class="ftr" style="padding:20px">' + t('none') + '</p>'; return; }

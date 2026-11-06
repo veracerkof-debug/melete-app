@@ -235,7 +235,5 @@
     "fret {n}"
   ],
   "kc.shape": "play as {shape}",
-  "bookMore": "More in the textbook",
-  "sets": "Theory settings",
-  "findAbout": "Chord or scale from the notes pressed — as a separate tab"
+  "bookMore": "More in the textbook"
 }

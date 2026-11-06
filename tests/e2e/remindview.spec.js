@@ -34,5 +34,8 @@ test('настройки по карте: звук, маскот, связь —
   await melete.click('#panelLayer [data-act="idea"]'); await page.waitForTimeout(500);
   await expect(page.locator('.sheet a[href*="t.me"]')).toHaveCount(1);
   await expect(page.locator('.sheet .ideatext')).toHaveCount(1);
+  // поле идеи — во всю ширину карточки (06.11.2026: было в половину)
+  const ta = await page.locator('.sheet .ideatext').boundingBox(), gr = await page.locator('.sheet .ideatext').locator('xpath=ancestor::div[contains(@class,"group")]').boundingBox();
+  expect(ta.width).toBeGreaterThan(gr.width * 0.8);
   expect(errors).toEqual([]);
 });

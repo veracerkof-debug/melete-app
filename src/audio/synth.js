@@ -4,6 +4,7 @@
 // эквалайзер (низ, середина, верх). У каждого звука — свои ручки: то, что у него действительно меняется
 // (у рояля — крышка, удар, демпферы; у пэда — дыхание, мерцание, плавание; у баса — фильтр и резонанс).
 // Параметры звука (patch) — как в прототипе (device.piano.syn), слой — device.piano.layer.
+import { holdAt } from './param.js';
 import { getContext, midiFreq, sendToHall, outReady } from './context.js';
 import { maxVoices } from './perf.js';
 import { synWave, noiseBuf } from './waves.js';
@@ -170,11 +171,10 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
   const offOne = (key, fast = false, at = 0) => {
     const vo = voices.get(key), c = vo && vo.g.context;
     if (!vo) return;
-    const t = Math.max(c.currentTime, at || 0), r = fast ? 0.02 : vo.rel;
+    const t = Math.max(c.currentTime, at || 0), r = fast ? 0.04 : vo.rel; // забранный голос — 40 мс, без щелчка
     if (vo.grand && !fast && vo.g.gain.value > 0.05) releaseNoise(c, vo, t);
     try {
-      vo.g.gain.cancelScheduledValues(t);
-      vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
+      holdAt(vo.g.gain, t);
       vo.g.gain.setTargetAtTime(0.0001, t, r / 4);
       vo.os.forEach((o) => { try { o.stop(t + r * 1.4 + 0.05); } catch { /* ignore */ } });
     } catch { /* ignore */ }
@@ -415,8 +415,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
         if (vo.grand) return;
         const c = vo.g.context, t = c.currentTime, tau = Math.max(vo.rel, 0.5) * 1.4 + 0.9, end = tau * 6;
         try {
-          vo.g.gain.cancelScheduledValues(t);
-          vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
+          holdAt(vo.g.gain, t);
           vo.g.gain.setTargetAtTime(0.0001, t, tau);
           vo.os.forEach((o) => { try { o.stop(t + end); } catch { /* ignore */ } });
         } catch { /* ignore */ }
@@ -461,8 +460,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
         vo.rel = Math.max(0.03, s.rel);
         if (vo.sustain) {
           const SU = vo.held ? Math.max(s.sus, 0.45) : s.sus;
-          vo.g.gain.cancelScheduledValues(t);
-          vo.g.gain.setValueAtTime(Math.max(vo.g.gain.value, 0.0001), t);
+          holdAt(vo.g.gain, t);
           vo.g.gain.setTargetAtTime(Math.max(0.0001, vo.peak * SU), t, 0.05);
         }
       });

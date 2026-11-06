@@ -17,8 +17,9 @@ import { chromaSVG, chordSteps } from '../../ui/chroma.js';
 
 import meta, { ICON } from './meta.js';
 const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals'];
-// Определитель — в «Минимале» по умолчанию, в обычном виде включается здесь же, в «Теории» (кнопка в конце вкладок; settings.theory.find)
-const findOn = () => { const d = ctx.data(); return ctx.mono ? d.find !== false : d.find === true; };
+// Определитель — выключен по умолчанию везде, включается в «Модулях и функциях» (слово автора 06.11.2026: вкладка
+// портит вид; settings.theory.find)
+const findOn = () => ctx.data().find === true;
 const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
 const curSec = () => { const s = TH().sec || 'circle'; return secs().includes(s) ? s : 'circle'; }; // «Учебник» и «Джаз» теперь — отдельный инструмент
 const I = {
@@ -370,27 +371,15 @@ function heard() {
 }
 function stopListen() { if (lis) { clearTimeout(lis.timer); lis.m.stop(); lis = null; } }
 
-// Настройки «Теории»: определитель аккордов и гамм (слово автора 06.11.2026 — переключатель здесь, а не в «Модулях и функциях»)
-function setsSheet() {
-  const { t, ui } = ctx;
-  ui.sheet(() => ui.snav(t('sets')) + '<div class="group"><div class="cell"><span class="grow"><span>' + t('sec.find') + '</span><span class="st l2" style="display:block;font-size:13px">' + t('findAbout') + '</span></span>' +
-    ui.sw('thfind', findOn(), t('sec.find')) + '</div></div>', (el) => el.addEventListener('change', (e) => {
-    if (e.target.dataset.sw !== 'thfind') return;
-    const d = ctx.data(); d.find = e.target.checked; ctx.saveData();
-    if (!e.target.checked && TH().sec === 'find') TH().sec = 'circle';
-    render();
-  }));
-}
-
 /* ---------- окно ---------- */
 
 function view() {
   const s = curSec(), big = size === 'full' || size === 'half', { t } = ctx;
   const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
-    t('sec.' + k) + '</button>').join('') + '</div><button class="tsets" data-x="tsets" aria-label="' + ctx.ui.esc(t('sets')) + '" title="' + ctx.ui.esc(t('sets')) + '">⋯</button></div>'
+    t('sec.' + k) + '</button>').join('') + '</div></div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
   const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
-  return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
+  return '<div class="comp ' + size + '"' + (sw ? ' data-swtabs' : '') + '>' + sw + '<div class="cbody">' + body + '</div></div>';
 }
 
 let lastSec = null;
@@ -452,7 +441,6 @@ function act(a, el) {
   switch (a) {
     case 'bookgo': ctx.openIn('book', { book: { ch: el.dataset.v, sec: 'school' } }); break; // раздел уточнит сам учебник по главе
     case 'tsec': th.sec = el.dataset.v; save(); break;
-    case 'tsets': setsSheet(); return;
     case 'kcfrom': KC().from.pc = +el.dataset.v; save(); break;
     case 'kcto': KC().to = +el.dataset.v; save(); break;
     case 'kcplay': { const k = KC(), from = { ...k.from, sharp: null }, list = el.dataset.k === 'a' ? diatonic(from) : diatonic(keyTo(from, k.to)), c = list[+el.dataset.i];

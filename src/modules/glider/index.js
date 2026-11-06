@@ -51,6 +51,15 @@ const cfg = () => {
   normalizeFx(s);
   return s;
 };
+// Доска шире телефона в портрете (альбомное положение, планшет) — нот на ней больше, а полутон под пальцем той же
+// ширины, что в портрете (слово автора 06.11.2026: «чувствительность не должна отличаться так сильно»). Выбранный
+// диапазон начинается там же и расширяется вверх; в настройках хранится свой (портретный). Мышь — как есть.
+function wideWidth(w) {
+  if (!host || !(globalThis.matchMedia && matchMedia('(pointer: coarse)').matches)) return w;
+  const ref = Math.min(screen.width, screen.height) || Math.min(innerWidth, innerHeight), k = host.clientWidth / ref;
+  return k > 1.15 ? Math.round(w * Math.min(k, 2.5)) : w;
+}
+const pcfg = () => { const s = cfg(), w = wideWidth(s.width); return w === s.width ? s : { ...s, width: w, lo: clampLo(s.lo, w) }; };
 const save = () => ctx.store.save();
 const rangeTxt = (s) => mName(s.lo) + '–' + mName(s.lo + s.width);
 const patch = (s) => (s.sound === 'app' ? ctx.audio.pianoPatch() : presetOf(s.sound) || SYN.sine);
@@ -81,7 +90,7 @@ function padHTML(s, over) {
 // что не мешает игре: нота крупно и полупрозрачно (касания проходят сквозь), подпись эффектов вдоль левого края
 // и одна узкая панель в углу: диапазон, привязка, настройки
 function view() {
-  const { t, ui } = ctx, s = cfg(), big = size === 'full' || size === 'half';
+  const { t, ui } = ctx, s = pcfg(), big = size === 'full' || size === 'half';
   const gear = ui.icb('data-x="gset"', ui.icons.gear, t('settings'), 'sm');
   if (size === 'strip') return '<div class="gl strip">' + padHTML(s, '<div class="glov">' + gear + '</div>') + '</div>';
   const note = '<div class="glnote" aria-live="off"><b class="num" id="glnote">' + (big ? mName(s.lo) + '–' + mName(s.lo + s.width) : '—') + '</b><span class="num" id="glc"></span></div>';
@@ -101,7 +110,7 @@ function render() {
 
 // Мало места между подписями — подписываем только «до» и тонику (в ладу нот меньше — места больше)
 function dense() {
-  const p = host && host.querySelector('#glpad'), s = cfg(), pcs = allowedPcs(s);
+  const p = host && host.querySelector('#glpad'), s = pcfg(), pcs = allowedPcs(s);
   if (!p) return;
   const per = p.clientWidth / (s.width + 1), gap = pcs ? Math.min(...pcs.map((x) => pcs.map((y) => (y - x + 12) % 12).filter(Boolean)).flat()) : 1;
   p.classList.toggle('dense', per * gap < 28);
@@ -126,7 +135,7 @@ function melOver(s) {
 function melShow(hit) {
   const pad = host && host.querySelector('#glpad');
   if (!pad) return;
-  const s = cfg();
+  const s = pcfg();
   pad.querySelectorAll('.glmel, #gltg').forEach((e) => e.remove());
   const wrap = document.createElement('div');
   wrap.innerHTML = melOver(s);
@@ -169,7 +178,7 @@ function melPick(id) {
 }
 // «Послушать»: мелодия играет сама, точка касания идёт по доске, полоса показывает слоги
 function listen() {
-  const s = cfg(), mel = melOf(s);
+  const s = pcfg(), mel = melOf(s);
   if (!mel) return;
   if (M.play) { stopListen(); return; }
   if (!ctx.audio.unlock()) { ctx.ui.toast(ctx.t('noAudio')); return; }
@@ -191,7 +200,7 @@ function listen() {
     if (P.voice) P.voice.release();
     P.voice = createGlideVoice(dest.context, bus.input, p, { hold: false, a4: ctx.audio.mf(69), hallVia: ctx.audio.mixer.wet('glider', 'cathedral') });
     P.voice.start(m, voiceFx(s.fx, y));
-    const c = cfg();
+    const c = pcfg();
     el.style.left = midiToPos(m, c.lo, c.width) * 100 + '%'; el.style.top = (1 - y) * 100 + '%';
     show(m);
     M.fol.reset(P.k);
@@ -233,7 +242,7 @@ function place(tc, x, y) {
 }
 
 function at(e, pad) {
-  const r = pad.getBoundingClientRect(), s = cfg();
+  const r = pad.getBoundingClientRect(), s = pcfg();
   const x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
   const m = snapPitch(posToMidi(x, s.lo, s.width), s.snap, allowedPcs(s));
   return { x: midiToPos(m, s.lo, s.width), y, m };
@@ -298,7 +307,7 @@ function up(e) {
 // и он участвует в общей шине эффектов. y — выразительность (CC74; в записи — высота пальца), без неё — 0.3
 function midiIn(e) {
   if (!host) return;
-  const s = cfg(), key = 'mi' + e.id, pos = (m) => Math.max(0, Math.min(1, midiToPos(m, s.lo, s.width)));
+  const s = pcfg(), key = 'mi' + e.id, pos = (m) => Math.max(0, Math.min(1, midiToPos(m, s.lo, s.width)));
   if (e.k === 'on') {
     if (!ctx.audio.unlock()) return;
     const dest = ctx.audio.bus('glider');
@@ -438,6 +447,9 @@ function setSheet() {
 
 function bind() {
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
+  // повернули телефон — доска перерисуется с другим числом нот (когда не играют)
+  let rot = 0, wNow = wideWidth(cfg().width);
+  on(window, 'resize', () => { clearTimeout(rot); rot = setTimeout(() => { if (!host || touches.size) return; const w = wideWidth(cfg().width); if (w !== wNow) { wNow = w; render(); } }, 250); });
   on(host, 'pointerdown', down);
   on(window, 'pointermove', move, { passive: true });
   on(window, 'pointerup', up);

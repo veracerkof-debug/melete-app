@@ -505,6 +505,7 @@ function helpHTML(app) {
 }
 
 // Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
+const theoryFind = (st) => (st.theory || {}).find === true;
 function featHTML(app) {
   const st = app.store.state.settings, lang = getLang();
   const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
@@ -520,6 +521,9 @@ function featHTML(app) {
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
     // пакеты моделей (полный рояль, вокал телефона): скачать один раз, удалить (src/core/packs.js)
+    // определитель аккордов и гамм в «Теории»: выключен по умолчанию (слово автора 06.11.2026)
+    (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
+      t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
     packsHTML() +
     // работа в фоне (Android): разрешения — батарея, уведомления, настройки приложения
     (bgAvailable() ? '<div class="hdr">' + t('bg.feat') + '</div><div data-bgbox><p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(null) + '</div>' : '') +
@@ -843,6 +847,7 @@ export function createPanel(app, onChange) {
         if (e.target.checked) s.add(d.qset); else if (s.size > 1) s.delete(d.qset); else { e.target.checked = true; return; }
         st.qsets = [...QSETS, ...(st.quoteBooks || []).map((x) => 'own:' + x.id)].filter((k) => s.has(k)); app.store.settingsChanged(); onChange(); return;
       }
+      if (e.target.hasAttribute('data-thfind')) { const st = app.store.state.settings; (st.theory ??= {}).find = e.target.checked; app.store.settingsChanged(); return; }
       if (e.target.hasAttribute('data-bplan')) { const v = e.target.value; app.bible.setPlan(v === 'none' ? null : v, dayKeyOf(Date.now())); render(); onChange(); return; }
       if (d.bgctl) {
         const st = app.store.state.settings, k = d.bgctl, on = e.target.checked;

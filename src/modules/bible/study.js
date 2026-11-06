@@ -187,7 +187,8 @@ function wordAt(x, y) {
   return { word, strong };
 }
 
-// Подключить жесты к тексту главы. h — { lexicon(topic), dict(word), comm(v), xref(v), foot(v, marker), menu(v), step(d), font(px) }
+// Подключить жесты к тексту главы. h — { lexicon(topic), dict(word), comm(v), xref(v), foot(v, marker), menu(v), step(d), font(px), pure(on) }
+const SLOW = 280; // мс: дольше — масштаб шрифта, быстрее — полный экран
 export function bindGestures(el, h) {
   let down = null, lastTap = 0, lastXY = null, press = 0, pinch = null;
   const clear = () => { clearTimeout(press); press = 0; };
@@ -236,9 +237,28 @@ export function bindGestures(el, h) {
     lastXY = { x: e.clientX, y: e.clientY };
   });
   el.addEventListener('pointercancel', () => { clear(); down = null; });
-  // щипок — размер шрифта
+  // два пальца (слово автора 06.11.2026): быстрый щипок — полный экран (развести) или обратно (свести);
+  // поставил пальцы и повёл медленно — размер шрифта. Решается по первым 280 мс: успели разойтись заметно — «быстрый»
   const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  el.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { clear(); pinch = { d: dist(e.touches), fs: h.fs() }; } }, { passive: true });
-  el.addEventListener('touchmove', (e) => { if (pinch && e.touches.length === 2) { e.preventDefault(); h.font(pinch.fs * (dist(e.touches) / pinch.d), false); } }, { passive: false });
-  el.addEventListener('touchend', (e) => { if (pinch && e.touches.length < 2) { h.font(null, true); setTimeout(() => { pinch = null; }, 50); } });
+  el.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { clear(); pinch = { d: dist(e.touches), fs: h.fs(), t: performance.now(), r: 1, mode: null }; } }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    const p = pinch, now = performance.now(), dd = dist(e.touches);
+    p.r = dd / p.d;
+    if (!p.mode) {
+      if (now - p.t < SLOW && (p.r >= 1.3 || p.r <= 1 / 1.3)) p.mode = 'fast';
+      else if (now - p.t >= SLOW) { p.mode = 'zoom'; p.d = dd; p.fs = h.fs(); p.r = 1; }
+    }
+    if (p.mode === 'zoom') h.font(p.fs * p.r, false);
+  }, { passive: false });
+  el.addEventListener('touchend', (e) => {
+    if (!pinch || e.touches.length >= 2) return;
+    const p = pinch;
+    if (p.mode === 'zoom') h.font(null, true);
+    else if (h.pure && p.r >= 1.4) h.pure(true);
+    else if (h.pure && p.r <= 1 / 1.4) h.pure(false);
+    setTimeout(() => { pinch = null; }, 50);
+  });
+  el.addEventListener('touchcancel', () => { pinch = null; });
 }

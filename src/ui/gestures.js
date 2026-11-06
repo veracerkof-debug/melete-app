@@ -2,6 +2,7 @@
 // и принят в телефонах — он есть, а кнопки остаются для тех, кто жестов не знает.
 // Защита от случайных срабатываний: смахивание — только почти горизонтальное, быстрое и достаточно длинное;
 // не начинается на полях ввода, ползунках, клавишах, полосах выбора с прокруткой и там, где стоит data-noswipe.
+let lastSwipe = 0;
 const NOSWIPE = 'input, textarea, select, [contenteditable], .hscroll, .kb, canvas, [role="slider"], [data-noswipe], .mwheel';
 
 // el — где слушать; left() — смахнули влево (дальше), right() — вправо (назад).
@@ -20,6 +21,7 @@ export function swipe(el, { left, right, min = 70, edge = 0, ok = () => true } =
     s = null;
     if (dt > 700 || Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 2) return;
     if (document.getSelection && String(document.getSelection()).length) return; // выделяли текст
+    if ((dx < 0 && left) || (dx > 0 && right)) lastSwipe = performance.now(); // смахивание между страницами его не повторит
     if (dx < 0 && left) left(); else if (dx > 0 && right) right();
   };
   const cancel = () => { s = null; };
@@ -109,4 +111,55 @@ export function zoom2(el, { start, move, end, ok = () => true }) {
   el.addEventListener('touchend', te);
   el.addEventListener('touchcancel', te);
   return () => { el.removeEventListener('touchstart', ts); el.removeEventListener('touchmove', tm); el.removeEventListener('touchend', te); el.removeEventListener('touchcancel', te); };
+}
+
+// Смахивание между страницами (слово автора 06.11.2026): там, где вверху переключатель страниц ([role="tablist"]
+// внутри области [data-swtabs]), смахивание по странице влево — следующая, вправо — предыдущая; переход — тем же
+// касанием по вкладке, что и рукой. Не действует там, где жест значит другое: клавиши, холсты, пэды
+// ([data-noswipe], NOSWIPE), полосы с прокруткой вбок и места со своим смахиванием (оно срабатывает раньше).
+const scrollsX = (el, stop) => {
+  for (let x = el; x && x !== stop; x = x.parentElement) {
+    if (x.scrollWidth > x.clientWidth + 2) { const o = getComputedStyle(x).overflowX; if (o === 'auto' || o === 'scroll') return true; }
+  }
+  return false;
+};
+export function pageStep(reg, d) {
+  const tl = reg && reg.querySelector('[role="tablist"]');
+  if (!tl) return false;
+  const tabs = [...tl.querySelectorAll('[role="tab"]')].filter((b) => !b.disabled && b.offsetParent);
+  const i = tabs.findIndex((b) => b.getAttribute('aria-selected') === 'true');
+  const n = tabs[i + d];
+  if (i < 0 || !n) return false;
+  n.click();
+  n.scrollIntoView && n.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  return true;
+}
+// На касаниях, а не на pointer-событиях: браузер отменяет pointer, когда начинает свою прокрутку, а touchend приходит всегда.
+// other — смахивание вне области страниц (нижние вкладки приложения): { ok(target), step(d) }
+export function pageSwipe(root = document, { min = 70, other = null } = {}) {
+  let s = null;
+  const start = (e) => {
+    s = null;
+    if (e.touches.length !== 1) return;
+    const tg = e.target, reg = tg.closest && tg.closest('[data-swtabs]');
+    if (!tg.closest || tg.closest(NOSWIPE) || tg.closest('[role="tablist"]') || scrollsX(tg, reg)) return;
+    if (!reg && !(other && other.ok(tg))) return;
+    const p = e.touches[0];
+    s = { x: p.clientX, y: p.clientY, t: performance.now(), reg };
+  };
+  const end = (e) => {
+    if (!s || e.touches.length) { if (e.touches.length) s = null; return; }
+    const q = s, p = e.changedTouches[0];
+    s = null;
+    const dx = p.clientX - q.x, dy = p.clientY - q.y, now = performance.now();
+    if (now - q.t > 700 || Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 2) return;
+    if (now - lastSwipe < 400) return; // взял ближний обработчик
+    if (document.getSelection && String(document.getSelection()).length) return;
+    if (q.reg) pageStep(q.reg, dx < 0 ? 1 : -1); else other.step(dx < 0 ? 1 : -1);
+  };
+  const cancel = () => { s = null; };
+  root.addEventListener('touchstart', start, { passive: true });
+  root.addEventListener('touchend', end);
+  root.addEventListener('touchcancel', cancel);
+  return () => { root.removeEventListener('touchstart', start); root.removeEventListener('touchend', end); root.removeEventListener('touchcancel', cancel); };
 }

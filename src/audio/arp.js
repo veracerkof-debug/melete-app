@@ -6,6 +6,7 @@
 // долям), иначе свой. Спутник «Глайдер рядом» — тянущаяся воздушная мелодия по ступеням той же тональности с эхом.
 // Логика рисунков — чистые функции (tests/arp.test.js); планировщик — на часах звука (clock.js), без setTimeout.
 import { CHORDS } from './drone.js';
+import { holdAt } from './param.js';
 import { presetOf, PRESETS } from './synth.js';
 import { every, cancel } from './clock.js';
 import { getContext, midiFreq } from './context.js';
@@ -159,7 +160,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
   function glideOff() {
     if (!glide) return;
     const x = glide, c = x.g.context, t = c.currentTime;
-    x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0, t, 0.5); x.wet.gain.setTargetAtTime(0, t + 2, 0.8);
+    holdAt(x.g.gain, t); x.g.gain.setTargetAtTime(0, t, 0.5); x.wet.gain.setTargetAtTime(0, t + 2, 0.8);
     [x.o1, x.o2, x.vib].forEach((o) => { try { o.stop(t + 6); } catch { /* уже */ } });
     glide = null;
   }

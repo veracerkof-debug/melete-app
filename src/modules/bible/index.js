@@ -72,7 +72,7 @@ function barHTML() {
     '<button class="bpick" data-x="bpick" aria-label="' + ui.esc(t('pick')) + '">' + ui.esc((small ? P.abbr(cur.code) : P.name(cur.code)) + ' ' + cur.ch) + '</button>' +
     ui.icb('data-x="bnext"', I.next, t('next'), 'sm') +
     (small ? '' : '<button class="btr" data-x="btr" aria-label="' + ui.esc(t('tr')) + '">' + ui.esc(P.short) + '</button><span class="bgrow"></span>' + ui.icb('data-x="bsearch"', I.search, t('search'), 'sm') +
-      ui.icb('data-x="bfs" data-d="-2"', I.minus, t('smaller'), 'sm') + ui.icb('data-x="bfs" data-d="2"', I.plus, t('bigger'), 'sm') + ui.icb('data-x="bpure"', I.full, t('pure'), 'sm')) +
+      ui.icb('data-x="bpure"', I.full, t('pure'), 'sm')) +
     '<button class="ic sm bmark' + (isRead() ? ' on' : '') + '" data-x="bmark" aria-pressed="' + isRead() + '" aria-label="' + ui.esc(t(isRead() ? 'unmark' : 'markRead')) + '">' + I.check + '</button></div>';
 }
 
@@ -132,6 +132,7 @@ function gestures(tx) {
     link: (href) => S.follow(ctx, href, nav),
     step: (d) => { if (sel) return; const n = step(d); if (n) open(n.code, n.ch); },
     fs: () => fs(),
+    pure: (on) => setPure(on),
     font: (px, done) => {
       if (px != null) { livePx = Math.max(FS_MIN, Math.min(FS_MAX, Math.round(px))); host.querySelector('.bwrap').style.setProperty('--bfs', livePx + 'px'); }
       if (done && livePx) { ctx.store.set('fs', livePx); livePx = 0; }
@@ -421,7 +422,6 @@ function bind() {
     else if (a === 'bselcopy') copyVerses([...sel]);
     else if (a === 'bselshare') shareVerses([...sel]);
     else if (a === 'btr') trSheet();
-    else if (a === 'bfs') { ctx.store.set('fs', Math.max(FS_MIN, Math.min(FS_MAX, fs() + +x.dataset.d))); host.querySelector('.bwrap').style.setProperty('--bfs', fs() + 'px'); }
     else if (a === 'bmark') { const k = chKey(cur.code, cur.ch), on = !ctx.bible.isRead(k); ctx.bible.mark(k, on); ctx.log('прочитано ' + k + ': ' + on); render(); }
   };
   host.addEventListener('click', onClick);

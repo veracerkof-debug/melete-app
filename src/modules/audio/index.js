@@ -995,7 +995,7 @@ function playerHTML() {
       '<div class="vrow tight">' + c.rate + c.key + c.click + c.stems + c.sty('sm') + '</div></div>' + pviewHTML(c, d, true) + pswHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av pv" style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
+  return '<div class="mcard av pv" data-swtabs style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
     '<div class="vrow tight arow2">' + c.rate + c.rpre + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 

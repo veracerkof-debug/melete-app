@@ -1,6 +1,7 @@
 // Звук глайдера: голос (на каждый палец) и общая шина эффектов (эхо, реверберация).
 // Тембр — как у пианино приложения (те же таблицы волн и огибающая), высота меняется плавно.
 // Эффекты управляются значением 0…1: внизу поверхности — 0 (эффекта нет совсем), вверху — максимум.
+import { holdAt } from '../../audio/param.js';
 import { synWave } from '../../audio/waves.js';
 import { reverbNode, sendToHall } from '../../audio/context.js';
 import { airVoice } from '../../audio/airsound.js';
@@ -162,8 +163,7 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440, hallVi
       if (dead) return;
       dead = true;
       const t = c.currentTime, r = Math.max(0.04, s.rel);
-      amp.gain.cancelScheduledValues(t);
-      amp.gain.setValueAtTime(Math.max(amp.gain.value, 0.0001), t);
+      holdAt(amp.gain, t);
       amp.gain.setTargetAtTime(0.0001, t, r / 4);
       const end = t + r * 1.4 + 0.05;
       [...os, ...(air ? air.srcs : []), vibLfo, trLfo].forEach((o) => { try { o.stop(end); } catch { /* ignore */ } });

@@ -42,3 +42,21 @@ test('Библия: полоса внизу, поиск, полный экран
   await expect(page.locator('.tabbar')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+// Два пальца по тексту (автор 06.11.2026): быстрый щипок — полный экран, медленный — размер шрифта; кнопок − + нет
+test('Библия: быстрый щипок — полный экран, медленный — шрифт', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { church: true } });
+  await melete.tab('bible');
+  await page.waitForSelector('.bwrap .bv', { timeout: 15_000 });
+  await expect(page.locator('.bbar [data-x="bfs"]')).toHaveCount(0);
+  const fs0 = await page.evaluate(() => getComputedStyle(document.querySelector('.bwrap')).getPropertyValue('--bfs'));
+  await melete.spread('.bwrap .btext', 1.5, { steps: 40 }); // медленно: ~0,8 с
+  await expect(page.locator('.bwrap.bpure')).toHaveCount(0);
+  const fs1 = await page.evaluate(() => getComputedStyle(document.querySelector('.bwrap')).getPropertyValue('--bfs'));
+  expect(parseFloat(fs1)).toBeGreaterThan(parseFloat(fs0));
+  await melete.spread('.bwrap .btext', 3, { steps: 4 }); // быстро
+  await expect(page.locator('.bwrap.bpure')).toHaveCount(1);
+  await melete.spread('.bwrap .btext', 0.3, { steps: 4 });
+  await expect(page.locator('.bwrap.bpure')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

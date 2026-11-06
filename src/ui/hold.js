@@ -112,6 +112,13 @@ export function sortable(list, rowSel, key, onDrop) {
 // элемент встаёт на новое место, onDrop(ids, el) — новый порядок (значения атрибута key). Удержание без движения —
 // onStill(el, e) (меню). skip(e) — не начинать (например, касание пришлось на вложенный элемент). У края экрана —
 // прокрутка. Пока элемент поднят, страница не прокручивается пальцем.
+// Где элемент стоит по раскладке (без transform), в координатах экрана: от offsetParent, с его прокруткой
+function layAt(x) {
+  const op = x.offsetParent;
+  if (!op || op === document.body || op === document.documentElement) return { l: x.offsetLeft - scrollX, t: x.offsetTop - scrollY };
+  const r = op.getBoundingClientRect();
+  return { l: r.left + op.clientLeft - op.scrollLeft + x.offsetLeft, t: r.top + op.clientTop - op.scrollTop + x.offsetTop };
+}
 export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
   let D = null, last = null;
   root.addEventListener('pointermove', (e) => { last = e; }, { passive: true });
@@ -138,20 +145,23 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     place();
     // элемент под пальцем — по раскладке, без учёта анимации соседей (offset*), — меняемся местами;
     // соседи переезжают плавно (FLIP)
-    const all = siblings(D.el), host = D.el.parentElement, hb = host.getBoundingClientRect();
+    const all = siblings(D.el);
     const tg = all.find((x) => {
       if (x === D.el) return false;
-      const l = hb.left + host.clientLeft + x.offsetLeft, t = hb.top + host.clientTop + x.offsetTop;
+      const { l, t } = layAt(x);
       return D.x >= l && D.x <= l + x.offsetWidth && D.y >= t && D.y <= t + x.offsetHeight;
     });
-    if (!tg) return;
+    // пока палец над тем, с кем только что поменялись, — не меняться обратно (иначе блоки разной высоты
+    // меняются туда-сюда на каждом движении, и блок уезжает из-под пальца)
+    if (!tg || tg === D.skip) { if (!tg) D.skip = null; return; }
+    D.skip = tg;
     const before = new Map(all.map((x) => [x, x.getBoundingClientRect()]));
-    const r0 = before.get(D.el), dx0 = D.x - D.x0, dy0 = D.y - D.y0;
+    const a = layAt(D.el);
     if (all.indexOf(D.el) < all.indexOf(tg)) tg.after(D.el); else tg.before(D.el);
-    D.el.style.transform = '';
-    const r1 = D.el.getBoundingClientRect();
-    // палец остаётся на том же месте элемента
-    D.x0 += r1.left - (r0.left - dx0); D.y0 += r1.top - (r0.top - dy0);
+    // палец остаётся на том же месте элемента: сдвиг считается по раскладке (без масштаба «приподнятого» блока),
+    // с учётом прокрутки, которую браузер сам подправляет при перестановке
+    const c = layAt(D.el);
+    D.x0 += c.l - a.l; D.y0 += c.t - a.t;
     place();
     all.forEach((x) => {
       if (x === D.el) return;

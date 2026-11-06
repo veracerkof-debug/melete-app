@@ -1,5 +1,6 @@
 // Пэды и дрон: тёплый, смычок, хор, стекло (и воздушные); тампура заменена арпеджиатором (arp.js, 06.11.2026). Слои по октавам, созвучия, плавная смена нот.
 // Настройки — объект device.drone (как в прототипе).
+import { holdAt } from './param.js';
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
 import { airVoice, sideInto } from './airsound.js';
@@ -180,9 +181,8 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
 
   function release(v, fade) {
     cancel(v.timer);
-    const { g, os } = v, t = g.context.currentTime, cur = g.gain.value;
-    g.gain.cancelScheduledValues(t);
-    g.gain.setValueAtTime(cur, t);
+    const { g, os } = v, t = g.context.currentTime;
+    holdAt(g.gain, t);
     g.gain.linearRampToValueAtTime(0, t + fade);
     os.forEach((o) => { try { o.stop(t + fade + 0.1); } catch { /* ignore */ } });
   }

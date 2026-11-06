@@ -26,6 +26,7 @@ import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { dragSort, onHold, holdMenu } from '../../ui/hold.js';
+import { pageSwipe } from '../../ui/gestures.js';
 
 // Значки меню песни (удержание строки в списке)
 const SM = {
@@ -35,6 +36,9 @@ const SM = {
   del: '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"/></svg>',
 };
 
+let pageSwiping = false, tabSwipe = null;
+// Нижние вкладки смахиванием (слово автора 06.11.2026): не там, где играют пальцами, и не по тексту Библии (там — главы)
+const PLAY_TABS = ['piano', 'glider', 'drone', 'theremin', 'looper', 'studio', 'synth'];
 export function createShell(app, root) {
   // «Минимал»: страниц две — главная и «Песни»; остальное — значками на главной (решение автора 28.10.2026)
   const tabsNow = () => (app.store.state.settings.uiStyle === 'mono' ? ['home', 'library', 'tools'] : visibleTabs(app.store.state.settings, tabIds(app.store.state.settings)));
@@ -43,6 +47,8 @@ export function createShell(app, root) {
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
   // у вкладок — значок и подпись (слово автора 05.11.2026): любой инструмент, перенесённый во вкладки, подписан
   document.documentElement.classList.add('tablabels');
+  // смахивание между страницами внутри инструментов (переключатель вверху) — везде, один обработчик на документ
+  if (!pageSwiping) { pageSwiping = true; pageSwipe(document, { other: { ok: (tg) => !!tabSwipe && tabSwipe.ok(tg), step: (d) => tabSwipe && tabSwipe.step(d) } }); }
 
   const tabName = (k) => (TAB_ICONS[k] ? t('nav.' + k) : moduleName(moduleById(k)));
   const renderTabs = () => {
@@ -124,6 +130,16 @@ export function createShell(app, root) {
     requestAnimationFrame(step);
   }
 
+  tabSwipe = {
+    ok: (tg) => !!tg.closest('#main') && !view.song && !homeEditing() && !document.documentElement.classList.contains('arrange') &&
+      !PLAY_TABS.includes(tabModuleOf(app.store.state.settings, view.tab)) && !tg.closest('.btext, [data-noswipe]'),
+    step: (d) => {
+      const L = tabsNow(), n = L[L.indexOf(view.tab) + d];
+      if (!n) return;
+      go(n);
+      if (main.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) main.animate([{ transform: 'translateX(' + d * 28 + 'px)', opacity: 0.5 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: 'ease-out' });
+    },
+  };
   function go(tab, song) {
     if (panel.page) panel.close();
     setHomeEdit(false); // правка главной заканчивается при уходе с неё
