@@ -547,3 +547,9 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rvrow.play .rvk{background:var(--tint);width:12px;height:12px}
 .rvrow.ev .rvk{border-radius:3px;background:var(--blue,#3b82f6)}
 .rvrow.past{opacity:.45}
+/* сопряжение по QR (qrscan.js): код на компьютере, камера на телефоне */
+.syqr{width:200px;height:200px;border-radius:12px;overflow:hidden;background:#fff;margin:12px 0 6px}
+.syqr svg{display:block;width:100%;height:100%}
+.qrcam{position:relative;width:100%;aspect-ratio:1;border-radius:16px;overflow:hidden;background:#000}
+.qrcam video{width:100%;height:100%;object-fit:cover;display:block}
+.qrframe{position:absolute;inset:18%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}

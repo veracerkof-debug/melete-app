@@ -2113,5 +2113,12 @@
   "tour.next": "Keyingi",
   "tour.done": "Tayyor",
   "help.offTitle": "Birinchi marta koʻrsatish",
-  "help.offHint": "Yoritilgan yoʻriqnoma boʻlim yoki asbob birinchi marta ochilganda oʻzi koʻrsatiladi. Oʻtkazib yuborilgani — yana, ikki martadan koʻp emas."
+  "help.offHint": "Yoritilgan yoʻriqnoma boʻlim yoki asbob birinchi marta ochilganda oʻzi koʻrsatiladi. Oʻtkazib yuborilgani — yana, ikki martadan koʻp emas.",
+  "qr.title": "Kompyuter QR-kodi",
+  "qr.hint": "Kamerani kompyuterdagi Melete QR-kodiga qarating (Profil → Telefon va kompyuter).",
+  "qr.other": "Bu Melete kodi emas — kompyuterdagi «Telefon va kompyuter» sahifasidagi kod kerak.",
+  "qr.noCam": "Kamera mavjud emas — telefon sozlamalarida ruxsat bering yoki manzil va kodni qoʻlda kiriting.",
+  "qr.scan": "QR-kodni skanerlash",
+  "qr.pcHint": "Telefonda: «QR-kodni skanerlash» — manzil va kod oʻzi qoʻyiladi.",
+  "group.train": "Eshitish va ritm"
 }

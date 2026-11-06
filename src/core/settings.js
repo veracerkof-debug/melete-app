@@ -159,6 +159,19 @@ export function setTheme(store, theme) {
 export const DEFAULT_TABS = ['home', 'library', 'calendar', 'tools'];
 // Где появляется новая вкладка: «Библия» (церковный режим) — в середине, сразу после «Песен»
 const TAB_AFTER = { bible: 'library' };
+// «Слух» и «Ритм» стали главами одного инструмента «Слух и ритм» (06.11.2026): прежние места (вкладки, быстрый доступ,
+// порядок инструментов и панели занятия) переходят к нему; выключены были оба — выключен и он (главы — снова включены)
+export function trainMigrate(st) {
+  if (st.trainMig) return false;
+  st.trainMig = true;
+  const swap = (a) => { if (!Array.isArray(a)) return a; const out = []; a.forEach((x) => { const y = x === 'ear' || x === 'beat' ? 'train' : x; if (!out.includes(y)) out.push(y); }); return out; };
+  ['tabs', 'tabsOff', 'tabMods', 'quick', 'dockOrder'].forEach((k) => { if (Array.isArray(st[k])) st[k] = swap(st[k]); });
+  if (st.toolsTab) ['order', 'off'].forEach((k) => { if (Array.isArray(st.toolsTab[k])) st.toolsTab[k] = swap(st.toolsTab[k]); });
+  const off = st.off || {};
+  if (off.ear && off.beat) { off.train = true; delete off.ear; delete off.beat; }
+  return true;
+}
+
 // Раньше «Библия» вставала в конец; один раз переносим её в середину (дальше порядок — как задал человек)
 export function tabsMigrate(settings) {
   const t = settings.tabs;

@@ -16,7 +16,7 @@ import { createFxPanel } from '../ui/fxpanel.js';
 import { gemOf } from './mastery.js';
 import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
-import { isOn } from './settings.js';
+import { isOn, setFeature } from './settings.js';
 import { moduleById } from '../modules/index.js';
 import { createSetlists } from './metrosets.js';
 
@@ -179,6 +179,8 @@ export function makeCtx(app, mod) {
     desk: () => isDesk(),
     keyLabel: (m) => (isDesk() && app.midi ? keyLabel(m, app.midi.qwerty.base) : ''),
     hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
+    // включить или выключить свою часть (главу: модуль с partOf этого модуля — «Слух и ритм»)
+    setPart: (id, on) => { const m = moduleById(id); if (!m || m.partOf !== mod.id) return; setFeature(app.store, id, on); if (app.onFeatures) app.onFeatures(); },
     // Другой инструмент внутри своего окна (студия: пианино, глайдер, терменвокс под плейлистом) → { resize, unmount } или null
     // ctx другого модуля (его строки и хранилище): лупер открывает редактор партии студии (вид «Партии»)
     ctxOf: (id) => { const m = moduleById(id); return m ? makeCtx(app, m) : null; },

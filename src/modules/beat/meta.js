@@ -16,6 +16,8 @@ export default {
   icon: ICON,
   color: '#D2693C',
   sizes: ['full', 'half', 'quarter'],
+  // глава «Слуха и ритма» (06.11.2026): не отдельной карточкой — внутри train; в занятии — группа окон train
+  inner: true, partOf: 'train', group: 'train',
   multitouch: true, // удары двумя пальцами по площадке
   record: false,
 };

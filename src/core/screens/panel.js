@@ -49,6 +49,7 @@ import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
 import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT } from '../sync.js';
 import { setlistsOf } from '../guest.js';
+import { scanQR, parsePair, pairPayload } from './qrscan.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
 const iconBg = (st, hue) => '--tc:' + hueColor(st, hue);
@@ -436,7 +437,9 @@ function syncHTML(app) {
     return '<div class="hdr">' + t('sy.pcTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + t('sy.pcSw') + '</span>' + psw('syncSrv', st.on, t('sy.pcSw')) + '</div>' +
       (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc((st.ips[0] || '—')) + '</b>' + (st.ips.length > 1 ? '<span class="l2">' + esc(st.ips.slice(1).join(', ')) + '</span>' : '') +
         '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
-        (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') + '</div>' : '') +
+        (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
+        // QR (слово автора 06.11.2026): телефон наводит камеру — адрес, код и отпечаток без ввода
+        (st.ips[0] ? '<div class="syqr" data-qr="' + esc(pairPayload(st.ips[0], st.code, st.fp || '')) + '">' + qrHTML(pairPayload(st.ips[0], st.code, st.fp || '')) + '</div><span class="l2">' + t('qr.pcHint') + '</span>' : '') + '</div>' : '') +
       peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
       '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
       '</div><p class="ftr">' + (st.err === 'port' && !st.on ? '<b class="danger">' + t('sy.err.port2') + '</b><br>' : '') + t('sy.pcHint') + '</p>';
@@ -447,7 +450,8 @@ function syncHTML(app) {
   if (!pc) return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group">' +
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-sy="addr" inputmode="decimal" placeholder="192.168.1.23" value="' + esc(syncAddr) + '" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-sy="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
-    '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
+    '<button class="cell act" data-act="sypair"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.pair') + '</button>' +
+    '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('qr.scan') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
   return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + (pc.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(pc.fp)) : '') + '</span></span></div>' +
     '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
@@ -460,7 +464,7 @@ function syncHTML(app) {
 // Открытая — вбил адрес, и внутри; закрытая — только по QR-коду и с подтверждением здесь. Ведёт хозяин, можно передать гостю
 let qrSvg = null; // генератор QR-кода — по требованию (лёгкий, MIT)
 function qrHTML(text) {
-  if (!qrSvg) { import('qrcode-generator').then((m) => { qrSvg = m.default || m; const el = document.querySelector('[data-qr]'); if (el) el.innerHTML = qrHTML(el.dataset.qr); }); return ''; }
+  if (!qrSvg) { import('qrcode-generator').then((m) => { qrSvg = m.default || m; document.querySelectorAll('[data-qr]').forEach((el) => { el.innerHTML = qrHTML(el.dataset.qr); }); }); return ''; }
   const q = qrSvg(0, 'M'); q.addData(text); q.make();
   const n = q.getModuleCount(), c = 6, m = 4 * c, W = n * c + 2 * m;
   let d = '';
@@ -742,6 +746,23 @@ export function createPanel(app, onChange) {
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
+      if (g('[data-act="syscan"]') && !syncBusy) {
+        scanQR((x) => !!parsePair(x)).then((x) => {
+          const q = parsePair(x);
+          if (!q) return;
+          syncAddr = q.addr; syncBusy = true; syncMsg = t('sy.pairing'); render();
+          pair(q.addr, q.code, t('sy.phoneName'))
+            .then((pc) => {
+              // отпечаток из QR не совпал — это не тот компьютер: связь не сохраняется
+              if (q.fp && pc.fp && !pc.fp.startsWith(q.fp)) { forgetPc(); throw Object.assign(new Error('fp'), { reason: 'tls' }); }
+              syncMsg = t('sy.paired', { name: pc.name }) + (pc.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(pc.fp) : '');
+              if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {});
+            })
+            .catch((e) => { syncMsg = syncErr(e); })
+            .finally(() => { syncBusy = false; render(); });
+        });
+        return;
+      }
       if (g('[data-act="sypair"]') && !syncBusy) {
         const addr = layer.querySelector('[data-sy="addr"]').value, code = layer.querySelector('[data-sy="code"]').value;
         syncBusy = true; syncMsg = t('sy.pairing'); render();

@@ -17,7 +17,7 @@ import { bareScope } from '../../i18n/index.js';
 const NOSPREAD_IDS = ['piano', 'glider']; // двумя пальцами там играют — окном управляют кнопки
 
 // Строка на карточке — только последнее состояние (темп, строй, звук, тональность); описания и счётчики — нет
-const NO_STATUS = ['ear', 'looper', 'audio', 'notes', 'voice', 'studio'];
+const NO_STATUS = ['train', 'ear', 'looper', 'audio', 'notes', 'voice', 'studio'];
 export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, root));
 // Порядок и убранные во вкладке (settings.toolsTab: { order, off }): удержание карточки — меню (левее, правее, убрать);
 // убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки

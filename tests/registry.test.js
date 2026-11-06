@@ -9,7 +9,7 @@ const template = (await import('../docs/module-template/index.js')).default;
 describe('реестр модулей', () => {
   it('встроенные модули подключены по порядку, без ошибок', () => {
     expect(skippedModules).toEqual([]);
-    expect(modules.map((m) => m.id)).toEqual(['bible', 'metro', 'tuner', 'piano', 'glider', 'theremin', 'drone', 'looper', 'studio', 'theory', 'book', 'ear', 'beat', 'timer', 'audio', 'notes', 'voice', 'convert', 'spectrum']);
+    expect(modules.map((m) => m.id)).toEqual(['bible', 'metro', 'tuner', 'piano', 'glider', 'theremin', 'drone', 'looper', 'studio', 'theory', 'book', 'train', 'ear', 'beat', 'timer', 'audio', 'notes', 'voice', 'convert', 'spectrum']);
     modules.forEach((m) => expect(m.i18n.ru.about, m.id).toBeTruthy());
   });
   it('при запуске — только описания; сам модуль догружается по требованию и совпадает с описанием', async () => {

@@ -2149,5 +2149,12 @@
   "tour.next": "Next",
   "tour.done": "Done",
   "help.offTitle": "Show the first time",
-  "help.offHint": "An instruction with highlights shows itself when a section or tool is opened for the first time. A skipped one shows again, at most twice."
+  "help.offHint": "An instruction with highlights shows itself when a section or tool is opened for the first time. A skipped one shows again, at most twice.",
+  "qr.title": "Computer QR code",
+  "qr.hint": "Point the camera at the QR code in Melete on the computer (Profile → Phone and computer).",
+  "qr.other": "This is not a Melete code — use the code from the “Phone and computer” page on the computer.",
+  "qr.noCam": "The camera is unavailable — allow it in the phone settings or enter the address and code by hand.",
+  "qr.scan": "Scan QR code",
+  "qr.pcHint": "On the phone: “Scan QR code” — the address and code fill in by themselves.",
+  "group.train": "Ear & rhythm"
 }

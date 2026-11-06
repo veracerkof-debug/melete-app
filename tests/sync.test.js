@@ -233,3 +233,14 @@ describe('подбор кода сопряжения', () => {
     resetPairGuard();
   });
 });
+
+// Сопряжение по QR (06.11.2026)
+import { pairPayload, parsePair } from '../src/core/screens/qrscan.js';
+describe('QR сопряжения', () => {
+  it('код компьютера читается телефоном; чужие коды — нет', () => {
+    const fp = 'ab'.repeat(32);
+    expect(parsePair(pairPayload('192.168.1.5', '123456', fp))).toEqual({ addr: '192.168.1.5', code: '123456', fp: fp.slice(0, 16) });
+    expect(parsePair('https://example.com')).toBeNull();
+    expect(parsePair('MELETE-PAIR;a=1.2.3.4;c=12')).toBeNull();
+  });
+});
