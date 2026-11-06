@@ -15,6 +15,7 @@ test('правка вкладок: календарь в инструменты 
   await page.mouse.move(c.x + c.width / 2, c.y - 150, { steps: 8 }); await page.mouse.move(c.x + c.width / 2, c.y - 300, { steps: 8 });
   await page.mouse.up(); await page.waitForTimeout(500);
   expect(await tabs(page)).not.toContain('calendar');
+  await expect(page.locator('.arrghost')).toHaveCount(0); // призрак (в обёртках классов) убран целиком
   // главную не унести
   await expect(page.locator('.tab[data-tab="home"] .arrb')).toHaveCount(0);
   // в «Инструментах» — карточка календаря; ведение на полосу перед «Песнями» — снова вкладка

@@ -90,7 +90,14 @@ export function createArrange(app, { root, bar, main, render, cardMenu }) {
     const g = el.cloneNode(true);
     g.classList.add('arrghost');
     Object.assign(g.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
-    document.body.appendChild(g);
+    // призрак — в той же цепочке классов, что и оригинал (обёртки display: contents): стили вида «.tgrid .tcard2»,
+    // «.tabbar .tab», «Минимала» действуют и на него — под пальцем он выглядит так же (слово автора 06.11.2026)
+    let host = document.body;
+    const chain = [];
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) chain.unshift(p);
+    chain.forEach((p) => { const w = document.createElement(p.tagName === 'NAV' ? 'nav' : 'div'); w.className = p.className; w.style.display = 'contents'; host.appendChild(w); host = w; });
+    host.appendChild(g);
+    g._wrap = chain.length ? document.body.lastElementChild : null;
     el.classList.add('arrsrc');
     D = { ...P, el, g, x0: e.clientX, y0: e.clientY, zone: null, idx: -1 };
     P = null;
@@ -124,7 +131,7 @@ export function createArrange(app, { root, bar, main, render, cardMenu }) {
   function drop() {
     const d = D; D = null;
     clearMarks();
-    d.g.remove();
+    if (d.g._wrap) d.g._wrap.remove(); else d.g.remove();
     d.el.classList.remove('arrsrc');
     const s = st(), K = known();
     if (d.kind === 'tab' && d.zone === 'bar') {
