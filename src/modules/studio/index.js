@@ -434,11 +434,14 @@ const panLabel = (v) => (!v ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v)
 function trackMenu(anchor, tr) {
   const { t, ui } = ctx, p = proj(), i = p.tracks.indexOf(tr);
   const move = (d) => { const j = i + d; if (j < 0 || j >= p.tracks.length) return; p.tracks.splice(i, 1); p.tracks.splice(j, 0, tr); save(); render(); };
+  // касание дорожки (слово автора 06.11.2026): первым — громкость по ходу всей дорожки, скорость и тональность записи
+  const first = clipsOf(p, tr).sort((x, y) => x.at - y.at)[0];
   holdMenu(anchor, [
+    { icon: I.mix, label: t('auto.vol'), run: () => { V.auto = { tr: tr.id, kind: 'vol' }; V.view = 'song'; render(); ctx.ui.toast(t('auto.hint')); } },
+    ...(first ? [{ icon: I.wave, label: t('tr.speedKey'), run: () => clipEditSheet(first) }] : []),
+    { icon: I.vol, label: t('tr.sound'), run: () => trackSheet(tr) },
     { icon: I.mute, label: t(tr.mute ? 'unmute' : 'mute'), run: () => { seq.setTrackMute(tr, !tr.mute); save(); render(); } },
     { icon: I.solo, label: t(tr.solo ? 'soloOff' : 'solo'), run: () => { seq.setTrackSolo(tr, !tr.solo); save(); render(); } },
-    { icon: I.vol, label: t('tr.sound'), run: () => trackSheet(tr) },
-    { icon: I.mix, label: t('auto.vol'), run: () => { V.auto = { tr: tr.id, kind: 'vol' }; V.view = 'song'; render(); ctx.ui.toast(t('auto.hint')); } },
     { icon: I.mix, label: t('auto.pan'), run: () => { V.auto = { tr: tr.id, kind: 'pan' }; V.view = 'song'; render(); ctx.ui.toast(t('auto.hint')); } },
     { icon: I.pen, label: t('tr.rename'), run: () => ui.sheet(() => ui.snav(t('tr.rename')) + '<div class="group"><label class="cell"><input class="inp left" data-trn maxlength="30" value="' + ui.esc(tr.name) + '" placeholder="' + ui.esc(trName(tr)) + '" aria-label="' + ui.esc(t('tr.rename')) + '"></label></div>', (el) => { const inp = el.querySelector('[data-trn]'); setTimeout(() => inp.focus(), 80); inp.addEventListener('input', () => { tr.name = inp.value; save(); }); }, { onClose: render }) },
     ...(i > 0 ? [{ icon: I.up, label: t('tr.up'), run: () => move(-1) }] : []),

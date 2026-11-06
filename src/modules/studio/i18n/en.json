@@ -289,5 +289,6 @@
   "part.bass": "Bass",
   "part.other": "Other",
   "part.guitar": "Guitar",
-  "part.piano": "Keys"
+  "part.piano": "Keys",
+  "tr.speedKey": "Speed and key"
 }

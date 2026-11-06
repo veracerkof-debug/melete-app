@@ -292,5 +292,6 @@
   "part.bass": "Бас",
   "part.other": "Остальное",
   "part.guitar": "Гитара",
-  "part.piano": "Клавишные"
+  "part.piano": "Клавишные",
+  "tr.speedKey": "Скорость и тональность"
 }

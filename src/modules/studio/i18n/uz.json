@@ -286,5 +286,6 @@
   "part.bass": "Bas",
   "part.other": "Qolgani",
   "part.guitar": "Gitara",
-  "part.piano": "Klavishli"
+  "part.piano": "Klavishli",
+  "tr.speedKey": "Tezlik va tonallik"
 }
