@@ -61,7 +61,8 @@ export function relDay(ts, now = Date.now()) {
   return d === 0 ? t('rel.today') : d === 1 ? t('rel.yesterday') : tn('rel.daysAgo', d);
 }
 
-export const topbar = (right = '') => '<div class="topbar"><button class="avatar" data-act="panel" aria-label="' + esc(t('panel.aria')) + '">' + AVATAR + '</button>' + right + '</div>';
+// left — рядом с профилем (на главной — помодоро)
+export const topbar = (right = '', left = '') => '<div class="topbar"><div class="tbl"><button class="avatar" data-act="panel" aria-label="' + esc(t('panel.aria')) + '">' + AVATAR + '</button>' + left + '</div>' + right + '</div>';
 
 /* ---------- выученность: шкала 1–5 (полоски), 1–10 или % (кольцо) ---------- */
 

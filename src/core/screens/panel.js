@@ -39,11 +39,8 @@ import { helpOf, showHelp, resetHelp, coreHelp, coreTopic, CORE_TOPICS } from '.
 import { freeTagName, trackMode } from '../session.js';
 import { dockGroups } from './session.js';
 import { INSTRUMENTS, PRIOR_MAX, gemSec, saveProfile, newProfile } from '../profile.js';
-import { gemOf } from '../mastery.js';
 import { APP_ICON_IDS, appIconSVG } from '../../ui/appicons.js';
 import { iconOf, setAppIcon } from '../appicon.js';
-import { gemSVG } from '../../ui/gems.js';
-import { gemCanvas } from '../../ui/gem3d.js';
 import { mountStones } from './home.js';
 import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
@@ -66,19 +63,21 @@ const PAGES = {
   look: ['indigo', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
   help: ['blue', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg>'],
   link: ['teal', '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="13" height="9.5" rx="1.6"/><path d="M6 18h6M9 14.5V18"/><rect x="16.5" y="8" width="5" height="10" rx="1.4"/></svg>'],
+  sound: ['pink', '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>'],
+  bible: ['brown', '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>'],
   data: ['green', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
-const PAGE_GROUPS = [['me', ['me', 'week', 'stats']], ['screen', ['look', 'tabs']], ['tools', ['feat', 'mascot', 'notif']], ['link', ['link']], ['help', ['help', 'data']]]; // главная правится на самой главной (удержание блока)
+// Карта настроек (решение автора 06.11.2026): практика · экран · звук, маскот, Библия · связь · помощь
+const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
-const PLAIN_HIDE = ['stats', 'week', 'notif', 'mascot'];
+const PLAIN_HIDE = ['stats', 'notif', 'mascot'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 // Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
-const IDEA = '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>';
+const STONE_IC = '<svg viewBox="0 0 24 24"><path d="M5 15.5c-.6-3.4 1.6-7 5.2-8.2 3.7-1.2 7.6.3 8.6 3.4 1 3.2-1.2 6.6-4.9 7.7-3.8 1.1-8.3.4-8.9-2.9z"/></svg>';
 const VAR_IC = '<svg viewBox="0 0 24 24"><path d="M6 4v6M6 14v6M12 4v2M12 10v10M18 4v10M18 18v2"/><circle cx="6" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="18" cy="16" r="2"/></svg>';
 const UPD_IC = '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>';
-const TG_CHAT = 'https://t.me/+qP8rC1tAkvU1MjYy';
 const PLANE = '<svg viewBox="0 0 24 24"><path d="M21 4 3 11.2l6.3 2.3L18 7.5l-6.8 7.4V20l3.4-3.6 4 3L21 4z"/></svg>';
 const VERSION = APP_VERSION;
 
@@ -191,6 +190,8 @@ function meHTML(app) {
 function weekHTML(app) {
   const st = app.store.state.settings, WD = weekdays();
   return '<div class="large">' + t('week.title') + '</div>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
+    '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div></div>' +
     '<p class="ftr">' + t('week.autoHint') + '</p>' +
@@ -198,6 +199,19 @@ function weekHTML(app) {
     '<div class="segcap">' + t('track.hint.' + trackMode(st)) + '</div></div></div><p class="ftr">' + t('track.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
     '<p class="ftr">' + t('presence.hint') + '</p>' +
+    // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
+    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => featRow(st, k, k === 'mastery' ? STONE_IC : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
+    '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
+    WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
+    '<p class="ftr">' + t('week.restHint') + '</p>' +
+    '<div class="hdr">' + t('week.goal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('week.perWeek') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + fmtDur(st.goalMin * 60) +
+    '</span><span class="stepper"><button data-goal="-30" aria-label="' + t('week.minus30') + '">−</button><button data-goal="30" aria-label="' + t('week.plus30') + '">+</button></span></div></div>';
+}
+
+// Звук (своя страница по карте 06.11.2026): буфер, ресурсы, движок, реверберация, нагрузка; дорожки и разбор записей
+function soundHTML(app) {
+  const st = app.store.state.settings;
+  return '<div class="large">' + t('page.sound') + '</div>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
     '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', (isDesktop() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : 'auto.stemsHintPhone') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
       '<div class="cellcol">' + seg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
@@ -212,28 +226,53 @@ function weekHTML(app) {
     '<p class="ftr">' + t('snd.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('snd.load') + '</span><span class="val num" data-sndload style="color:var(--ink)">' + (app.audio.load && app.audio.load.ready ? Math.round(app.audio.load.value * 100) + ' %' : '–') + '</span></div></div>' +
     '<p class="ftr">' + t('snd.loadHint') + '</p>' +
-    '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
-    WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
-    '<p class="ftr">' + t('week.restHint') + '</p>' +
-    '<div class="hdr">' + t('week.goal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('week.perWeek') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + fmtDur(st.goalMin * 60) +
-    '</span><span class="stepper"><button data-goal="-30" aria-label="' + t('week.minus30') + '">−</button><button data-goal="30" aria-label="' + t('week.plus30') + '">+</button></span></div></div>';
+    '';
+}
+
+// Строка функции с переключателем (data-feat) — «Неделя и цель», «Модули и функции»
+function featRow(st, id, icon, color, name, about) {
+  return '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span>' + esc(name) + '</span>' +
+    (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
+    '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
+}
+
+// «Библия» (церковный режим): план чтения, кнопки вверху или внизу; переводы — в самой Библии
+function bibleHTML(app) {
+  const st = app.store.state.settings, top = !!((app.device.bible || {}).barTop);
+  return '<div class="large">' + t('page.bible') + '</div>' +
+    '<div class="group"><label class="cellcol"><span>' + t('church.plan') + '</span><select class="sortsel" data-bplan style="width:100%;margin-top:8px;text-align:left" aria-label="' + esc(t('church.plan')) + '">' +
+      ['none', ...PLAN_IDS].map((k) => '<option value="' + k + '"' + (((st.bible && st.bible.plan) || 'none') === k ? ' selected' : '') + '>' + t('plan.' + k) + '</option>').join('') +
+      // свои планы — тем же списком
+      ((st.bible && st.bible.custom) || []).map((c) => '<option value="' + esc(c.id) + '"' + (st.bible.plan === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select></label>' +
+      (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') +
+      (st.bible && st.bible.plan && String(st.bible.plan).startsWith('c') ? '<button class="cell act" data-bplanedit>' + t('bplan.edit') + '</button>' : '') +
+      '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' + '</div>' +
+    '<p class="ftr">' + t('church.hintOn') + (st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
+    '<div class="hdr">' + t('bset.view') + '</div><div class="group"><div class="cell"><span class="grow">' + t('bset.barTop') + '</span><label class="sw"><input type="checkbox" data-bbartop' + (top ? ' checked' : '') + ' aria-label="' + esc(t('bset.barTop')) + '"><i></i></label></div></div>' +
+    '<p class="ftr">' + t('bset.hint') + '</p>';
 }
 
 // Уведомления: каждое выключается раз и навсегда
 // Маскот (Мелетий, Мелета или без маскота): характер, напоминания, тамагочи, слова дня — свой раздел (решение автора)
 function mascotHTML(app) {
   const st = app.store.state.settings;
-  return '<div class="large">' + t('page.mascot') + '</div>' + meleteHTML(st, { test: true, sets: true });
+  const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
+  return '<div class="large">' + t('page.mascot') + '</div>' + meleteHTML(st, { remind: false }) +
+    // наборы слов Мелеты (слово дня и напоминания)
+    (!st.toolsOnly && isOn(st, 'quote') ? '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + qsetsFor(st).map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
+      '<input type="checkbox" data-qset="' + k + '"' + (setsOf(st).includes(k) ? ' checked' : '') + ' style="width:22px;height:22px"></label>').join('') +
+      // свои сборники (из файла): включить, удалить
+      (st.quoteBooks || []).map((b) => '<div class="cell"><span class="grow"><span>' + esc(b.title) + '</span><span class="st l2" style="display:block;font-size:13px">' + tn('share.nq', b.items.length) + '</span></span>' +
+        '<button class="ic sm" data-qdel="' + esc(b.id) + '" aria-label="' + esc(t('qset.del') + ': ' + b.title) + '">' + IC.minus + '</button>' +
+        '<input type="checkbox" data-qset="own:' + esc(b.id) + '"' + (setsOf(st).includes('own:' + b.id) ? ' checked' : '') + ' style="width:22px;height:22px;margin-left:10px" aria-label="' + esc(b.title) + '"></div>').join('') +
+      '<button class="cell act" data-aidoc>' + t('qset.make') + '</button></div><p class="ftr">' + t('qset.hint') + '</p>' : '') +
+    '<div class="hdr">' + t('rem.inApp') + '</div>' +
+    row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
 }
 
 function notifHTML(app) {
   const st = app.store.state.settings;
-  const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
-  // напоминания о практике — в разделе маскота (характер, время, «напомнить за»)
-  const rem = '<div class="group"><button class="cell" data-pp="mascot"><span class="grow">' + t('rem.where') + '</span>' + CHEV + '</button></div>';
-  return '<div class="large">' + t('page.notif') + '</div>' + rem +
-    '<div class="hdr">' + t('rem.inApp') + '</div>' +
-    row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
+  return '<div class="large">' + t('page.notif') + '</div>' + meleteHTML(st, { test: true, who: false, tama: false });
 }
 
 // Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
@@ -469,17 +508,9 @@ function featHTML(app) {
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
   return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
-    '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
     // церковный режим: Библия и чтения дня
     '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
-    (st.church ? '<label class="cellcol"><span>' + t('church.plan') + '</span><select class="sortsel" data-bplan style="width:100%;margin-top:8px;text-align:left" aria-label="' + esc(t('church.plan')) + '">' +
-      ['none', ...PLAN_IDS].map((k) => '<option value="' + k + '"' + (((st.bible && st.bible.plan) || 'none') === k ? ' selected' : '') + '>' + t('plan.' + k) + '</option>').join('') +
-      // свои планы — тем же списком
-      ((st.bible && st.bible.custom) || []).map((c) => '<option value="' + esc(c.id) + '"' + (st.bible.plan === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select></label>' +
-      (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') +
-      (st.bible && st.bible.plan && String(st.bible.plan).startsWith('c') ? '<button class="cell act" data-bplanedit>' + t('bplan.edit') + '</button>' : '') +
-      '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' : '') + '</div>' +
+'</div>' +
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
     modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
@@ -498,16 +529,6 @@ function featHTML(app) {
     '<div class="hdr">' + t('scr.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('scr.on') + '</span><label class="sw"><input type="checkbox" data-psw="screenOn"' + (st.screenOn !== false ? ' checked' : '') + ' aria-label="' + esc(t('scr.on')) + '"><i></i></label></div></div><p class="ftr">' + t('scr.hint') + '</p>' +
     // защита игры от снимка экрана тремя пальцами (Android)
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
-    // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
-    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => row(k, k === 'mastery' ? gemSVG('sapphire', 1, 22) : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
-    // наборы слов Мелеты (слово дня и напоминания)
-    (!st.toolsOnly && isOn(st, 'quote') ? '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + qsetsFor(st).map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
-      '<input type="checkbox" data-qset="' + k + '"' + (setsOf(st).includes(k) ? ' checked' : '') + ' style="width:22px;height:22px"></label>').join('') +
-      // свои сборники (из файла): включить, удалить
-      (st.quoteBooks || []).map((b) => '<div class="cell"><span class="grow"><span>' + esc(b.title) + '</span><span class="st l2" style="display:block;font-size:13px">' + tn('share.nq', b.items.length) + '</span></span>' +
-        '<button class="ic sm" data-qdel="' + esc(b.id) + '" aria-label="' + esc(t('qset.del') + ': ' + b.title) + '">' + IC.minus + '</button>' +
-        '<input type="checkbox" data-qset="own:' + esc(b.id) + '"' + (setsOf(st).includes('own:' + b.id) ? ' checked' : '') + ' style="width:22px;height:22px;margin-left:10px" aria-label="' + esc(b.title) + '"></div>').join('') +
-      '<button class="cell act" data-aidoc>' + t('qset.make') + '</button></div><p class="ftr">' + t('qset.hint') + '</p>' : '') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
     (skippedModules.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('feat.skipped', { list: skippedModules.map((x) => x.path.split('/').slice(-2, -1)[0] + ' (' + x.err + ')').join(', ') })) + '</p>' : '');
 }
@@ -550,33 +571,29 @@ function dockHTML(st) {
 }
 
 function rootHTML(app) {
+  const cellA = (act, hue, ic, name, sub) => '<button class="cell" data-act="' + act + '"><span class="ticon" style="' + iconBg(app.store.state.settings, hue) + '">' + ic + '</span><span class="grow">' + name + '<span class="psub">' + sub + '</span></span>' + CHEV + '</button>';
   const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
   const pr = app.store.state.settings.profile || {}, sub = (pr.instruments || []).map((k) => t('inst.' + k)).join(', ');
   // Вместо аватара — лига (самоцвет по часам практики в приложении); нажатие — подробности. Званий и уровня нет.
   // «Только инструменты»: ни лиги, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
   const plain = !!app.store.state.settings.toolsOnly;
-  const g = gemOf(gemSec(all) / 3600), gn = t('gem.' + g.gem.id);
-  // «Минимал»: лиг нет — вместо самоцвета крутящийся камень (src/ui/stone.js)
-  const mono = app.store.state.settings.uiStyle === 'mono';
-  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : mono ? '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>'
-    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemCanvas(g.gem.id, g.frac, 64) + '</button>') +
+  return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>') +
     // компактно (слово автора 06.11.2026: камень меньше, настройки выше): камень слева, имя и лига справа
     '<div class="phtxt"><div class="large" style="margin:0">' + esc(pr.name || t('panel.title')) + '</div>' +
-    (plain ? '' : '<button class="prname" data-act="gem">' + esc(mono ? t('stone.title') : gn) + '</button>') +
+    (plain ? '' : '<button class="prname" data-act="gem">' + esc(t('stone.title')) + '</button>') +
     (sub ? '<div class="l2" style="font-size:15px">' + esc(sub) + '</div>' : '') + '</div></div>' +
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)));
-      return list.length ? '<div class="hdr">' + t('pg.' + g) + '</div><div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + '</div>' : '';
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'bible' || !!app.store.state.settings.church));
+      const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
+      return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +
-    '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
+    ((DEV && VARIANTS.length) || (app.updater && app.updater.platform) ? '<div class="group" style="margin-top:20px">' +
       (DEV && VARIANTS.length ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
       (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
-      '<button class="cell" data-act="diag"><span class="ticon" style="' + iconBg(app.store.state.settings, 'green') + '">' + icons.check + '</span><span class="grow">' + t('diag.title') + '<span class="psub">' + t('diag.sub') + '</span></span>' + CHEV + '</button>' +
-      '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button>' +
-      '<button class="cell" data-act="idea"><span class="ticon" style="' + iconBg(app.store.state.settings, 'orange') + '">' + IDEA + '</span><span class="grow">' + t('idea.title') + '<span class="psub">' + t('idea.sub') + '</span></span>' + CHEV + '</button></div>' +
+      '</div>' : '') +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : isDesktop() ? 'panel.kindWin' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }
@@ -603,7 +620,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
@@ -618,7 +635,8 @@ export function createPanel(app, onChange) {
     if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
     if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
-    if (page === 'mascot') { coreHelp(app, 'melete'); mountMelete(layer); }
+    if (page === 'mascot') coreHelp(app, 'melete');
+    if (page === 'notif') mountMelete(layer);
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
     if (bb) {
@@ -661,6 +679,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
+      if (g('[data-bbartop]')) { const d = (app.device.bible ??= {}); d.barTop = g('[data-bbartop]').checked; app.saveDevice(); return; }
       if (g('[data-bplannew]')) { planSheet(app, () => { render(); onChange(); }); return; }
       if (g('[data-bplanedit]')) { planSheet(app, () => { render(); onChange(); }, app.bible.st().plan); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }

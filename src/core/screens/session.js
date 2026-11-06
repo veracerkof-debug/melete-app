@@ -25,7 +25,7 @@ import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave } from '../pure.js';
-import { dragSort, holdMenu } from '../../ui/hold.js';
+import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
 import { spread, NOSPREAD } from '../../ui/gestures.js';
 
 const IC = {
@@ -134,7 +134,8 @@ export function createSessionScreen(app) {
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
       '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
-      (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '">' + pchipHTML() + '</button>') +
+      // помодоро (слово автора 06.11.2026): касание времени — пауза, удержание — помодоро; идущий помодоро виден кольцом рядом
+      (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '"' + (app.pomodoro.active() ? '' : ' hidden') + '>' + pchipHTML() + '</button>') +
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + (tm ? '' : '<button class="sstage" data-s="stage" aria-label="' + esc(t('stage.btn')) + '">' + STAGE_IC + '<span>' + esc(t('stage.btn')) + '</span></button>') + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
@@ -151,6 +152,7 @@ export function createSessionScreen(app) {
       if (p) setFocus(+p.dataset.pane);
     });
     ses.addEventListener('click', onClick);
+    if (!tm && isOn(st(), 'timer')) onHold(ses, '#stime', () => pomoSheet());
     // два пальца (слово автора 06.11.2026): развести — окно во весь экран, свести — окна звучащих инструментов
     // (во весь экран — обратно); в пианино и глайдере не действует — там играют несколькими пальцами
     spread(wsEl, {
@@ -509,7 +511,7 @@ export function createSessionScreen(app) {
   function tickNow() {
     updClock();
     const pc = layer && layer.querySelector('#pchip');
-    if (pc) { const h = pchipHTML(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
+    if (pc) { const h = pchipHTML(); pc.hidden = !app.pomodoro.active(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
     rotCheck();
   }
 

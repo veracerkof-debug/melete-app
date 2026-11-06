@@ -171,6 +171,7 @@ export function createShell(app, root) {
       if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
       if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render); // есть вкладка — в неё
     }
+    else if (d.act === 'pomo') openToolView(app, 'timer', render);
     else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'idea') ideaSheet(app);
     else if (d.act === 'check') checkSheet(app);

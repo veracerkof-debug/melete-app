@@ -122,7 +122,7 @@ describe('копии с подписью', async () => {
     expect(await pruneBackups(d, 3)).toBe(4);
     expect(Object.keys(d.fs).filter((p) => p.startsWith(BACKUP_DIR))).toHaveLength(3);
   });
-  it('синхронизация: автокопия раз в день', async () => {
+  it('синхронизация: автокопия раз в неделю', async () => {
     const d = memDrive(), a = memApp();
     a.api.by = () => 'Алекс';
     const day = new Date(2026, 9, 15, 10).getTime();
@@ -130,6 +130,8 @@ describe('копии с подписью', async () => {
     await syncFolder(d, {}, a.api, day + 3600000);
     expect((await listBackups(d))).toHaveLength(1);
     await syncFolder(d, {}, a.api, day + 86400000);
+    expect((await listBackups(d))).toHaveLength(1);
+    await syncFolder(d, {}, a.api, day + 7 * 86400000);
     expect((await listBackups(d))).toHaveLength(2);
   });
 });
@@ -164,5 +166,21 @@ describe('папка Melete: демо', async () => {
     expect(p.songs.map((s) => s.id + (s.deleted ? '-' : ''))).toEqual(['p-', 'own']); // сыгранная — удалённой, ради статистики
     expect(p.events.map((e) => e.id)).toEqual(['e']);
     expect(p.settings.demo).toBe(false);
+  });
+});
+
+describe('копии в папке: раз в неделю, архив по месяцам', async () => {
+  const { weekDue, backupKeep } = await import('../src/core/folder.js');
+  const n = (d) => 'Melete ' + d + ' 10-00 — Я.json';
+  it('недельная копия — через 7 дней', () => {
+    expect(weekDue([], Date.parse('2026-11-06T10:00:00'))).toBe(true);
+    expect(weekDue([n('2026-11-01')], Date.parse('2026-11-06T10:00:00'))).toBe(false);
+    expect(weekDue([n('2026-10-30')], Date.parse('2026-11-06T10:00:00'))).toBe(true);
+  });
+  it('остаются свежая и по одной на 6 последних месяцев', () => {
+    const all = ['2026-11-05', '2026-10-29', '2026-10-01', '2026-09-03', '2026-08-06', '2026-07-02', '2026-06-04', '2026-05-07', '2026-04-02'].map(n);
+    const k = backupKeep(all);
+    expect([...k].sort()).toEqual(['2026-06-04', '2026-07-02', '2026-08-06', '2026-09-03', '2026-10-01', '2026-11-05'].map(n).sort());
+    expect(k.size).toBeLessThanOrEqual(7);
   });
 });

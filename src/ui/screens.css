@@ -515,3 +515,13 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .tgrid .arrb.off{width:26px;height:26px;font-size:18px}
 .rgrip{flex:none;width:40px;height:40px;display:grid;place-items:center;color:var(--l3);touch-action:none}
 .rgrip svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+/* профиль и помодоро рядом (главная) */
+.topbar .tbl{display:flex;align-items:center;gap:8px}
+.hpomo{display:inline-flex;align-items:center;gap:4px;min-width:40px;min-height:40px;padding:0 8px;border-radius:999px;color:var(--l2);justify-content:center}
+.hpomo svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hpomo.on{color:var(--tint-text);background:color-mix(in srgb,var(--tint) 14%,transparent)}
+.hpomo .num{font-size:14px;font-weight:700}
+/* камень вместо самоцветов (06.11.2026): крутится пальцем, касание — во весь экран */
+.pstone{width:64px;height:64px;flex:none;display:block;cursor:grab;touch-action:none;border-radius:50%}
+.hgstone canvas[data-stone],.gstonerow canvas[data-stone]{width:58px;height:58px;flex:none;display:block;cursor:grab;touch-action:none;border-radius:50%}
+.gstonerow{display:flex;align-items:center;gap:12px}

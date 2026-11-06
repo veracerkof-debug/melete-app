@@ -1,6 +1,7 @@
 // «Сообщить о проблеме»: человек пишет, что случилось (можно не писать), может посмотреть весь отчёт и
 // отправляет его сам — через системное «Поделиться» (Telegram, почта…). После неожиданного закрытия
 // приложение один раз предлагает отправить отчёт; без согласия ничего не происходит.
+import { CHEV } from './common.js';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, seg, toast, leave } from '../../ui/index.js';
@@ -76,8 +77,12 @@ async function sendCrash(app) {
 }
 
 // Идея: короткий текст — через «Поделиться» (подпись сообщения — сама идея, в файле — версия и устройство, без журнала)
+// «Связь» (слово автора 06.11.2026): чат тестеров в Telegram и идея — одним окном
+const TG_CHAT = 'https://t.me/+qP8rC1tAkvU1MjYy';
 export function ideaSheet(app) {
-  const api = sheet(() => snav(t('idea.title')) +
+  const api = sheet(() => snav(t('contact.title')) +
+    '<div class="group"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="grow">' + t('panel.tg') + '<span class="st l2" style="display:block;font-size:13px">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a></div>' +
+    '<div class="hdr">' + t('idea.title') + '</div>' +
     '<p class="l2" style="margin:4px 4px 14px;font-size:15px;line-height:1.45">' + t('idea.intro') + '</p>' +
     '<div class="group"><div class="cellcol"><textarea class="inp ideatext" rows="5" maxlength="2000" placeholder="' + esc(t('idea.ph')) + '" aria-label="' + esc(t('idea.title')) + '"></textarea></div></div>' +
     '<button class="btn fill" data-idea style="width:100%;margin-top:16px">' + t('idea.send') + '</button>');

@@ -13,6 +13,14 @@ import { genreOf, ensureLib } from '../library.js';
 import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
+
+// Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
+function pomoBtn(app) {
+  const st = app.store.state.settings, po = app.pomodoro, m = moduleById('timer');
+  if (!m || !isOn(st, 'timer') || st.toolsOnly) return '';
+  const on = po && po.active();
+  return '<button class="hpomo' + (on ? ' on' : '') + '" data-act="pomo" aria-label="' + esc(t('ses.pomo')) + '">' + m.icon + (on ? '<span class="num">' + Math.ceil(po.rem() / 60) + '</span>' : '') + '</button>';
+}
 import { moduleName } from '../modules.js';
 import { topbar, weekdays, relDay, PLAY, IC, tabIds, TAB_MODULES, isPage, pageName, TAB_ICONS } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
@@ -176,7 +184,7 @@ function homeMonoHTML(app) {
     (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
     '<button class="mplay" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>'
     : '');
-  return '<div class="mono-home">' + topbar(logoHTML()) + blocks(st, P) + '</div>';
+  return '<div class="mono-home">' + topbar(logoHTML(), pomoBtn(app)) + blocks(st, P) + '</div>';
 }
 
 // До цели — коротко, чтобы влезло в кольцо: «5 ч», «40 мин», «4:30»
@@ -221,7 +229,7 @@ export function homeHTML(app) {
       return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
         '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
     }).join('') + '</div>');
-  return topbar(logoHTML()) + '<div class="hlist">' + blocks(st, P) + '</div>';
+  return topbar(logoHTML(), pomoBtn(app)) + '<div class="hlist">' + blocks(st, P) + '</div>';
 }
 
 // Долгое нажатие на инструмент (главная — быстрый доступ, вкладка «Инструменты»): меню у кнопки —
@@ -377,30 +385,26 @@ export function stoneSheet(app) {
   });
 }
 
-// Лига под карточкой недели: самоцвет, часы в приложении, путь до следующей лиги
+// Камень под карточкой недели (слово автора 06.11.2026: камень из «Минимала» вместо самоцветов и в «Классике»): часы в приложении
 function gemRow(app) {
   const st = app.store.state.settings;
   if (!isOn(st, 'mastery')) return '';
-  const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs), name = t('gem.' + g.gem.id);
-  return '<button class="gemrow" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(total) })) + '">' + gemCanvas(g.gem.id, g.frac, 52) +
-    '<span class="gtxt"><b>' + esc(name) + '</b><span class="l2 num">' + (total >= 60 ? fmtDur(total) : '') + (g.next ? (total >= 60 ? ' · ' : '') + esc(t('gem.toNext', { name: t('gem.' + g.next.id), left: hoursText(g.left) })) : '') + '</span>' +
-    (g.next ? '<span class="rkbar"><i style="width:' + g.frac * 100 + '%"></i></span>' : '') + '</span></button>';
+  const sec = leagueHours(app) * 3600;
+  return '<div class="gemrow gstonerow"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
+    '<span class="gtxt"><b>' + esc(t('stone.title')) + '</b><span class="l2 num">' + (sec >= 60 ? fmtDur(sec) : '') + '</span></span></div>';
 }
 
 // До следующей лиги — коротко: «ещё 9 ч», меньше часа — «ещё 40 мин»
 const leftShort = (h) => (h >= 1 ? t('time.h', { n: Math.round(h) }) : t('time.m', { n: Math.max(1, Math.ceil(h * 60)) }));
-// Лига кольцом: доля пути до следующего самоцвета, камень внутри, название под ним; касание — все лиги
+// Камень в плитке недели: крутится пальцем, касание — во весь экран
 function gemRing(app) {
-  const hrs = leagueHours(app), g = gemOf(hrs), name = t('gem.' + g.gem.id), r = 40, c = 2 * Math.PI * r, f = g.next ? g.frac : 1;
-  return '<button class="hgring" data-act="gem" aria-label="' + esc(t('gem.aria', { name, total: fmtDur(hrs * 3600) })) + '">' +
-    '<svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="' + r + '" class="hgtrack"/>' +
-    (f > 0.001 ? '<circle cx="48" cy="48" r="' + r + '" class="hgfill" stroke-dasharray="' + c * f + ' ' + c + '" transform="rotate(-90 48 48)"/>' : '') + '</svg>' +
-    gemCanvas(g.gem.id, g.frac, 46) + '<span class="hgname">' + esc(name) + '</span>' +
-    (g.next ? '<span class="hgleft num">' + esc(t('gem.left', { left: leftShort(g.left) })) + '</span>' : '') + '</button>';
+  const sec = leagueHours(app) * 3600;
+  return '<div class="hgring hgstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
+    '<span class="hgname">' + esc(t('stone.title')) + '</span>' + (sec >= 60 ? '<span class="hgleft num">' + esc(fmtDur(sec)) + '</span>' : '') + '</div>';
 }
 
 export function gemSheet(app) {
-  if (app.store.state.settings.uiStyle === 'mono') { stoneSheet(app); return; }
+  stoneSheet(app); return; // самоцветы-лиги заменены камнем (06.11.2026); ниже — прежний вид, не показывается
   const hrs = leagueHours(app), total = hrs * 3600, g = gemOf(hrs);
   // камни — объёмные, крутятся сами и пальцем (src/ui/gem3d.js); в списке вращается только текущий
   const api = sheet(() => snav(t('gem.title')) +

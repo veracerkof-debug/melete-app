@@ -30,45 +30,48 @@ function preview(st, mode) {
 }
 
 // sets — показать выбор наборов слов (при регистрации); test — кнопка проверки (в «Уведомлениях»)
-export function meleteHTML(st, { sets = false, test = false } = {}) {
+// who — выбор маскота, remind — напоминания о практике, tama — тамагочи (настройки делят их по разделам: «Маскот» и «Уведомления»)
+export function meleteHTML(st, { sets = false, test = false, who = true, remind = true, tama = true } = {}) {
   const r = remindOf(st), mode = r.mode;
   const tm = '<input type="time" class="inp" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '">';
   // кто: Мелета или Мелетий — лицо и то, как говорит о себе
   const g = mascotOf(st), ring = st.uiStyle !== 'mono';
   const NONE = '<svg class="mlnone" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 7"/></svg>';
-  let h = '<div class="mlwho" role="group" aria-label="' + esc(t('mascot.who')) + '">' + ['m', 'f', 'none'].map((k) => '<button type="button" class="mlwb' + (g === k ? ' on' : '') + '" data-mlg="' + k + '" aria-pressed="' + (g === k) + '">' +
+  let h = !who ? '' : '<div class="mlwho" role="group" aria-label="' + esc(t('mascot.who')) + '">' + ['m', 'f', 'none'].map((k) => '<button type="button" class="mlwb' + (g === k ? ' on' : '') + '" data-mlg="' + k + '" aria-pressed="' + (g === k) + '">' +
     (k === 'none' ? NONE : mascotSVG('glad', { size: 56, ring, gender: k })) + '<b>' + t('mascot.' + k) + '</b><small>' + t('mascot.' + k + '.sub') + '</small></button>').join('') + '</div>';
-  h += '<div class="group"><div class="cellcol"><div class="mlhead">' + faceOr(st, FACE[mode]) +
-    seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div>' + preview(st, mode) + '</div>';
-  if (mode !== 'quiet') {
-    h += '<label class="cell"><span class="grow">' + t('rem.time') + '</span>' + tm + '</label>';
-    // своё: список — когда (до/после занятия или точное время) и в каком стиле
-    if (mode === 'custom') {
-      h += r.custom.map((x, i) => '<div class="cell mlrow"><select class="sortsel" data-mlwhen="' + i + '" aria-label="' + esc(t('rem.when')) + '">' +
-        OFFSETS.map((m) => '<option value="' + m + '"' + (!x.at && x.min === m ? ' selected' : '') + '>' + offName(m) + '</option>').join('') +
-        (!x.at && !OFFSETS.includes(x.min) ? '<option value="' + x.min + '" selected>' + offName(x.min) + '</option>' : '') +
-        '<option value="abs"' + (x.at ? ' selected' : '') + '>' + t('rem.atTime') + '</option></select>' +
-        (x.at ? '<input type="time" class="inp" data-mlat="' + i + '" value="' + esc(x.at) + '" aria-label="' + esc(t('rem.atTime')) + '">' : '') +
-        '<select class="sortsel" data-mltone="' + i + '" aria-label="' + esc(t('rem.tone')) + '">' + TONES.map((k) => '<option value="' + k + '"' + (x.tone === k ? ' selected' : '') + '>' + t('rem.tone.' + k) + '</option>').join('') + '</select>' +
-        '<button class="ic sm" data-mldel="' + i + '" aria-label="' + esc(t('rem.del')) + '">' + DEL + '</button></div>').join('') +
-        (r.custom.length < CUSTOM_MAX ? '<button class="cell act" data-mladd>' + t('rem.add') + '</button>' : '');
+  if (remind) {
+    h += '<div class="group"><div class="cellcol"><div class="mlhead">' + faceOr(st, FACE[mode]) +
+      seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div>' + preview(st, mode) + '</div>';
+    if (mode !== 'quiet') {
+      h += '<label class="cell"><span class="grow">' + t('rem.time') + '</span>' + tm + '</label>';
+      // своё: список — когда (до/после занятия или точное время) и в каком стиле
+      if (mode === 'custom') {
+        h += r.custom.map((x, i) => '<div class="cell mlrow"><select class="sortsel" data-mlwhen="' + i + '" aria-label="' + esc(t('rem.when')) + '">' +
+          OFFSETS.map((m) => '<option value="' + m + '"' + (!x.at && x.min === m ? ' selected' : '') + '>' + offName(m) + '</option>').join('') +
+          (!x.at && !OFFSETS.includes(x.min) ? '<option value="' + x.min + '" selected>' + offName(x.min) + '</option>' : '') +
+          '<option value="abs"' + (x.at ? ' selected' : '') + '>' + t('rem.atTime') + '</option></select>' +
+          (x.at ? '<input type="time" class="inp" data-mlat="' + i + '" value="' + esc(x.at) + '" aria-label="' + esc(t('rem.atTime')) + '">' : '') +
+          '<select class="sortsel" data-mltone="' + i + '" aria-label="' + esc(t('rem.tone')) + '">' + TONES.map((k) => '<option value="' + k + '"' + (x.tone === k ? ' selected' : '') + '>' + t('rem.tone.' + k) + '</option>').join('') + '</select>' +
+          '<button class="ic sm" data-mldel="' + i + '" aria-label="' + esc(t('rem.del')) + '">' + DEL + '</button></div>').join('') +
+          (r.custom.length < CUSTOM_MAX ? '<button class="cell act" data-mladd>' + t('rem.add') + '</button>' : '');
+      }
+      if (mode === 'classic') h += '<div class="cellcol"><span>' + t('rem.lead') + '</span><div class="pickrow" style="margin-top:8px">' + LEADS.slice().reverse().map((m) =>
+        '<button type="button" class="lchip pick' + (r.leads.includes(m) ? ' on' : '') + '" data-mllead="' + m + '" aria-pressed="' + r.leads.includes(m) + '" style="--c:var(--tint);--t:var(--on-tint)">' + leadName(m) + '</button>').join('') + '</div></div>';
+      h += '<div class="cell"><span class="grow"><span>' + t('rem.byName') + '</span><span class="st l2" style="display:block;font-size:13px">' + t('rem.byNameHint') + '</span></span>' +
+        '<label class="sw"><input type="checkbox" data-ml="byName"' + (r.byName ? ' checked' : '') + ' aria-label="' + esc(t('rem.byName')) + '"><i></i></label></div>';
+      if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>' +
+        // точные будильники не разрешены — строка видна (её открывает проверка после отрисовки: mountMelete)
+        '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>' +
+        // Honor, Huawei, Xiaomi и другие без «Автозапуска» снимают будильники закрытого приложения
+        '<button class="cell act" data-mlauto><span class="grow">' + t('rem.auto') + '<span class="psub">' + t('rem.autoHint') + '</span></span></button>' +
+        '<div class="cell l2" data-mlnext hidden style="font-size:13.5px"></div>';
     }
-    if (mode === 'classic') h += '<div class="cellcol"><span>' + t('rem.lead') + '</span><div class="pickrow" style="margin-top:8px">' + LEADS.slice().reverse().map((m) =>
-      '<button type="button" class="lchip pick' + (r.leads.includes(m) ? ' on' : '') + '" data-mllead="' + m + '" aria-pressed="' + r.leads.includes(m) + '" style="--c:var(--tint);--t:var(--on-tint)">' + leadName(m) + '</button>').join('') + '</div></div>';
-    h += '<div class="cell"><span class="grow"><span>' + t('rem.byName') + '</span><span class="st l2" style="display:block;font-size:13px">' + t('rem.byNameHint') + '</span></span>' +
-      '<label class="sw"><input type="checkbox" data-ml="byName"' + (r.byName ? ' checked' : '') + ' aria-label="' + esc(t('rem.byName')) + '"><i></i></label></div>';
-    if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>' +
-      // точные будильники не разрешены — строка видна (её открывает проверка после отрисовки: mountMelete)
-      '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>' +
-      // Honor, Huawei, Xiaomi и другие без «Автозапуска» снимают будильники закрытого приложения
-      '<button class="cell act" data-mlauto><span class="grow">' + t('rem.auto') + '<span class="psub">' + t('rem.autoHint') + '</span></span></button>' +
-      '<div class="cell l2" data-mlnext hidden style="font-size:13.5px"></div>';
+    h += '</div><p class="ftr">' + (mode === 'quiet' ? t('rem.quietHint') : t('rem.hint', { from: r.quietFrom, to: r.quietTo })) + (remindAvailable() || mode === 'quiet' ? '' : ' ' + t('rem.webOnly')) + '</p>';
   }
-  h += '</div><p class="ftr">' + (mode === 'quiet' ? t('rem.quietHint') : t('rem.hint', { from: r.quietFrom, to: r.quietTo })) + (remindAvailable() || mode === 'quiet' ? '' : ' ' + t('rem.webOnly')) + '</p>';
   // Мелета-тамагочи: рядом на занятии, по желанию слушает и говорит, как идёт (src/core/tama.js)
   const tmc = tamaOf(st), tsw = (k, on, label, hint = '') => '<div class="cell"><span class="grow"><span>' + label + '</span>' + (hint ? '<span class="st l2" style="display:block;font-size:13px;white-space:normal">' + hint + '</span>' : '') + '</span>' +
     '<label class="sw"><input type="checkbox" data-mltama="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label></div>';
-  if (mascotOf(st) !== 'none') h += '<div class="hdr">' + t('tama.title') + '</div><div class="group">' + tsw('on', tmc.on, t('tama.on'), t('tama.onHint')) +
+  if (tama && mascotOf(st) !== 'none') h += '<div class="hdr">' + t('tama.title') + '</div><div class="group">' + tsw('on', tmc.on, t('tama.on'), t('tama.onHint')) +
     (tmc.on ? tsw('listen', tmc.listen, t('tama.listen'), t('tama.listenHint')) + '<div class="cellcol"><span>' + t('tama.chat') + '</span><div style="margin-top:8px">' +
       seg('mltchat', [['normal', t('tama.chat.normal')], ['rare', t('tama.chat.rare')]], tmc.chat, t('tama.chat')) + '</div></div>' : '') +
     '</div><p class="ftr">' + t('tama.hint') + '</p>';

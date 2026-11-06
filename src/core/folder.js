@@ -11,8 +11,8 @@ import { isDesktop, desktopDriver } from './desktop.js';
 
 export const DIRS = { data: 'Data', media: 'Media', tabs: 'Tabs', pdf: 'PDF', lyrics: 'Lyrics' };
 export const DATA_FILE = 'Data/melete-data.json';
-// Резервные копии с подписью: «Melete 2026-10-15 14-30 — Имя.json»; при синхронизации — одна автокопия в день, хранятся последние BACKUP_KEEP
-export const BACKUP_DIR = 'Data/Backups', BACKUP_KEEP = 30;
+// Резервные копии с подписью: «Melete 2026-10-15 14-30 — Имя.json»; при синхронизации — автокопия раз в неделю, хранятся свежая и архив по месяцам (backupKeep)
+export const BACKUP_DIR = 'Data/Backups', BACKUP_KEEP = 30, BACKUP_MONTHS = 6;
 const CHUNK = 768 * 1024;
 
 const ext = (n) => ((/\.([^.\\/]+)$/.exec(n || '') || [])[1] || '').toLowerCase();
@@ -118,11 +118,9 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
 
   // 1. Копия данных — всегда свежая
   await writeAll(drv, DATA_FILE, new TextEncoder().encode(api.backup()), 'application/json');
-  // автокопия с подписью — одна в день (если сегодня копии ещё нет)
-  if (api.by) {
-    const today = 'Melete ' + dayOf(now);
-    if (!(await listBackups(drv)).some((x) => x.name.startsWith(today))) { await writeBackup(drv, api.backup(), api.by(), now); await pruneBackups(drv); out.backup = true; }
-  }
+  // автокопия с подписью — раз в неделю (слово автора 06.11.2026): последней копии 7 дней и больше или копий нет;
+  // хранятся свежая и по одной на каждый из 6 последних месяцев (архив) — всего до 7 (backupKeep)
+  if (api.by && weekDue((await listBackups(drv)).map((x) => x.name), now)) { await writeBackup(drv, api.backup(), api.by(), now); await pruneBackups(drv); out.backup = true; }
 
   // 2. Файлы приложения → папка (один раз на файл; удалённый человеком из папки не возвращается)
   const recs = api.files().filter((r) => r.blob && dirOfRec(r) && !no('skipFile', r));
@@ -235,9 +233,25 @@ export async function writeBackup(drv, text, by, at = Date.now()) {
   await writeAll(drv, BACKUP_DIR + '/' + name, new TextEncoder().encode(text), 'application/json');
   return name;
 }
-// Старые копии сверх keep — удалить
-export async function pruneBackups(drv, keep = BACKUP_KEEP) {
-  const old = (await listBackups(drv)).slice(keep);
+// Пора ли недельная копия: names — имена копий; самая свежая — 7 дней назад и раньше
+export function weekDue(names, now = Date.now()) {
+  const days = names.map(dateOf).filter(Boolean);
+  if (!days.length) return true;
+  const last = days.sort().pop();
+  return dayOf(now) >= dayOf(Date.parse(last + 'T12:00:00') + 7 * 86400000);
+}
+const dateOf = (n) => (/^Melete (\d{4}-\d\d-\d\d)/i.exec(n) || [])[1] || '';
+// Какие копии оставить: самую свежую и самую раннюю в каждом из months последних месяцев (архив по месяцам)
+export function backupKeep(names, months = BACKUP_MONTHS) {
+  const sorted = names.filter(dateOf).sort().reverse(), keep = new Set(sorted.slice(0, 1)), seen = [];
+  for (const n of sorted) { const m = dateOf(n).slice(0, 7); if (!seen.includes(m)) seen.push(m); }
+  seen.slice(0, months).forEach((m) => { const first = sorted.filter((n) => dateOf(n).startsWith(m)).pop(); if (first) keep.add(first); });
+  return keep;
+}
+// Старые копии — удалить: keep — сколько свежих оставить (число) или по плану недели и месяцев (по умолчанию)
+export async function pruneBackups(drv, keep = null) {
+  const all = await listBackups(drv), plan = keep == null ? backupKeep(all.map((x) => x.name)) : null;
+  const old = plan ? all.filter((x) => !plan.has(x.name)) : all.slice(keep);
   for (const f of old) { try { await drv.remove(BACKUP_DIR + '/' + f.name); } catch { /* уже нет */ } }
   return old.length;
 }
