@@ -386,8 +386,8 @@ function setsSheet() {
 
 function view() {
   const s = curSec(), big = size === 'full' || size === 'half', { t } = ctx;
-  const sw = big ? '<div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
-    t('sec.' + k) + '</button>').join('') + '<button class="tswb tsets" data-x="tsets" aria-label="' + ctx.ui.esc(t('sets')) + '" title="' + ctx.ui.esc(t('sets')) + '">⋯</button></div>'
+  const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
+    t('sec.' + k) + '</button>').join('') + '</div><button class="tsets" data-x="tsets" aria-label="' + ctx.ui.esc(t('sets')) + '" title="' + ctx.ui.esc(t('sets')) + '">⋯</button></div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
   const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
   return '<div class="comp ' + size + '">' + sw + '<div class="cbody">' + body + '</div></div>';
