@@ -115,7 +115,7 @@
 
 /* ---------- профиль ---------- */
 :root[data-style="mono"] .phero { align-items: flex-start; margin: 4px 4px 18px; }
-:root[data-style="mono"] .phero .large { text-align: left !important; font-size: 38px; margin: 14px 0 0; }
+:root[data-style="mono"] .phero .large { text-align: left !important; font-size: 30px; margin: 0; }
 :root[data-style="mono"] .pav { background: var(--fill); color: var(--ink); width: 64px; height: 64px; }
 :root[data-style="mono"] .pav svg { stroke: var(--ink); }
 :root[data-style="mono"] .prname { color: var(--l2); text-transform: uppercase; letter-spacing: .18em; font-size: 12px; padding: 0; min-height: 32px; }
@@ -429,7 +429,7 @@
 :root[data-bare] .rhead b,:root[data-bare] .rsec .rt,:root[data-bare] .sclab,:root[data-bare] .lcdn{visibility:hidden}
 :root[data-bare] .bt,:root[data-bare] .bpmlbl{display:none!important}
 :root[data-bare] .bareic svg path,:root[data-bare] .bareic svg circle{vector-effect:non-scaling-stroke}
-.pstone{width:96px;height:96px;display:block;cursor:grab;touch-action:none;border-radius:50%}
+.pstone{width:64px;height:64px;flex:none;display:block;cursor:grab;touch-action:none;border-radius:50%}
 .mono-home .mvoice { margin-top: 18px; }
 
 /* Страница инструментов в «Минимале» (слово автора 06.11.2026): крупные значки кружками в духе вида, название

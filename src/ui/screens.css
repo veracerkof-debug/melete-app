@@ -504,3 +504,14 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .hstagerow{display:flex;margin:8px 0 4px}
 .hstage{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:14px;background:var(--tint);color:var(--on-tint);font:600 16px var(--font)}
 .hstage svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* Шапка профиля компактно (06.11.2026): камень 64 px слева, имя и лига справа — настройки выше */
+.phero{flex-direction:row!important;align-items:center!important;gap:14px;margin:4px 2px 14px!important}
+.phero .phtxt{display:flex;flex-direction:column;align-items:flex-start;min-width:0;gap:2px}
+.phero .phtxt .large{font-size:26px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.phero .prname{text-align:left;padding:0;min-height:32px}
+.phero .prank{flex:none}
+/* «−» на карточке в правке «Инструментов» — выключить инструмент (06.11.2026) */
+.arrb.off{background:var(--red,#D2463F);right:auto;left:4px;top:4px}
+.tgrid .arrb.off{width:26px;height:26px;font-size:18px}
+.rgrip{flex:none;width:40px;height:40px;display:grid;place-items:center;color:var(--l3);touch-action:none}
+.rgrip svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}

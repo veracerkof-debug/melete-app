@@ -5,7 +5,8 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 
-export const ICON = '<svg viewBox="0 0 24 24"><path d="M6 17V6M12 17V6M18 17V9M6 6h6"/><ellipse cx="4.6" cy="17.4" rx="1.9" ry="1.4"/><ellipse cx="10.6" cy="17.4" rx="1.9" ry="1.4"/><ellipse cx="16.6" cy="17.4" rx="1.9" ry="1.4"/></svg>';
+// три восьмые под одним ребром — тот же знак, ровнее (слово автора 06.11.2026)
+export const ICON = '<svg viewBox="0 0 24 24"><path d="M7.4 17V6.2l12-1.6V15.6M13.4 16.3V5.4"/><ellipse cx="5.4" cy="17.3" rx="2.1" ry="1.6" transform="rotate(-20 5.4 17.3)"/><ellipse cx="11.4" cy="16.6" rx="2.1" ry="1.6" transform="rotate(-20 11.4 16.6)"/><ellipse cx="17.4" cy="15.9" rx="2.1" ry="1.6" transform="rotate(-20 17.4 15.9)"/></svg>';
 
 export default {
   id: 'beat',

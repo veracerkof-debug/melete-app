@@ -25,10 +25,15 @@ test('правка вкладок: календарь в инструменты 
   await page.mouse.move(lib.x + 5, lib.y + lib.height / 2, { steps: 12 }); await page.mouse.up(); await page.waitForTimeout(500);
   expect(await tabs(page)).toBe('home,calendar,library,tools');
   // «+» у метронома — вкладкой; «−» — обратно
-  await page.locator('.tgrid [data-open-tool="metro"] .arrb').click({ force: true }); await page.waitForTimeout(400);
+  await page.locator('.tgrid [data-open-tool="metro"] .arrb.in').click({ force: true }); await page.waitForTimeout(400);
   expect(await tabs(page)).toContain('metro');
   await page.locator('.tab[data-tab="metro"] .arrb').click({ force: true }); await page.waitForTimeout(400);
   expect(await tabs(page)).not.toContain('metro');
+  // «−» на карточке — выключить инструмент, как в «Модулях и функциях» (06.11.2026); «Вернуть» в сообщении
+  await page.locator('.tgrid [data-open-tool="tuner"] .arrb.off').click({ force: true }); await page.waitForTimeout(400);
+  await expect(page.locator('.tgrid [data-open-tool="tuner"]')).toHaveCount(0);
+  await page.locator('.toast button').click(); await page.waitForTimeout(400);
+  await expect(page.locator('.tgrid [data-open-tool="tuner"]')).toHaveCount(1);
   await page.click('[data-arr="done"]'); await page.waitForTimeout(300);
   await expect(page.locator('html')).not.toHaveClass(/arrange/);
   // без правки карточка страницы открывает её

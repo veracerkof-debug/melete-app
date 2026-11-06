@@ -514,6 +514,7 @@ function featHTML(app) {
 
 // Вкладки внизу: порядок и состав
 
+const GRIP_IC = '<svg viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg>';
 function tabsHTML(app) {
   const st = app.store.state.settings, vis = visibleTabs(st, tabIds(st)), hid = hiddenTabs(st, tabIds(st));
   const nameOf = (k) => (TAB_ICONS[k] && !TAB_MODULES[k] ? t('nav.' + k) : moduleById(k) ? moduleName(moduleById(k)) : t('nav.' + k));
@@ -522,7 +523,8 @@ function tabsHTML(app) {
   const color = (k) => (TAB_ICONS[k] && !TAB_MODULES[k] ? 'var(--tint)' : (moduleById(k) || {}).color || 'var(--tint)');
   const row = (k, on, i) => '<div class="cell"' + (on ? ' data-tab-row="' + k + '"' : '') + '><span class="ticon" style="--tc:' + color(k) + '">' + tabIcon(k) + '</span><span class="grow">' + esc(nameOf(k)) +
     (on && tool(k) ? '<span class="st l2" style="display:block;font-size:13px">' + t('tabs.fromTools') + '</span>' : '') + '</span>' +
-    (on ? (i > 0 ? '<button class="ic sm plain" data-tabmv="up" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.up', { name: nameOf(k) })) + '">' + IC.up + '</button>' : '') +
+    // порядок — жестом: удержать строку и вести (слово автора 06.11.2026: без стрелок)
+    (on ? '<span class="rgrip" aria-hidden="true">' + GRIP_IC + '</span>' +
       (vis.length > 1 && !FIXED_TABS.includes(k) ? (mod(k) ? '<button class="ic sm plain" data-tabun="' + k + '" aria-label="' + esc(t('tabs.toTools') + ': ' + nameOf(k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: nameOf(k) })) + '" style="color:var(--red)">' + IC.minus + '</button>') : '')
       : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: nameOf(k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
@@ -542,8 +544,8 @@ function tabsHTML(app) {
 function dockHTML(st) {
   const list = dockGroups(st);
   return '<div class="hdr">' + t('dock.title') + '</div><div class="group">' + list.map((g, i) => { const m = moduleById(g), n = m ? moduleName(m) : g;
-    return '<div class="cell"><span class="ticon" style="--tc:' + ((m && m.color) || 'var(--tint)') + ';--on:' + ((m && m.on) || '#fff') + '">' + (m ? m.icon : '') + '</span><span class="grow">' + esc(n) + '</span>' +
-      (i > 0 ? '<button class="ic sm plain" data-dockup="' + g + '" aria-label="' + esc(t('tabs.up', { name: n })) + '">' + IC.up + '</button>' : '') + '</div>'; }).join('') +
+    return '<div class="cell" data-dock-row="' + g + '"><span class="ticon" style="--tc:' + ((m && m.color) || 'var(--tint)') + ';--on:' + ((m && m.on) || '#fff') + '">' + (m ? m.icon : '') + '</span><span class="grow">' + esc(n) + '</span>' +
+      '<span class="rgrip" aria-hidden="true">' + GRIP_IC + '</span>' + '</div>'; }).join('') +
     (st.dockOrder ? '<button class="cell act center" data-dockreset>' + t('dock.resetDef') + '</button>' : '') + '</div><p class="ftr">' + t('dock.ftr') + '</p>';
 }
 
@@ -557,10 +559,11 @@ function rootHTML(app) {
   // «Минимал»: лиг нет — вместо самоцвета крутящийся камень (src/ui/stone.js)
   const mono = app.store.state.settings.uiStyle === 'mono';
   return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : mono ? '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>'
-    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemCanvas(g.gem.id, g.frac, 104) + '</button>') +
-    '<div class="large" style="margin:12px 0 0;text-align:center">' + esc(pr.name || t('panel.title')) + '</div>' +
+    : '<button class="prank" data-act="gem" aria-label="' + esc(t('gem.aria', { name: gn, total: fmtDur(gemSec(all)) })) + '">' + gemCanvas(g.gem.id, g.frac, 64) + '</button>') +
+    // компактно (слово автора 06.11.2026: камень меньше, настройки выше): камень слева, имя и лига справа
+    '<div class="phtxt"><div class="large" style="margin:0">' + esc(pr.name || t('panel.title')) + '</div>' +
     (plain ? '' : '<button class="prname" data-act="gem">' + esc(mono ? t('stone.title') : gn) + '</button>') +
-    (sub ? '<div class="l2" style="text-align:center;font-size:15px">' + esc(sub) + '</div>' : '') + '</div>' +
+    (sub ? '<div class="l2" style="font-size:15px">' + esc(sub) + '</div>' : '') + '</div></div>' +
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
@@ -642,6 +645,8 @@ export function createPanel(app, onChange) {
     layer.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.owncolor) { ownSet(e.target); changed(); } });
     // «Вкладки»: удержать вкладку и вести вверх-вниз — новый порядок
     sortable(layer, '[data-tab-row]', 'data-tab-row', (ids) => { if (orderTabs(app.store, tabIds(app.store.state.settings), ids)) { render(); onChange(); } });
+    // порядок значков панели занятия — тоже жестом
+    sortable(layer, '[data-dock-row]', 'data-dock-row', (ids) => { const st = app.store.state.settings; st.dockOrder = ids; app.store.settingsChanged(); render(); });
     layer.addEventListener('click', (e) => {
       const g = (s) => e.target.closest(s);
       let b;

@@ -8,7 +8,7 @@ import { t } from '../../i18n/index.js';
 import { toast, esc } from '../../ui/index.js';
 import { buzz } from '../../ui/hold.js';
 import { tabIds, isPage } from './common.js';
-import { visibleTabs, orderTabs, placeTab, tabToTools, FIXED_TABS, TABS_MAX } from '../settings.js';
+import { visibleTabs, orderTabs, placeTab, tabToTools, FIXED_TABS, TABS_MAX, setFeature } from '../settings.js';
 import { toolsTab, setToolsTab } from './tools.js';
 
 const HOLD_MS = 450, SLOP = 8;
@@ -80,6 +80,8 @@ export function createArrange(app, { root, bar, main, render, cardMenu }) {
     if (op === 'done') { set(false); return; }
     if (op === 'out') { if (tabToTools(app.store, known(), id)) { toast(t('tabs.toToolsDone')); render(); } return; }
     if (op === 'in') { if (placeTab(app.store, known(), id) === 'max') toast(t('tabs.max', { max: TABS_MAX })); else render(); }
+    // «−» на карточке инструмента: выключить, как в «Модулях и функциях» (слово автора 06.11.2026); вернуть — там же или «Отменить»
+    if (op === 'off') { setFeature(app.store, id, false); render(); toast(t('tools.offToast'), { action: t('ui.undo'), onAction: () => { setFeature(app.store, id, true); render(); } }); }
   }
 
   // Ведение: призрак под пальцем, исходный — бледный; метка — куда встанет
