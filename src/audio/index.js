@@ -5,6 +5,7 @@ import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlo
 import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
+import { createArp } from './arp.js';
 import { createMetronome } from './metronome.js';
 import { setFxTempo } from './fx.js';
 import { openMic } from './mic.js';
@@ -19,6 +20,8 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getLayer: () => pianoLayer(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
   const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
+  // арпеджиатор пэдов (вместо тампуры): аккорд звучащего пэда рисунком, звуком пианино, по темпу метронома
+  const arp = createArp({ drone, synth, metro, mixer, getArp: () => (device.drone.arp ??= {}), getDrone: () => device.drone, getA4: a4 });
   setFxTempo(() => (metro.cfg && metro.cfg.bpm) || 0); // тремоло «в такт» — по темпу метронома
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
@@ -118,7 +121,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     onLoadSample: null, // и счёт нагрузки для диагностики (src/core/diag.js)
     // обстановка звука для диагностики: что звучит и как настроено (без названий)
     state() { const c = peekContext(); return c ? { sr: c.sampleRate, base: Math.round((c.baseLatency || 0) * 1000), out: Math.round((c.outputLatency || 0) * 1000), st: c.state, mode: device.mix.mode, perf: device.mix.perf, engine: device.mix.engine, verb: device.mix.verb, voices: synth.voiceCount, pads: drone.sounding, metro: !!metro.running } : null; },
-    mixer, synth, drone, metro,
+    mixer, synth, drone, metro, arp,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя
     release: () => { if (isHeld()) hold(false); }, // «играть» в приложении снимает паузу из шторки (player.js)
     held: () => isHeld(),

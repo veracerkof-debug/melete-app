@@ -2,6 +2,7 @@
 // Формат и ключ — как в прототипе (practice.v1.tools).
 export const LS_T = 'practice.v1.tools';
 
+// 'tanpura' — прежний звук: normalizeDrone переводит его в мягкий пэд с арпеджиатором
 export const DRONE_SOUNDS = ['wair', 'wlight', 'wwarm', 'wchoir', 'soft', 'bow', 'tanpura', 'choir', 'glass'];
 
 export function deviceDefaults() {

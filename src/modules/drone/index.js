@@ -13,6 +13,7 @@ import { SOUNDS, CHORD_SET, LAYERS, DIRS, SENS, normalizeDrone } from '../../aud
 import { TREM_DIV_ORDER } from '../../audio/fx.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
+import { arpSheet } from './arpsheet.js';
 import meta, { ICON } from './meta.js';
 const GRID_ICON = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>';
 const CIRCLE_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.5v4.3M12 16.2v4.3M3.5 12h4.3M16.2 12h4.3"/></svg>';
@@ -135,11 +136,13 @@ function view() {
   const mode = ui.icb('data-x="dmode"', VIEW_ICON[NEXT_VIEW[v]], t('mode.' + NEXT_VIEW[v]), 'plain');
   const wv = FX().trem > 0;
   const wave = '<button class="dwv' + (wv ? ' on' : '') + '" data-x="dwave" aria-pressed="' + wv + '" aria-label="' + t('wave') + '">' + WAVE_ICON + '</button>';
+  // арпеджиатор (вместо тампуры): касание — вкл/выкл, удержание — настройки
+  const ao = !!(d.arp && d.arp.on), arp = '<button class="darp' + (ao ? ' on' : '') + '" data-x="darp" aria-pressed="' + ao + '" aria-label="' + t('arp.title') + '" title="' + t('arp.title') + '">' + ARP_ICON + '</button>';
   const latch = kv ? '<button class="dlatch' + (d.latch ? ' on' : '') + '" data-x="dlatch" aria-pressed="' + !!d.latch + '">' + t(d.latch ? 'latch.on' : 'latch.off') + '</button>' : '';
   const surf = (g) => (kv ? keysHTML() : v === 'circle' && size !== 'strip' ? circleSVG() : gridHTML(g));
   if (size === 'quarter') return '<div class="dwrap">' + surf('g3') + '<div class="dbar q">' + stop + '</div></div>';
   if (size === 'strip') return '<div class="srow2 dstrip">' + surf('g6') + stop + '</div>';
-  return '<div class="dwrap' + (kv ? ' kv' : '') + (isHeld() ? ' held' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain') + layers + latch + wave + stop + mode + '</div></div>';
+  return '<div class="dwrap' + (kv ? ' kv' : '') + (isHeld() ? ' held' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain') + layers + latch + arp + wave + stop + mode + '</div></div>';
 }
 
 function render() {
@@ -166,7 +169,8 @@ function droneSheet() {
     '<div class="hdr">' + t('space') + '</div><div class="group sgroup">' + sl('fade', 0.2, 6, 0.1, SF) + sl('rev', 0, 1, 0.01, P) + sl('vol', 0, 1, 0.01, P) + '</div>' +
     // поклонение: длинный зал (отдельная реверберация ~7 с) и «Air» — тихий шум, настроенный по нотам созвучия
     '<div class="hdr">' + t('worship') + '</div><div class="group sgroup">' + sl('hall', 0, 1, 0.01, P) + sl('air', 0, 1, 0.01, P) + '</div><p class="ftr">' + t('worship.ftr') + '</p>' +
-    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>';
+    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell" data-darpset><span class="grow">' + t('arp.title') + '<span class="st l2" style="display:block;font-size:13px">' + t('arp.onHint') + '</span></span>' + (d.arp && d.arp.on ? '<span class="val">' + t('arp.isOn') + '</span>' : '') + '</button></div>';
   // Волна громкости («мягкий выключатель»): вкл, сила, форма (волна / пульс), мягкость краёв пульса, частота — свободно или
   // в такт метронома. Звук — тремоло шины пэдов (fx.js), то же видно в эффектах микшера
   function waveHTML() {
@@ -199,6 +203,7 @@ function droneSheet() {
         return;
       }
       if (g('[data-pman]')) { presetManager(api, () => sh.update()); return; }
+      if (g('[data-darpset]')) { arpSheet(ctx, render); return; }
       if ((b = g('[data-upre]'))) {
         const p = api.get(b.dataset.upre);
         if (p) { Object.assign(d, JSON.parse(JSON.stringify(p.data)), { preset: p.id, pname: p.name }); changed(); DR().retune(); }
@@ -436,10 +441,22 @@ function bind() {
     } else if (a === 'dmode') { stopAll(); d.view = NEXT_VIEW[viewOf()]; ctx.store.save(); render(); }
     else if (a === 'dlatch') { d.latch = !d.latch; DR().keysOff(); fingers.clear(); ctx.store.save(); render(); }
     else if (a === 'dset') droneSheet();
+    else if (a === 'darp') {
+      if (performance.now() - arpHeld < 600) return; // удержание уже открыло настройки
+      const A = (d.arp = { ...(d.arp || {}), on: !(d.arp && d.arp.on) });
+      ctx.store.save(); ctx.audio.arp.sync(); render();
+      if (A.on && !DR().on) ctx.ui.toast(ctx.t('arp.needPad'));
+    }
     else if (a === 'dwave') { setFx({ trem: FX().trem > 0 ? 0 : d.wave }); render(); }
   };
   host.addEventListener('click', onClick);
+  // удержание кнопки арпеджиатора — его настройки
+  let arpT = 0;
+  host.addEventListener('pointerdown', (e) => { if (!e.target.closest('[data-x="darp"]')) return; clearTimeout(arpT); arpT = setTimeout(() => { arpHeld = performance.now(); arpSheet(ctx, render); }, 480); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((k) => host.addEventListener(k, () => clearTimeout(arpT)));
 }
+let arpHeld = 0;
+const ARP_ICON = '<svg viewBox="0 0 24 24"><path d="M4 18l4-4 4 4 4-8 4 4"/><circle cx="4" cy="18" r="1.3"/><circle cx="8" cy="14" r="1.3"/><circle cx="12" cy="18" r="1.3"/><circle cx="16" cy="10" r="1.3"/><circle cx="20" cy="14" r="1.3"/></svg>';
 
 export default {
   ...meta,

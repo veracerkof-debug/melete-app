@@ -4,7 +4,7 @@ import { runLegacy } from './legacy.js';
 import { defaultAccents, tempoName, step, newPosition } from '../src/audio/metronome.js';
 import { yin } from '../src/audio/pitch.js';
 import { harmAmp } from '../src/audio/waves.js';
-import { normalizeDrone, droneNotes, tanpuraPattern } from '../src/audio/drone.js';
+import { normalizeDrone, droneNotes } from '../src/audio/drone.js';
 import { pianoPatch, PRESETS } from '../src/audio/synth.js';
 import { normalizeMix, createMixer } from '../src/audio/mixer.js';
 import { loadDevice, LS_T } from '../src/core/device.js';
@@ -123,7 +123,7 @@ describe('звук: синтезатор, пэды, микшер, настрой
     expect(Object.keys(PRESETS)).toEqual(['piano', 'wfelt', 'wkpad', 'wair', 'wlight', 'wwarm', 'wchoir', 'wflute', 'organ', 'sine', 'bell', 'fmep', 'abass']);
     // рояль (записи) + воздушный набор для поклонения + орган, синус, колокол + FM-пиано и аналоговый бас
   });
-  it('пэды: значения по умолчанию, ноты, тампура', () => {
+  it('пэды: значения по умолчанию, ноты (тампура заменена арпеджиатором, 06.11.2026)', () => {
     const d = loadDevice(memStorage({ [LS_T]: JSON.stringify(stored) }));
     // поверх прототипа — новые настройки поклонения (длинный зал и «Air»), по умолчанию выключены
     expect(normalizeDrone(d.drone)).toEqual({ ...clone(L.DC()), hall: 0, air: 0, view: 'grid', latch: false, ckey: 0, gest: true, sens: 'mid', wave: 0.7 });
@@ -133,7 +133,6 @@ describe('звук: синтезатор, пэды, микшер, настрой
       const offs = L.DCH.find((x) => x[0] === chord)[2];
       expect(droneNotes(d.drone)).toHaveLength(3 * offs.length);
       expect(droneNotes(d.drone)[0]).toEqual([12 * 3 + 2, 1]);
-      expect(tanpuraPattern(d.drone).pat[0]).toBe(36 + 2 + (chord === 'root' || chord === 'sus4' ? 5 : 7));
     }
   });
   it('микшер: громкость и выключение как mixV', () => {

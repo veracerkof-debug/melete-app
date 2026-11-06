@@ -11,7 +11,7 @@ import { after } from './clock.js';
 // и мерцающий хвост из октавы и квинты сверху (как отражения большого зала), только у голоса пэда
 // Воздушные пэды для поклонения (airsound.js) — первыми: id → рецепт
 export const AIR_PADS = { wair: 'air', wlight: 'light', wwarm: 'warm', wchoir: 'choir' };
-export const PAD_SOUNDS = [...Object.keys(AIR_PADS), 'shimmer', ...Object.keys(SOUNDS).filter((k) => k !== 'tanpura' && !AIR_PADS[k])];
+export const PAD_SOUNDS = [...Object.keys(AIR_PADS), 'shimmer', ...Object.keys(SOUNDS).filter((k) => !AIR_PADS[k])];
 // Уровень генератора по тембру: подобран так, чтобы аккорд любым пэдом звучал так же громко,
 // как голосом соло (замер: среднеквадратичный уровень четырёх голосов ≈ 0,09)
 const LVL = { soft: 0.152, pad: 0.205, bow: 0.224, choir: 0.5, glass: 0.147, shimmer: 0.15 };

@@ -1,14 +1,14 @@
-// Пэды и дрон: тёплый, смычок, хор, стекло, тампура (и воздушные). Слои по октавам, созвучия, плавная смена нот.
+// Пэды и дрон: тёплый, смычок, хор, стекло (и воздушные); тампура заменена арпеджиатором (arp.js, 06.11.2026). Слои по октавам, созвучия, плавная смена нот.
 // Настройки — объект device.drone (как в прототипе).
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
 import { airVoice, sideInto } from './airsound.js';
-import { every, cancel } from './clock.js';
+import { cancel } from './clock.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
 // Первыми — воздушные для поклонения (airsound.js): воздух, свет, тепло, хор
 // «Пэд» (пила) убран по слову автора 05.11.2026 — сохранённый «pad» становится «Тёплым» (normalizeDrone)
-export const SOUNDS = { wair: 0.5, wlight: 0.5, wwarm: 0.5, wchoir: 0.5, soft: 0.7, bow: 0.85, choir: 0.5, glass: 0.9, tanpura: 0.7 };
+export const SOUNDS = { wair: 0.5, wlight: 0.5, wwarm: 0.5, wchoir: 0.5, soft: 0.7, bow: 0.85, choir: 0.5, glass: 0.9 };
 const AIRS = { wair: 'air', wlight: 'light', wwarm: 'warm', wchoir: 'choir' };
 // Созвучия: интервалы от нажатой ноты
 // sus42 — тоника, секунда, кварта, квинта; hmin — «гармонический минор» в понимании автора (05.11.2026): тоника и квинта,
@@ -24,6 +24,8 @@ export const LAYERS = [2, 3, 4]; // октавы слоёв: низкий, ср�
 // Дополняет настройки значениями по умолчанию (прототип: DC())
 export function normalizeDrone(d) {
   if (!d.chord || !CHORDS[d.chord]) d.chord = d.fifth === false ? 'root' : 'fifth';
+  // тампура (до 06.11.2026) → мягкий пэд и арпеджиатор (он даёт движение вместо щипков)
+  if (d.sound === 'tanpura') { d.sound = 'soft'; d.arp = { ...(d.arp || {}), on: true }; }
   if (d.sound === 'pad' || !(d.sound in SOUNDS)) d.sound = 'soft';
   if (d.gest == null) d.gest = true;      // созвучия жестом по плитке; выкл — только касание
   if (!SENS[d.sens]) d.sens = 'mid';
@@ -52,13 +54,6 @@ export function droneNotes(d) {
   return notes;
 }
 
-// Рисунок тампуры: квинта (или кварта для тоники и sus4), две октавы, тоника
-export function tanpuraPattern(d) {
-  const Ls = LAYERS.filter((o) => d.layers[o]);
-  if (!Ls.length) return null;
-  const base = 12 * (Ls[0] + 1) + d.pc;
-  return { layers: Ls, pat: [d.chord === 'root' || d.chord === 'sus4' || d.chord === 'sus42' ? base + 5 : d.chord === 'hmin' ? base + 8 : base + 7, base + 12, base + 12, base] };
-}
 
 export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   // nodes — пэд сетки (одна нота с созвучием); keys — голоса режима «пиано» (нота → голос, все слои, без созвучия)
@@ -72,43 +67,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   const wet = (type) => (mixer.wet ? mixer.wet('drone', type) : null);
   const KEY_K = 0.7; // несколько клавиш сразу — каждая тише, сумма не перегружает
 
-  function pluck(c, dest, m, t, lvl) {
-    const f = mf(m), o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter();
-    o.setPeriodicWave(wave(c, 'tan'));
-    o.frequency.value = f;
-    o.detune.value = (Math.random() - 0.5) * 4;
-    lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(Math.min(9000, f * 16), t);
-    lp.frequency.setTargetAtTime(f * 5, t, 1.6);
-    lp.Q.value = 2.5;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.14 * lvl, t + 0.012);
-    g.gain.setTargetAtTime(0.0001, t + 0.02, 1.7);
-    let out = g;
-    if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = (Math.random() - 0.5) * 0.6; g.connect(p); out = p; }
-    o.connect(lp).connect(g);
-    out.connect(dest);
-    o.start(t); o.stop(t + 7);
-  }
 
-  // Тампура: свой рисунок щипков у каждого голоса (свои часы)
-  function tanpura(c, d, v) {
-    let next = c.currentTime + 0.1, step = 0;
-    const gap = 1.15;
-    const run = () => {
-      const tp = tanpuraPattern(d);
-      if (!tp) return;
-      while (next < c.currentTime + 0.4) {
-        const i = step % 4;
-        pluck(c, v.g, tp.pat[i], next, i === 3 ? 1.1 : 0.9);
-        tp.layers.slice(1).forEach((o) => pluck(c, v.g, tp.pat[i] + 12 * (o - tp.layers[0]), next + 0.015, 0.45));
-        next += i === 3 ? gap * 1.6 : gap;
-        step++;
-      }
-    };
-    run();
-    v.timer = every(120, run);
-  }
 
   // Воздушный пэд: каждая нота созвучия — голос airsound.js; «Движение» — дыхание громкости, «Ширина» — расстройка,
   // «Яркость» — фильтр. В высоких слоях и на неосновных нотах голосов в унисоне меньше (легче для телефона)
@@ -141,7 +100,6 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     master.gain.setValueAtTime(0, t);
     master.gain.linearRampToValueAtTime(level() * k, t + Math.max(0.05, att));
     const os = [], v = { g: master, os, send, hallS, k, timer: null };
-    if (d.sound === 'tanpura') { tanpura(c, d, v); return v; }
     if (AIRS[d.sound]) { startAir(c, d, master, t, os, att < 1 ? Math.max(0.12, att) : undefined); return v; }
     const base = 250 * Math.pow(20, d.bright), lp = c.createBiquadFilter();
     lp.type = 'lowpass';

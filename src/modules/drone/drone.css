@@ -102,10 +102,11 @@
 /* низкая полоска (альбомный телефон, окна стопкой): двенадцать тонов в один ряд — второй ряд не срезан */
 @media (max-height: 460px) { .pane.strip .dgrid.g6{grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:1fr!important} .pane.strip .dtile{font-size:clamp(12px,40cqh,20px)} }
 /* «Волна громкости» на полосе — кнопка-переключатель; созвучие касания в настройках — плитки в два ряда */
-.dwv{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--l2);background:var(--fill)}
-.dwv svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.dwv.on{background:var(--tint);color:var(--on-tint)}
+.dwv,.darp{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--l2);background:var(--fill)}
+.dwv svg,.darp svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.dwv.on,.darp.on{background:var(--tint);color:var(--on-tint)}
 .dchs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .dch{min-height:44px;border-radius:12px;background:var(--fill);color:var(--ink);font:600 14px var(--font);padding:0 6px}
 .dch.on{background:var(--tint);color:var(--on-tint)}
 .dwrap.held .dtile.on,.dwrap.held .dkey.on{animation:none;filter:saturate(.35) brightness(.92)}
+.darp svg circle{fill:currentColor;stroke:none}
