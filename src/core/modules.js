@@ -179,6 +179,10 @@ export function makeCtx(app, mod) {
     desk: () => isDesk(),
     keyLabel: (m) => (isDesk() && app.midi ? keyLabel(m, app.midi.qwerty.base) : ''),
     hasTool: (id) => !!moduleById(id) && isOn(app.store.state.settings, id),
+    // урок пройден (учебник, слух, ритм): один раз — «Добавить на главную?» с часами в неделю (screens/study.js)
+    studyOffer: (id = mod.id) => { if (app.studyOffer) app.studyOffer(id); },
+    // время инструмента — под другим именем (главы «Слуха и ритма»: ear, beat), пока он открыт отдельным окном
+    trackAs: (id) => { if (app.retrack) app.retrack(mod.id, id); },
     // включить или выключить свою часть (главу: модуль с partOf этого модуля — «Слух и ритм»)
     setPart: (id, on) => { const m = moduleById(id); if (!m || m.partOf !== mod.id) return; setFeature(app.store, id, on); if (app.onFeatures) app.onFeatures(); },
     // Другой инструмент внутри своего окна (студия: пианино, глайдер, терменвокс под плейлистом) → { resize, unmount } или null

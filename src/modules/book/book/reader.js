@@ -197,7 +197,7 @@ export function createBook(ctx, L, { save }) {
         const lo = t.closest('[data-lopen]'); if (lo) { (BS().opened ||= {})[lo.dataset.lopen] = 1; save(); return; }
         const bm = t.closest('[data-bmode]'); if (bm) { BS().mode = bm.dataset.bmode; snd.stop(); stopSing(); save(); return; }
         const li = t.closest('[data-li]'); if (li) { BS().inst = li.dataset.li; snd.stop(); stopSing(); save(); return; }
-        const ld = t.closest('[data-ldone]'); if (ld) { const d = doneMap(), id = ld.dataset.ldone; if (d[id]) delete d[id]; else d[id] = 1; stopSing(); save(); return; }
+        const ld = t.closest('[data-ldone]'); if (ld) { const d = doneMap(), id = ld.dataset.ldone; if (d[id]) delete d[id]; else { d[id] = 1; if (ctx.studyOffer) ctx.studyOffer('book'); } stopSing(); save(); return; }
         const el = t.closest('.blab'); if (!el) return;
         const lab = LABS[el.dataset.lab], st = states.get(el.dataset.k);
         const sb = t.closest('.seg button');

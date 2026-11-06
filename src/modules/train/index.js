@@ -15,6 +15,7 @@ function render() {
   const body = host.querySelector('.cbody');
   if (!c) { body.innerHTML = '<p class="ftr" style="padding:20px">' + t('none') + '</p>'; return; }
   inner = ctx.mountTool(c, body, size);
+  if (ctx.trackAs) ctx.trackAs(c); // время — по главе (учёба на главной)
 }
 
 function setsSheet() {

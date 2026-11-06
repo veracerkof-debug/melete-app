@@ -104,6 +104,9 @@ function openToolViewNow(app, id, onClose) {
       ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div>' + (rec ? recButtonHTML() : '') + pureBtn + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
       '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
+  let track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id), trackSec = 0;
+  // главы («Слух и ритм»): время — под именем главы; прежний отрезок сохраняется
+  app.retrack = (from, to) => { if (from !== id || mod.stats === false) return; trackSec += track.stop(); track = trackToolTime(app, to); };
   const inst = mountModule(app, mod, layer.querySelector('.tvhost'), 'full');
   const recOff = rec ? bindRec(app, layer, mod, layer.querySelector('.tvhost'), name) : () => {};
   // Поворот всего окна с надписями (пианино: телефон держат горизонтально); сторону задаёт модуль
@@ -121,7 +124,6 @@ function openToolViewNow(app, id, onClose) {
   const rotOn = !!mod.rotate || !mod.loaded;
   if (rotOn) { addEventListener('melete:rot', onRot); addEventListener('resize', onRot); addEventListener('melete:modloaded', onRot); rotCheck(); }
   // Рабочие инструменты (stats: false, например шумомер) в статистику не пишут
-  const track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id);
 
   // Полный экран: окно без шапки и кнопок, модуль убирает свои (класс .pure у окна), размер — заново
   let pure = false;
@@ -145,7 +147,8 @@ function openToolViewNow(app, id, onClose) {
     inst.unmount();
     ui.leave(layer.firstElementChild || layer, 260);
     setTimeout(() => layer.remove(), 280);
-    const sec = track.stop();
+    const sec = trackSec + track.stop();
+    app.retrack = null;
     if (sec) ui.toast(t('tools.recorded', { tool: name, dur: fmtDur(sec) }));
     if (next) openToolView(app, next, onClose);
     else if (onClose) onClose();

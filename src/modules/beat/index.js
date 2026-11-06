@@ -443,6 +443,7 @@ function finishL() {
     const score = all.length ? all.reduce((sum, x) => sum + (x.score || 0), 0) / all.length : 0;
     if (L.kind === 'lesson') recordLesson(p, L.id, score, now);
     L.done = { score };
+    if (L.kind === 'lesson' && ctx.studyOffer) ctx.studyOffer('beat'); // программа на главной — один раз
   }
   ctx.saveData();
   render();

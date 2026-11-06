@@ -352,6 +352,7 @@ function finishL() {
     const score = all.length ? all.filter((x) => x.ans).length / all.length : 0;
     if (L.kind === 'lesson') recordLesson(p, L.id, score, now);
     L.done = { score };
+    if (L.kind === 'lesson' && ctx.studyOffer) ctx.studyOffer('ear'); // программа на главной — один раз
   }
   ctx.saveData();
   render();

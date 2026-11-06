@@ -2158,5 +2158,17 @@
   "qr.pcHint": "On the phone: “Scan QR code” — the address and code fill in by themselves.",
   "group.train": "Ear & rhythm",
   "lic.jsqr.sub": "QR code recognition with the camera · version 1.4.0",
-  "lic.jsqr.text": "Distributed under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0). Used without changes."
+  "lic.jsqr.text": "Distributed under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0). Used without changes.",
+  "hb.study": "Study",
+  "study.title": "Study this week",
+  "study.of": "{done} of {goal}",
+  "study.ask": "Add to the home screen? The program is hours per week: the row shows how much is done. No streaks, no race.",
+  "study.perWeek": "{h} a week",
+  "study.own": "Own, minutes",
+  "study.min": "min",
+  "study.remove": "Remove from home",
+  "study.later": "Not now",
+  "study.hint": "Time in the tool itself counts; it also goes into the overall statistics. Change or remove — ⋯ on the Study block on the home screen.",
+  "study.added": "“{name}” on home: {h} a week",
+  "study.hours": "Hours per week"
 }

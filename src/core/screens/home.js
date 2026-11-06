@@ -13,6 +13,7 @@ import { genreOf, ensureLib } from '../library.js';
 import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
+import { studyCard } from './study.js';
 
 // Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
 function pomoBtn(app) {
@@ -54,7 +55,7 @@ export function streakPill(app, extra = '') {
 
 /* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
 // Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
-export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'start', 'quick', 'events', 'songs'];
+export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'study', 'start', 'quick', 'events', 'songs'];
 export const HOME_SIZES = ['s', 'm', 'l'];
 export function homeLayout(st) {
   const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));
@@ -169,6 +170,7 @@ function homeMonoHTML(app) {
     }
   }
   P.reading = readingCard(app, true);
+  P.study = studyCard(app);
   P.start = '<button class="mcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   // всё приложение — значками на одной странице, без подписей (решение автора 28.10.2026): календарь, студия, Библия,
   // все инструменты; порядок — удержать и перенести (settings.monoGrid), название — в подсказке и для чтения с экрана
@@ -212,6 +214,7 @@ export function homeHTML(app) {
     (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
   P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
+  P.study = plain ? '' : studyCard(app); // учёба: учебник, слух, ритм — часы в неделю
   P.start = '<button class="hcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
   P.quick = '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>' +

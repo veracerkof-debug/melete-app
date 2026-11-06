@@ -172,6 +172,8 @@ export function createShell(app, root) {
       if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render); // есть вкладка — в неё
     }
     else if (d.act === 'pomo') openToolView(app, 'timer', render);
+    else if (d.act === 'study') import('./study.js').then((m) => m.openStudy(app, d.k, openToolView, render));
+    else if (d.act === 'studyset') import('./study.js').then((m) => m.studySetSheet(app, render));
     else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'idea') ideaSheet(app);
     else if (d.act === 'check') checkSheet(app);
@@ -289,6 +291,8 @@ export function createShell(app, root) {
   app.go = go;
   app.homeEditDone = () => { if (!homeEditing()) return false; setHomeEdit(false); render(); return true; };
   app.render = render;
+  // урок пройден — «Добавить на главную?» (учёба: часы в неделю)
+  app.studyOffer = (id) => import('./study.js').then((m) => m.studyOffer(app, id, () => render()));
   app.shellAct = act;
   // Первый запуск (профиля ещё нет): главная не показывается вовсе — заставка, затем язык, соглашение и регистрация;
   // главная появляется только после регистрации
