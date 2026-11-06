@@ -54,12 +54,13 @@
 .stproj .bksub{display:block}
 /* шаговый секвенсор ударных */
 .rack{flex:1;min-height:0;overflow:auto;scrollbar-width:none;border-radius:14px;background:var(--cell);padding:8px}
-.rkbars{display:flex;gap:4px;padding:0 0 8px 92px;overflow:auto;scrollbar-width:none}
+.rkbars{display:flex;gap:4px;padding:0 0 8px 92px;overflow:auto;scrollbar-width:none;position:sticky;left:0;max-width:100%;box-sizing:border-box}
+.rack > .ftr{position:sticky;left:0;max-width:100%}
 .rkbars .rkbar{flex:none;min-width:36px;min-height:30px;border-radius:8px;background:var(--fill);font-size:12px;font-weight:700;color:var(--l2)}
 .rkbars .rkbar.on{background:var(--ink);color:var(--bg)}
-.rkrows{display:flex;flex-direction:column;gap:4px}
-.rkrow{display:flex;align-items:stretch;gap:4px;height:46px}
-.rkname{width:88px;flex:none;border-radius:9px;background:color-mix(in srgb,var(--c) 18%,var(--fill));text-align:left;padding:0 8px;overflow:hidden}
+.rkrows{display:flex;flex-direction:column;gap:4px;width:calc(var(--rkn,92px) + (100% - var(--rkn,92px)) * var(--zx,1))}
+.rkrow{display:flex;align-items:stretch;gap:4px;height:var(--rkh,46px)}
+.rkname{width:88px;flex:none;position:sticky;left:0;z-index:1;border-radius:9px;background:linear-gradient(color-mix(in srgb,var(--c) 18%,var(--fill)),color-mix(in srgb,var(--c) 18%,var(--fill))),var(--cell);box-shadow:4px 0 0 var(--cell);text-align:left;padding:0 8px;overflow:hidden}
 .rkname b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rkcells{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:3px;touch-action:none}
 .rkcells[hidden]{display:none}
@@ -84,8 +85,9 @@
 .scdia .pill small{font-size:10px;opacity:.7;font-family:Georgia,serif}
 @container (min-width: 700px) {
   .rkname{width:150px}
+  .rack{--rkn:154px}
   .rkbars{padding-left:154px}
-  .rkrow{height:50px}
+  .rkrow{height:var(--rkh,50px)}
 }
 /* запись и живой ввод */
 .sttop .strec.on,.sthead .strec.on{color:#D9534F;animation:blink 1s step-end infinite}

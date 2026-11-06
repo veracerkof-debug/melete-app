@@ -177,12 +177,13 @@ function render() {
     mute: (tr) => { seq.setTrackMute(tr, !tr.mute); save(); render(); }, solo: (tr) => { seq.setTrackSolo(tr, !tr.solo); save(); render(); }, fx: (tr) => trackSheet(tr), sound: (tr) => trackSheet(tr), master: () => { if (ctx.openMixer) ctx.openMixer(); } });
   const rh = host.querySelector('#stroll');
   if (rh) {
-    roll = createRoll(rh, () => { const c = clip(); return { p: proj(), total: dataBeats(proj(), c.data), tr: ctrack(), d: c.data, grid: grid() }; }, { change: () => save(), audition: (m) => seq.audition(ctrack(), m) });
+    roll = createRoll(rh, () => { const c = clip(); return { p: proj(), total: dataBeats(proj(), c.data), tr: ctrack(), d: c.data, grid: grid() }; }, { change: () => save(), audition: (m) => seq.audition(ctrack(), m), zoom: (z) => ctx.store.set('rollZoom', z) });
+    roll.view(st().rollZoom); // масштаб ролла — время и высота нот — запоминается
     rh.addEventListener('contextmenu', (e) => e.preventDefault());
     if (V.bar) roll.follow(V.bar * p.num);
   }
   const rk = host.querySelector('.rack');
-  if (rk) offSteps = stepsGestures(rk, () => clip().data, { change: () => save(), audition: (lane) => seq.audition(ctrack(), lane) });
+  if (rk) offSteps = stepsGestures(rk, () => clip().data, { change: () => save(), audition: (lane) => seq.audition(ctrack(), lane), zoom: (z) => ctx.store.set('stepZoom', z) }, st().stepZoom);
   const ph = host.querySelector('#stpl');
   if (ph) {
     pl = createPlaylist(ph, () => ({ p: proj(), names: trName, fileName, peaks: filePeaks, auto: V.auto }), {

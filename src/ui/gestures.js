@@ -81,3 +81,32 @@ export function spread(el, { out, inn, ok = () => true, k = 1.4 } = {}) {
 // Где двумя пальцами не управлять окном: пианино и глайдер (там играют несколькими пальцами — только кнопки),
 // поля ввода и то, что само масштабируется щипком
 export const NOSPREAD = '[data-group="piano"], [data-group="glider"], input, textarea, select, [contenteditable], [data-nospread]';
+
+// Масштаб двумя пальцами по двум осям (слово автора 06.11.2026 — Студия, пиано-ролл, ударные): развести или свести
+// по горизонтали — kx, по вертикали — ky, наискось — оба; ось выбирается по тому, как пальцы поставлены (почти в ряд —
+// только x, почти друг над другом — только y). start(mx, my) — пальцы поставлены (середина между ними, экранные
+// координаты); move(kx, ky, mx, my) — во время жеста (k — во сколько раз от начала); end() — пальцы отпущены.
+export function zoom2(el, { start, move, end, ok = () => true }) {
+  let z = null;
+  const spanOf = (t) => ({ dx: Math.abs(t[0].clientX - t[1].clientX), dy: Math.abs(t[0].clientY - t[1].clientY), mx: (t[0].clientX + t[1].clientX) / 2, my: (t[0].clientY + t[1].clientY) / 2 });
+  const ts = (e) => {
+    if (e.touches.length !== 2) { if (e.touches.length > 2) z = null; return; }
+    if (!ok(e)) return;
+    z = spanOf(e.touches);
+    z.ax = z.dx > z.dy * 1.7 ? 'x' : z.dy > z.dx * 1.7 ? 'y' : 'xy';
+    if (start) start(z.mx, z.my, e);
+  };
+  const tm = (e) => {
+    if (!z || e.touches.length !== 2) return;
+    e.preventDefault();
+    const s = spanOf(e.touches);
+    const kx = z.ax !== 'y' && z.dx > 24 ? s.dx / z.dx : 1, ky = z.ax !== 'x' && z.dy > 24 ? s.dy / z.dy : 1;
+    move(kx, ky, s.mx, s.my);
+  };
+  const te = (e) => { if (z && e.touches.length < 2) { z = null; if (end) end(); } };
+  el.addEventListener('touchstart', ts, { passive: true });
+  el.addEventListener('touchmove', tm, { passive: false });
+  el.addEventListener('touchend', te);
+  el.addEventListener('touchcancel', te);
+  return () => { el.removeEventListener('touchstart', ts); el.removeEventListener('touchmove', tm); el.removeEventListener('touchend', te); el.removeEventListener('touchcancel', te); };
+}

@@ -3,6 +3,9 @@
 // Касание шага — удар, вести по ряду — «красить»; название ряда — услышать, удержать — очистить ряд.
 // Без зависимости от модуля: получает проект и содержимое клипа.
 import { DRUMS, STEP, stepOn, setStep, toggleStep } from '../../music/project.js';
+import { zoom2 } from '../../ui/gestures.js';
+
+const ZX_MAX = 4, RH_MIN = 36, RH_MAX = 96;
 
 const perBeat = 1 / STEP;
 const cells = (perBar, bar, b0, on) => '<div class="rkcells" data-bar="' + bar + '"' + (bar === b0 ? '' : ' hidden') + '>' +
@@ -31,8 +34,12 @@ export function stepsPos(host, i) {
 }
 
 // Жесты по шагам: касание — удар, вести по ряду — несколько. get() → содержимое; on: { change(), audition(lane) }
-export function stepsGestures(host, get, on) {
-  let paint = null; // { id, lane, on }
+// z0 — прежний масштаб { zx, rh }: ширина клеток (1 — такт на ширину окна) и высота рядов
+export function stepsGestures(host, get, on, z0 = null) {
+  let paint = null; // { id, lane, on, i, was }
+  const Z = { zx: z0 && z0.zx >= 1 && z0.zx <= ZX_MAX ? z0.zx : 1, rh: z0 && z0.rh >= RH_MIN && z0.rh <= RH_MAX ? z0.rh : 46 };
+  const apply = () => { host.style.setProperty('--zx', Z.zx); host.style.setProperty('--rkh', Z.rh + 'px'); };
+  apply();
   const cellAt = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList.contains('rkc') ? el : null; };
   const down = (e) => {
     const c = cellAt(e);
@@ -40,7 +47,7 @@ export function stepsGestures(host, get, on) {
     const lane = c.closest('.rkrow').dataset.lane, d = get(), i = +c.dataset.i, v = toggleStep(d, lane, i);
     c.classList.toggle('on', v);
     if (v) on.audition(lane);
-    paint = { id: e.pointerId, lane, on: v };
+    paint = { id: e.pointerId, lane, on: v, i, was: !v };
     try { host.setPointerCapture(e.pointerId); } catch { /* */ }
     e.preventDefault();
   };
@@ -55,5 +62,21 @@ export function stepsGestures(host, get, on) {
   };
   const up = (e) => { if (!paint || e.pointerId !== paint.id) return; paint = null; on.change(); };
   host.addEventListener('pointerdown', down); host.addEventListener('pointermove', move); host.addEventListener('pointerup', up); host.addEventListener('pointercancel', up);
-  return () => { host.removeEventListener('pointerdown', down); host.removeEventListener('pointermove', move); host.removeEventListener('pointerup', up); host.removeEventListener('pointercancel', up); };
+  // два пальца (06.11.2026): по горизонтали — шире клетки (такт прокручивается), по вертикали — выше ряды; первое касание
+  // второго пальца не ставит удар (отменяется); место под пальцами стоит
+  let zs = null;
+  const offZoom = zoom2(host, {
+    start: (mx, my) => {
+      if (paint) { const d = get(); setStep(d, paint.lane, paint.i, paint.was); const c = host.querySelector('.rkrow[data-lane="' + paint.lane + '"] .rkcells:not([hidden]) .rkc[data-i="' + paint.i + '"]'); if (c) c.classList.toggle('on', paint.was); paint = null; }
+      const r = host.getBoundingClientRect(), rows = host.querySelector('.rkrows');
+      zs = { zx: Z.zx, rh: Z.rh, cx: (host.scrollLeft + mx - r.left - 92) / Z.zx, cy: (host.scrollTop + my - r.top) / Z.rh, r, rows };
+    },
+    move: (kx, ky, mx, my) => {
+      if (!zs) return;
+      Z.zx = Math.max(1, Math.min(ZX_MAX, zs.zx * kx)); Z.rh = Math.max(RH_MIN, Math.min(RH_MAX, zs.rh * ky)); apply();
+      host.scrollLeft = zs.cx * Z.zx + 92 - (mx - zs.r.left); host.scrollTop = zs.cy * Z.rh - (my - zs.r.top);
+    },
+    end: () => { zs = null; if (on.zoom) on.zoom({ ...Z }); },
+  });
+  return () => { offZoom(); host.removeEventListener('pointerdown', down); host.removeEventListener('pointermove', move); host.removeEventListener('pointerup', up); host.removeEventListener('pointercancel', up); };
 }

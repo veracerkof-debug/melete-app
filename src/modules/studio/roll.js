@@ -5,12 +5,12 @@
 // Внизу — полоса силы нот (как в FL Studio Mobile): столбик у каждой ноты, вести по полосе — сила (0,05…1).
 // Линия хода — при проигрывании. Без зависимости от модуля: получает проект, паттерн, ячейку и обратные вызовы.
 import { toggleNote, noteAt, moveNote, resizeNote, NOTE_LO, NOTE_HI } from '../../music/project.js';
-import { pinch } from '../../ui/gestures.js';
+import { zoom2 } from '../../ui/gestures.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const BLACK = [1, 3, 6, 8, 10];
-const HOLD_MS = 450, KEYW = 36, LANE = 30; // ширина клавиш слева, высота полосы силы внизу
+const HOLD_MS = 450, KEYW = 36, LANE = 30, PXB_MIN = 16, PXB_MAX = 320, ROW_MIN = 12, ROW_MAX = 48; // ширина клавиш слева, высота полосы силы внизу
 
 // host — элемент под холст; get() → { p, total (длина куска в долях), d, tr, grid }; on: { change(), audition(m) }
 export function createRoll(host, get, on) {
@@ -156,8 +156,19 @@ export function createRoll(host, get, on) {
   };
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
-  const offPinch = pinch(cv, { min: 16, max: 160, get: () => V.pxb, set: (v) => { const mid = tOfX(KEYW + (W - KEYW) / 2); V.pxb = v; V.x = mid * v - (W - KEYW) / 2; draw(); } });
-  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) { V.pxb = Math.max(16, Math.min(160, V.pxb - e.deltaY / 10)); } else { V.x += e.deltaX; V.y += e.deltaY; } draw(); }, { passive: false });
+  // два пальца: по горизонтали — время, по вертикали — высота нот, наискось — оба; место под пальцами стоит (06.11.2026)
+  let z0 = null;
+  const offPinch = zoom2(cv, {
+    start: (mx, my) => { const r = cv.getBoundingClientRect(); drag = null; z0 = { r, pxb: V.pxb, rowH: V.rowH, t: tOfX(mx - r.left), yr: (my - r.top + V.y) / V.rowH }; },
+    move: (kx, ky, mx, my) => {
+      if (!z0) return;
+      V.pxb = Math.max(PXB_MIN, Math.min(PXB_MAX, z0.pxb * kx)); V.rowH = Math.max(ROW_MIN, Math.min(ROW_MAX, z0.rowH * ky));
+      V.x = z0.t * V.pxb - (mx - z0.r.left - KEYW); V.y = z0.yr * V.rowH - (my - z0.r.top);
+      clampView(); draw();
+    },
+    end: () => { z0 = null; if (on.zoom) on.zoom({ pxb: V.pxb, rowH: V.rowH }); },
+  });
+  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) V.pxb = Math.max(PXB_MIN, Math.min(PXB_MAX, V.pxb * Math.exp(-e.deltaY / 300))); else if (e.altKey) V.rowH = Math.max(ROW_MIN, Math.min(ROW_MAX, V.rowH * Math.exp(-e.deltaY / 300))); else { V.x += e.deltaX; V.y += e.deltaY; } clampView(); draw(); }, { passive: false });
   const ro = new ResizeObserver(size);
   ro.observe(host);
   size();
@@ -168,6 +179,8 @@ export function createRoll(host, get, on) {
     pos(b) { V.pos = b; cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); },
     // показать нужную долю (начало проигрывания — в кадре)
     follow(b) { const x = b * V.pxb; if (x < V.x || x > V.x + W - KEYW - 20) { V.x = Math.max(0, x - 40); draw(); } },
+    // прежний масштаб (запомненный модулем)
+    view(z) { if (!z) return; if (z.pxb >= PXB_MIN && z.pxb <= PXB_MAX) V.pxb = z.pxb; if (z.rowH >= ROW_MIN && z.rowH <= ROW_MAX) V.rowH = z.rowH; draw(); },
     destroy() { ro.disconnect(); offPinch(); clearTimeout(holdT); cancelAnimationFrame(raf); cv.remove(); },
   };
 }
