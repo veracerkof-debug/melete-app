@@ -228,7 +228,13 @@ function bind() {
     if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) }); }
   });
   // Sustain: отпущенная клавиша не глушится — звук уходит долгим хвостом
-  const up = (e) => { const p = ptr.get(e.pointerId); if (!p) return; if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); ctx.midi.ev({ k: 'off', id: p.key, r: true }); vOff(p.key); } else noteOff(p); ptr.delete(e.pointerId); };
+  const up = (e) => {
+    const p = ptr.get(e.pointerId);
+    if (p) { if (hold.mode === 1) { p.el.classList.remove('down'); syn.release(p.key); ctx.midi.ev({ k: 'off', id: p.key, r: true }); vOff(p.key); } else noteOff(p); ptr.delete(e.pointerId); }
+    // страховка (отчёт автора 06.11.2026: нота звучала бесконечно без Hold): пальцев на клавишах нет, педали нет —
+    // ни одна нота касания не звучит; сработала — в журнал, чтобы найти, откуда нота
+    if (!ptr.size && !hold.mode && syn.offWhere) { const n = syn.offWhere((k) => /^p\d/.test(k)); if (n) ctx.log('страховка: отпущено нот касания — ' + n, 'w'); }
+  };
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
 

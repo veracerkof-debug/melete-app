@@ -392,6 +392,13 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
       if (L) play(c, m, key + LK, opts, L, busName === 'piano' ? 'layer' : null);
     },
 
+    // Страховка: отпустить все звучащие ноты, чьи ключи подходят (не удержанные педалью) → сколько отпущено
+    offWhere(test) {
+      let n = 0;
+      [...voices.keys()].forEach((k) => { const vo = voices.get(k); if (vo && !vo.held && test(k.replace(LK, ''))) { offOne(k); n++; } });
+      return n;
+    },
+
     // Отпустить ноту (и её второй слой)
     off(key, fast = false, at = 0) {
       offOne(key, fast, at);
