@@ -47,16 +47,20 @@ export function remindOf(settings) {
   r.leads = (Array.isArray(r.leads) ? r.leads : DEFAULT_REMIND.leads).filter((m) => LEADS.includes(m));
   if (!r.leads.length) r.leads = DEFAULT_REMIND.leads.slice();
   if (!/^\d\d:\d\d$/.test(r.time)) r.time = DEFAULT_REMIND.time;
+  // своё время занятия по дням недели (0 — понедельник): { '2': '07:30' }; нет — общее r.time
+  r.dayTimes = Object.fromEntries(Object.entries(r.dayTimes && typeof r.dayTimes === 'object' ? r.dayTimes : {}).filter(([k, v]) => /^[0-6]$/.test(k) && /^\d\d:\d\d$/.test(v) && v !== r.time));
   r.custom = (Array.isArray(r.custom) ? r.custom : DEFAULT_REMIND.custom).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX);
   return r;
 }
 // Сохранить выбор (settings.remind): только поля нового вида
 export function setRemind(settings, patch) {
   const r = { ...remindOf(settings), ...patch };
-  settings.remind = { mode: r.mode, time: r.time, leads: r.leads, custom: (r.custom || []).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX), byName: !!r.byName, quietFrom: r.quietFrom, quietTo: r.quietTo };
+  settings.remind = { mode: r.mode, time: r.time, leads: r.leads, custom: (r.custom || []).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX), byName: !!r.byName, quietFrom: r.quietFrom, quietTo: r.quietTo, dayTimes: r.dayTimes || {} };
   return remindOf(settings);
 }
 
+// Время занятия в день d (полночь): своё для этого дня недели или общее
+export const timeOn = (r, d) => (r.dayTimes && r.dayTimes[weekday(d)]) || r.time;
 const at = (d, hhmm) => { const [h, m] = String(hhmm || '19:00').split(':').map((x) => +x || 0); return d + (h * 60 + m) * MIN; };
 
 // Напоминания дня d (полночь) → [{ ts, slot, tone? }] по возрастанию. slot: 'lead:<мин>' — до занятия, 'after' — после,
@@ -66,7 +70,7 @@ export function remindTimes(r, d) {
   r = r.leads && r.mode ? r : remindOf({ remind: r });
   if (r.mode === 'quiet') return [];
   const quiet = (ts) => { const hr = new Date(ts).getHours(); return r.quietFrom > r.quietTo ? hr >= r.quietFrom || hr < r.quietTo : hr >= r.quietFrom && hr < r.quietTo; };
-  const t0 = at(d, r.time);
+  const t0 = at(d, timeOn(r, d));
   if (r.mode === 'custom') {
     const seen = new Set();
     return r.custom.map((x) => (x.at ? { ts: at(d, x.at), slot: 'abs', tone: x.tone } : { ts: t0 + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone }))

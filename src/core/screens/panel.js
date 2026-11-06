@@ -25,6 +25,7 @@ import { isBackup } from '../store.js';
 import { exportSheet, importSheet } from './backupsheet.js';
 import { playerAvailable, bgCtl, canOverlay, askOverlay } from '../player.js';
 import { meleteHTML, bindMelete, mountMelete } from './melete.js';
+import { remindViewHTML, bindRemindView } from './remindview.js';
 import { setsOf, QSETS, qsetsFor } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
 import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
@@ -272,7 +273,7 @@ function mascotHTML(app) {
 
 function notifHTML(app) {
   const st = app.store.state.settings;
-  return '<div class="large">' + t('page.notif') + '</div>' + meleteHTML(st, { test: true, who: false, tama: false });
+  return '<div class="large">' + t('page.notif') + '</div>' + remindViewHTML(app) + meleteHTML(st, { test: true, who: false, tama: false });
 }
 
 // Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
@@ -652,6 +653,7 @@ export function createPanel(app, onChange) {
     if (app.guest) app.guest.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.syncCli) app.syncCli.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected && !syncBusy) render(); });
     // характер Мелеты (страница «Уведомления»)
+    bindRemindView(layer, app, (ch) => (ch ? changed() : render()));
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
     const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };

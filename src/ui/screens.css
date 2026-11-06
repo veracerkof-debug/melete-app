@@ -525,3 +525,25 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pstone{width:64px;height:64px;flex:none;display:block;cursor:grab;touch-action:none;border-radius:50%}
 .hgstone canvas[data-stone],.gstonerow canvas[data-stone]{width:58px;height:58px;flex:none;display:block;cursor:grab;touch-action:none;border-radius:50%}
 .gstonerow{display:flex;align-items:center;gap:12px}
+/* Уведомления наглядно (remindview.js): неделя по часам — дни, тихие часы, напоминания, занятие; сегодня — лента */
+.rvseg{margin:0 0 10px}
+.rvweek{background:var(--cell);border-radius:14px;padding:8px 6px 10px}
+.rvhead,.rvbody{display:grid;grid-template-columns:22px repeat(7,1fr);gap:3px}
+.rvday{min-height:40px;border-radius:10px;font-size:13px;font-weight:700;color:var(--l3)}
+.rvday.on{color:var(--tint-text);background:color-mix(in srgb,var(--tint) 12%,transparent)}
+.rvbody{height:300px;margin-top:4px}
+.rvaxis{position:relative}
+.rvh{position:absolute;right:2px;transform:translateY(-50%);font-size:10px;color:var(--l3);font-variant-numeric:tabular-nums}
+.rvcol{position:relative;border-radius:8px;background:var(--fill);overflow:visible;touch-action:none}
+.rvcol.off{opacity:.35}
+.rvq{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--l3) 18%,transparent) 0 3px,transparent 3px 7px);border-radius:8px;pointer-events:none}
+.rvdot{position:absolute;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--l2);pointer-events:none}
+.rvmark{position:absolute;left:-2px;right:-2px;min-height:40px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}
+.rvmark .num{display:block;width:100%;padding:3px 0;border-radius:7px;background:var(--tint);color:var(--on-tint);font-size:10.5px;font-weight:700;letter-spacing:-.02em;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.rvmark.own .num{background:var(--tint-text)}
+.rvlist .rvrow{gap:10px;min-height:44px}
+.rvt{width:46px;font-weight:700;color:var(--ink)}
+.rvk{width:9px;height:9px;border-radius:50%;background:var(--l2);flex:none}
+.rvrow.play .rvk{background:var(--tint);width:12px;height:12px}
+.rvrow.ev .rvk{border-radius:3px;background:var(--blue,#3b82f6)}
+.rvrow.past{opacity:.45}

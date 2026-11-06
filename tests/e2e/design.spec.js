@@ -6,8 +6,8 @@ test('дизайн: главная, вкладки, пояснения', async (
   await melete.open();
   await expect(page.locator('.gring .rcap')).toHaveCount(1);
   await expect(page.locator('.hfirst[data-act="addSong"]')).toBeVisible();
-  // лига — вторым кольцом с камнем в плитке недели, отдельной плитки нет
-  await expect(page.locator('.hwgem .hgring[data-act="gem"] canvas[data-gem3d]')).toHaveCount(1);
+  // камень (вместо самоцвета, 06.11.2026) — в плитке недели, отдельной плитки нет
+  await expect(page.locator('.hwgem .hgstone canvas[data-stone="home"]')).toHaveCount(1);
   await expect(page.locator('.gemrow')).toHaveCount(0);
   // подписи вкладок — всегда (решение автора 05.11.2026, не вариант): прежний выбор «только значки» не действует
   await expect(page.locator('.tab .tl').first()).toBeVisible();

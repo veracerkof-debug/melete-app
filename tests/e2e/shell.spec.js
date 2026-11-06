@@ -16,8 +16,9 @@ test('вкладки и панель', async ({ page, melete, errors }) => {
     expect(await melete.count('#panelLayer > .wrap'), pg).toBe(1);
     await melete.click('[data-pp="root"]'); await page.waitForTimeout(250);
   }
-  // отчёт о проблеме: текст собирается
-  await melete.click('[data-act="report"]'); await page.waitForTimeout(400);
+  // отчёт о проблеме: сначала диагностика, из неё — отчёт; текст собирается
+  await melete.click('[data-act="diag"]'); await page.waitForTimeout(600);
+  await melete.click('[data-dg-act="report"]'); await page.waitForTimeout(500);
   await melete.click('[data-rpt="show"]'); await page.waitForTimeout(800);
   expect(await melete.text('.rptpre')).toContain('Melete');
   expect(errors).toEqual([]);

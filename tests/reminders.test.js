@@ -179,3 +179,21 @@ describe('своё расписание', () => {
     expect(r.custom.length).toBe(10);
   });
 });
+
+// Своё время занятия по дням недели (вид «Неделя», 06.11.2026)
+describe('время по дням', async () => {
+  const { timeOn } = await import('../src/core/reminders.js');
+  const { setDayTime } = await import('../src/core/screens/remindview.js');
+  it('свой день — своё время, остальные — общее; напоминания считаются от него', () => {
+    const st = { days: [true, true, true, true, true, true, true], remind: { mode: 'classic', time: '19:00', leads: [60] } };
+    setDayTime(st, 2, '09:30'); // среда
+    const r = remindOf(st);
+    expect(r.dayTimes).toEqual({ 2: '09:30' });
+    const wed = new Date(2026, 10, 4).getTime(), thu = new Date(2026, 10, 5).getTime(); // 4.11.2026 — среда
+    expect(timeOn(r, wed)).toBe('09:30');
+    expect(timeOn(r, thu)).toBe('19:00');
+    expect(new Date(remindTimes(r, wed)[0].ts).getHours()).toBe(8);
+    setDayTime(st, 2, '19:00'); // как общее — своё снимается
+    expect(remindOf(st).dayTimes).toEqual({});
+  });
+});
