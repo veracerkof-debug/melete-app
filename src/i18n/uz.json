@@ -2097,5 +2097,21 @@
   "rv.dayTitle": "{d}",
   "rv.same": "Boshqa kunlardagidek ({t})",
   "rv.allDays": "Bu vaqt — barcha kunlarga",
-  "rv.rest": "Dam olish kuni qilish"
+  "rv.rest": "Dam olish kuni qilish",
+  "hc.start.tour.profile": "Profil va barcha sozlamalar.",
+  "hc.start.tour.pomo": "Pomodoro: taymer boʻyicha ish va tanaffuslar.",
+  "hc.start.tour.week": "Hafta: qancha chalingan va maqsadgacha qancha qolgan. Teginish — statistika.",
+  "hc.start.tour.go": "Mashqni boshlash — asboblar oynalari va vaqt hisobi.",
+  "hc.start.tour.tabs": "Boʻlimlar. Belgini ushlab turish — joyini oʻzgartirish.",
+  "hc.session.tour.time": "Mashgʻulot vaqti. Teginish — pauza; ushlab turish — pomodoro.",
+  "hc.session.tour.grip": "Oyna chizigʻi: teginish — oyna menyusi, ikki marta teginish — toʻliq ekran, surish — oynalarni almashtirish.",
+  "hc.session.tour.full": "Oyna toʻliq ekranga. Yana — ikki barmoqni yoyish.",
+  "hc.session.tour.dock": "Asboblar. Teginish — oynaga, oynaga sudrash — oʻsha yerda ochish; ikki barmoqni yaqinlashtirish — chalayotganlar oynalari.",
+  "hc.session.tour.stage": "Sahna: chiqish uchun toʻliq ekranli set-list.",
+  "hc.session.tour.finish": "Mashgʻulotni tugatish — yakun va statistikaga yozuv.",
+  "tour.skip": "Oʻtkazib yuborish",
+  "tour.next": "Keyingi",
+  "tour.done": "Tayyor",
+  "help.offTitle": "Birinchi marta koʻrsatish",
+  "help.offHint": "Yoritilgan yoʻriqnoma boʻlim yoki asbob birinchi marta ochilganda oʻzi koʻrsatiladi. Oʻtkazib yuborilgani — yana, ikki martadan koʻp emas."
 }

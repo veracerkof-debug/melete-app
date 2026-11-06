@@ -10,7 +10,8 @@ import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
 
 const WAIT_MS = 1000;
-const AUTO = false; // карточка при первом открытии — выключена
+const AUTO = true; // в первый раз — сама (слово автора 06.11.2026, пункт 20); выключить все — «Инструкции» в профиле (settings.helpOff)
+const SKIP_MAX = 2; // пропущенную инструкцию сами показываем ещё раз, не больше двух раз
 const queue = [];
 const thisRun = new Set(); // показанные за этот запуск
 let showing = false;
@@ -29,10 +30,26 @@ const IC = {
 const COLOR = { start: '#9C7242', songs: '#A75750', session: '#5F8568', calendar: '#567198', folder: '#AE934D', share: '#4A8681', melete: '#646493', owndata: '#866B9D' };
 export const CORE_TOPICS = Object.keys(IC);
 
+// Шаги с подсветкой у механизмов ядра: [селектор, ключ текста hc.<id>.tour.<ключ>]
+const CORE_TOURS = {
+  start: [['.topbar .avatar', 'profile'], ['.hpomo', 'pomo'], ['.hcard, .mweek', 'week'], ['[data-act="free"]', 'go'], ['.tabbar', 'tabs']],
+  session: [['#stime', 'time'], ['.ws .grip', 'grip'], ['.ws .pfbtn', 'full'], ['#tpills', 'dock'], ['.sstage', 'stage'], ['[data-s="finish"]', 'finish']],
+};
+
 // Тема-инструмент из модуля
-export const modTopic = (mod) => ({ id: mod.id, name: moduleName(mod), icon: mod.icon || '', color: mod.color || '#8E8E93', on: mod.on, i18n: mod.i18n || {}, pre: 'help.' });
+export const modTopic = (mod) => ({ id: mod.id, name: moduleName(mod), icon: mod.icon || '', color: mod.color || '#8E8E93', on: mod.on, i18n: mod.i18n || {}, pre: 'help.', tour: mod.tour || null });
 // Тема-механизм ядра
-export const coreTopic = (id) => ({ id: 'core:' + id, name: t('hc.' + id + '.name'), icon: IC[id], color: COLOR[id], core: id });
+export const coreTopic = (id) => ({ id: 'core:' + id, name: t('hc.' + id + '.name'), icon: IC[id], color: COLOR[id], core: id, tour: CORE_TOURS[id] || null });
+
+// Шаги подсветки темы на текущем языке: [{ sel, text }] (нет шагов — null)
+export function tourOf(tp) {
+  if (!tp.tour) return null;
+  const l = getLang(), d = tp.i18n || {};
+  const txt = (k) => (tp.core ? (() => { const v = t('hc.' + tp.core + '.tour.' + k); return v === 'hc.' + tp.core + '.tour.' + k ? null : v; })() : d[l]?.['tour.' + k] ?? d.ru?.['tour.' + k] ?? null);
+  const steps = tp.tour.map(([sel, k]) => ({ sel, text: txt(k) })).filter((x) => x.text);
+  return steps.length ? steps : null;
+}
+const skips = (st) => st.helpSkip || (st.helpSkip = {});
 
 // Текст инструкции на текущем языке (чего нет — по-русски)
 export function helpOf(x) {
@@ -52,30 +69,32 @@ const never = (st) => st.helpSeen || (st.helpSeen = {}); // отмечено «�
 const once = (st) => st.helpOnce || (st.helpOnce = {}); // хоть раз показывалась (первый раз — «Понятно» через секунду)
 
 // Инструмент или механизм открыт: карточка, если её не просили больше не показывать (раз за запуск)
-export function firstHelp(app, x) {
-  // сами больше не всплывают (решение автора, 2026-10: меньше текста) — только по «?» и из «Профиль → Инструкции»
+export function firstHelp(app, x, root = null) {
+  // в первый раз — сама, с подсветкой, если у темы есть шаги; выключаются все разом в «Профиль → Инструкции»
   if (!app || !AUTO) return;
   const st = app.store.state.settings, tp = x.core ? x : modTopic(x);
-  if (isBare()) return; // «Минимал» без текста: инструкции — только по «?» и из профиля
-  if (!st.configured || never(st)[tp.id] || thisRun.has(tp.id) || !helpOf(tp) || queue.some((q) => q.tp.id === tp.id)) return;
+  if (isBare() || st.helpOff) return; // «Минимал» без текста: инструкции — только по «?» и из профиля
+  if (!st.configured || never(st)[tp.id] || (skips(st)[tp.id] || 0) >= SKIP_MAX || thisRun.has(tp.id) || !(helpOf(tp) || tourOf(tp)) || queue.some((q) => q.tp.id === tp.id)) return;
+  if (!tourOf(tp)) return; // сами — только с подсветкой; карточка с текстом — по «?» и из профиля (меньше текста, 2026-10)
   thisRun.add(tp.id);
-  queue.push({ app, tp, auto: true });
+  queue.push({ app, tp, auto: true, root });
   setTimeout(next, 600); // сначала — сам экран (и окна, которые появляются вместе с ним: соглашение и т. п.)
 }
 // Механизм ядра открыт (песни, сессия, календарь, папка, команда, Мелета, свои данные)
-export const coreHelp = (app, id) => firstHelp(app, coreTopic(id));
+export const coreHelp = (app, id, root = null) => firstHelp(app, coreTopic(id), root);
 
 // Открыть по просьбе (значок «?», список инструкций): закрывается сразу и касанием мимо
-export function showHelp(app, x) {
+// root — где сейчас тема на экране (окно инструмента): тогда — с подсветкой; иначе (список в профиле) — карточка
+export function showHelp(app, x, root = null) {
   const tp = x.core ? x : x.sizes ? modTopic(x) : x;
-  if (!helpOf(tp)) return;
-  queue.unshift({ app, tp, auto: false });
+  if (!helpOf(tp) && !(root && tourOf(tp))) return;
+  queue.unshift({ app, tp, auto: false, root });
   next();
 }
 
 export function resetHelp(app) {
   const st = app.store.state.settings;
-  st.helpSeen = {}; st.helpOnce = {};
+  st.helpSeen = {}; st.helpOnce = {}; st.helpSkip = {}; st.helpOff = false;
   thisRun.clear();
   app.store.settingsChanged();
 }
@@ -87,7 +106,22 @@ function next() {
   if (showing || !queue.length) return;
   if (busy()) { clearTimeout(waitT); waitT = setTimeout(next, 400); return; }
   showing = true;
-  const { app, tp, auto } = queue.shift(), h = helpOf(tp), st = app.store.state.settings;
+  const { app, tp, auto, root, card } = queue.shift(), h = helpOf(tp), st = app.store.state.settings;
+  // с подсветкой: шаги на экране (окно инструмента; главная и сессия — когда открылись сами); из списка в профиле — карточка
+  const steps = !card && (root || (auto && tp.core)) && tourOf(tp);
+  if (steps) {
+    import('../ui/tour.js').then(({ tour }) => tour(steps, { root: root || document, t })).then((r) => {
+      if (r.empty && h) { showing = false; queue.unshift({ app, tp, auto, root: null, card: true }); next(); return; } // шагов на экране нет — карточка
+      once(st)[tp.id] = true;
+      if (r.never) never(st)[tp.id] = true;
+      else if (!r.done && auto) skips(st)[tp.id] = (skips(st)[tp.id] || 0) + 1;
+      app.store.settingsChanged();
+      showing = false;
+      setTimeout(next, 200);
+    }, () => { showing = false; });
+    return;
+  }
+  if (!h) { showing = false; setTimeout(next, 0); return; }
   const wait = auto && !once(st)[tp.id], off = !!never(st)[tp.id];
   const d = document.createElement('div');
   d.className = 'ask helpask';

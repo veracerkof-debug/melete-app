@@ -156,7 +156,7 @@ function openToolViewNow(app, id, onClose) {
   document.addEventListener('keydown', onKey);
   layer.addEventListener('click', (e) => {
     if (e.target.closest('[data-tv="close"]')) close();
-    else if (e.target.closest('[data-tv="help"]')) showHelp(app, mod);
+    else if (e.target.closest('[data-tv="help"]')) showHelp(app, mod, layer.querySelector('.tvhost'));
     else if (e.target.closest('[data-tv="pure"]')) setPure(true);
   });
   // два пальца: развести — во весь экран, свести — обратно (не в пианино и глайдере — там только кнопки)

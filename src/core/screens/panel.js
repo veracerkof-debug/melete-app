@@ -494,6 +494,7 @@ function helpHTML(app) {
   const core = CORE_TOPICS.filter((k) => !st.toolsOnly || ['folder', 'share', 'owndata'].includes(k)).map((k) => { const tp = coreTopic(k); return row('core:' + k, tp.icon, tp.color, tp.name, tp.id); });
   const mods = modules.filter((m) => !m.tab && helpOf(m) && (!CHURCH_MODULES.includes(m.id) || st.church)).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), m.id));
   return '<div class="large">' + t('page.help') + '</div><p class="sub" style="margin:0 4px 12px">' + t('help.listHint') + '</p>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('help.offTitle') + '</span>' + psw('helpOn', !st.helpOff, t('help.offTitle')) + '</div></div><p class="ftr">' + t('help.offHint') + '</p>' +
     '<div class="hdr">' + t('help.listCore') + '</div><div class="group">' + core.join('') + '</div>' +
     '<div class="hdr">' + t('help.listTools') + '</div><div class="group">' + mods.join('') + '</div>' +
     '<div class="group" style="margin-top:12px"><button class="cell act" data-helpreset>' + t('help.all') + '</button></div>';
@@ -835,6 +836,7 @@ export function createPanel(app, onChange) {
       if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
       if (e.target.matches('[data-gset]')) { app.guest.set({ set: e.target.value }); return; }
+      if (d.psw === 'helpOn') { app.store.state.settings.helpOff = !e.target.checked; app.store.settingsChanged(); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {

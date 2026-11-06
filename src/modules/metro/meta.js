@@ -15,4 +15,6 @@ export default {
   icon: ICON,
   color: '#9C7242',
   sizes: ['full', 'half', 'quarter', 'strip'],
+  // инструкция с подсветкой: [селектор, ключ текста tour.<ключ>] (src/core/help.js, src/ui/tour.js)
+  tour: [['.bigplay', 'play'], ['.bpmb', 'bpm'], ['[data-s="tap"]', 'tap'], ['[data-s="sl"]', 'sl']],
 };

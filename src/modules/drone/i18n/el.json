@@ -41,5 +41,8 @@
   "wave.d.16": "1/16",
   "wave.rate": "Συχνότητα",
   "u.hz": "{n} Hz",
-  "wave.ftr": "Απαλός διακόπτης: η ένταση πέφτει και επιστρέφει."
+  "wave.ftr": "Απαλός διακόπτης: η ένταση πέφτει και επιστρέφει.",
+  "tour.pad": "A pad is a chord of the key. Tap — it sounds, tap again — stop; swipe across a pad — another chord type.",
+  "tour.bar": "Layers, hold, wave and stop are here.",
+  "tour.set": "Settings: chords on gestures, sensitivity, wave sound."
 }

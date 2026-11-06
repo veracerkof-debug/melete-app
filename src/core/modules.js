@@ -235,6 +235,7 @@ function heavyHTML(ctx, mod) {
 // где есть ещё полоска перетаскивания и переключатель «метроном / тюнер».
 export function mountModule(app, mod, host, size = 'full', frame = host) {
   const ctx = makeCtx(app, mod);
+  ctx.help = () => showHelp(app, mod, host); // «?» в модуле — с подсветкой по его окну
   dCount('mod.open.' + mod.id);
   (app.openNow || (app.openNow = new Map())).set(mod.id, (app.openNow.get(mod.id) || 0) + 1); // что открыто — для обстановки событий диагностики
   log('mod', 'открыт ' + mod.id + ' (' + size + ')');
@@ -254,7 +255,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)
     const guarded = !!mod.multitouch;
     if (guarded) guardOpen();
-    firstHelp(app, mod); // при первом открытии — инструкция
+    firstHelp(app, mod, host); // при первом открытии — инструкция (с подсветкой, если у модуля есть шаги)
     // понимает MIDI — слушает клавиатуру и воспроизводит свои записи, пока открыт
     const midiOff = mod.midiIn && app.midi ? app.midi.attach(mod.id, mod) : () => {};
     live = { guarded, midiOff };

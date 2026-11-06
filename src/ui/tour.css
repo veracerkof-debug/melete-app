@@ -1,0 +1,17 @@
+/* Инструкция с подсветкой (tour.js): затемнение с «окном» над элементом и надпись рядом */
+.tour{position:fixed;inset:0;z-index:9000;touch-action:none;animation:tourin .18s ease}
+.tour.out{opacity:0;transition:opacity .18s}
+.tour.nohole{background:rgba(0,0,0,.62)}
+.tourhole{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.62),0 0 0 2px var(--tint) inset;transition:all .25s cubic-bezier(.2,.9,.3,1);pointer-events:none}
+.tourbub{position:fixed;left:16px;right:16px;max-width:420px;margin:0 auto;background:var(--bg);color:var(--ink);border-radius:16px;padding:14px 14px 10px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:top .25s cubic-bezier(.2,.9,.3,1)}
+.tourtx{font-size:16px;line-height:1.45}
+.tourtx b{display:block;font-size:17px;margin-bottom:4px}
+.tourft{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tourn{font-size:12.5px;color:var(--l3);margin-right:auto}
+.tournv{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--l2);width:100%;min-height:40px;order:-1}
+.tournv input{width:20px;height:20px}
+.tourbtn{min-height:40px;padding:0 14px;border-radius:999px;font-weight:600;font-size:15px}
+.tourbtn.skip{color:var(--l2)}
+.tourbtn.next{background:var(--tint);color:var(--on-tint)}
+@keyframes tourin{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){.tour,.tourhole,.tourbub{animation:none;transition:none}}

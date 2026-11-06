@@ -16,4 +16,6 @@ export default {
   color: '#548591',
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
   sizes: ['full', 'half', 'quarter', 'strip'],
+  // инструкция с подсветкой: [селектор, ключ текста tour.<ключ>] (src/core/help.js, src/ui/tour.js)
+  tour: [['.dtile', 'pad'], ['.dbar', 'bar'], ['[data-x="dset"]', 'set']],
 };

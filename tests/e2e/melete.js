@@ -35,7 +35,7 @@ function helpers(page) {
       await page.evaluate(({ ver, mono, songs, settings, tools }) => {
         const s = JSON.parse(localStorage.getItem('practice.v1') || '{"settings":{}}');
         s.settings = s.settings || {};
-        Object.assign(s.settings, { configured: true, tosOk: ver, lang: 'ru', profile: { name: 'A', instruments: ['guitar'], level: 'amateur', priorHours: 0, createdAt: 1760000000000 } }, mono ? { uiStyle: 'mono' } : {}, settings);
+        Object.assign(s.settings, { configured: true, tosOk: ver, lang: 'ru', helpOff: true, profile: { name: 'A', instruments: ['guitar'], level: 'amateur', priorHours: 0, createdAt: 1760000000000 } }, mono ? { uiStyle: 'mono' } : {}, settings);
         s.songs = songs;
         localStorage.setItem('practice.v1', JSON.stringify(s));
         if (tools) { const d = JSON.parse(localStorage.getItem('practice.v1.tools') || '{}'); localStorage.setItem('practice.v1.tools', JSON.stringify(Object.assign(d, tools))); }

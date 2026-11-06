@@ -106,5 +106,8 @@
   "wave.d.16": "1/16",
   "wave.rate": "Chastota",
   "u.hz": "{n} Gs",
-  "wave.ftr": "Yumshoq oʻchirgich: ovoz pasayadi va qaytadi, zal dumi davom etadi."
+  "wave.ftr": "Yumshoq oʻchirgich: ovoz pasayadi va qaytadi, zal dumi davom etadi.",
+  "tour.pad": "Ped — tonallik akkordi. Teginish — chaladi, yana teginish — toʻxtaydi; ped boʻylab surish — akkordning boshqa turi.",
+  "tour.bar": "Qatlamlar, ushlab turish, toʻlqin va toʻxtatish — shu yerda.",
+  "tour.set": "Sozlamalar: imo-ishoralardagi akkordlar, sezgirlik, toʻlqin ovozi."
 }

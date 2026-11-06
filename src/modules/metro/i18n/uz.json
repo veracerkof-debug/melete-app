@@ -140,5 +140,9 @@
   "sl.keep": "Metronomdagidek",
   "sl.up": "Yuqoriga",
   "sl.down": "Pastga",
-  "sl.remove": "Set-listdan olib tashlash"
+  "sl.remove": "Set-listdan olib tashlash",
+  "tour.play": "Boshlash va toʻxtatish. Teginish — metronom yuradi, yana teginish — jimlik.",
+  "tour.bpm": "Temp. Teginish — raqam kiritish; barmoqni yuqoriga-pastga surish — tezroq yoki sekinroq.",
+  "tour.tap": "Tempni barmoq bilan urib bering — metronom ilib oladi.",
+  "tour.sl": "Set-list: konsert qoʻshiqlari — qoʻshiqqa teginish uning tempi va oʻlchovini qoʻyadi."
 }

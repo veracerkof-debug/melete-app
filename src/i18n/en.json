@@ -2133,5 +2133,21 @@
   "rv.dayTitle": "{d}",
   "rv.same": "Same as other days ({t})",
   "rv.allDays": "This time for all days",
-  "rv.rest": "Make it a rest day"
+  "rv.rest": "Make it a rest day",
+  "hc.start.tour.profile": "Profile and all settings.",
+  "hc.start.tour.pomo": "Pomodoro: work and breaks on a timer.",
+  "hc.start.tour.week": "The week: how much was played and how much is left to the goal. Tap — statistics.",
+  "hc.start.tour.go": "Start practice — tool windows and time tracking.",
+  "hc.start.tour.tabs": "Sections. Hold an icon to rearrange.",
+  "hc.session.tour.time": "Session time. Tap — pause; hold — pomodoro.",
+  "hc.session.tour.grip": "Window strip: tap — window menu, double tap — full screen, drag — swap windows.",
+  "hc.session.tour.full": "Window full screen. Also — spread two fingers.",
+  "hc.session.tour.dock": "Tools. Tap — into a window, drag onto a window — open there; pinch two fingers — windows of what is playing.",
+  "hc.session.tour.stage": "Stage: the set list full screen for a performance.",
+  "hc.session.tour.finish": "Finish the session — summary and statistics.",
+  "tour.skip": "Skip",
+  "tour.next": "Next",
+  "tour.done": "Done",
+  "help.offTitle": "Show the first time",
+  "help.offHint": "An instruction with highlights shows itself when a section or tool is opened for the first time. A skipped one shows again, at most twice."
 }
