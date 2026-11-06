@@ -18,6 +18,7 @@ import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
 import { isOn } from './settings.js';
 import { moduleById } from '../modules/index.js';
+import { createSetlists } from './metrosets.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
@@ -131,6 +132,10 @@ export function makeCtx(app, mod) {
     uploadOk: () => app.store.state.settings.upOk >= 2,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
     songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
+    // Сет-листы (те же, что у сцены; core/metrosets.js): list, get, create, add, quick, remove, move, setBpm, setMeter, songs
+    get setlists() { return createSetlists(app.store); },
+    // открыть сцену сет-листа (весь экран, текст, клик, пэд, минусовка)
+    openStage: async (id) => { const m = await import('./screens/stage.js'); m.openStage(app, id, 0); },
     // Текст песни (с аккордами) — записать; → true, если песня есть
     songText(id, text) { const s = app.store.songs().find((x) => x.id === id); if (!s) return false; s.notes = String(text || ''); s.updatedAt = app.store.now(); app.store.save(); return true; },
     // Проекты студии (state.projects, в резервной копии вместе с песнями): list(), get(id), save(p), remove(id)

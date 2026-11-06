@@ -8,6 +8,7 @@ import el from './i18n/el.json';
 import { defaultAccents, tempoName, GROUPINGS, accentsOfGroups, groupsLabel } from '../../audio/metronome.js';
 
 import meta, { ICON } from './meta.js';
+import { createSetlistBar, SL_ICON } from './setlist.js';
 
 // Ноты дробления
 const SUBICON = (() => {
@@ -71,6 +72,15 @@ function sigHTML() {
 
 const M = () => ctx.audio.metro;
 const cfg = () => ctx.audio.metro.cfg;
+// Сет-лист (setlist.js): полоса песен, открыта до закрытия; создаётся при монтировании
+let SL = null;
+// Песня сет-листа: темп и размер сразу, без остановки (размер — с начала такта)
+function applySong({ bpm, num, den }) {
+  const c = cfg();
+  if (bpm) M().setBpm(bpm);
+  if (num && den && (c.num !== num || c.den !== den)) { c.num = num; c.den = den; c.accents = defaultAccents(num, den); M().restartBeat({ bar: true }); }
+  M().save();
+}
 const adj = () => (ctx.mono ? 'both' : ctx.store.get('adj', 'wheel')); // «Минимал» — колесо и стрелки
 
 /* ---------- разметка ---------- */
@@ -115,9 +125,11 @@ function view() {
   const tags = [c.sub === 2 && c.swing ? t('tag.swing') : '', c.trainer.on ? t('tag.trainer', { step: c.trainer.step, every: c.trainer.every }) : '',
     c.gap.on ? t('tag.gap', { play: c.gap.play, mute: c.gap.mute }) : ''].filter(Boolean);
   const ctl = size === 'quarter' ? [meter, sub]
-    : [meter, tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
-  return '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside"><div class="mctl n' + ctl.length + '">' + ctl.join('') +
+    : [meter, tile('data-s="sl" aria-pressed="' + !!(SL && SL.open) + '"', SL_ICON, t('sl.title')), tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
+  const mv = '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside"><div class="mctl n' + ctl.length + '">' + ctl.join('') +
     '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
+  const bar = size !== 'quarter' && SL ? SL.html() : '';
+  return bar ? '<div class="mwrap sl">' + mv + bar + '</div>' : mv;
 }
 
 function drawBeats() {
@@ -378,7 +390,12 @@ async function moreSheet() {
 function bind() {
   const on = (el, ev, fn, opts) => { el.addEventListener(ev, fn, opts); offs.push(() => el.removeEventListener(ev, fn, opts)); };
 
+  on(host, 'pointerdown', (e) => SL.onDown(e));
+  on(host, 'pointermove', (e) => SL.onMove(e));
+  on(host, 'pointerup', () => SL.onUp());
+  on(host, 'pointercancel', () => SL.onUp());
   on(host, 'click', (e) => {
+    if (SL.onClick(e)) return;
     const bt = e.target.closest('[data-beat]');
     if (bt) {
       if (Date.now() - wheelMovedAt < 400) return;
@@ -400,6 +417,7 @@ function bind() {
     if (a === 'metro') toggle(s);
     else if (a === 'tap') tap();
     else if (a === 'meter') meterSheet();
+    else if (a === 'sl') SL.toggle();
     else if (a === 'more') moreSheet();
   });
 
@@ -460,6 +478,9 @@ export default {
   status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }) + (c.audio.metro.cfg.poly >= 2 ? ' · ' + c.audio.metro.cfg.poly + ':' + c.audio.metro.cfg.num : ''),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    SL = createSetlistBar(c, { M, cfg, apply: applySong, rerender: () => render() });
+    // пульт и часы: «вперёд/назад» — соседняя песня сет-листа (если полоса открыта), название — песня
+    if (c.remote) c.remote({ title: () => (SL && SL.open ? SL.now() : ''), next: () => SL && SL.open && SL.step(1), prev: () => SL && SL.open && SL.step(-1) });
     render();
     bind();
     raf = requestAnimationFrame(loop);

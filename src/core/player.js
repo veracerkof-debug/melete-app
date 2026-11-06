@@ -68,13 +68,18 @@ export function initPlayer(app) {
       const d = app.device.drone || {}, lo = [2, 3, 4].find((o) => d.layers && d.layers[o]) ?? 3;
       parts.push(t('rm.drone', { sound: modT('drone', 'snd.' + d.sound) || '', note: mName(12 * (lo + 1) + (d.pc || 0)) }).replace(/\s+·/, ' ·').trim());
     }
-    if (metroOn()) { const c = A.metro.cfg; parts.push(t('rm.metro', { meter: c.num + '/' + c.den, bpm: c.bpm })); }
+    if (metroOn()) { const c = A.metro.cfg, r = app.remote && app.remote.metro, song = r && r.title ? r.title() : ''; parts.push((song ? song + ' · ' : '') + t('rm.metro', { meter: c.num + '/' + c.den, bpm: c.bpm })); }
     return parts.length ? { title: parts[0], sub: parts.slice(1).join(' · ') } : null;
   }
   function skip(d) {
     if (mediaOn()) { app.remote.audio[d > 0 ? 'next' : 'prev'](); log('player', 'пульт: запись ' + (d > 0 ? 'вперёд' : 'назад')); return; }
     if (droneOn()) { const pc = ((app.device.drone.pc || 0) + d + 12) % 12; A.drone.tonic(pc); log('player', 'пульт: пэды ' + mName(60 + pc)); return; }
-    if (metroOn()) { A.metro.setBpm(A.metro.cfg.bpm + d * METRO_STEP); log('player', 'пульт: темп ' + A.metro.cfg.bpm); }
+    if (metroOn()) {
+      // открыт сет-лист метронома — соседняя песня (её темп и размер), иначе темп ±5
+      const r = app.remote && app.remote.metro;
+      if (r && r[d > 0 ? 'next' : 'prev'] && r[d > 0 ? 'next' : 'prev']()) { log('player', 'пульт: сет-лист ' + (d > 0 ? 'вперёд' : 'назад')); return; }
+      A.metro.setBpm(A.metro.cfg.bpm + d * METRO_STEP); log('player', 'пульт: темп ' + A.metro.cfg.bpm);
+    }
   }
 
   P.addListener('control', ({ action, bus, value }) => {
