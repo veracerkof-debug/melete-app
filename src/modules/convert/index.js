@@ -175,7 +175,7 @@ async function run({ share = false } = {}) {
 }
 async function shareFiles(list) {
   for (const r of list) {
-    try { await ctx.sendFile(new Uint8Array(await r.blob.arrayBuffer()), r.name, r.name, r.blob.type); } catch (e) { if (ctx.logErr) ctx.logErr(e); }
+    try { await ctx.sendFile(new Uint8Array(await r.blob.arrayBuffer()), r.name, r.name, r.blob.type || 'application/octet-stream'); } catch (e) { if (ctx.logErr) ctx.logErr(e); ctx.ui.toast(ctx.t('shareFail')); }
   }
 }
 // Нужен FFmpeg: на телефоне — предложить скачать пакет; где пакета не бывает (веб) — сказать

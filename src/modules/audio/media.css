@@ -138,3 +138,9 @@
 .chflat .chc.on{background:var(--tint);color:var(--on-tint)}
 .pchords{container-type:inline-size}
 @container (min-width: 700px){ .chgrid{grid-template-columns:repeat(8,minmax(0,1fr))} .chb{height:64px} .chdg{width:92px;height:112px} }
+/* выбор нескольких: песни, отправить, конвертировать, удалить — одна полоса; конвертер — шторкой (06.11.2026) */
+.mlselbar{overflow-x:auto;scrollbar-width:none}
+.mlselbar::-webkit-scrollbar{display:none}
+.mlselbar .cell{flex:1 1 0;min-width:0;min-height:48px;padding:4px 6px;font-size:13.5px;line-height:1.15;white-space:normal;text-align:center}
+.mlselon{flex:none;min-height:40px;padding:0 6px;font-weight:600}
+.mlconv{height:min(78vh,720px);display:flex;flex-direction:column;container-type:size}

@@ -181,7 +181,7 @@ export function makeCtx(app, mod) {
     // Другой инструмент внутри своего окна (студия: пианино, глайдер, терменвокс под плейлистом) → { resize, unmount } или null
     // ctx другого модуля (его строки и хранилище): лупер открывает редактор партии студии (вид «Партии»)
     ctxOf: (id) => { const m = moduleById(id); return m ? makeCtx(app, m) : null; },
-    mountTool: (id, el, size = 'half') => { const m = moduleById(id); return m && isOn(app.store.state.settings, id) ? mountModule(app, m, el, size) : null; },
+    mountTool: (id, el, size = 'half', patch = null) => { const m = moduleById(id); if (!m || !isOn(app.store.state.settings, id)) return null; if (patch) Object.assign(app.device[id] ??= {}, patch); return mountModule(app, m, el, size); },
     // Игра любого инструмента (события midi.ev: on / mv / off / ped): fn(id, e); → отписка
     onPlay: (fn) => { (app.playTaps || (app.playTaps = new Set())).add(fn); return () => app.playTaps.delete(fn); },
     // Пульт снаружи (медиасессия — браслет, часы, наушники; core/player.js): { title() — что звучит или null, next(), prev() }

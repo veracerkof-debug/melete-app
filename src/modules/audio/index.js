@@ -878,7 +878,7 @@ function libHTML() {
   let h = '<div class="medlib"><div class="mlhead">' + (sel
     ? '<button class="link mlsall" data-x="mlsall">' + t(allOn ? 'selNone' : 'selAll') + '</button><b class="mlselt" aria-live="polite">' + t('selN', { n: sel.size }) + '</b><button class="link b" data-x="mlseloff">' + t('done') + '</button>'
     : '<label class="mlsearch">' + I.search + '<input type="search" data-mlq placeholder="' + t('search') + '" aria-label="' + t('search') + '" value="' + esc(ML.q) + '"></label>' +
-      icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
+      (all.length ? '<button class="link mlselon" data-x="mlselon">' + t('select') + '</button>' : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
@@ -912,7 +912,9 @@ function libHTML() {
   h += '</div>';
   if (sel) {
     const n = sel.size ? '' : ' disabled';
-    h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button><button class="ic sm mldel" data-x="mldel" aria-label="' + t('delSel') + '"' + n + '>' + I.trash + '</button></div>';
+    h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button>' +
+      '<button class="cell act" data-x="mlsend"' + n + '>' + t('selSend') + '</button><button class="cell act" data-x="mlconv"' + n + '>' + t('selConv') + '</button>' +
+      '<button class="ic sm mldel" data-x="mldel" aria-label="' + t('delSel') + '"' + n + '>' + I.trash + '</button></div>';
   } else if (AU.cur) {
     h += '<div class="mlmini"><button class="mlmmain" data-x="mlopen" aria-label="' + t('openPlayer') + '">' + (isVideo(AU.cur) ? '<span class="vidbox mini"></span>' : artHTML(AU.cur, 'sm')) + '<span class="mltxt"><b>' + esc(AU.cur.name) +
       '</b><small><span id="acur" class="num">' + fmtT(pl().currentTime) + '</span>' + (AU.rate !== 1 ? ' · ' + rateTxt() : '') + '</small></span></button><button class="bigplay mlpl" data-x="aplay" id="aplay" aria-label="' +
@@ -1235,7 +1237,8 @@ function menuSheet(id) {
     return ui.snav(x.name) + '<div class="mlmh">' + artHTML(x, 'big') + '<div><b>' + esc(x.name) + '</b><div class="l2" style="font-size:13px">' + [x.dur ? fmtT(x.dur) : '', sizeMb(x)].filter(Boolean).join(' · ') +
       '</div></div></div><div class="group"><button class="cell act" data-m="play">' + t('play') + '</button><button class="cell act" data-m="send">' + t('shareRec') + '</button>' +
       // конвертер (src/modules/convert): «Поделиться как …» — в нужном формате одним касанием, «Конвертировать…» — с настройкой
-      (ctx.hasTool && ctx.hasTool('convert') ? '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' : '') +
+      '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' +
+      (isVideo(x) ? '<button class="cell act" data-m="vaudio">' + t('videoAudio') + '</button>' : '') +
       '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
@@ -1249,17 +1252,37 @@ function menuSheet(id) {
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
     else if (m === 'send') shareRec(x, b);
-    else if (m === 'conv') { sh.close(); ctx.openIn('convert', { inbox: { ids: [x.id] } }); }
+    else if (m === 'conv') { sh.close(); convSheet([x.id]); }
+    else if (m === 'vaudio') { sh.close(); convSheet([x.id], { fmt: 'm4a' }); }
     else if (m === 'shareAs') shareAsSheet(x, sh);
     else if (m === 'del') { sh.close(); removeTrack(x); }
   }));
+}
+
+// Конвертер — часть медиатеки (слово автора 06.11.2026): шторка с тем же экраном конвертера; ids — файлы,
+// fmt — сразу формат, share — сразу отдать «Поделиться»
+function convSheet(ids, { fmt = null, share = false } = {}) {
+  let h = null;
+  ctx.ui.sheet(() => ctx.ui.snav(ctx.t('convertTo')) + '<div class="mlconv"></div>', (el) => {
+    h = ctx.mountTool('convert', el.querySelector('.mlconv'), 'full', { inbox: { ids, ...(fmt ? { fmt } : {}), ...(share ? { share: true } : {}) } });
+    if (!h) ctx.ui.toast(ctx.t('err.fail'));
+  }, { tall: true, onClose: () => { if (h) { try { h.unmount(); } catch (e) { ctx.logErr(e); } } render(); } });
+}
+// Отправить несколько файлов как есть (по одному через «Поделиться»); сбой — сказать, а не молчать
+async function shareMany(xs) {
+  let bad = 0;
+  for (const x of xs) {
+    try { const b = x.blob; if (!b) throw new Error('nofile'); await ctx.sendFile(new Uint8Array(await b.arrayBuffer()), x.name, x.name, x.type || b.type || (x.video ? 'video/mp4' : 'audio/wav')); }
+    catch (e) { bad++; ctx.logErr(e); }
+  }
+  if (bad) ctx.ui.toast(ctx.t('shareFail'));
 }
 
 // Поделиться как MP3 / M4A / OGG / WAV / FLAC: конвертер делает файл (он же — в медиатеке) и сразу отдаёт «Поделиться»
 function shareAsSheet(x, parent) {
   const { t, ui } = ctx, F = [['mp3', 'MP3'], ['m4a', 'M4A'], ['opus', 'OGG (Opus)'], ['wav', 'WAV'], ['flac', 'FLAC']];
   ui.sheet(() => ui.snav(t('shareAs')) + '<div class="group">' + F.map(([k, l]) => '<button class="cell act" data-sf="' + k + '">' + l + '</button>').join('') + '</div><p class="ftr">' + t('shareAsHint') + '</p>',
-    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-sf]'); if (!b) return; sh.close(); if (parent) parent.close(); ctx.openIn('convert', { inbox: { ids: [x.id], fmt: b.dataset.sf, share: true } }); }));
+    (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-sf]'); if (!b) return; sh.close(); if (parent) parent.close(); convSheet([x.id], { fmt: b.dataset.sf, share: true }); }));
 }
 
 // Поделиться записью (Telegram, почта, другое приложение — системный выбор; на компьютере — «Сохранить как»): файл как есть
@@ -1505,6 +1528,9 @@ function act(a, el) {
     }
     case 'mlsong': if (ML.sel && ML.sel.size) selSongsSheet(); break;
     case 'mldel': if (ML.sel && ML.sel.size) removeSelected(); break;
+    case 'mlsend': if (ML.sel && ML.sel.size) shareMany([...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean)); break;
+    case 'mlconv': if (ML.sel && ML.sel.size) convSheet([...ML.sel]); break;
+    case 'mlselon': ML.sel = new Set(); render(); break;
     case 'amadd': markAdd(); break;
     case 'amj': seekMark(+el.dataset.i); break;
     case 'amlist': marksSheet(); break;

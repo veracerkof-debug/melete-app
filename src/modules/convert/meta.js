@@ -14,6 +14,9 @@ export default {
   icon: ICON,
   color: '#6F7F8F',
   sizes: ['full', 'half', 'quarter', 'strip'],
+  // с 06.11.2026 — часть медиатеки (слово автора): своей вкладки и карточки нет, открывается шторкой из медиатеки
+  inner: true,
+  partOf: 'audio',
   record: false, // звука у конвертера нет
   stats: false, // не практика
 };

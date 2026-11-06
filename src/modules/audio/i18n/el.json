@@ -1,5 +1,9 @@
 {
   "name": "Ἦχος",
   "shareRec": "Κοινοποίηση",
-  "shareFail": "Η κοινοποίηση απέτυχε"
+  "shareFail": "Η κοινοποίηση απέτυχε",
+  "selSend": "Send",
+  "selConv": "Convert",
+  "select": "Select",
+  "videoAudio": "Audio from video"
 }

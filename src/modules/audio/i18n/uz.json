@@ -254,5 +254,9 @@
   "stems.packHint": "Ajratish uchun model kerak — «Vokal va cholgʻu» paketi, bir marta yuklanadi.",
   "shareAs": "… sifatida ulashish",
   "convertTo": "Konvertatsiya…",
-  "shareAsHint": "Bu formatdagi fayl mediatekada ham paydo boʻladi"
+  "shareAsHint": "Bu formatdagi fayl mediatekada ham paydo boʻladi",
+  "selSend": "Yuborish",
+  "selConv": "Konvertatsiya",
+  "select": "Tanlash",
+  "videoAudio": "Videodan tovush"
 }

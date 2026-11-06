@@ -110,5 +110,6 @@
   "p.monoSub": "Ikkita oʻrniga bitta kanal — fayl ikki baravar kichik",
   "p.stereoSub": "Mono ikkita bir xil kanalga aylanadi",
   "p.leftSub": "Faqat chap — masalan, alohida kirishdagi vokal",
-  "p.rightSub": "Faqat oʻng"
+  "p.rightSub": "Faqat oʻng",
+  "shareFail": "Faylni yuborib boʻlmadi"
 }

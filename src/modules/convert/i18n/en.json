@@ -111,5 +111,6 @@
   "p.monoSub": "One channel instead of two — half the size",
   "p.stereoSub": "Mono becomes two identical channels",
   "p.leftSub": "Left only — e.g. vocal on a separate input",
-  "p.rightSub": "Right only"
+  "p.rightSub": "Right only",
+  "shareFail": "Could not send the file"
 }

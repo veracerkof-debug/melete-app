@@ -255,5 +255,9 @@
   "stems.packHint": "Separation needs a model — the “Vocals and instrumental” pack, downloaded once.",
   "shareAs": "Share as…",
   "convertTo": "Convert…",
-  "shareAsHint": "The file in this format is also added to the library"
+  "shareAsHint": "The file in this format is also added to the library",
+  "selSend": "Send",
+  "selConv": "Convert",
+  "select": "Select",
+  "videoAudio": "Audio from video"
 }
