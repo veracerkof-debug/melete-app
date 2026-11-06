@@ -812,6 +812,7 @@
   "ses.grip": "Window: tap for menu, drag to move",
   "ses.divider": "Window divider",
   "ses.toolOutside": "“{name}” opens separately in the Tools tab",
+  "ses.noSound": "Nothing is playing — pinching in opens windows of the tools that play",
   "pm.pure": "Full screen",
   "pm.unpure": "Exit full screen",
   "pm.full": "Keep only this window",

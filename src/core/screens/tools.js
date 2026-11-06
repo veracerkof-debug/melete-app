@@ -11,7 +11,10 @@ import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave } from '../pure.js';
+import { spread, NOSPREAD } from '../../ui/gestures.js';
 import { bareScope } from '../../i18n/index.js';
+
+const NOSPREAD_IDS = ['piano', 'glider']; // двумя пальцами там играют — окном управляют кнопки
 
 // Строка на карточке — только последнее состояние (темп, строй, звук, тональность); описания и счётчики — нет
 const NO_STATUS = ['ear', 'looper', 'audio', 'notes', 'voice', 'studio'];
@@ -156,5 +159,7 @@ function openToolViewNow(app, id, onClose) {
     else if (e.target.closest('[data-tv="help"]')) showHelp(app, mod);
     else if (e.target.closest('[data-tv="pure"]')) setPure(true);
   });
+  // два пальца: развести — во весь экран, свести — обратно (не в пианино и глайдере — там только кнопки)
+  if (!NOSPREAD_IDS.includes(mod.id)) spread(layer, { ok: (e) => !e.target.closest(NOSPREAD), out: () => setPure(true), inn: () => setPure(false) });
   return close;
 }

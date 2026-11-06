@@ -47,3 +47,37 @@ export function pinch(el, { get, set, min = 10, max = 64, ok = () => true }) {
   el.addEventListener('touchcancel', end);
   return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
 }
+
+// Два пальца — «раздвинуть» или «свести» (слово автора 06.11.2026): развести пальцы — во весь экран, свести — обратно
+// (в сессии — окна звучащих инструментов). Срабатывает один раз, когда пальцы отпущены, и только если расстояние
+// изменилось заметно (в 1,4 раза). Не спорит с щипками внутри: если ближний обработчик уже взял жест
+// (preventDefault на touchmove — масштаб табов, нот, текста), этот молчит; ok(e) — можно ли начинать здесь.
+export function spread(el, { out, inn, ok = () => true, k = 1.4 } = {}) {
+  let p = null;
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const start = (e) => {
+    if (e.touches.length === 2) p = ok(e) ? { d: Math.max(1, dist(e.touches)), r: 1, taken: false, e } : null;
+    else if (e.touches.length > 2) p = null;
+  };
+  const move = (e) => {
+    if (!p || e.touches.length !== 2) return;
+    if (e.defaultPrevented) p.taken = true;
+    p.r = dist(e.touches) / p.d;
+  };
+  const end = (e) => {
+    if (!p || e.touches.length >= 2) return;
+    const q = p; p = null;
+    if (q.taken) return;
+    if (q.r >= k && out) out(q.e);
+    else if (q.r <= 1 / k && inn) inn(q.e);
+  };
+  const cancel = () => { p = null; };
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchmove', move, { passive: true });
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', cancel);
+  return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', cancel); };
+}
+// Где двумя пальцами не управлять окном: пианино и глайдер (там играют несколькими пальцами — только кнопки),
+// поля ввода и то, что само масштабируется щипком
+export const NOSPREAD = '[data-group="piano"], [data-group="glider"], input, textarea, select, [contenteditable], [data-nospread]';

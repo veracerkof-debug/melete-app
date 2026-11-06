@@ -80,6 +80,19 @@ function helpers(page) {
       await cdp.detach();
       await page.waitForTimeout(450);
     },
+    // Два пальца по элементу: k > 1 — развести (в k раз), k < 1 — свести
+    async spread(sel, k, { steps = 6 } = {}) {
+      const c = await h.centre(sel, 0.5, 0.5);
+      if (!c) throw new Error('нет ' + sel);
+      const cdp = await page.context().newCDPSession(page);
+      const pts = (d) => [{ x: c[0] - d, y: c[1], id: 1 }, { x: c[0] + d, y: c[1], id: 2 }];
+      const d0 = k > 1 ? 30 : 110, d1 = d0 * k;
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pts(d0) });
+      for (let i = 1; i <= steps; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pts(d0 + ((d1 - d0) * i) / steps) }); await page.waitForTimeout(20); }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await cdp.detach();
+      await page.waitForTimeout(600);
+    },
     text: (sel) => page.evaluate((s) => document.querySelector(s)?.textContent?.trim() ?? null, sel),
     count: (sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel),
     settings: () => page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).settings),

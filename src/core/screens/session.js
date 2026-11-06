@@ -26,6 +26,7 @@ import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave } from '../pure.js';
 import { dragSort, holdMenu } from '../../ui/hold.js';
+import { spread, NOSPREAD } from '../../ui/gestures.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -42,6 +43,8 @@ const inSession = (st, m) => m.session !== false && !m.tab && isOn(st, m.id); //
 const groupOf = (m) => m.group || m.id;
 // Порядок значков нижней панели: свой у песни (song.dock), иначе — из настроек (settings.dockOrder), иначе DOCK_DEF;
 // кого нет в списке — правее, по порядку модулей. Меняется удержанием значка на панели (перетащить)
+// шина микшера → инструмент, который через неё звучит
+const SOUND_BUS = [['metro', 'metro'], ['drone', 'drone'], ['media', 'audio'], ['looper', 'looper'], ['notes', 'notes'], ['theory', 'theory'], ['piano', 'piano'], ['glider', 'glider']];
 export const DOCK_DEF = ['metro', 'notes', 'drone', 'voice', 'tuner', 'audio', 'theory'];
 export const dockBase = (st, song) => (song && Array.isArray(song.dock) && song.dock.length ? song.dock : Array.isArray(st.dockOrder) && st.dockOrder.length ? st.dockOrder : DOCK_DEF);
 
@@ -148,6 +151,13 @@ export function createSessionScreen(app) {
       if (p) setFocus(+p.dataset.pane);
     });
     ses.addEventListener('click', onClick);
+    // два пальца (слово автора 06.11.2026): развести — окно во весь экран, свести — окна звучащих инструментов
+    // (во весь экран — обратно); в пианино и глайдере не действует — там играют несколькими пальцами
+    spread(wsEl, {
+      ok: (e) => !e.target.closest(NOSPREAD),
+      out: (e) => { const p = e.target.closest('.ws .pane'); if (p && pureI < 0) setPanePure(+p.dataset.pane); },
+      inn: () => { if (pureI >= 0) setPanePure(-1); else soundingPanes(); },
+    });
     // удержание значка на панели — перестановка: у песни — свой порядок, у свободного занятия — порядок по умолчанию
     dragSort(ses, '.sdock .tb[data-pill]', 'data-pill', {
       onStill: (b) => dockMenu(b),
@@ -321,6 +331,17 @@ export function createSessionScreen(app) {
     const vi = visible(w).indexOf(g);
     if (vi >= 0) { w.focus = vi; saveWS(); renderWS(vi); }
     else relayout(assign, g);
+  }
+
+  // Окна звучащих инструментов: окно в фокусе остаётся, к нему — до трёх звучащих (шины микшера → инструменты)
+  function soundingPanes() {
+    const on = SOUND_BUS.filter(([b]) => audio.mixer.isActive(b) && audio.mixer.value(b) > 0).map(([, id]) => moduleById(id)).filter(Boolean)
+      .map(groupOf).filter((g, i, a) => a.indexOf(g) === i && dockGroups(st(), song()).includes(g));
+    const cur = w.panes[w.focus], add = on.filter((g) => g !== cur);
+    if (!add.length) { toast(t('ses.noSound')); return; }
+    const vis = [cur].concat(add).slice(0, lowScreen() ? 2 : 4);
+    if (vis.length === visible(w).length && vis.every((g) => visible(w).includes(g))) return;
+    relayout(setLayout, ['F', 'HH', 'HQ', 'QQ'][vis.length - 1], vis);
   }
 
   /* ---------- нажатия ---------- */
