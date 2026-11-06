@@ -66,6 +66,7 @@ function view() {
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
   const kb = (m) => kbHTML(m, nw, hl ? hl.pcs : null, hl ? hl.root : null, ctx.keyLabel);
   const syn = panelOn() ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
+  // строка кнопок (октава, клавиш, Hold…) — на своём месте, над клавишами (слово автора 06.11.2026: её не трогать)
   const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn || linesOn() ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
     (linesOn() ? '<canvas class="pvl" aria-hidden="true"></canvas>' : '') + '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
   return rot ? '<div class="protbox"><div class="prot' + (p.rotDir === 'l' ? ' l' : '') + '">' + inner + '</div></div>' : inner;

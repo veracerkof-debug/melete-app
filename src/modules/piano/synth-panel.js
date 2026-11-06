@@ -257,14 +257,15 @@ export function synBody(ctx, inline) {
     (L ? tab('layer', '<small>' + t('slot.layer') + '</small>' + ui.esc(nameOf(ctx, L)), slot === 'layer') +
       '<button class="sltx" data-slotdel aria-label="' + ui.esc(t('slot.del')) + '" title="' + ui.esc(t('slot.del')) + '">×</button>'
       : '<button class="slt add" data-slotadd title="' + ui.esc(t('slot.hint')) + '">＋ ' + t('slot.layer') + '</button>') + '</div>';
-  // встроенная панель — всегда над клавишами, без заголовка и закрытия: пресеты, экран и ручки на всю высоту
-  return (inline ? '' : ui.snav(t('syn.title'))) + slots +
-    presetRow(ctx.presets('piano'), s.preset, builtins) +
-    '<div class="retro' + (inline ? ' inl' : '') + '"><i class="scr tl"></i><i class="scr tr"></i><i class="scr bl"></i><i class="scr br"></i>' +
-    '<div class="rhead"><b>MELETE · SYN-1</b><span class="led"></span></div><div class="lcd"><canvas class="scopec" aria-hidden="true"></canvas><span class="sclab"></span><span class="lcdn">' +
+  // ручки и живой сигнал; во встроенной панели — без «корпуса» (слово автора 06.11.2026: только ручки и окно сигнала)
+  const knobs = '<div class="retro' + (inline ? ' inl' : '') + '">' + (inline ? '' : '<i class="scr tl"></i><i class="scr tr"></i><i class="scr bl"></i><i class="scr br"></i>' +
+    '<div class="rhead"><b>MELETE · SYN-1</b><span class="led"></span></div>') + '<div class="lcd"><canvas class="scopec" aria-hidden="true"></canvas><span class="sclab"></span><span class="lcdn">' +
     ui.esc(nameOf(ctx, s)) + '</span></div>' +
     '<div class="rsec wide"><span class="rt">' + t(slot === 'layer' ? 'sec.layer' : 'sec.sound') + '</span><div class="krow">' + knobsOf(s).map(kn).join('') + '</div></div>' +
-    '<div class="rsec wide"><span class="rt">MIX</span><div class="krow">' + MIX_KNOBS.map(kn).join('') + '</div></div></div>' +
+    '<div class="rsec wide"><span class="rt">MIX</span><div class="krow">' + MIX_KNOBS.map(kn).join('') + '</div></div></div>';
+  const pick = slots + presetRow(ctx.presets('piano'), s.preset, builtins);
+  // встроенная панель: сверху ручки, внизу — выбор звука и слоя, ближе к клавишам
+  return (inline ? '' : ui.snav(t('syn.title'))) + (inline ? knobs + '<div class="pspick">' + pick + '</div>' : pick + knobs) +
     // полный рояль — пакет (src/core/packs.js): не скачан — строка «Скачать» прямо здесь; пока его нет, звучит облегчённый
     (!inline && s.kind === 'grand' && ctx.packs && !ctx.packs.has('piano') ? '<div class="group">' + ctx.packs.row('piano') + '</div>' : '') +
     (inline ? '' : '<div class="hdr">' + t('mode') + '</div><div class="group"><div class="cellcol">' +

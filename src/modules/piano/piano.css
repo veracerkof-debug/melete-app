@@ -141,3 +141,13 @@
 /* линии голосов над клавишами (src/ui/voicelines.js): касания проходят сквозь */
 .pvl{display:block;width:100%;height:90px;flex:none;pointer-events:none;margin:0 0 4px;order:-1}
 .tview.pure .pvl,.pfull .pvl{display:none}
+/* Встроенная панель звука (слово автора 06.11.2026): без «корпуса» и подложек — только окно сигнала и ручки;
+   выбор звука и слоя — внизу, у клавиш */
+.retro.inl{background:none!important;box-shadow:none!important;padding:0!important}
+.psyn .retro.inl{grid-template-rows:minmax(28px,1fr) auto auto!important;gap:8px 4px!important}
+.psyn .pspick{flex:none}
+.retro.inl .rsec{background:none!important;box-shadow:none!important;padding:0!important}
+.retro.inl .rt{display:none}
+.retro.inl .lcd{border-radius:12px}
+.psyn .pspick{margin-top:6px}
+.psyn .pspick .slots{margin-bottom:6px}
