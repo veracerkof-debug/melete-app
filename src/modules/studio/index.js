@@ -186,6 +186,7 @@ function render() {
   const ph = host.querySelector('#stpl');
   if (ph) {
     pl = createPlaylist(ph, () => ({ p: proj(), names: trName, fileName, peaks: filePeaks, auto: V.auto }), {
+      zoom: (z) => ctx.store.set('zoom', z), // масштаб стола (время и высота дорожек) — запоминается
       autoChange: () => { save(); seq.autoChanged(); },
       autoExit: () => { V.auto = null; render(); },
       open: (c) => { pl.selection = [c.id]; selBar([c.id]); clipEditSheet(c); }, // удержание клипа — его шторка
@@ -200,6 +201,7 @@ function render() {
       seek: (beat) => { V.cursor = beat; if (seq.playing && !rec.busy) seq.start(beat); },
       change: () => { save(); seq.audioChanged(); selBar(pl.selection); },
     });
+    pl.view(st().zoom); // прежний масштаб: время и высота дорожек
     pl.selection = (V.sel || []).filter((id) => clipById(p, id));
     selBar(pl.selection);
     pl.cursor = V.cursor || 0; // плейлист создаётся заново при каждой перерисовке — курсор живёт в V (пауза продолжает с места)

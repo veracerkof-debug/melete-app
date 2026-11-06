@@ -7,15 +7,14 @@
 // правый край — длина (запись — открывается дальше записанное, по кругу — повтор, сплошной — пустое место), за левый —
 // начало (так же назад); касание пустого места — «+» в этом такте, касание «+» — новая партия и сразу её редактор;
 // удержать пустое и вести — рамка выделения (без движения — меню: вставить); вести по пустому — прокрутка;
-// щипок — масштаб (до миллисекунд; сетка мельчает с приближением, на самом крупном — без сетки);
+// два пальца — масштаб: по горизонтали время (до миллисекунд; сетка мельчает), по вертикали высота дорожек;
 // касание линейки — играть отсюда; вести по линейке — петля, вести край петли — изменить, удержать линейку — меню
 // (маркер, снять петлю). Касание значка дорожки — её меню, «+» внизу — новая дорожка.
 // Без зависимости от модуля: получает проект и обратные вызовы.
 import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, piecePasses, DRUMS, TQ } from '../../music/project.js';
-import { pinch } from '../../ui/gestures.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
-const HEAD = 56, RULER = 30, ROW = 64, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8, ZMIN = 6, ZMAX = 2400;
+const HEAD = 56, RULER = 30, ROW0 = 64, ROW_MIN = 34, ROW_MAX = 168, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8, ZMIN = 6, ZMAX = 2400;
 
 // Автоматизация (get().auto = { tr, kind }): поверх ряда дорожки — огибающая; касание — точка, вести — сдвинуть,
 // удержать — убрать; значок этой дорожки — выйти.
@@ -29,7 +28,7 @@ export function createPlaylist(host, get, on) {
   cv.className = 'plcv';
   host.appendChild(cv);
   // sels — выделенные клипы; plus — «+» на пустом месте { tr, bar }; band — рамка выделения (экранные точки)
-  const V = { pxb: 0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sels: new Set(), plus: null, band: null, cursor: 0 };
+  const V = { pxb: 0, row: ROW0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sels: new Set(), plus: null, band: null, cursor: 0 };
   let W = 0, H = 0, raf = 0, drag = null, holdT = 0, css = null, lastTap = { t: 0, id: null };
   const setSel = (ids) => { V.sels = new Set(ids); on.sel && on.sel([...V.sels]); };
   const colors = () => css || (css = (() => { const s = getComputedStyle(host); const v = (k) => s.getPropertyValue(k).trim(); return { ink: v('--ink'), l2: v('--l2'), sep: v('--sep'), fill: v('--fill'), fill2: v('--fill2') || v('--fill'), cell: v('--cell'), tint: v('--tint'), bg: v('--bg'), red: v('--red') || '#D2463F' }; })());
@@ -38,11 +37,11 @@ export function createPlaylist(host, get, on) {
   // сетка по масштабу: мелко — такт, крупнее — доля, ¼, 1/16; совсем крупно — без сетки (до 1/960 доли — миллисекунды)
   const snap = () => (V.pxb < 22 ? P().num : V.pxb < 70 ? 1 : V.pxb < 200 ? 0.25 : V.pxb < 700 ? 1 / 16 : 0);
   const xOf = (b) => HEAD + b * V.pxb - V.x, bOf = (x) => (x - HEAD + V.x) / V.pxb;
-  const yOf = (i) => RULER + i * ROW - V.y, rowOf = (y) => Math.floor((y - RULER + V.y) / ROW);
+  const yOf = (i) => RULER + i * V.row - V.y, rowOf = (y) => Math.floor((y - RULER + V.y) / V.row);
   const clampView = () => {
     const p = P();
     V.x = Math.max(0, Math.min(Math.max(0, bars() * p.num * V.pxb - (W - HEAD)), V.x));
-    V.y = Math.max(0, Math.min(Math.max(0, (p.tracks.length + 1) * ROW + RULER - H), V.y));
+    V.y = Math.max(0, Math.min(Math.max(0, (p.tracks.length + 1) * V.row + RULER - H), V.y));
   };
 
   function size() {
@@ -72,8 +71,8 @@ export function createPlaylist(host, get, on) {
     // ряды дорожек
     p.tracks.forEach((tr, i) => {
       const y = yOf(i);
-      if (y + ROW < RULER || y > H) return;
-      g.fillStyle = i % 2 ? C.fill : C.cell; g.fillRect(HEAD, y, W - HEAD, ROW);
+      if (y + V.row < RULER || y > H) return;
+      g.fillStyle = i % 2 ? C.fill : C.cell; g.fillRect(HEAD, y, W - HEAD, V.row);
     });
     const yAdd = yOf(p.tracks.length);
     g.fillStyle = C.bg; g.fillRect(HEAD, yAdd, W - HEAD, H - yAdd);
@@ -97,7 +96,7 @@ export function createPlaylist(host, get, on) {
     p.clips.forEach((c) => {
       const i = p.tracks.findIndex((t) => t.id === c.tr), tr = p.tracks[i];
       if (!tr) return;
-      const x = xOf(c.at), y = yOf(i) + GAP, w = c.len * V.pxb, h = ROW - GAP * 2, dim = tr.mute || (solo && !tr.solo) || c.mute;
+      const x = xOf(c.at), y = yOf(i) + GAP, w = c.len * V.pxb, h = V.row - GAP * 2, dim = tr.mute || (solo && !tr.solo) || c.mute;
       if (x + w < HEAD || x > W || y + h < RULER || y > H) return;
       const ghost = drag && drag.c === c && drag.moved;
       g.globalAlpha = dim ? 0.35 : ghost ? 0.75 : 1;
@@ -124,9 +123,9 @@ export function createPlaylist(host, get, on) {
     const A = get().auto, atr = A && p.tracks.find((t) => t.id === A.tr);
     if (atr) {
       const i = p.tracks.indexOf(atr), y = yOf(i), pts = (atr.auto && atr.auto[A.kind]) || [], def = A.kind === 'pan' ? (atr.pan || 0) : 1;
-      const yv = (v) => y + GAP + (A.kind === 'pan' ? (1 - v) / 2 : 1 - v) * (ROW - GAP * 2);
+      const yv = (v) => y + GAP + (A.kind === 'pan' ? (1 - v) / 2 : 1 - v) * (V.row - GAP * 2);
       g.save(); g.beginPath(); g.rect(HEAD, RULER, W - HEAD, H - RULER); g.clip();
-      g.fillStyle = C.bg; g.globalAlpha = 0.55; g.fillRect(HEAD, y, W - HEAD, ROW); g.globalAlpha = 1;
+      g.fillStyle = C.bg; g.globalAlpha = 0.55; g.fillRect(HEAD, y, W - HEAD, V.row); g.globalAlpha = 1;
       g.strokeStyle = C.tint; g.lineWidth = 2; g.beginPath();
       const b0 = bOf(HEAD), b1 = bOf(W);
       g.moveTo(HEAD, yv(autoAt(pts, b0, def)));
@@ -139,7 +138,7 @@ export function createPlaylist(host, get, on) {
     if (V.plus) {
       const i = p.tracks.findIndex((t) => t.id === V.plus.tr);
       if (i >= 0) {
-        const x = xOf(V.plus.bar), y = yOf(i) + GAP, w = n * V.pxb, h = ROW - GAP * 2, tr = p.tracks[i];
+        const x = xOf(V.plus.bar), y = yOf(i) + GAP, w = n * V.pxb, h = V.row - GAP * 2, tr = p.tracks[i];
         g.save(); g.beginPath(); g.rect(HEAD, RULER, W - HEAD, H - RULER); g.clip();
         g.globalAlpha = 0.18; g.fillStyle = tr.color; rr(x, y, w, h, 7); g.fill(); g.globalAlpha = 1;
         g.strokeStyle = tr.color; g.lineWidth = 2; g.setLineDash([5, 4]); rr(x, y, w, h, 7); g.stroke(); g.setLineDash([]);
@@ -183,18 +182,18 @@ export function createPlaylist(host, get, on) {
     g.fillStyle = C.bg; g.fillRect(0, RULER, HEAD, H - RULER);
     p.tracks.forEach((tr, i) => {
       const y = yOf(i);
-      if (y + ROW < RULER || y > H) return;
+      if (y + V.row < RULER || y > H) return;
       const dim = tr.mute || (solo && !tr.solo);
       g.globalAlpha = dim ? 0.4 : 1;
-      g.fillStyle = tr.color; rr(6, y + GAP, HEAD - 12, ROW - GAP * 2, 10); g.fill();
-      icon(tr.kind, 6 + (HEAD - 12) / 2 - 11, y + ROW / 2 - 11, 22, 'rgba(255,255,255,.95)');
+      g.fillStyle = tr.color; rr(6, y + GAP, HEAD - 12, V.row - GAP * 2, 10); g.fill();
+      icon(tr.kind, 6 + (HEAD - 12) / 2 - 11, y + V.row / 2 - 11, 22, 'rgba(255,255,255,.95)');
       if (atr === tr) { g.fillStyle = C.tint; g.beginPath(); g.arc(HEAD - 12, y + GAP + 6, 6, 0, Math.PI * 2); g.fill(); }
-      if (tr.solo) { g.fillStyle = '#fff'; g.font = '700 9px system-ui'; g.fillText('S', 11, y + ROW - 9); }
+      if (tr.solo) { g.fillStyle = '#fff'; g.font = '700 9px system-ui'; g.fillText('S', 11, y + V.row - 9); }
       g.globalAlpha = 1;
     });
     // «+» — новая дорожка
-    g.strokeStyle = C.l2; g.lineWidth = 2; const cx = HEAD / 2, cy = yAdd + ROW / 2;
-    if (cy < H + 20) { rr(6, yAdd + GAP, HEAD - 12, ROW - GAP * 2, 10); g.setLineDash([4, 4]); g.stroke(); g.setLineDash([]); g.beginPath(); g.moveTo(cx - 8, cy); g.lineTo(cx + 8, cy); g.moveTo(cx, cy - 8); g.lineTo(cx, cy + 8); g.stroke(); }
+    g.strokeStyle = C.l2; g.lineWidth = 2; const cx = HEAD / 2, cy = yAdd + V.row / 2;
+    if (cy < H + 20) { rr(6, yAdd + GAP, HEAD - 12, V.row - GAP * 2, 10); g.setLineDash([4, 4]); g.stroke(); g.setLineDash([]); g.beginPath(); g.moveTo(cx - 8, cy); g.lineTo(cx + 8, cy); g.moveTo(cx, cy - 8); g.lineTo(cx, cy + 8); g.stroke(); }
     g.fillStyle = C.bg; g.fillRect(0, 0, HEAD, RULER);
   }
   function label(c, tr, names, fileName) {
@@ -268,7 +267,7 @@ export function createPlaylist(host, get, on) {
     }
     const A = get().auto, atr = A && P().tracks.find((t) => t.id === A.tr);
     if (atr && P().tracks[rowOf(q.y)] === atr) { // огибающая: точка под пальцем — вести или удержать; пусто — новая точка
-      const y = yOf(P().tracks.indexOf(atr)), vOf = (yy) => { const f = Math.max(0, Math.min(1, (yy - y - GAP) / (ROW - GAP * 2))); return A.kind === 'pan' ? 1 - f * 2 : 1 - f; };
+      const y = yOf(P().tracks.indexOf(atr)), vOf = (yy) => { const f = Math.max(0, Math.min(1, (yy - y - GAP) / (V.row - GAP * 2))); return A.kind === 'pan' ? 1 - f * 2 : 1 - f; };
       const b = bOf(q.x), tol = 8 / V.pxb, pt0 = autoPointAt(atr, A.kind, b, tol);
       drag = { id: e.pointerId, x0: q.x, y0: q.y, auto: true, q: pt0 || setAutoPoint(atr, A.kind, b, vOf(q.y), snap()), vOf, moved: false };
       if (!pt0) on.autoChange();
@@ -294,7 +293,7 @@ export function createPlaylist(host, get, on) {
   // Клипы внутри рамки (экранные точки) → id
   const inBand = (B) => {
     const p = P(), xa = Math.min(B.x0, B.x1), xb = Math.max(B.x0, B.x1), ya = Math.min(B.y0, B.y1), yb = Math.max(B.y0, B.y1);
-    return p.clips.filter((c) => { const i = p.tracks.findIndex((t) => t.id === c.tr), x0 = xOf(c.at), x1 = xOf(c.at + c.len), y0 = yOf(i), y1 = y0 + ROW; return i >= 0 && x1 > xa && x0 < xb && y1 > ya && y0 < yb; }).map((c) => c.id);
+    return p.clips.filter((c) => { const i = p.tracks.findIndex((t) => t.id === c.tr), x0 = xOf(c.at), x1 = xOf(c.at + c.len), y0 = yOf(i), y1 = y0 + V.row; return i >= 0 && x1 > xa && x0 < xb && y1 > ya && y0 < yb; }).map((c) => c.id);
   };
   cv.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -366,10 +365,41 @@ export function createPlaylist(host, get, on) {
   const p0fix = () => { P().clips.sort((a, b) => a.at - b.at); };
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
-  // масштаб — вокруг середины кадра; на самом крупном шаг сетки — без сетки (миллисекунды)
-  const zoomTo = (v, mid = bOf(HEAD + (W - HEAD) / 2)) => { V.pxb = Math.max(ZMIN, Math.min(ZMAX, v)); V.x = mid * V.pxb - (W - HEAD) / 2; draw(); };
-  const offPinch = pinch(cv, { min: ZMIN, max: ZMAX, get: () => V.pxb, set: (v) => zoomTo(v) });
-  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) zoomTo(V.pxb * Math.exp(-e.deltaY / 300)); else { V.x += e.deltaX; V.y += e.deltaY; draw(); } }, { passive: false });
+  // Масштаб (слово автора 06.11.2026: «приблизить и отдалить именно жестами»): два пальца — развести или свести
+  // по горизонтали — время (до миллисекунд), по вертикали — высота дорожек, наискось — и то и другое; место под
+  // пальцами остаётся под пальцами, двумя пальцами можно и вести стол. Компьютер: Ctrl + колесо — время,
+  // Alt + колесо — высота дорожек. Масштаб запоминается (on.zoom)
+  const zoomTo = (v, mid = bOf(HEAD + (W - HEAD) / 2)) => { V.pxb = Math.max(ZMIN, Math.min(ZMAX, v)); V.x = mid * V.pxb - (W - HEAD) / 2; clampView(); draw(); zoomed(); };
+  const rowTo = (v) => { const my = (V.y + (H - RULER) / 2) / V.row; V.row = Math.max(ROW_MIN, Math.min(ROW_MAX, v)); V.y = my * V.row - (H - RULER) / 2; clampView(); draw(); zoomed(); };
+  let zt = 0;
+  const zoomed = () => { clearTimeout(zt); zt = setTimeout(() => on.zoom && on.zoom({ pxb: V.pxb, row: V.row }), 400); };
+  let z = null;
+  const spanOf = (t) => ({ dx: Math.abs(t[0].clientX - t[1].clientX), dy: Math.abs(t[0].clientY - t[1].clientY), mx: (t[0].clientX + t[1].clientX) / 2, my: (t[0].clientY + t[1].clientY) / 2 });
+  const zStart = (e) => {
+    if (e.touches.length !== 2) { if (e.touches.length > 2) z = null; return; }
+    const s0 = spanOf(e.touches), r = cv.getBoundingClientRect();
+    clearTimeout(holdT); drag = null; V.band = null;
+    z = { ...s0, r, pxb: V.pxb, row: V.row, b: bOf(s0.mx - r.left), yr: (s0.my - r.top - RULER + V.y) / V.row, ax: null };
+  };
+  const zMove = (e) => {
+    if (!z || e.touches.length !== 2) return;
+    e.preventDefault();
+    const s1 = spanOf(e.touches);
+    // ось — по тому, как пальцы стоят: почти в ряд — только время, почти друг над другом — только высота
+    if (!z.ax) z.ax = z.dx > z.dy * 1.7 ? 'x' : z.dy > z.dx * 1.7 ? 'y' : 'xy';
+    const kx = z.ax !== 'y' && z.dx > 24 ? s1.dx / z.dx : 1, ky = z.ax !== 'x' && z.dy > 24 ? s1.dy / z.dy : 1;
+    V.pxb = Math.max(ZMIN, Math.min(ZMAX, z.pxb * kx));
+    V.row = Math.max(ROW_MIN, Math.min(ROW_MAX, z.row * ky));
+    V.x = z.b * V.pxb - (s1.mx - z.r.left - HEAD);
+    V.y = z.yr * V.row - (s1.my - z.r.top - RULER);
+    clampView(); draw();
+  };
+  const zEnd = (e) => { if (z && e.touches.length < 2) { z = null; zoomed(); } };
+  cv.addEventListener('touchstart', zStart, { passive: true });
+  cv.addEventListener('touchmove', zMove, { passive: false });
+  cv.addEventListener('touchend', zEnd);
+  cv.addEventListener('touchcancel', zEnd);
+  cv.addEventListener('wheel', (e) => { e.preventDefault(); if (e.ctrlKey) zoomTo(V.pxb * Math.exp(-e.deltaY / 300), bOf(e.offsetX)); else if (e.altKey) rowTo(V.row * Math.exp(-e.deltaY / 300)); else { V.x += e.deltaX; V.y += e.deltaY; clampView(); draw(); } }, { passive: false });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   const ro = new ResizeObserver(size);
   ro.observe(host);
@@ -390,6 +420,9 @@ export function createPlaylist(host, get, on) {
     clearPlus() { V.plus = null; draw(); },
     get zoom() { return V.pxb; },
     zoomBy(f) { zoomTo(V.pxb * f); },
-    destroy() { ro.disconnect(); offPinch(); clearTimeout(holdT); cancelAnimationFrame(raf); cv.remove(); },
+    get row() { return V.row; },
+    // прежний масштаб (запомненный модулем)
+    view(z0) { if (!z0) return; if (z0.pxb >= ZMIN && z0.pxb <= ZMAX) V.pxb = z0.pxb; if (z0.row >= ROW_MIN && z0.row <= ROW_MAX) V.row = z0.row; clampView(); draw(); },
+    destroy() { ro.disconnect(); clearTimeout(holdT); clearTimeout(zt); cancelAnimationFrame(raf); cv.remove(); },
   };
 }

@@ -22,6 +22,20 @@ test('студия: отдельный инструмент, буфер груп
   await melete.click('[data-open-tool="studio"]'); await page.waitForTimeout(1200);
   await melete.click('.tview .stproj'); await page.waitForTimeout(1000);
   await expect(page.locator('.tview .stpl canvas')).toHaveCount(1);
+  // масштаб двумя пальцами: развести по горизонтали — время крупнее, свести по вертикали — дорожки ниже
+  const cv = await page.locator('.tview .stpl canvas').boundingBox(), cx = cv.x + cv.width / 2, cy = cv.y + cv.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  const two = async (a, b, steps = 6) => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: a.map(([x, y], i) => ({ x, y, id: i + 1 })) });
+    for (let k = 1; k <= steps; k++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: a.map(([x, y], i) => ({ x: x + ((b[i][0] - x) * k) / steps, y: y + ((b[i][1] - y) * k) / steps, id: i + 1 })) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(600);
+  };
+  await two([[cx - 30, cy], [cx + 30, cy]], [[cx - 90, cy], [cx + 90, cy]]);
+  await two([[cx, cy - 60], [cx, cy + 60]], [[cx, cy - 30], [cx, cy + 30]]);
+  const z = (await melete.toolsNow()).studio.zoom;
+  expect(z.pxb).toBeGreaterThanOrEqual(25); // было ~10 (8 тактов в кадре), развели втрое
+  expect(z.row).toBeLessThan(40);
   // петля такты 1–2, вырезать её из всех дорожек — второй клип встаёт на 4-ю долю
   const pid = await page.evaluate(() => window.__pid);
   await page.evaluate(async (pid) => { const s = JSON.parse(localStorage.getItem('practice.v1')); void s; void pid; }, pid);
