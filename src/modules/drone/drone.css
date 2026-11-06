@@ -35,9 +35,9 @@
 .dstop.live{border-color:var(--tint)}
 .dstop.live span{background:var(--tint);border-color:var(--tint)}
 .dstop:disabled{opacity:.5}
-.dbar{display:flex;align-items:center;gap:8px;padding:8px 0 0}
-.layers{flex:1;display:flex;gap:4px;background:var(--fill);border-radius:12px;padding:3px}
-.lay{flex:1;min-height:40px;border-radius:9px;font-size:14px;font-weight:600;color:var(--l2)}
+.dbar{display:flex;align-items:center;gap:6px;padding:8px 0 0;min-width:0}
+.layers{flex:1;min-width:0;display:flex;gap:4px;background:var(--fill);border-radius:12px;padding:3px}
+.lay{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;min-height:40px;border-radius:9px;font-size:14px;font-weight:600;color:var(--l2)}
 .lay.on{background:var(--tint);color:var(--on-tint)}
 .dstop{width:46px;height:46px;flex:none}
 .dstop,.lay,.dlatch{transition:transform .12s ease,background .15s,color .15s}
@@ -102,7 +102,7 @@
 /* низкая полоска (альбомный телефон, окна стопкой): двенадцать тонов в один ряд — второй ряд не срезан */
 @media (max-height: 460px) { .pane.strip .dgrid.g6{grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:1fr!important} .pane.strip .dtile{font-size:clamp(12px,40cqh,20px)} }
 /* «Волна громкости» на полосе — кнопка-переключатель; созвучие касания в настройках — плитки в два ряда */
-.dwv,.darp{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--l2);background:var(--fill)}
+.dwv,.darp{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--l2);background:var(--fill)}
 .dwv svg,.darp svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .dwv.on,.darp.on{background:var(--tint);color:var(--on-tint)}
 .dchs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
