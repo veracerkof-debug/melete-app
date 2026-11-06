@@ -16,6 +16,7 @@
 :root[data-style="mono"] .lifted{box-shadow:none;outline:1px solid var(--ink)}
 /* перетаскивание, как значков на главном экране (dragSort) */
 .lifting{position:relative;z-index:30;transition:none!important;box-shadow:0 14px 34px rgba(0,0,0,.24);opacity:.96;touch-action:none}
+.hblk.lifting{background:var(--bg);border-radius:18px;opacity:1}
 .sorting,.sorting *{user-select:none;-webkit-user-select:none}
 :root[data-style="mono"] .lifting{box-shadow:none;outline:1px solid var(--ink)}
 .draghost{position:relative}
