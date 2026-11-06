@@ -36,9 +36,9 @@ test('правка вкладок: календарь в инструменты 
   await expect(page.locator('.tab[data-tab="calendar"]')).toHaveAttribute('aria-current', 'page');
 });
 
-test('«Минимал»: две вкладки, всё остальное — значками на главной', async ({ page, melete, errors }) => {
+test('«Минимал»: три вкладки (с 06.11.2026 и «Инструменты»), значки и на главной', async ({ page, melete, errors }) => {
   await melete.open({ mono: true });
-  expect(await tabs(page)).toBe('home,library');
+  expect(await tabs(page)).toBe('home,library,tools');
   const grid = page.locator('.mono-home .mall');
   await expect(grid.locator('[data-open-tool="calendar"]')).toHaveCount(1);
   await expect(grid.locator('[data-open-tool="metro"]')).toHaveCount(1);

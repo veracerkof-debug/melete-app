@@ -37,7 +37,7 @@ const SM = {
 
 export function createShell(app, root) {
   // «Минимал»: страниц две — главная и «Песни»; остальное — значками на главной (решение автора 28.10.2026)
-  const tabsNow = () => (app.store.state.settings.uiStyle === 'mono' ? ['home', 'library'] : visibleTabs(app.store.state.settings, tabIds(app.store.state.settings)));
+  const tabsNow = () => (app.store.state.settings.uiStyle === 'mono' ? ['home', 'library', 'tools'] : visibleTabs(app.store.state.settings, tabIds(app.store.state.settings)));
   const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
