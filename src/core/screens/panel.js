@@ -937,6 +937,7 @@ export function legalSheet(kind) {
       lic(t('lic.bible.title'), t('lic.bible.sub'), '<p>' + t('lic.bible.text') + '</p>') +
       lic(t('lic.verses.title'), t('lic.verses.sub'), '<p>' + t('lic.verses.text') + '</p>') +
       lic('fflate', t('lic.fflate.sub'), '<p>© Arjun Barrett</p><p>' + t('lic.mit') + '</p>') +
+      lic('jsQR', t('lic.jsqr.sub'), '<p>© Cosmo Wolfe</p><p>' + t('lic.jsqr.text') + '</p>') +
       lic('qrcode-generator', t('lic.qr.sub'), '<p>© Kazuhiko Arase</p><p>' + t('lic.mit') + '</p><p>' + t('lic.qr.tm') + '</p>') +
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
       lic('ONNX Runtime', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +

@@ -2120,5 +2120,7 @@
   "qr.noCam": "Kamera mavjud emas — telefon sozlamalarida ruxsat bering yoki manzil va kodni qoʻlda kiriting.",
   "qr.scan": "QR-kodni skanerlash",
   "qr.pcHint": "Telefonda: «QR-kodni skanerlash» — manzil va kod oʻzi qoʻyiladi.",
-  "group.train": "Eshitish va ritm"
+  "group.train": "Eshitish va ritm",
+  "lic.jsqr.sub": "Kamera bilan QR-kodni aniqlash · versiya 1.4.0",
+  "lic.jsqr.text": "Apache License 2.0 litsenziyasi boʻyicha tarqatiladi (apache.org/licenses/LICENSE-2.0). Oʻzgartirishsiz ishlatiladi."
 }

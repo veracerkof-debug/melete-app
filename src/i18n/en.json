@@ -2156,5 +2156,7 @@
   "qr.noCam": "The camera is unavailable — allow it in the phone settings or enter the address and code by hand.",
   "qr.scan": "Scan QR code",
   "qr.pcHint": "On the phone: “Scan QR code” — the address and code fill in by themselves.",
-  "group.train": "Ear & rhythm"
+  "group.train": "Ear & rhythm",
+  "lic.jsqr.sub": "QR code recognition with the camera · version 1.4.0",
+  "lic.jsqr.text": "Distributed under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0). Used without changes."
 }
