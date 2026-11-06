@@ -18,6 +18,14 @@ const unb64 = (s) => { const b = atob(s), u8 = new Uint8Array(b.length); for (le
 const when = (ts) => new Date(ts).toLocaleString(getLang() === 'uz' ? 'uz-Latn' : getLang(), { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 const chk = (attrs, on) => '<input type="checkbox" ' + attrs + (on ? ' checked' : '') + ' style="width:22px;height:22px;margin-right:12px;flex:none">';
 
+// Отправить текст: Android — выбор приложения; веб — «Поделиться» браузера; иначе — в буфер обмена ('copied')
+export async function sendText(text, title = 'Melete') {
+  if (Share) { await Share.text({ text, title }); return 'shared'; }
+  if (navigator.share) { try { await navigator.share({ text, title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; } }
+  await navigator.clipboard.writeText(text);
+  return 'copied';
+}
+
 // Отправить готовый файл: Android — выбор приложения; компьютер — «Сохранить как»; веб — «Поделиться» браузера или скачивание
 export async function sendFile(u8, name, title, type = 'application/octet-stream') {
   if (Share) {

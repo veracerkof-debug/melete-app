@@ -127,6 +127,7 @@ export function makeCtx(app, mod) {
     },
     // Отправить файл («Поделиться» на Android, «Сохранить как» на Windows): u8, имя, заголовок, тип
     sendFile: async (u8, name, title, type) => { const { sendFile } = await import('./screens/share.js'); return sendFile(u8, name, title, type); },
+    sendText: async (text, title) => { const { sendText } = await import('./screens/share.js'); return sendText(text, title); },
     confirmUpload: () => app.confirmUpload(),
     // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
     uploadOk: () => app.store.state.settings.upOk >= 2,

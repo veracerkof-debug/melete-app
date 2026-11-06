@@ -17,6 +17,8 @@ export function backStep(app) {
   if (document.getElementById('onboard')) return click('#onboard [data-obback]') || false;
   if (click('.pdffull [data-x="pfull0"]')) return true; // PDF во весь экран
   if (closeTopSheet()) return true;
+  if (click('.bwrap.bselm [data-x="bsel0"]')) return true; // Библия: выбор стихов
+  if (click('.bwrap.bpure [data-x="bunpure"]')) return true; // Библия во весь экран
   if (click('.stage [data-sg="exit"]')) return true; // сцена: выход — с подтверждением
   const panel = document.getElementById('panelLayer');
   if (panel) return click('#panelLayer .navrow [data-pp="root"]') || click('#panelLayer [data-act="pclose"]');

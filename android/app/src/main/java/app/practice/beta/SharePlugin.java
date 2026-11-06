@@ -133,4 +133,19 @@ public class SharePlugin extends Plugin {
             call.reject(e.getMessage());
         }
     }
+
+    // Отправить текст (стихи Библии с ссылкой): { text, title } → системный выбор приложения
+    @PluginMethod
+    public void text(PluginCall call) {
+        try {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_TEXT, call.getString("text", ""));
+            Intent chooser = Intent.createChooser(send, call.getString("title", "Melete"));
+            getActivity().startActivity(chooser);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
+    }
 }

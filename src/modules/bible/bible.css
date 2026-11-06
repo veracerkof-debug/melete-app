@@ -1,6 +1,6 @@
-/* Библия: текст главы на всё окно, сверху — одна узкая полоса */
+/* Библия: текст главы на всё окно, внизу — одна узкая полоса (под большой палец; слово автора 06.11.2026) */
 .bwrap{display:flex;flex-direction:column;height:100%;min-height:80px;width:100%}
-.bbar{display:flex;align-items:center;gap:4px;padding:2px 2px 6px;flex:none}
+.bbar{display:flex;align-items:center;gap:4px;padding:6px 2px 2px;flex:none;border-top:1px solid var(--sep)}
 .bbar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .bpick{min-height:40px;padding:0 12px;border-radius:999px;background:var(--fill);font-weight:600;font-size:15px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
 .bgrow{flex:1}
@@ -58,3 +58,20 @@
 .fc1{color:var(--red)}.fc2{color:#2E8B57}.fc3{color:#3B6FD8}.fc4{color:#8A4FBF}.fc5{color:var(--l2)}
 .bmtext{font-family:Georgia,"Noto Serif",serif;font-size:16px;line-height:1.5;margin:0 0 12px}
 [data-seg="btest"]{margin:2px 0 14px}
+/* во весь экран: только текст; вкладки и полоса спрятаны, выход — круглая кнопка в углу */
+.bwrap.bpure{position:fixed;inset:0;z-index:80;background:var(--bg);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.bwrap.bpure .btext{padding:14px 18px 60px}
+html.bible-pure .tabbar{display:none}
+.bunpure{position:absolute;right:calc(10px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(6px);opacity:.75}
+/* выбор стихов */
+.bv.sel{background:color-mix(in srgb,var(--tint) 24%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 24%,transparent)}
+.bselm .btext{-webkit-user-select:none;user-select:none}
+.bseln{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* поиск */
+.bsq{width:100%;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--sep);background:var(--fill);color:var(--ink);font-size:16px;margin:2px 0 10px;box-sizing:border-box}
+[data-seg="bscope"]{margin-bottom:8px}
+.bsst{font-size:13px;margin:4px 2px 8px;min-height:18px}
+.bshit{text-align:left;min-height:44px;display:block;padding:8px 14px;font-family:Georgia,"Noto Serif",serif;font-size:15px;line-height:1.45;color:var(--ink)}
+.bshit b{font-family:var(--font);font-size:13px;color:var(--tint-text);margin-right:4px}
+.bshit mark{background:color-mix(in srgb,var(--tint) 30%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.bwrap.btop .bbar{border-top:0;border-bottom:1px solid var(--sep);padding:2px 2px 6px}

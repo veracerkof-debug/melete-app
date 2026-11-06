@@ -126,20 +126,24 @@ async function lexiconOrDict(ctx, topic, nav) {
   else ctx.ui.toast(ctx.t('st.noWord', { w: topic }));
 }
 
-// Меню стиха (долгое касание): комментарии, перекрёстные ссылки, копировать
-export function verseMenu(ctx, P, cur, v, text, x, nav) {
+// Меню стиха (долгое касание): копировать и отправить с ссылкой и переводом, выбрать несколько; комментарии, ссылки.
+// act — { copy, share, select } от модуля (формат цитаты — quote.js)
+export function verseMenu(ctx, P, cur, v, text, x, nav, act) {
   const { t, ui } = ctx, xl = x.xref.get(v) || [];
   const api = ui.sheet(() => ui.snav(P.abbr(cur.code) + ' ' + cur.ch + ':' + v) + '<p class="bmtext">' + ui.esc(text) + '</p><div class="group">' +
+    '<button class="cell act" data-vm="copy">' + t('st.copy') + '</button>' +
+    '<button class="cell act" data-vm="share">' + t('share') + '</button>' +
+    '<button class="cell act" data-vm="select">' + t('selMany') + '</button></div><div class="group">' +
     '<button class="cell act" data-vm="comm">' + t('st.comm') + '</button>' +
-    (xl.length ? '<button class="cell act" data-vm="xref">' + t('st.xref') + ' · ' + xl.length + '</button>' : '') +
-    '<button class="cell act" data-vm="copy">' + t('st.copy') + '</button></div>', (el) => {
-    el.addEventListener('click', async (e) => {
+    (xl.length ? '<button class="cell act" data-vm="xref">' + t('st.xref') + ' · ' + xl.length + '</button>' : '') + '</div>', (el) => {
+    el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-vm]');
       if (!b) return;
       api.close();
-      if (b.dataset.vm === 'comm') commentary(ctx, P, cur.code, cur.ch, v, nav);
-      else if (b.dataset.vm === 'xref') xrefs(ctx, P, cur.code, cur.ch, v, xl, nav);
-      else { try { await navigator.clipboard.writeText(text + ' (' + P.abbr(cur.code) + ' ' + cur.ch + ':' + v + ')'); ui.toast(t('st.copied')); } catch { ui.toast(t('st.copyFail')); } }
+      const k = b.dataset.vm;
+      if (k === 'comm') commentary(ctx, P, cur.code, cur.ch, v, nav);
+      else if (k === 'xref') xrefs(ctx, P, cur.code, cur.ch, v, xl, nav);
+      else if (act && act[k]) act[k]();
     });
   });
 }
@@ -186,6 +190,7 @@ export function bindGestures(el, h) {
     const d = down;
     down = null;
     if (d.long || pinch) return;
+    if (h.tap && !d.moved && h.tap(e)) { lastTap = 0; return; } // выбор стихов: касание — отметить
     const dx = e.clientX - d.x, dy = e.clientY - d.y, dt = performance.now() - d.t;
     // смахивание: соседняя глава
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45 && dt < 700) { h.step(dx < 0 ? 1 : -1); lastTap = 0; return; }
