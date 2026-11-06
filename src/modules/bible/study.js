@@ -74,8 +74,23 @@ export async function lexicon(ctx, topic, nav) {
     head: ctx.ui.esc(d.title),
     html: (r.lexeme ? '<div class="blex" lang="' + (t[0] === 'G' ? 'el' : 'he') + '">' + ctx.ui.esc(r.lexeme) + '</div>' : '') +
       ([r.transliteration, r.pronunciation].filter(Boolean).length ? '<div class="btr2">' + ctx.ui.esc([r.transliteration, r.pronunciation].filter(Boolean).join(' · ')) + '</div>' : '') +
-      (r.short_definition ? '<div class="bshort">' + ctx.ui.esc(r.short_definition) + '</div>' : '') + sanitizeHTML(r.definition),
+      (r.short_definition ? '<div class="bshort">' + ctx.ui.esc(r.short_definition) + '</div>' : '') + sanitizeHTML(r.definition) + cognatesHTML(ctx, d, t),
   })), nav);
+}
+// Однокоренные (таблица cognate_strong_numbers лексикона) — ссылками на свои статьи
+function cognatesHTML(ctx, d, t) {
+  const list = d.cognates ? d.cognates(t).slice(0, 40) : [];
+  return list.length ? '<div class="bcog"><span class="bdf">' + ctx.t('st.cognates') + ':</span> ' + list.map((x) => '<a class="blink" data-href="S:' + ctx.ui.esc(x) + '">' + ctx.ui.esc(x) + '</a>').join(', ') + '</div>' : '';
+}
+
+// Морфология (код после слова, например «V-PAI-3S»): расшифровка по лексикону с таблицей морфологии
+export async function morph(ctx, code, nav) {
+  const a = await auxModules(ctx), d = a.dict.find((x) => x.hasMorph);
+  if (!d) { ctx.ui.toast(ctx.t('st.noMorph', { m: code })); return; }
+  const r = d.morph(code);
+  ctx.log('морфология ' + code);
+  articleSheet(ctx, code, [{ head: ctx.ui.esc(d.title), html: '<div class="bshort">' + r.parts.map((x) => ctx.ui.esc(x)).join(' · ') + '</div>' +
+    (r.topic ? '<a class="blink" data-href="S:' + ctx.ui.esc(r.topic) + '">' + ctx.ui.esc(ctx.t('st.morphMore')) + '</a>' : '') }], nav);
 }
 
 // Слово без номера Стронга — по словарям
@@ -196,10 +211,11 @@ export function bindGestures(el, h) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45 && dt < 700) { h.step(dx < 0 ? 1 : -1); lastTap = 0; return; }
     if (d.moved) return;
     // метки: касание
-    const m = e.target.closest('.bs, .bfn, .bcm, .bxr, a.blink');
+    const m = e.target.closest('.bs, .bmo, .bfn, .bcm, .bxr, a.blink');
     if (m) {
       const v = +(m.closest('.bv') || {}).dataset?.v || 0;
       if (m.classList.contains('bs')) h.lexicon(m.dataset.s);
+      else if (m.classList.contains('bmo')) { if (h.morph) h.morph(m.dataset.m); }
       else if (m.classList.contains('bfn')) h.foot(v, m.dataset.fn);
       else if (m.classList.contains('bcm')) h.comm(+m.dataset.cv);
       else if (m.classList.contains('bxr')) h.xref(+m.dataset.xv);

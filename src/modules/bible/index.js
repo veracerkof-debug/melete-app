@@ -122,6 +122,7 @@ function gestures(tx) {
   tx.addEventListener('contextmenu', (e) => e.preventDefault());
   S.bindGestures(tx, {
     lexicon: (s) => S.lexicon(ctx, s, nav),
+    morph: (m) => S.morph(ctx, m, nav),
     dict: (w) => S.dictWord(ctx, w, nav),
     comm: (v) => S.commentary(ctx, P, cur.code, cur.ch, v, nav),
     xref: (v) => S.xrefs(ctx, P, cur.code, cur.ch, v, marks.xref.get(v) || [], nav),
@@ -269,15 +270,31 @@ async function addOne(f) {
   ctx.log('модуль MyBible (' + m.type + '): ' + m.title + (bible ? ', книг ' + count : '') + ', ' + (f.size / 1048576).toFixed(1) + ' МБ');
   return rec;
 }
+// .zip → файлы .SQLite3 внутри; имя без русских букв (бывает «.SQLite3») — по имени архива («Стронг.dictionary.zip»)
+async function unzipModules(files) {
+  const out = [];
+  for (const f of files) {
+    if (!/\.zip$/i.test(f.name)) { out.push(f); continue; }
+    const { unzipSync } = await import('fflate');
+    const z = unzipSync(new Uint8Array(await f.arrayBuffer()), { filter: (e) => /\.sqlite3?$/i.test(e.name) });
+    const base = safeDecode(f.name).replace(/\.zip$/i, '').replace(/\.sqlite3?$/i, '');
+    for (const [name, u8] of Object.entries(z)) out.push(new File([u8], zipEntryName(name, base), { type: 'application/x-sqlite3' }));
+  }
+  return out;
+}
+const safeDecode = (n) => { try { return decodeURIComponent(n); } catch { return n; } };
+export const zipEntryName = (name, base) => { const n = String(name).split('/').pop(); return /^\.sqlite3?$/i.test(n) || !n.replace(/\.sqlite3?$/i, '').trim() ? base + '.SQLite3' : n; };
 const ERR = { notbible: 'trNotBible', nobooks: 'trNoBooks', notsaved: 'trNotSaved' };
 function addModule(done) {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
-  input.accept = '.SQLite3,.sqlite3,.sqlite,.db';
+  input.accept = '.SQLite3,.sqlite3,.sqlite,.db,.zip';
   input.addEventListener('change', async () => {
-    const list = [...input.files];
+    let list = [...input.files];
     if (!list.length) return;
+    // архивы .zip (так модули скачиваются с сайтов MyBible) — раскрыть: внутри один или несколько .SQLite3
+    try { list = await unzipModules(list); } catch (e) { ctx.logErr(e); }
     ctx.ui.toast(ctx.t('trReading'));
     const added = [], failed = [];
     for (const f of list) {

@@ -42,7 +42,7 @@
   "modDelQ": "Modul oʻchirilsinmi?",
   "modDelText": "Modul fayli qurilmadan oʻchiriladi.",
   "modAdded": "Modul ulandi: {name}",
-  "trHintStudy": "MyBible modullari — .SQLite3 fayllar: tarjimalar, lugʻatlar (Strong leksikonlari ham), sharhlar, izohlar, oʻzaro havolalar, sarlavhalar. Faqat shu qurilmada saqlanadi. Imolar MyBible dagidek: soʻz yoki Strong raqamiga ikki marta tegish — leksikon maqolasi; belgiga tegish — sharh (◆), havolalar (↗) yoki izoh; oyatni uzoq bosish — oyat menyusi; surish — qoʻshni bob; chimdish — shrift oʻlchami.",
+  "trHintStudy": "MyBible modullari — .SQLite3 fayllar yoki modullar saytidagi .zip arxivlar: tarjimalar, lugʻatlar (Strong leksikonlari ham), sharhlar, izohlar, oʻzaro havolalar, sarlavhalar. Faqat shu qurilmada saqlanadi. Imolar MyBible dagidek: soʻz yoki Strong raqamiga ikki marta tegish — leksikon maqolasi; belgiga tegish — sharh (◆), havolalar (↗) yoki izoh; oyatni uzoq bosish — oyat menyusi; surish — qoʻshni bob; chimdish — shrift oʻlchami.",
   "st.show": "Matnda",
   "st.strong": "Strong raqamlari",
   "st.comm": "Sharhlar",
@@ -82,5 +82,8 @@
   "shareFail": "Yuborib boʻlmadi",
   "help.4": "Bob oxiridagi «Oʻqildi» rejani va bosh sahifani belgilaydi.",
   "view": "Koʻrinish",
-  "barTop": "Tugmalar tepada"
+  "barTop": "Tugmalar tepada",
+  "st.cognates": "Oʻzakdosh",
+  "st.noMorph": "{m} shakli: morfologiyali leksikon kerak — modul «Tarjima»da qoʻshiladi",
+  "st.morphMore": "Shakl haqida batafsil"
 }

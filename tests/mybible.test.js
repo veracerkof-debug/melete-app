@@ -66,3 +66,34 @@ describe('модули', () => {
     b.close();
   });
 });
+
+// Настоящие модули (06.11.2026, сверено на RST+, VINT+, «Стронг», «Лексикон», Strong): разметка лексиконов, морфология, номера
+import { decodeMorph, strongAlt } from '../src/core/mybible-study.js';
+describe('модули Стронга', () => {
+  it('теги лексиконов: слово оригинала, поля, номера значений', () => {
+    expect(sanitizeHTML('<he>אָב</he> <br/><nm>1.</nm> <df>Оригинал:</df> <bi>x</bi>')).toBe('<span class="bhe" lang="he" dir="rtl">אָב</span> <br><span class="bnm">1.</span> <span class="bdf">Оригинал:</span> <span class="bbi">x</span>');
+    expect(sanitizeHTML('<el>βίβλος</el>')).toBe('<span class="bgr" lang="el">βίβλος</span>');
+  });
+  it('номер в стихе: с буквой Завета или без; код формы касается', () => {
+    expect(renderVerse('книга<S>G976</S> <m>N-NSF</m>', { prefix: 'H' })).toBe('книга<sup class="bs" data-s="G976">976</sup> <sup class="bmo" data-m="N-NSF">N-NSF</sup>');
+  });
+  it('морфология: целиком, часть речи и окончания с applicable_to', () => {
+    const rows = [{ i: 'V', a: null, m: 'гл.' }, { i: '-PAI', a: 'V', m: 'наст. вр.' }, { i: '-3S', a: null, m: '3 л., ед. ч.' }, { i: 'N-PRI', a: null, m: 'нескл. имя' }];
+    expect(decodeMorph('V-PAI-3S', rows)).toEqual(['гл.', 'наст. вр.', '3 л., ед. ч.']);
+    expect(decodeMorph('N-PRI', rows)).toEqual(['нескл. имя']);
+  });
+  it('G976 ↔ G0976', () => {
+    expect(strongAlt('G976')).toBe('G0976');
+    expect(strongAlt('G0976')).toBe('G976');
+    expect(strongAlt('слово')).toBeNull();
+  });
+  it('словарь: однокоренные и морфология из таблиц модуля', async () => {
+    const u8 = await db("CREATE TABLE info(name,value); CREATE TABLE dictionary(topic,definition,lexeme,transliteration,pronunciation,short_definition); CREATE TABLE cognate_strong_numbers(group_id INTEGER, strong_number TEXT); CREATE TABLE morphology_indications(indication TEXT, applicable_to TEXT, meaning TEXT); CREATE TABLE morphology_topics(indication TEXT, topic TEXT);",
+      ["INSERT INTO info VALUES ('is_strong','true')"], ["INSERT INTO dictionary VALUES ('G0976','книга','βίβλος','','','')"], ["INSERT INTO cognate_strong_numbers VALUES (1,'G976'),(1,'G975')"],
+      ["INSERT INTO morphology_indications VALUES ('N',NULL,'сущ.'),('-NSF',NULL,'им. п., ед. ч., ж. р.')"], ["INSERT INTO morphology_topics VALUES ('N-NSF','G5000')"]);
+    const d = await openModule(u8, 'Стронг.dictionary.SQLite3');
+    expect(d.get('G976').definition).toBe('книга'); // номер без нулей находит запись с нулями
+    expect(d.cognates('G976')).toEqual(['G975']);
+    expect(d.morph('N-NSF')).toEqual({ parts: ['сущ.', 'им. п., ед. ч., ж. р.'], topic: 'G5000' });
+  });
+});

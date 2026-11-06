@@ -18,3 +18,11 @@ describe('Библия: цитата и поиск', () => {
     expect(hitHTML('нет', normQ('да'), esc)).toBeNull();
   });
 });
+
+describe('Библия: модули из архива', async () => {
+  it('имя файла в .zip без русских букв — по имени архива', async () => {
+    const { zipEntryName } = await import('../src/modules/bible/index.js');
+    expect(zipEntryName('.SQLite3', 'Стронг.dictionary')).toBe('Стронг.dictionary.SQLite3');
+    expect(zipEntryName('RST+.commentaries.SQLite3', 'RST+')).toBe('RST+.commentaries.SQLite3');
+  });
+});

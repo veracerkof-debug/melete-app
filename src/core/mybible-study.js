@@ -1,4 +1,4 @@
-// MyBible для изучения (только вид «Минимал»): номера Стронга, словари и лексиконы, комментарии и сноски,
+// MyBible для изучения (все виды с 06.11.2026): номера Стронга, словари и лексиконы, комментарии и сноски,
 // перекрёстные ссылки, подзаголовки — по спецификации формата MyBible (ред. 2025-06-15).
 // Здесь — без DOM: отрисовка тегов стиха в HTML, очистка HTML статей из модулей (модули чужие — только безопасное),
 // ссылки B:/S:/C:@, открытие модулей всех типов. Показ и жесты — модуль «Библия».
@@ -24,8 +24,10 @@ export function renderVerse(raw, { prefix = 'H', strong = true } = {}) {
   while ((m = re.exec(String(raw || '')))) {
     if (m[1]) {
       const tag = m[1].toUpperCase() === 'S' ? 'S' : m[1].toLowerCase(), body = unesc(m[2]).trim();
-      if (tag === 'S') { if (strong && /^\d{1,5}$/.test(body)) out += '<sup class="bs" data-s="' + prefix + body + '">' + body + '</sup>'; }
-      else if (tag === 'm') { if (strong) out += '<sup class="bmo">' + esc(body) + '</sup>'; }
+      if (tag === 'S') {
+        const sm = /^([GH]?)(\d{1,5}[a-z]?)$/i.exec(body);
+        if (strong && sm) out += '<sup class="bs" data-s="' + (sm[1] ? sm[1].toUpperCase() : prefix) + sm[2] + '">' + sm[2] + '</sup>';
+      } else if (tag === 'm') { if (strong) out += '<sup class="bmo" data-m="' + esc(body) + '">' + esc(body) + '</sup>'; }
       else if (tag === 'f') out += '<sup class="bfn" data-fn="' + esc(body) + '">' + esc(body) + '</sup>';
       else if (tag === 'n') out += ' <span class="bnote">' + esc(body) + '</span>';
       else if (tag === 'h') out += '<span class="bhd">' + esc(body) + '</span>';
@@ -42,6 +44,7 @@ export function renderVerse(raw, { prefix = 'H', strong = true } = {}) {
 
 /* ---------- HTML статей словарей и комментариев: только безопасное ---------- */
 const TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 'p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'sup', 'sub', 'span', 'div', 'font', 'a', 'blockquote', 'hr', 'small', 'big', 'table', 'tr', 'td', 'th', 'tbody']);
+const LEX = { el: '<span class="bgr" lang="el">', he: '<span class="bhe" lang="he" dir="rtl">', df: '<span class="bdf">', nm: '<span class="bnm">', bi: '<span class="bbi">' };
 const COLORS = { '0': 0, '%COLOR_TEXT%': 0, '1': 1, '%COLOR_RED%': 1, '2': 2, '%COLOR_GREEN%': 2, '3': 3, '%COLOR_BLUE%': 3, '4': 4, '%COLOR_PURPLE%': 4, '5': 5, '%COLOR_GREY%': 5 };
 export function sanitizeHTML(html) {
   const src = String(html || '').replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|iframe|object|embed|svg|math)[\s\S]*?<\/\1>/gi, '');
@@ -49,6 +52,9 @@ export function sanitizeHTML(html) {
     if (text != null) return text.replace(/>/g, '&gt;');
     if (!name) return '&lt;';
     const n = name.toLowerCase(), close = m[1] === '/';
+    // лексиконы MyBible: <el> — греческое слово, <he> — еврейское, <df> — заголовок поля, <nm> — номер значения, <bi> — жирный курсив
+    if (LEX[n]) return close ? '</span>' : LEX[n];
+    if (n === 'bdo') return close ? '</span>' : '<span dir="rtl">';
     if (!TAGS.has(n)) return '';
     if (close) return n === 'br' || n === 'hr' ? '' : '</' + (n === 'font' ? 'span' : n) + '>';
     if (n === 'a') {
@@ -72,6 +78,24 @@ export function parseBRef(href) {
   return { code, ch: +m[2], v: m[3] ? +m[3] : null };
 }
 export const parseCRef = (href) => { const m = /^C:@(\d+)\s+(\d+):(\d+)/.exec(String(href || '')); return m && CODE_OF[+m[1]] ? { code: CODE_OF[+m[1]], ch: +m[2], v: +m[3] } : null; };
+
+/* ---------- морфология и номера ---------- */
+// Код морфологии по таблице модуля: сначала целиком («N-PRI»), иначе часть речи и окончания «-XXX» (с учётом applicable_to)
+export function decodeMorph(code, rows) {
+  const c = String(code || '').trim(), by = (i, a) => rows.find((r) => r.i === i && (a ? r.a === a : !r.a));
+  const whole = by(c) || by(c, null);
+  if (whole) return [String(whole.m)];
+  const head = c.split('-')[0], out = [], h = by(head);
+  if (h) out.push(String(h.m)); else if (head) out.push(head);
+  (c.slice(head.length).match(/-[^-]+/g) || []).forEach((seg) => { const r = by(seg, head[0]) || by(seg); out.push(r ? String(r.m) : seg.slice(1)); });
+  return out;
+}
+// Тот же номер в другой записи: G976 ↔ G0976 (модули пишут по-разному)
+export function strongAlt(t) {
+  const m = /^([GH])(0*)(\d+)([a-z]?)$/i.exec(String(t || ''));
+  if (!m) return null;
+  return m[2] ? m[1] + m[3] + m[4] : m[1] + m[3].padStart(4, '0') + m[4];
+}
 
 /* ---------- модули ---------- */
 const infoOf = (db, tables) => (tables.includes('info') ? Object.fromEntries(all(db, 'SELECT name, value FROM info').map((r) => [String(r.name).toLowerCase(), r.value])) : {});
@@ -100,12 +124,25 @@ export async function openModule(u8, fileName = '') {
 
   if (type === 'dictionary') {
     const t = String(info.type || '').toLowerCase(), strong = t ? t === 'strong lexicon' : info.is_strong == null ? true : truthy(info.is_strong);
+    const morphRows = tables.includes('morphology_indications') ? all(db, 'SELECT indication AS i, applicable_to AS a, meaning AS m FROM morphology_indications') : null;
+    const morphTopics = tables.includes('morphology_topics') ? new Map(all(db, 'SELECT indication AS i, topic AS t FROM morphology_topics').map((r) => [String(r.i), String(r.t)])) : null;
     return { ...base, strong,
+      hasMorph: !!morphRows,
+      // морфология: «V-PAI-3S» → ['гл.', 'наст. вр., акт. з., инд.', '3 л., ед. ч.'] и статья формы (если есть)
+      morph(code) { return morphRows ? { parts: decodeMorph(code, morphRows), topic: (morphTopics && morphTopics.get(String(code))) || '' } : null; },
+      // однокоренные: номера той же группы
+      cognates(topic) {
+        if (!tables.includes('cognate_strong_numbers')) return [];
+        const t = String(topic || '').toUpperCase();
+        return all(db, 'SELECT strong_number AS s FROM cognate_strong_numbers WHERE group_id IN (SELECT group_id FROM cognate_strong_numbers WHERE strong_number = ?) AND strong_number <> ?', [t, t]).map((r) => String(r.s));
+      },
       // статья по теме: точно, затем без учёта регистра
       get(topic) {
         const q = String(topic || '').trim();
         if (!q) return null;
-        return all(db, 'SELECT * FROM dictionary WHERE topic = ? LIMIT 1', [q])[0] || all(db, 'SELECT * FROM dictionary WHERE topic = ? COLLATE NOCASE LIMIT 1', [q])[0] || null;
+        const alt = strongAlt(q);
+        return all(db, 'SELECT * FROM dictionary WHERE topic = ? LIMIT 1', [q])[0] || all(db, 'SELECT * FROM dictionary WHERE topic = ? COLLATE NOCASE LIMIT 1', [q])[0] ||
+          (alt ? all(db, 'SELECT * FROM dictionary WHERE topic = ? LIMIT 1', [alt])[0] : null) || null;
       },
       // слово: точное совпадение темы, затем начало слова (для лексиконов без Стронга и обычных словарей)
       find(word) {

@@ -21,5 +21,8 @@
   "help.1": "Book and chapter — the title button at the bottom; search the whole Bible — magnifier; full screen — frame.",
   "help.2": "Long press a verse — copy or send it with reference and translation, select several; double tap a word — Strong's number (needs a MyBible module with numbers and a lexicon).",
   "view": "View",
-  "barTop": "Buttons at the top"
+  "barTop": "Buttons at the top",
+  "st.cognates": "Cognates",
+  "st.noMorph": "Form {m}: a lexicon with morphology is needed — add it in “Translation”",
+  "st.morphMore": "More about the form"
 }

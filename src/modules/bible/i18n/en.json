@@ -42,7 +42,7 @@
   "modDelQ": "Delete the module?",
   "modDelText": "The module file will be removed from the device.",
   "modAdded": "Module added: {name}",
-  "trHintStudy": "MyBible modules are .SQLite3 files: translations, dictionaries (including Strong's lexicons), commentaries, footnotes, cross-references, subheadings. Stored only on this device. Gestures as in MyBible: double tap on a word or Strong's number — lexicon entry; tap a mark — commentary (◆), references (↗) or footnote; long press on a verse — verse menu; swipe — next or previous chapter; pinch — font size.",
+  "trHintStudy": "MyBible modules are .SQLite3 files or .zip archives from module sites: translations, dictionaries (including Strong's lexicons), commentaries, footnotes, cross-references, subheadings. Stored only on this device. Gestures as in MyBible: double tap on a word or Strong's number — lexicon entry; tap a mark — commentary (◆), references (↗) or footnote; long press on a verse — verse menu; swipe — next or previous chapter; pinch — font size.",
   "st.show": "In the text",
   "st.strong": "Strong's numbers",
   "st.comm": "Commentaries",
@@ -82,5 +82,8 @@
   "shareFail": "Could not send",
   "help.4": "“Read” at the chapter end marks the plan and home.",
   "view": "View",
-  "barTop": "Buttons at the top"
+  "barTop": "Buttons at the top",
+  "st.cognates": "Cognates",
+  "st.noMorph": "Form {m}: a lexicon with morphology is needed — add it in “Translation”",
+  "st.morphMore": "More about the form"
 }
