@@ -19,7 +19,7 @@ import {
 } from '../workspace.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
-import { mInput, bindM } from './common.js';
+import { mInput, bindM, STAGE_IC } from './common.js';
 import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
@@ -132,7 +132,7 @@ export function createSessionScreen(app) {
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
       '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
       (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '">' + pchipHTML() + '</button>') +
-      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
+      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + (tm ? '' : '<button class="sstage" data-s="stage" aria-label="' + esc(t('stage.btn')) + '">' + STAGE_IC + '<span>' + esc(t('stage.btn')) + '</span></button>') + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
         dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '<span class="tl" aria-hidden="true">' + esc(groupName(st(), g)) + '</span></button>').join('') +
@@ -358,6 +358,7 @@ export function createSessionScreen(app) {
     } else if (a === 'pomo') pomoSheet();
     else if (a === 'hide') hide();
     else if (a === 'finish') finish();
+    else if (a === 'stage') import('./stage.js').then((m) => m.stagePick(app));
   }
 
   /* ---------- шторки окон ---------- */

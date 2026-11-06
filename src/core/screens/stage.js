@@ -13,6 +13,7 @@ import { lyricsHTML } from '../../music/lyrics.js';
 import { keyLabel, shiftKey } from '../../music/transpose.js';
 import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX, capoClamp } from '../stage.js';
 import { saveEvent, liveEvents } from '../calendar.js';
+import { setlistsOf } from '../metrosets.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
 import { swipe, pinch } from '../../ui/gestures.js';
@@ -353,6 +354,18 @@ export function openStage(app, evId, i = 0) {
   render();
   cur = { close, render };
   return cur;
+}
+
+// Сцена одной кнопкой (слово автора 06.11.2026: на главной и в рабочей сессии): один сет-лист на сегодня — сразу
+// на сцену; иначе короткий выбор — ближайшие впереди первыми; сет-листов нет — новое событие с песнями
+export function stagePick(app) {
+  const L = setlistsOf(app.store.state).filter((x) => x.n > 0), now = Date.now(), today = L.filter((x) => Math.abs(x.start - now) < 12 * 3600000);
+  if (!L.length) { toast(t('stage.none')); import('./calendar.js').then((m) => m.eventForm(app, null, {}, () => {})); return; }
+  if (today.length === 1) { openStage(app, today[0].id, 0); return; }
+  const day = (ts) => (ts ? new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '');
+  sheet(() => snav(t('stage.pick')) + '<div class="group">' + L.slice(0, 30).map((x) => '<button class="cell" data-stg="' + x.id + '"><span class="grow">' + esc(x.title || t('stage.untitled')) +
+    '<span class="bksub">' + esc(day(x.start) + ' · ' + t('stage.nSongs', { n: x.n })) + '</span></span>' + icons.chev + '</button>').join('') + '</div>',
+  (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-stg]'); if (b) { sh.close(); openStage(app, b.dataset.stg, 0); } }));
 }
 
 // После сбоя или перезапуска: была открыта сцена — предложить вернуться на ту же песню

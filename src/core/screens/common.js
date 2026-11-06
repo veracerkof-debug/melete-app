@@ -123,3 +123,6 @@ export function bindM(root, settings) {
   });
   return () => +w().dataset.pct;
 }
+
+// Значок сцены (кнопка «Сцена» на главной и в рабочей сессии; stage.js: stagePick)
+export const STAGE_IC = '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20v-6h12v6"/><path d="M12 4v6M9 7l3-3 3 3"/></svg>';

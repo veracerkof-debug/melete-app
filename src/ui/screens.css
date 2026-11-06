@@ -500,3 +500,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
   .tgrid .tcard2:last-child:nth-child(3n+1){grid-column:span 3}
   .tgrid .tcard2:last-child:nth-child(3n+2){grid-column:span 2}
 }
+/* Сцена одной кнопкой на главной (stage.js: stagePick) */
+.hstagerow{display:flex;margin:8px 0 4px}
+.hstage{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:14px;background:var(--tint);color:var(--on-tint);font:600 16px var(--font)}
+.hstage svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}

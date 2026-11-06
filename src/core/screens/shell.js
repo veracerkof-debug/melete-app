@@ -188,6 +188,7 @@ export function createShell(app, root) {
     else if (d.openTool && isPage(d.openTool)) go(d.openTool); // «Календарь», «Песни» значком — своя страница
     else if (d.openTool) openToolView(app, d.openTool, render);
     else if (d.act === 'free') app.startSession('free');
+    else if (d.act === 'stage') import('./stage.js').then((m) => m.stagePick(app));
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
     // команда: отправить песню или выбрать песни; принять файл .melete
     else if (d.act === 'share') { if (d.sid) shareSheet(app, { songIds: [d.sid] }); else shareMenu(app); }

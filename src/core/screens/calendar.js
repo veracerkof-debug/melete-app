@@ -14,7 +14,7 @@ import {
   ensureCal, liveEvents, kindOf, colorOf, occurrences, onDay, layoutDay, upcoming, newEvent, saveEvent, deleteEvent,
   skipOccurrence, toggleDone, isDone, toICS, REPEATS, REMIND_MIN,
 } from '../calendar.js';
-import { topbar, IC, weekdays, TAB_ICONS } from './common.js';
+import { topbar, IC, weekdays, TAB_ICONS, STAGE_IC } from './common.js';
 
 const HOUR = 3600000, ROW = 48; // высота часа в недельной сетке, px
 const I = {
@@ -508,8 +508,10 @@ function exportICS(app) {
 // Главная: ближайшие события на неделю (до двух)
 export function nextEventsHTML(app) {
   const list = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i).slice(0, 2);
-  if (!list.length) return '';
-  return '<div class="hhdr"><span>' + t('cal.soon') + '</span><button class="link" data-tab="calendar">' + t('cal.title') + '</button></div><div class="clist hnext">' + list.map((o) => evRow(app, o, { date: true })).join('') + '</div>';
+  // сцена одной кнопкой (есть сет-лист с песнями)
+  const stage = events(app).some((e) => !e.deleted && (e.songs || []).length) ? '<button class="hstage" data-act="stage">' + STAGE_IC + '<span>' + t('stage.btn') + '</span></button>' : '';
+  if (!list.length) return stage ? '<div class="hstagerow">' + stage + '</div>' : '';
+  return '<div class="hhdr"><span>' + t('cal.soon') + '</span><button class="link" data-tab="calendar">' + t('cal.title') + '</button></div><div class="clist hnext">' + list.map((o) => evRow(app, o, { date: true })).join('') + '</div>' + (stage ? '<div class="hstagerow">' + stage + '</div>' : '');
 }
 
 // Песня: её события (ближайшие полгода) и «+ событие» с этой песней
