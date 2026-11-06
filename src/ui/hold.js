@@ -119,6 +119,15 @@ function layAt(x) {
   const r = op.getBoundingClientRect();
   return { l: r.left + op.clientLeft - op.scrollLeft + x.offsetLeft, t: r.top + op.clientTop - op.scrollTop + x.offsetTop };
 }
+// Поднятый элемент — по форме того, что видно: если внутри один элемент во весь размер (круглая кнопка, карточка),
+// тень и скругление — как у него, подложки нет; иначе — карточка со своим скруглением
+function liftShape(el) {
+  const kids = [...el.children].filter((x) => x.offsetParent && getComputedStyle(x).position !== 'absolute');
+  const r = el.getBoundingClientRect(), k = kids.length === 1 && kids[0].getBoundingClientRect();
+  if (!k || Math.abs(k.width - r.width) > 3 || Math.abs(k.height - r.height) > 3) return;
+  el.style.borderRadius = getComputedStyle(kids[0]).borderRadius;
+  el.classList.add('liftbare');
+}
 export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
   let D = null, last = null;
   root.addEventListener('pointermove', (e) => { last = e; }, { passive: true });
@@ -127,6 +136,7 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     const p = last && last.pointerId === e.pointerId ? last : e;
     D = { el, id: e.pointerId, x0: p.clientX, y0: p.clientY, x: p.clientX, y: p.clientY, moved: false, e, raf: 0, scroller: scrollerOf(el) };
     el.classList.add('lifting');
+    liftShape(el);
     el.parentElement.classList.add('draghost');
     document.documentElement.classList.add('sorting');
     document.addEventListener('pointermove', move, { passive: false });
@@ -195,7 +205,7 @@ export function dragSort(root, sel, key, { onDrop, onStill, skip } = {}) {
     document.documentElement.classList.remove('sorting');
     d.el.classList.remove('lifting');
     if (d.el.parentElement) d.el.parentElement.classList.remove('draghost');
-    d.el.style.transform = ''; d.el.style.pointerEvents = '';
+    d.el.style.transform = ''; d.el.style.pointerEvents = ''; d.el.style.borderRadius = ''; d.el.classList.remove('liftbare');
     return d;
   }
   function up(e) {
