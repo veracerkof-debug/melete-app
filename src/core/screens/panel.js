@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
 import { logErr } from '../log.js';
 import { updateSheet, variantsSheet } from './update.js';
-import { DEV } from '../variants.js';
+import { DEV, VARIANTS } from '../variants.js';
 import { t, tn, getLang, LANGS, LANG_NAMES, loadLang } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
@@ -237,16 +237,15 @@ function notifHTML(app) {
 }
 
 // Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
-let prevDev = null;
 function sizeHTML(app) {
   const st = app.store.state.settings, s = uiScale(st), auto = !(+st.uiScale), pct = Math.round(s * 100);
-  const dev = prevDev || (screenShort() < 600 ? 'phone' : 'tablet');
+  // предпросмотр — этого устройства (выбора «телефон / планшет» нет: всё подстраивается само, слово автора 06.11.2026)
+  const dev = screenShort() < 600 ? 'phone' : 'tablet';
   return '<div class="hdr">' + t('look.size') + '</div><div class="group"><div class="cellcol">' +
     '<div class="szrow"><button class="ic sm" data-uisz="-1" aria-label="' + esc(t('look.smaller')) + '"' + (s <= SCALE_MIN + 1e-6 ? ' disabled' : '') + '>' + IC.minus + '</button>' +
     '<b class="num szval">' + pct + '%</b>' +
     '<button class="ic sm" data-uisz="1" aria-label="' + esc(t('look.bigger')) + '"' + (s >= SCALE_MAX - 1e-6 ? ' disabled' : '') + '>' + IC.plus + '</button>' +
     '<button class="pill szauto" data-uisz="auto" aria-pressed="' + auto + '">' + t('look.sizeAuto') + (auto ? '' : ' · ' + Math.round(autoScale(screenShort()) * 100) + '%') + '</button></div>' +
-    seg('szdev', [['phone', t('look.phone')], ['tablet', t('look.tablet')]], dev, t('look.prevDev')) +
     '<div class="szprev" data-szprev="' + dev + '"><figure><div class="szfr"></div><figcaption>' + t('look.prevHome') + '</figcaption></figure>' +
     '<figure><div class="szfr"></div><figcaption>' + t('look.prevTools') + '</figcaption></figure></div></div></div>' +
     '<p class="ftr">' + t('look.sizeHint') + '</p>';
@@ -570,7 +569,7 @@ function rootHTML(app) {
       return list.length ? '<div class="hdr">' + t('pg.' + g) + '</div><div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + '</div>' : '';
     }).join('') +
     '<div class="group" style="margin-top:20px"><a class="cell" href="' + TG_CHAT + '" target="_blank" rel="noopener"><span class="ticon" style="' + iconBg(app.store.state.settings, 'blue') + '">' + PLANE + '</span><span class="grow">' + t('panel.tg') + '<span class="psub">' + t('panel.tgSub') + '</span></span>' + CHEV + '</a>' +
-      (DEV ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
+      (DEV && VARIANTS.length ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
       (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
       '<button class="cell" data-act="diag"><span class="ticon" style="' + iconBg(app.store.state.settings, 'green') + '">' + icons.check + '</span><span class="grow">' + t('diag.title') + '<span class="psub">' + t('diag.sub') + '</span></span>' + CHEV + '</button>' +
       '<button class="cell" data-act="report"><span class="ticon" style="' + iconBg(app.store.state.settings, 'graphite') + '">' + BUG + '</span><span class="grow">' + t('report.title') + '<span class="psub">' + t('report.sub') + '</span></span>' + CHEV + '</button>' +
@@ -676,7 +675,6 @@ export function createPanel(app, onChange) {
         st.uiScale = v === 'auto' ? null : Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, uiScale(st) + +v * SCALE_STEP)) * 100) / 100;
         applyScale(st); changed(); return;
       }
-      if ((b = g('[data-seg="szdev"] [data-v]'))) { prevDev = b.dataset.v; render(); return; }
       if ((b = g('[data-skin]'))) { const st = app.store.state.settings; st.theme = st.theme === b.dataset.skin ? 'system' : b.dataset.skin; applyTheme(st); changed(); return; }
       if ((b = g('[data-seg="ontext"] [data-v]'))) { app.store.state.settings.onText = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if (g('[data-ownbgreset]')) { delete app.store.state.settings.ownBg; applyTheme(app.store.state.settings); changed(); return; }

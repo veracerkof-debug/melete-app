@@ -59,10 +59,12 @@ describe('глайдер: эффекты', () => {
     expect(fx.vib.on).toBe(true);
     expect(fx.bright.on).toBe(false);
     expect(s.fx).toBe(fx);
-    expect(normalizeFx({}).bright.on).toBe(true);
+    expect(normalizeFx({}).bright.on).toBe(false);
+    expect([normalizeFx({}).vol.on, normalizeFx({}).echo.on]).toEqual([true, true]); // умолчание 06.11.2026: громкость и эхо
   });
   it('громкость: внизу тише, вверху полная; без эффекта — 1', () => {
     const fx = defaultFx();
+    fx.vol.on = false;
     expect(voiceFx(fx, 0).volGain).toBe(1);
     fx.vol.on = true;
     expect(voiceFx(fx, 0).volGain).toBeCloseTo(0.1);

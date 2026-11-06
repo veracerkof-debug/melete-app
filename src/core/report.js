@@ -39,8 +39,16 @@ export async function deviceInfo(app) {
 }
 
 // Текст отчёта целиком (его и видит человек перед отправкой)
-export async function reportText(app, what = '', withLog = true) {
-  const now = new Date(), log = entries();
+// Сколько журнала приложить (слово автора 06.11.2026: не всё сразу): m10 — 10 минут, hour — час, day — с полуночи, all — всё
+export const LOG_SPANS = ['m10', 'hour', 'day', 'all'];
+export function spanFrom(span, now = Date.now()) {
+  if (span === 'm10') return now - 10 * 60e3;
+  if (span === 'hour') return now - 3600e3;
+  if (span === 'day') { const d = new Date(now); d.setHours(0, 0, 0, 0); return +d; }
+  return 0;
+}
+export async function reportText(app, what = '', withLog = true, span = 'all') {
+  const now = new Date(), from = spanFrom(span, +now), log = entries().filter((l) => l[0] >= from);
   const head = ['Отчёт о проблеме — Melete', now.toLocaleString('ru-RU'), ''];
   const body = [what.trim() ? 'Что случилось:\n' + what.trim() : 'Что случилось: (не описано)', '', '— Устройство —', ...(await deviceInfo(app)), ''];
   // последнее падение приложения на Android (CrashLog.java) — только техническое: время, модель, стек вызовов
@@ -56,7 +64,7 @@ export async function reportText(app, what = '', withLog = true) {
     body.push(found.length ? found.map((f) => (f.sev === 'bad' ? '✗ ' : f.sev === 'warn' ? '! ' : 'i ') + t('diag.f.' + f.id, f.vars) + ' — ' + t('diag.h.' + (f.hint || f.id), f.vars)).join('\n') : 'находок нет');
     body.push('', 'Сводка для разработчика:', JSON.stringify(machine(S, env)), '');
   } catch (e) { body.push('— Диагностика недоступна: ' + (e && e.message) + ' —', ''); }
-  const imp = important(), day = (x) => new Date(x).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ' ';
+  const imp = important().filter((l) => l[0] >= from), day = (x) => new Date(x).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ' ';
   const tail = withLog ? ['— Журнал (' + (log.length ? stamp(log[0][0]) + '–' + stamp(log.at(-1)[0]) : 'пусто') + ', записей: ' + log.length + ') —', logText(log), '', '— Важное за 7 дней (предупреждения и ошибки: ' + imp.length + ') —', imp.map((l) => day(l[0]) + logText([l])).join('\n')] : ['— Журнал не приложен —'];
   return [...head, ...body, ...tail].join('\n');
 }

@@ -20,13 +20,10 @@ test('варианты и ревербы Airwindows', async ({ page, melete, err
     return out;
   });
   expect(r).toEqual({ galactic: { ok: true, loud: true }, verbity: { ok: true, loud: true } });
-  // раздел «Варианты» (сборка у себя — канал dev)
+  // раздел «Варианты» (сборка у себя — канал dev) — только когда есть что выбирать; сейчас вариантов нет (05–06.11.2026)
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
-  await melete.click('[data-act="variants"]'); await page.waitForTimeout(400);
-  // подписи вкладок решены (05.11.2026): вариантов нет, вкладки — со значком и подписью
-  await expect(page.locator('.sheet')).toContainText('вариантов на выбор нет');
+  await expect(page.locator('[data-act="variants"]')).toHaveCount(0);
   await expect(page.locator('html.tablabels')).toHaveCount(1);
-  await expect(page.locator('.tabbar .tab .tl').first()).toBeVisible();
   // звук пространств — обычная настройка звука (не вариант)
   const al = await page.evaluate(async () => (await import('/src/audio/perf.js')).verbAlgo());
   expect(al).toBe('melete');

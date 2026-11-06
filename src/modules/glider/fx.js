@@ -5,12 +5,25 @@ import { FX, BUS_FX, fxValue } from './voice.js';
 
 const off = (extra = {}) => ({ on: false, amt: 1, curve: 'even', mode: 'axis', ...extra });
 
+// По умолчанию (слово автора 06.11.2026): громкость по высоте пальца и эхо; звук — синус, притяжение — «магнит»
 export function defaultFx() {
   const fx = Object.fromEntries(FX.map((k) => [k, off()]));
-  fx.bright.on = true;
-  fx.echo.time = 320;
-  fx.vol.amt = 0.9;
+  fx.vol.on = true; fx.vol.amt = 0.9;
+  fx.echo.on = true; fx.echo.amt = 0.4; fx.echo.mode = 'fixed'; fx.echo.time = 320;
   return fx;
+}
+// Прежнее умолчание (до 06.11.2026): у кого настройки не трогали — переходят на новое один раз
+export function oldDefaultFx() {
+  const fx = Object.fromEntries(FX.map((k) => [k, off()]));
+  fx.bright.on = true; fx.echo.time = 320; fx.vol.amt = 0.9;
+  return fx;
+}
+export function migrateDefaults(s, oldSounds) {
+  if (s.def3) return;
+  s.def3 = true;
+  if (!s.sound || oldSounds.includes(s.sound)) s.sound = 'sine';
+  if (!s.fx || (typeof s.fx === 'object' && JSON.stringify(s.fx) === JSON.stringify(oldDefaultFx()))) s.fx = defaultFx();
+  s.snap = s.snap || 'magnet';
 }
 
 // Готовые сочетания; названия — ключи i18n preset.<id>
@@ -26,7 +39,8 @@ export const PRESETS = {
 
 export function applyPreset(id) {
   const fx = defaultFx();
-  fx.bright.on = false;
+  FX.forEach((k) => { fx[k].on = false; }); // набор — с чистого листа (эхо и громкость умолчания не добавляются)
+  fx.echo.mode = 'axis'; fx.echo.amt = 1;
   Object.entries(PRESETS[id] || {}).forEach(([k, v]) => Object.assign(fx[k], v));
   return fx;
 }
@@ -39,7 +53,7 @@ export function normalizeFx(s) {
     return s.fx;
   }
   const fx = defaultFx();
-  if (typeof s.fx === 'string' && fx[s.fx]) { fx.bright.on = false; fx[s.fx].on = true; }
+  if (typeof s.fx === 'string' && fx[s.fx]) { FX.forEach((k) => { fx[k].on = false; }); fx[s.fx].on = true; }
   return (s.fx = fx);
 }
 

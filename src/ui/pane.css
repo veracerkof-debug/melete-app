@@ -124,3 +124,7 @@
 .tsw.fr,.hscroll.fr{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
 .tsw.fl,.hscroll.fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
 .tsw.fl.fr,.hscroll.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+/* Название в строке с кнопками (табы, плеер, лупер…) не наезжает на кнопки: одна строка с многоточием, кнопки не сжимаются
+   (слово автора 06.11.2026 — и в других местах) */
+.aname,.pane .ttl,.pane .stitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane .ntools>.ic,.pane .ntools>button:not(.sgrow),.pane .srow2>.ic,.pane .shead2>.ic,.pane .vrow>.ic{flex:none}

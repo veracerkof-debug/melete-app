@@ -20,7 +20,7 @@ import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
 import { microLabel } from '../../music/folk.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from '../glider/scale.js';
 import { createGlideVoice as glideVoice, createFxBus } from '../glider/voice.js';
-import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS } from '../glider/fx.js';
+import { normalizeFx, voiceFx, busFx, applyPreset, PRESETS, migrateDefaults } from '../glider/fx.js';
 import { twoHandSign, assign, palm, heightOf, characterOf, oneEuro, EDGE, pose, gestureValues, applyGestures, GESTURES, TARGETS, DEFAULT_MAP, RICH_MAP, PINCH_ON, PINCH_OFF } from './map.js';
 import { startHands } from './hands.js';
 import { readSign, chordOf, chordName, voicing, shapeOf, harmOf, harmOffsets, HARM_IDS, keySign, keyName, ACC_GESTURES } from './chords.js';
@@ -119,7 +119,8 @@ const cfg = () => {
   }
   // воздушные пэды для поклонения (airsound.js) заменили «Шиммер» в роли звука по умолчанию — один раз
   if (!s.air1) { s.air1 = true; if (!s.sound || s.sound === 'pad:shimmer') s.sound = 'pad:wair'; }
-  s.sound ??= 'pad:wair'; s.snap ??= 'magnet'; s.scale ??= 'chrom'; s.root ??= 0; s.side ??= 'right'; s.charX ??= true; s.showCam ??= true;
+  migrateDefaults(s, ['pad:wair', 'pad:shimmer', 'app']);
+  s.sound ??= 'sine'; s.snap ??= 'magnet'; s.scale ??= 'chrom'; s.root ??= 0; s.side ??= 'right'; s.charX ??= true; s.showCam ??= true;
   s.width ??= 12; s.lo ??= 60;
   if (!WIDTHS.includes(s.width)) s.width = 12;
   s.lo = clampLo(Number.isFinite(+s.lo) ? Math.round(+s.lo) : 60, s.width);

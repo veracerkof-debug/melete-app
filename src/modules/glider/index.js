@@ -19,7 +19,7 @@ import { scaleSelectHTML, folkInfoHTML, folkAct } from '../../ui/scalepick.js';
 import { microLabel } from '../../music/folk.js';
 import { SNAPS, WIDTHS, allowedPcs, posToMidi, midiToPos, snapPitch, nearest, clampLo, notesIn } from './scale.js';
 import { createGlideVoice, createFxBus, FX, CURVES } from './voice.js';
-import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS } from './fx.js';
+import { normalizeFx, voiceFx, busFx, applyPreset, axisFx, PRESETS, migrateDefaults } from './fx.js';
 import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from './melody.js';
 import { tabsHTML, chipHTML } from './settabs.js';
@@ -40,7 +40,8 @@ const M = { fol: null, id: null, last: null, raf: 0, play: null };
 
 const cfg = () => {
   const s = ctx.store.all();
-  s.sound ??= 'app'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true; s.keys ??= true;
+  migrateDefaults(s, ['app']);
+  s.sound ??= 'sine'; s.hold ??= true; s.snap ??= 'magnet'; s.port ??= 60; s.scale ??= 'chrom'; s.root ??= 0; s.labels ??= true; s.keys ??= true;
   s.mel = null; // мелодии по подсказке убраны (решение автора: демонстрации пока слабые)
   s.width ??= 12; s.lo ??= 60; // октава C4–C5: на телефоне по ширине в самый раз
   if (!WIDTHS.includes(s.width)) s.width = 12;

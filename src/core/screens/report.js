@@ -3,26 +3,28 @@
 // приложение один раз предлагает отправить отчёт; без согласия ничего не происходит.
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { t } from '../../i18n/index.js';
-import { esc, sheet, snav, sw, toast, leave } from '../../ui/index.js';
-import { reportText, sendReport, REPORT_EMAIL } from '../report.js';
+import { esc, sheet, snav, sw, seg, toast, leave } from '../../ui/index.js';
+import { reportText, sendReport, REPORT_EMAIL, LOG_SPANS } from '../report.js';
 import { log, logErr, crashedLast, crashSeen } from '../log.js';
 import { count as dCount } from '../diag.js';
 
 export function reportSheet(app) {
-  let withLog = true, shown = false;
+  let withLog = true, shown = false, span = 'all';
   const api = sheet(() => snav(t('report.title')) +
     '<p class="l2" style="margin:4px 4px 14px;font-size:15px;line-height:1.45">' + t('report.intro') + '</p>' +
     '<div class="group"><div class="cellcol"><textarea class="inp rptwhat" rows="4" maxlength="2000" placeholder="' + esc(t('report.ph')) + '" aria-label="' + esc(t('report.what')) + '"></textarea></div>' +
     '<div class="cell"><span class="grow">' + t('report.withLog') + '</span>' + sw('rptlog', true, t('report.withLog')) + '</div>' +
+    '<div class="cellcol rptspan"><span>' + t('report.span') + '</span><div style="margin-top:8px">' + seg('rptspan', LOG_SPANS.map((k) => [k, t('report.span.' + k)]), 'all', t('report.span')) + '</div></div>' +
     '<button class="cell act" data-rpt="show">' + t('report.show') + '</button></div>' +
     '<pre class="rptpre" hidden></pre>' +
     '<button class="btn fill rptsend" data-rpt="send" style="width:100%;margin-top:16px">' + t('report.send') + '</button>' +
     '<button class="btn rptcopy" data-rpt="copy" style="width:100%;margin-top:8px">' + t('report.copy') + '</button>' +
     '<p class="ftr">' + t('report.how', { email: REPORT_EMAIL }) + '</p>');
   const el = api.el, what = el.querySelector('.rptwhat'), pre = el.querySelector('.rptpre');
-  const text = () => reportText(app, what.value, withLog);
+  const text = () => reportText(app, what.value, withLog, span);
   const refresh = async () => { if (shown) pre.textContent = await text(); };
-  el.querySelector('[data-sw="rptlog"]').addEventListener('change', (e) => { withLog = e.target.checked; refresh(); });
+  el.querySelector('[data-sw="rptlog"]').addEventListener('change', (e) => { withLog = e.target.checked; el.querySelector('.rptspan').hidden = !withLog; refresh(); });
+  el.addEventListener('click', (e) => { const s = e.target.closest('[data-seg="rptspan"] [data-v]'); if (!s) return; span = s.dataset.v; el.querySelectorAll('[data-seg="rptspan"] [data-v]').forEach((x) => x.setAttribute('aria-pressed', x === s)); refresh(); });
   what.addEventListener('input', () => { clearTimeout(what._t); what._t = setTimeout(refresh, 400); });
   el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-rpt]');

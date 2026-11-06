@@ -26,6 +26,7 @@ export function backStep(app) {
   const ses = document.querySelector('.session.pure');
   if (ses && ses.parentElement.pureExit && ses.parentElement.pureExit()) return true; // окно сессии во весь экран — сначала из него
   if (click('.session [data-s="hide"]')) return true;
+  if (document.documentElement.classList.contains('arrange') && click('[data-arr="done"]')) return true; // правка вкладок и «Инструментов» — «Готово»
   if (app.homeEditDone && app.homeEditDone()) return true; // правка главной — «Готово»
   return app.shellBack ? app.shellBack() : false;
 }
