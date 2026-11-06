@@ -32,10 +32,9 @@ test('первый запуск: стартовый экран, не главн�
   expect(errors).toEqual([]);
 });
 
-test('вкладки: инструмент вниз и обратно; студии вкладкой нет (часть лупера с 30.10.2026)', async ({ page, melete, errors }) => {
-  await melete.open({ settings: { feat: { studio: true }, tabs: ['home', 'library', 'calendar', 'tools', 'studio'] } });
+test('вкладки: инструмент вниз и обратно; Студия — снова отдельный инструмент (06.11.2026)', async ({ page, melete, errors }) => {
+  await melete.open();
   const bar = () => page.evaluate(() => [...document.querySelectorAll('.tabbar .tab')].map((x) => x.dataset.tab));
-  expect(await bar()).not.toContain('studio'); // и у тех, у кого она была внизу
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-pp="tabs"]'); await page.waitForTimeout(450);
   await melete.click('[data-tabmk="metro"]'); await page.waitForTimeout(300);
@@ -47,6 +46,6 @@ test('вкладки: инструмент вниз и обратно; студ�
   await page.evaluate(() => document.querySelector('#panelLayer [data-close], #panelLayer .close')?.click());
   await page.waitForTimeout(300);
   await melete.tab('tools'); await page.waitForTimeout(400);
-  expect(await melete.count('[data-open-tool="studio"]')).toBe(0);
+  expect(await melete.count('[data-open-tool="studio"]')).toBe(1);
   expect(errors).toEqual([]);
 });

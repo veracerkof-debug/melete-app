@@ -375,6 +375,30 @@ export function splitClip(p, c, t, grid = 1) {
   return n;
 }
 
+// Вырезать отрезок [a, b) по всем дорожкам (слово автора 06.11.2026: «вырезать только определённую часть»): клипы на
+// краях режутся, середина убирается, всё после — сдвигается влево; точки огибающих и маркеры — так же. → сколько убрано
+export function cutRange(p, a, b) {
+  if (!(b > a)) return 0;
+  const d = b - a, eps = 1e-9;
+  [...p.clips].forEach((c) => { if (c.at < b - eps && c.at + c.len > b + eps) splitClip(p, c, b, 0); });
+  [...p.clips].forEach((c) => { if (c.at < a - eps && c.at + c.len > a + eps) splitClip(p, c, a, 0); });
+  const before = p.clips.length;
+  p.clips = p.clips.filter((c) => !(c.at >= a - eps && c.at + c.len <= b + eps));
+  p.clips.forEach((c) => { if (c.at >= b - eps) c.at = tq(c.at - d); });
+  (p.tracks || []).forEach((tr) => ['vol', 'pan'].forEach((k) => {
+    const pts = tr.auto && tr.auto[k];
+    if (Array.isArray(pts)) tr.auto[k] = pts.filter((x) => x.t < a || x.t >= b).map((x) => (x.t >= b ? { ...x, t: tq(x.t - d) } : x));
+  }));
+  if (Array.isArray(p.marks)) p.marks = p.marks.filter((m) => m.t < a || m.t >= b).map((m) => (m.t >= b ? { ...m, t: tq(m.t - d) } : m));
+  if (p.region) setRegion(p);
+  p.clips.sort((x, y) => x.at - y.at);
+  return before - p.clips.length;
+}
+// Сдвинуть клип на ms миллисекунд (тонкая подгонка, мимо сетки)
+export function nudgeClip(p, c, ms) {
+  c.at = tq(Math.max(0, Math.min(SONG_BARS_MAX * p.num - c.len, c.at + ms / 1000 / secPerBeat(p))));
+}
+
 /* ---------- ноты (содержимое d = { bars, notes }) ---------- */
 
 // Добавить или снять ноту в клетке (t — доля с сеткой, m — высота): есть такая — убирается, иначе — ставится длиной len

@@ -2,9 +2,9 @@
 import { test, expect } from './melete.js';
 
 test('смахивание меняет вид вопроса', async ({ page, melete, errors }) => {
-  await melete.open({ tools: { ear: { sec: 'dg', level: 'mid', dgKind: 'note' } } });
+  await melete.open({ tools: { ear: { sec: 'dg', level: 'mid', dgKind: 'note' }, train: { ch: 'ear' } } });
   await melete.tab('tools');
-  await melete.click('[data-open-tool="ear"]'); await page.waitForTimeout(900);
+  await melete.click('[data-open-tool="train"]'); await page.waitForTimeout(900); // «Слух и ритм», глава «Слух» (06.11.2026)
   const kind = async () => (await melete.toolsNow()).ear.dgKind;
   expect(await kind()).toBe('note');
   await melete.swipe('.ecard', -160, 0, { fx: 0.8 });

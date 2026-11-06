@@ -14,7 +14,7 @@ import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
-import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, humanizeNotes, secPerBeat, joinClips, clipAt, fitPiece, setTake, notesFromTake } from '../../music/project.js';
+import { newProject, newTrack, newData, normalizeProject, normalizeData, INSTRUMENTS, COLORS, GRIDS, BARS_MAX, DRUMS, projectEvents, songBars, addClip, dupClip, removeClip, splitClip, cutRange, nudgeClip, clipById, trackOf, clipsOf, dataBeats, isEmptyProject, projectTracks, setRegion, setMark, removeMark, markAt, pasteClip, clipCopy, quantizeNotes, humanizeNotes, secPerBeat, joinClips, clipAt, fitPiece, setTake, notesFromTake } from '../../music/project.js';
 import { stretchRender } from '../../audio/stretchrender.js';
 import { addPlayedNote } from '../../music/project.js';
 import { loadGM, gmReady, programName, kitName, FAMILIES, KITS } from '../../audio/gm.js';
@@ -42,7 +42,16 @@ let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, 
 // экран: { view: 'list' | 'song' | 'clip' | 'mix', pid, cid, bar, live (запись живого ввода) }; отмена и повтор: снимки проекта (JSON)
 const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0, sel: [], tool: null }; // auto — { tr, kind }: правка огибающей дорожки; sel — выделенные клипы
 const undo = { pid: null, last: '', stack: [], redo: [] };
-let clipBuf = null; // буфер обмена: слепок клипа (clipCopy)
+// буфер обмена (06.11.2026 — и группа): [{ c: слепок клипа (clipCopy), tr: id дорожки, d: сдвиг от первого, доли }]
+let clipBuf = null;
+const bufOf = (p, cs) => { const a0 = Math.min(...cs.map((c) => c.at)); return cs.map((c) => ({ c: clipCopy(p, c), tr: c.tr, d: c.at - a0 })); };
+// Вставить буфер с места at: на прежние дорожки (нет — на первую того же рода); tr — дорожка для одного клипа
+function pasteBuf(p, at, tr0 = null) {
+  if (!clipBuf || !clipBuf.length) return [];
+  const made = clipBuf.map((x) => { const tr = (clipBuf.length === 1 && tr0 && tr0.kind === x.c.kind ? tr0 : null) || p.tracks.find((y) => y.id === x.tr && y.kind === x.c.kind) || p.tracks.find((y) => y.kind === x.c.kind); return tr ? pasteClip(p, x.c, tr, at + x.d, 0) : null; }).filter(Boolean);
+  if (made.length < clipBuf.length) ctx.ui.toast(ctx.t('clip.max'));
+  return made;
+}
 // общее для частей студии (record.js)
 const S = { get ctx() { return ctx; }, get seq() { return seq; }, get pl() { return pl; }, get host() { return host; }, V, proj: () => proj(), save: () => save(), render: () => render(), trName: (tr) => trName(tr), st: () => st(), countIn: () => countIn(), recLat: () => recLat(),
   progress: (x) => { const el = host && host.querySelector('#stpos'); if (el) el.textContent = x == null ? '1.1' : Math.round(x * 100) + '%'; } }; // ход сведения — на месте такта
@@ -113,7 +122,7 @@ function transportHTML(p) {
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
     '<button class="stinfo" data-x="settings" aria-label="' + ui.esc(t('settings')) + '"><b class="num">' + p.bpm + '</b><span>' + ui.esc(keyLabel(p.key) + ' · ' + p.num + '/' + p.den) + '</span><i class="num" id="stpos">1.1</i><em class="stld" id="stld" hidden></em></button>' +
     ui.icb('data-x="click"', I.click, t('click'), 'sm plain' + (seq && seq.click ? ' on' : '')) + '</div>' +
-    '<div class="stgrp">' + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
+    '<div class="stgrp">' + (clipBuf && clipBuf.length ? ui.icb('data-x="paste"', I.paste, t('clip.pasteHere'), 'sm plain') : '') + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
 }
 // Шапка редактора клипа: назад, дорожка · такты куска (−/+), сетка (ноты), файл (запись)
 function clipHeadHTML(p, c, tr) {
@@ -321,7 +330,7 @@ function clipMenu(anchor, c) {
   holdMenu(anchor, [
     { icon: I.pen, label: t('clip.edit'), run: () => openClip(c) },
     { icon: I.copy, label: t('clip.dup'), run: () => { if (dupClip(p, c)) { save(); render(); } } },
-    { icon: I.paste, label: t('clip.copy'), run: () => { clipBuf = clipCopy(p, c); ctx.ui.toast(t('clip.copied')); } },
+    { icon: I.paste, label: t('clip.copy'), run: () => { clipBuf = bufOf(p, [c]); ctx.ui.toast(t('clip.copied')); } },
     ...(cur > c.at && cur < c.at + c.len ? [{ icon: I.cut, label: t('clip.split'), run: () => { if (splitClip(p, c, cur, 1)) { save(); render(); } } }] : []),
     { icon: I.loop, label: t('clip.loopHere'), run: () => { setRegion(p, c.at, c.at + c.len, 0.25); save(); render(); } },
     { icon: I.mutec, label: t(c.mute ? 'clip.unmute' : 'clip.mute'), run: () => { c.mute = !c.mute; save(); seq.audioChanged(); render(); } },
@@ -338,7 +347,7 @@ function emptyMenu(anchor, tr, beat) {
   holdMenu(anchor, [
     { icon: I.plus, label: t('clip.new'), run: () => createClip(tr, beat) },
     ...(tr.kind === 'notes' ? [{ icon: I.file, label: t('take.from'), run: () => takePicker(tr, beat) }] : []),
-    ...(clipBuf && clipBuf.kind === tr.kind ? [{ icon: I.paste, label: t('clip.paste'), run: () => { if (pasteClip(p, clipBuf, tr, beat, 1)) { save(); render(); } else ctx.ui.toast(t('clip.max')); } }] : []),
+    ...(clipBuf && clipBuf.some((x) => x.c.kind === tr.kind) ? [{ icon: I.paste, label: t('clip.paste'), run: () => { if (pasteBuf(p, beat, tr).length) { save(); render(); } } }] : []),
   ], trName(tr) + ' · ' + (Math.floor(beat / p.num) + 1));
 }
 // Удержание линейки: маркер здесь (или убрать), снять петлю
@@ -347,6 +356,7 @@ function rulerMenu(anchor, beat) {
   holdMenu(anchor, [
     m ? { icon: I.del, label: t('mark.remove'), danger: true, run: () => { removeMark(p, m); save(); render(); } }
       : { icon: I.flag, label: t('mark.add'), run: () => ui.sheet(() => ui.snav(t('mark.add')) + '<div class="group"><label class="cell"><input class="inp left" data-mk maxlength="30" placeholder="' + ui.esc(t('mark.name')) + '" aria-label="' + ui.esc(t('mark.name')) + '"></label></div>', (el, sh) => { const inp = el.querySelector('[data-mk]'); setTimeout(() => inp.focus(), 80); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') sh.close(); }); sh.onClose = () => {}; el.addEventListener('focusout', () => {}); inp.addEventListener('change', () => { setMark(p, beat, inp.value); save(); }); setMark(p, beat, ''); save(); }, { onClose: render }) },
+    ...(p.region ? [{ icon: I.cut, label: t('loop.cut'), danger: true, run: () => { const n = cutRange(p, p.region.a, p.region.b); save(); seq.audioChanged(); render(); ctx.ui.toast(t('loop.cutDone', { n })); } }] : []),
     ...(p.region ? [{ icon: I.loop, label: t('loop.clear'), run: () => { p.region = null; save(); render(); } }] : [{ icon: I.loop, label: t('loop.bar'), run: () => { const b0 = Math.floor(beat / p.num) * p.num; setRegion(p, b0, b0 + p.num, 1); save(); render(); } }]),
   ], (Math.floor(beat / p.num) + 1) + '.' + (Math.floor(beat % p.num) + 1));
 }
@@ -434,8 +444,34 @@ function trackMenu(anchor, tr) {
     ...(i > 0 ? [{ icon: I.up, label: t('tr.up'), run: () => move(-1) }] : []),
     ...(i < p.tracks.length - 1 ? [{ icon: I.down, label: t('tr.down'), run: () => move(1) }] : []),
     { icon: I.copy, label: t('tr.dup'), run: () => { const c = JSON.parse(JSON.stringify(tr)); c.id = newTrack().id; c.name = trName(tr) + ' 2'; p.tracks.splice(i + 1, 0, c); clipsOf(p, tr).forEach((cl) => { p.clips.push({ ...cl, id: newTrack().id.replace('tr', 'cl'), tr: c.id, data: JSON.parse(JSON.stringify(cl.data)) }); }); save(); render(); } },
+    ...(tr.kind === 'audio' && clipsOf(p, tr).some((c) => c.data.fileId) && ctx.jobs ? [{ icon: I.wave, label: t('tr.stems'), run: () => splitTrack(tr) }] : []),
     { icon: I.del, label: t('tr.delete'), danger: true, run: () => { p.tracks.splice(i, 1); p.clips = p.clips.filter((cl) => cl.tr !== tr.id); if (V.cid && !clip()) { V.view = 'song'; V.cid = null; } save(); render(); } },
   ], trName(tr));
+}
+// Разделить дорожку-запись на дорожки (слово автора 06.11.2026): вокал, ударные, бас, остальное — новыми дорожками
+// под ней, клипы на тех же местах; исходная дорожка выключается (не удаляется). Готовые дорожки файла — без пересчёта
+async function splitTrack(tr) {
+  const { t } = ctx, p = proj(), cs = clipsOf(p, tr).filter((c) => c.data.fileId), fid = cs[0] && cs[0].data.fileId, rec = fid && ctx.files.get(fid);
+  if (!rec) return;
+  // готовые дорожки этого файла (больше частей — лучше; улучшенные — если есть)
+  const have = ctx.files.list('audio').filter((r) => r.stem && r.stem.src === rec.id), modes = [...new Set(have.map((r) => r.stem.mode || '4'))].sort((a, b) => +b - +a);
+  let stems = modes.length ? (have.filter((r) => (r.stem.mode || '4') === modes[0] && r.stem.hq).length ? have.filter((r) => (r.stem.mode || '4') === modes[0] && r.stem.hq) : have.filter((r) => (r.stem.mode || '4') === modes[0] && !r.stem.hq)) : [];
+  if (!stems.length) {
+    if (!ctx.jobs.supported()) { ctx.ui.toast(t('tr.stemsWeb')); return; }
+    if (ctx.jobs.busy()) { ctx.ui.toast(t('tr.stemsBusy')); return; }
+    ctx.ui.toast(t('tr.stemsGo'));
+    try { stems = (await ctx.jobs.separate(rec, ctx.jobs.mode ? ctx.jobs.mode() : '4')).stems; } catch (e) { if (!(e && e.message === 'cancel')) { ctx.logErr(e); ctx.ui.toast(t('tr.stemsFail')); } return; }
+  }
+  if (!host || proj() !== p) return;
+  const at = p.tracks.indexOf(tr) + 1;
+  stems.forEach((st, k) => {
+    const nt = newTrack('audio', p.tracks.length); nt.name = t('part.' + st.stem.part) === 'part.' + st.stem.part ? st.stem.part : t('part.' + st.stem.part);
+    p.tracks.splice(at + k, 0, nt);
+    cs.filter((c) => c.data.fileId === fid).forEach((c) => { const n = pasteClip(p, { ...clipCopy(p, c), kind: 'audio' }, nt, c.at, 0); if (n) n.data.fileId = st.id; });
+  });
+  seq.setTrackMute(tr, true);
+  save(); seq.audioChanged(); render();
+  ctx.ui.toast(t('tr.stemsDone', { n: stems.length }));
 }
 function addTrackMenu(anchor) {
   const { t } = ctx, p = proj();
@@ -461,7 +497,7 @@ function selBar(ids) {
     ui.icb('data-sb="dup"', I.copy, t('clip.dup'), 'sm plain') +
     ui.icb('data-sb="loop"', I.loop, t(loopOn ? 'clip.toOnce' : 'clip.toLoop'), 'sm plain' + (loopOn ? ' on' : '')) +
     ui.icb('data-sb="mute"', I.mutec, t(cs.every((c) => c.mute) ? 'clip.unmute' : 'clip.mute'), 'sm plain') +
-    (one ? ui.icb('data-sb="copy"', I.paste, t('clip.copy'), 'sm plain') : '') +
+    ui.icb('data-sb="copy"', I.paste, t('clip.copy'), 'sm plain') + ui.icb('data-sb="cut"', I.scissors || I.cut, t('clip.cut'), 'sm plain') +
     ui.icb('data-sb="del"', I.del, t('clip.delete'), 'sm plain danger') +
     ui.icb('data-sb="none"', '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('sel.clear'), 'sm plain');
   void pieces;
@@ -480,7 +516,8 @@ function selAct(k) {
   if (k === 'dup') { const made = cs.slice().sort((a, b) => a.at - b.at).map((c) => dupClip(p, c)).filter(Boolean); if (made.length < cs.length) ctx.ui.toast(t('clip.max')); done(made.map((c) => c.id)); return; }
   if (k === 'loop') { const on = !cs.every((c) => c.loop); cs.forEach((c) => { c.loop = on; fitPiece(p, trackOf(p, c), c); }); ctx.ui.toast(t(on ? 'clip.loopOn' : 'clip.onceOn')); done(); return; }
   if (k === 'mute') { const m = !cs.every((c) => c.mute); cs.forEach((c) => { c.mute = m; }); done(); return; }
-  if (k === 'copy') { clipBuf = clipCopy(p, cs[0]); ctx.ui.toast(t('clip.copied')); return; }
+  if (k === 'copy') { clipBuf = bufOf(p, cs); ctx.ui.toast(t(cs.length > 1 ? 'clip.copiedN' : 'clip.copied', { n: cs.length })); return; }
+  if (k === 'cut') { clipBuf = bufOf(p, cs); cs.forEach((c) => { removeClip(p, c); if (V.cid === c.id) V.cid = null; }); ctx.ui.toast(t('clip.cutN', { n: cs.length })); done([]); return; }
   if (k === 'del') { cs.forEach((c) => { removeClip(p, c); if (V.cid === c.id) V.cid = null; }); done([]); return; }
 }
 // Шторка клипа (удержание клипа): править; по кругу или сплошной; тональность и скорость (запись — новым файлом рядом,
@@ -498,6 +535,9 @@ function clipEditSheet(c) {
     (audio && c.data.takes ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + ui.esc(t('clip.take')) + '</span>' + stepper('take', (takeIx() + 1) + ' / ' + c.data.takes.length, t('clip.take')) + '</div></div><p class="ftr">' + ui.esc(t('clip.takesHint')) + '</p>' : '') +
     '<div class="group" style="margin-top:12px"><div class="cellcol">' + ui.seg('celoop', [['1', t('clip.loop')], ['0', t(audio ? 'clip.audioOnce' : 'clip.once')]], c.loop ? '1' : '0', t('clip.mode')) + '</div></div>' +
     '<p class="ftr">' + ui.esc(t(audio ? 'clip.audioLoopHint' : 'clip.loopHint')) + '</p>' +
+    // тонкий сдвиг мимо сетки (слово автора 06.11.2026: «тонко донастроить по миллисекундам»)
+    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + ui.esc(t('clip.nudge')) + '<span class="st l2" style="display:block;font-size:12.5px">' + ui.esc(t('clip.nudgeAt', { ms: Math.round(c.at * secPerBeat(p) * 1000) })) + '</span></span><span class="stnudge">' +
+      [-10, -1, 1, 10].map((ms) => '<button type="button" class="lchip" data-cn="' + ms + '" aria-label="' + ui.esc(t('clip.nudge') + ' ' + (ms > 0 ? '+' : '') + ms + ' ' + t('ms')) + '">' + (ms > 0 ? '+' : '−') + Math.abs(ms) + '</button>').join('') + '</span></div></div>' +
     (drums ? '' : '<div class="group"><div class="cell"><span class="grow">' + ui.esc(t('clip.semi')) + '</span>' + stepper('semi', semiTxt(semi), t('clip.semi')) + '</div>') +
     (drums ? '<div class="group">' : '') +
     '<div class="cellcol"><span>' + ui.esc(t('clip.rate')) + '</span>' + ui.seg('cerate', rates.map(([v, l]) => [String(v), l]), String(rate), t('clip.rate')) + '</div>' +
@@ -515,6 +555,7 @@ function clipEditSheet(c) {
       if ((b = e.target.closest('[data-ce="edit"]'))) { sh.close(); if (audio) filePicker(c); else openClip(c); }
       else if ((b = e.target.closest('[data-ce="more"]'))) { sh.close(); setTimeout(() => clipMenu(host.querySelector('#stsel') || host, c), 220); }
       else if ((b = e.target.closest('[data-seg="celoop"] [data-v]'))) { c.loop = b.dataset.v === '1'; fitPiece(p, tr, c); save(); seq.audioChanged(); sh.update(); if (pl) pl.draw(); selBar(V.sel); }
+      else if ((b = e.target.closest('[data-cn]'))) { nudgeClip(p, c, +b.dataset.cn); save(); seq.audioChanged(); sh.update(); if (pl) pl.draw(); }
       else if ((b = e.target.closest('[data-cs]'))) {
         const k = b.dataset.cs, d = +b.dataset.d;
         if (k === 'take') { setTake(c, takeIx() + d); save(); seq.audioChanged(); sh.update(); if (pl) pl.draw(); return; } // дубль — по кругу
@@ -684,6 +725,7 @@ function act(x, el) {
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
     case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
+    case 'paste': { const p = proj(), made = pasteBuf(p, pl ? pl.cursor : 0); if (made.length) { save(); seq.audioChanged(); render(); if (pl) { pl.selection = made.map((c) => c.id); pl.draw(); } selBar(made.map((c) => c.id)); } break; }
     case 'toSong': if (V.embed) { V.embed.close(); break; } V.view = 'song'; V.auto = null; render(); break;
     case 'play': { // пауза: стоп запоминает место, следующий старт — оттуда (в начало — кнопкой перемотки)
       if (rec.busy) { rec.stop(true); break; }

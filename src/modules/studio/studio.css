@@ -169,3 +169,4 @@
 /* Редактор партии в лупере (вид «Партии»): на узком экране шапка в две строки — название целиком сверху */
 @container (max-width: 520px){.stwrap.embed .sthead{flex-wrap:wrap;row-gap:4px}.stwrap.embed .sttitle{flex:1 1 calc(100% - 80px)}}
 .lpped{container-type:inline-size}
+.stnudge{display:flex;gap:6px;flex:none}.stnudge .lchip{min-width:44px;min-height:40px;justify-content:center;font-variant-numeric:tabular-nums}

@@ -273,3 +273,27 @@ describe('студия: клипы по кругу и сплошные, разр
     expect(normalizeProject(old).clips.every((x) => x.loop)).toBe(true);
   });
 });
+
+// Студия (06.11.2026): вырезать отрезок по всем дорожкам, сдвиг по миллисекундам
+import { cutRange, nudgeClip } from '../src/music/project.js';
+describe('вырезать отрезок', () => {
+  it('клипы на краях режутся, середина убирается, дальше — сдвиг влево', () => {
+    const p = newProject();
+    const tr = p.tracks.find((x) => x.kind === 'notes') || p.tracks[0];
+    p.clips = [];
+    const c1 = addClip(p, tr, 0); c1.len = 8; // 0..8
+    const c2 = addClip(p, tr, 12); c2.len = 4; // 12..16
+    const n = cutRange(p, 4, 6);
+    expect(n).toBe(1);
+    const at = p.clips.map((c) => [c.at, c.len]).sort((x, y) => x[0] - y[0]);
+    expect(at).toEqual([[0, 4], [4, 2], [10, 4]]);
+  });
+  it('сдвиг на миллисекунды — мимо сетки, не раньше нуля', () => {
+    const p = newProject(); p.bpm = 120; p.clips = [];
+    const c = addClip(p, p.tracks[0], 4);
+    nudgeClip(p, c, 50); // 0,05 с = 0,1 доли при 120
+    expect(c.at).toBeCloseTo(4.1, 5);
+    nudgeClip(p, c, -100000);
+    expect(c.at).toBe(0);
+  });
+});

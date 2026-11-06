@@ -143,6 +143,8 @@ export function createJobs(files) {
     busy: () => !!cur,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     supported: () => stemsSupported(),
+    // сколько дорожек делит это устройство: компьютер — 4, телефон — вокал и инструментал (DECISIONS «Телефон лёгкий»)
+    mode: () => (isDesktop() ? '4' : '2'),
     // пакет модели, который нужно скачать для разделения (src/core/packs.js), или null
     pack: () => stemsPack(),
     // → Promise<{ stems, absent }>; занято — отказ 'busy'
