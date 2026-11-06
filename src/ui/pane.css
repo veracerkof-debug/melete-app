@@ -128,3 +128,4 @@
    (слово автора 06.11.2026 — и в других местах) */
 .aname,.pane .ttl,.pane .stitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pane .ntools>.ic,.pane .ntools>button:not(.sgrow),.pane .srow2>.ic,.pane .shead2>.ic,.pane .vrow>.ic{flex:none}
+.tswb.tsets{flex:0 0 auto;min-width:40px;font-size:16px;letter-spacing:.05em}
