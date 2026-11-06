@@ -12,7 +12,7 @@ test('копии на устройстве: запись, список, чтен
     const list = await S.list(), back = await S.read(id);
     return { n: list.filter((x) => x.kind === 'update').length, day: list.some((x) => x.kind === 'day'), title: back.songs[0].title, by: back.backupInfo.by };
   });
-  expect(r).toEqual({ n: 3, day: true, title: 'Песня', by: 'Тест' });
+  expect(r).toEqual({ n: 1, day: true, title: 'Песня', by: 'Тест' }); // перед обновлением — одна (06.11.2026)
   void errors;
 });
 
