@@ -1,5 +1,6 @@
 # зависимости и сборка
-node_modules/
+node_modules
+/node_modules
 dist/
 .vite/
 # сквозные проверки (Playwright): отчёт и трассы падений
