@@ -51,6 +51,7 @@
     "@tauri-apps/plugin-dialog": "^2.8.3",
     "@tauri-apps/plugin-fs": "^2.7.1",
     "fflate": "0.8.3",
+    "jsqr": "1.4.0",
     "mp4-muxer": "5.2.2",
     "onnxruntime-web": "^1.30.0",
     "pdfjs-dist": "^6.4.299",

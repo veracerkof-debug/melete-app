@@ -11,7 +11,7 @@ test('арпеджиатор: играет с пэдом, стоит без не
   const T = '.session .pane[data-tool="drone"] ';
   await melete.swipe(T + '.dtile[data-v="0"]', 0, 0, { steps: 1 });
   const s0 = await stat(page);
-  await page.click(T + '[data-x="darp"]'); await page.waitForTimeout(1500);
+  await page.click(T + '[data-x="darp"]'); await page.waitForTimeout(2600);
   await expect(page.locator(T + '.darp.on')).toHaveCount(1);
   const s1 = await stat(page);
   expect(s1.notes - s0.notes).toBeGreaterThan(3);

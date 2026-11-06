@@ -3,7 +3,7 @@
 import { test, expect } from './melete.js';
 
 test('слух и ритм: одна карточка, главы переключаются и выключаются', async ({ page, melete, errors }) => {
-  await melete.open({ settings: { quick: ['metro', 'ear', 'beat'] } });
+  await melete.open({ settings: { quick: ['metro', 'ear', 'beat'], trainMig: false } }); // как у прежних версий: переход ещё не делался
   expect((await melete.settings()).quick).toEqual(['metro', 'train']); // прежний быстрый доступ — к общему инструменту
   await melete.tab('tools');
   await expect(page.locator('.tgrid [data-open-tool="train"]')).toHaveCount(1);
