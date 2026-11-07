@@ -456,6 +456,7 @@ function syncHTML(app) {
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
   return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + (pc.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(pc.fp)) : '') + '</span></span></div>' +
     '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
+    (app.mesh && app.mesh.avail ? '<button class="cell act" data-act="pcrc">' + t('rc.open') + '</button>' : '') + // пульт компьютера (Melete DEV)
     '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
     '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
@@ -476,7 +477,7 @@ function meshHTML(app) {
     '</div>' +
     '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
     devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
-      '<button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button><button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>').join('') +
+      '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button><button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button><button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>').join('') +
     '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button></div>' +
     '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('mesh.hint') + '</p>';
 }
@@ -771,6 +772,8 @@ export function createPanel(app, onChange) {
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }
+      if (g('[data-act="devrc"]')) { const dv = devsOf().find((x) => x.addr === g('[data-act="devrc"]').dataset.a); if (dv) import('./remote.js').then((m) => m.remoteSheet(app, dv)); return; }
+      if (g('[data-act="pcrc"]')) { const pc = pcOf(); if (pc) import('./remote.js').then((m) => m.remoteSheet(app, pc)); return; }
       if (g('[data-act="devforget"]')) { forgetDev(g('[data-act="devforget"]').dataset.a); syncMsg = ''; render(); return; }
       if (g('[data-act="devsync"]') && !syncBusy) {
         const a = g('[data-act="devsync"]').dataset.a;

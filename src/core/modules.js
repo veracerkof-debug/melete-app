@@ -193,6 +193,8 @@ export function makeCtx(app, mod) {
     onPlay: (fn) => { (app.playTaps || (app.playTaps = new Set())).add(fn); return () => app.playTaps.delete(fn); },
     // Пульт снаружи (медиасессия — браслет, часы, наушники; core/player.js): { title() — что звучит или null, next(), prev() }
     remote: (o) => { (app.remote || (app.remote = {}))[mod.id] = o; },
+    // Пульт с другого устройства (Melete DEV, src/core/netctl.js): { state() — что сейчас, cmd(c) — сделать }; null — убрать
+    net: (o) => { const N = app.net || (app.net = {}); if (o) N[mod.id] = o; else delete N[mod.id]; },
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)

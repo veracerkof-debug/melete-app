@@ -130,6 +130,8 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   if ((req.query.auto || (req.json && req.json.auto)) && ctx.busy && ctx.busy()) return { status: 503, json: { error: 'busy' } };
   const F = app.files;
   // ансамбль (ensemble.js): опрос участника и сверка часов — без ожидания тишины
+  // пульт с сопряжённого устройства (netctl.js) — без ожидания тишины
+  if (req.path.startsWith('/melete/v1/rc/')) return ctx.rc ? ctx.rc(req.path, req.json, { key: req.key, name: peer.name }) : { status: 404, json: {} };
   if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
@@ -201,8 +203,8 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
       const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
-      save();
+      res = await handleRequest({ app, mem, rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      if (!u.pathname.startsWith('/melete/v1/rc/')) save(); // пульт опрашивает раз в секунду — хранить нечего
       if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta' || u.pathname === '/melete/v1/pair') { if (app.render && u.pathname !== '/melete/v1/pair') app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }
     return res;

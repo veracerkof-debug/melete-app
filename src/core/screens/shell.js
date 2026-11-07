@@ -130,6 +130,8 @@ export function createShell(app, root) {
     requestAnimationFrame(step);
   }
 
+  // открыть инструмент поверх (пульт с другого устройства — netctl.js)
+  app.showTool = (id) => { if (app.openTool) app.openTool(id); else openToolView(app, id, render); };
   tabSwipe = {
     ok: (tg) => !!tg.closest('#main') && !view.song && !homeEditing() && !document.documentElement.classList.contains('arrange') &&
       !PLAY_TABS.includes(tabModuleOf(app.store.state.settings, view.tab)) && !tg.closest('.btext, [data-noswipe]'),

@@ -565,3 +565,17 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .hsrow.met .hsbar i{background:var(--green,#34C759)}
 .hsv{font-size:13px;color:var(--l2);white-space:nowrap}
 .hstudy .hhdr{display:flex;align-items:center;justify-content:space-between}.hsset{min-width:40px;min-height:40px;font-size:17px;font-weight:700;color:var(--l2)}
+/* Пульт другого устройства (screens/remote.js) */
+.rc .rcnow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:6px 4px}
+.rc .rcnow b{font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc .rcseek{width:100%;margin:4px 0 10px}
+.rc .rcrow{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.rc .rcrow.small{gap:6px;font-size:14px}
+.rc .rcrow.small .l2{margin-left:8px}
+.rcb{min-width:44px;min-height:44px;padding:0 10px;border-radius:999px;background:var(--fill);color:var(--ink);font-weight:600;font-size:15px}
+.rcb.main{min-width:64px;min-height:56px;background:var(--tint);color:var(--on-tint);font-size:18px}
+.rc .rcstem{display:flex;align-items:center;gap:10px}
+.rc .rcstem input{flex:1;min-width:0}
+.rc .rcpart{width:96px;flex:none}
+.rc .rcpct{width:36px;text-align:right;color:var(--l2)}
+.rc .rcq{width:100%;margin:0 0 8px}

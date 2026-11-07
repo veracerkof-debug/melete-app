@@ -866,6 +866,25 @@ function remoteStep(d) {
   if (host) render();
 }
 
+// Пульт с другого устройства (Melete DEV, шаг 2): что звучит, дорожки с громкостью — и команды
+const netRemote = {
+  state() {
+    const x = AU.cur, p = AU.el ? pl() : null;
+    return { id: x ? x.id : null, name: x ? x.name || '' : '', dur: (p && p.duration) || (x && x.dur) || 0, pos: (p && p.currentTime) || 0, playing: !!(x && p && !p.paused), rate: AU.rate,
+      key: x ? pitchOf(x)[0] : 0, stems: x ? stemsFor(x).map((r) => ({ part: r.stem.part, v: mixVal(x, r.stem.part) })) : [] };
+  },
+  async cmd(c) {
+    const x = AU.cur;
+    if (c.a === 'open') { const r = ctx.files.get(c.id); if (r && !r.stem) { load(r); await playEl(); } }
+    else if (c.a === 'play' && x) { if (pl().paused) await playEl(); else pl().pause(); }
+    else if (c.a === 'seek' && x) pl().currentTime = Math.max(0, Math.min(pl().duration || x.dur || 0, +c.t || 0));
+    else if (c.a === 'step') remoteStep(c.d < 0 ? -1 : 1);
+    else if (c.a === 'stem' && x && c.part) { mixSet(x, c.part, +c.v); mixApply(x); }
+    else if (c.a === 'rate') setRate(+c.r || 1);
+    else if (c.a === 'key' && x) setPitch(+c.p || 0, pitchOf(x)[1]);
+    if (host) render();
+  },
+};
 function libHTML() {
   const { t, tn } = ctx;
   let list = tracks().slice();
@@ -1675,6 +1694,7 @@ export default {
     host = el; ctx = c; size = sz;
     // пульт снаружи (браслет, часы, наушники — core/player.js): название записи и соседняя запись в порядке списка
     if (c.remote) c.remote({ title: () => (AU.cur && !pl().paused ? String(AU.cur.name || '').replace(/\.[a-z0-9]{2,5}$/i, '') : null), next: () => remoteStep(1), prev: () => remoteStep(-1) });
+    if (c.net) c.net(netRemote); // пульт с другого устройства (src/core/netctl.js)
     { const a = c.store.all(); if (a.sortOnce) { ML.sort = a.sortOnce; delete a.sortOnce; c.store.save(); } } // «Освободить место» — крупные сверху
     ensureEl(c);
     input = document.createElement('input');
@@ -1695,6 +1715,7 @@ export default {
   resize(sz) { size = sz; render(); },
   // Окно закрыто: вне сессии музыка останавливается (как в прототипе)
   unmount() {
+    if (ctx && ctx.net) ctx.net(null);
     clearInterval(uiTimer);
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }

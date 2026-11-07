@@ -273,3 +273,14 @@ describe('связь между телефонами', () => {
     expect(pcApp.files.get('fa')).toBeUndefined();
   });
 });
+
+describe('пульт через связь', () => {
+  it('без ключа — отказ, с ключом — к обработчику пульта с именем устройства', async () => {
+    const app = mkApp(), calls = [];
+    const ctx = { app, mem: { peers: { k1: { name: 'Pixel', at: 0 } } }, rc: async (p, j, peer) => { calls.push([p, j, peer]); return { status: 200, json: { ok: 1 } }; } };
+    expect((await handleRequest(ctx, { method: 'GET', path: '/melete/v1/rc/state', query: {}, key: 'чужой', json: null })).status).toBe(401);
+    const r = await handleRequest(ctx, { method: 'POST', path: '/melete/v1/rc/cmd', query: {}, key: 'k1', json: { a: 'play' } });
+    expect(r.json.ok).toBe(1);
+    expect(calls[0]).toEqual(['/melete/v1/rc/cmd', { a: 'play' }, { key: 'k1', name: 'Pixel' }]);
+  });
+});
