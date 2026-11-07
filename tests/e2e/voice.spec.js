@@ -13,7 +13,9 @@ const vs = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('practi
 
 test('экран: вход и лампочка, пресеты; шторки входа, пресета, цифр', async ({ page, melete, errors }) => {
   await open(page, melete);
-  await expect(page.locator('.voice .vc-in')).toHaveCount(1);
+  // вход и выход — две плашки рядом (07.11.2026), обе ведут в свои шторки
+  await expect(page.locator('.voice .vc-inrow [data-x="insheet"]')).toHaveCount(1);
+  await expect(page.locator('.voice .vc-inrow [data-x="outsheet"]')).toHaveCount(1);
   await expect(page.locator('.voice #vc-lamp')).toHaveCount(1);
   await expect(page.locator('.voice [data-preset="music"].on')).toHaveCount(1); // новичку — «Музыка», своих нет
   expect((await vs(page)).presets).toEqual([]);
@@ -22,6 +24,9 @@ test('экран: вход и лампочка, пресеты; шторки в�
   await melete.click('.voice [data-x="insheet"]');
   await expect(page.locator('.sheet [data-in]').first()).toBeVisible();
   await page.keyboard.press('Escape');
+  await melete.click('.voice [data-x="outsheet"]');
+  await expect(page.locator('.sheet [data-out=""][aria-pressed="true"]')).toHaveCount(1); // «как в системе»
+  await page.keyboard.press('Escape'); await page.waitForTimeout(500);
   await melete.click('.voice .vc-stage');
   await expect(page.locator('.sheet #vcd-pk')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -100,5 +105,21 @@ test('запись → метки → дубль → в медиатеку с м
   await page.waitForSelector('.voice [data-x="insheet"]', { timeout: 8_000 });
   await melete.click('.voice [data-x="more"]');
   await expect(page.locator('.sheet [data-kopen]')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+// Выходы (автор 07.11.2026): плашка на главном экране диктофона, все выходы, несколько сразу — звук во все
+test('выходы: плашка, несколько сразу, «как в системе» — снять всё', async ({ page, melete, errors }) => {
+  await open(page, melete);
+  await melete.click('.voice .vc-inrow [data-x="outsheet"]');
+  const outs = page.locator('.sheet [data-out]:not([data-out=""])');
+  expect(await outs.count()).toBeGreaterThan(1);
+  await outs.nth(0).click(); await outs.nth(1).click();
+  await page.waitForTimeout(200);
+  expect((await vs(page)).outs.length).toBe(2);
+  await expect(page.locator('.voice .vc-inrow [data-x="outsheet"] .vc-n')).toHaveText('2');
+  await page.locator('.sheet [data-out=""]').click(); await page.waitForTimeout(200);
+  expect((await vs(page)).outs).toEqual([]);
+  await page.keyboard.press('Escape');
   expect(errors).toEqual([]);
 });

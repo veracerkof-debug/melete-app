@@ -76,8 +76,22 @@ public class VoicePlugin extends Plugin {
             case AudioDeviceInfo.TYPE_LINE_ANALOG: return "line";
             case AudioDeviceInfo.TYPE_TELEPHONY: return "telephony";
             case AudioDeviceInfo.TYPE_REMOTE_SUBMIX: return "submix";
+            case AudioDeviceInfo.TYPE_FM: return "fm";
+            case AudioDeviceInfo.TYPE_FM_TUNER: return "fm_tuner";
+            case AudioDeviceInfo.TYPE_TV_TUNER: return "tv_tuner";
+            case AudioDeviceInfo.TYPE_LINE_DIGITAL: return "line_digital";
+            case AudioDeviceInfo.TYPE_AUX_LINE: return "aux_line";
+            case AudioDeviceInfo.TYPE_DOCK: return "dock";
+            case AudioDeviceInfo.TYPE_IP: return "ip";
+            case AudioDeviceInfo.TYPE_BUS: return "bus";
+            case 23: return "hearing_aid";   // TYPE_HEARING_AID (API 28)
+            case 24: return "speaker_safe";  // TYPE_BUILTIN_SPEAKER_SAFE (API 30)
             case 26: return "ble_headset";   // TYPE_BLE_HEADSET (API 31)
             case 27: return "ble_speaker";   // TYPE_BLE_SPEAKER
+            case 28: return "echo_reference"; // TYPE_ECHO_REFERENCE
+            case 29: return "hdmi_earc";
+            case 30: return "ble_broadcast";
+            case 31: return "dock_analog";
             default: return "other_" + t;
         }
     }
@@ -91,7 +105,40 @@ public class VoicePlugin extends Plugin {
         int[] ch = d.getChannelCounts();
         int max = 1; for (int c : ch) max = Math.max(max, c);
         o.put("channels", max);
+        int[] rates = d.getSampleRates();
+        int top = 0; for (int r : rates) top = Math.max(top, r);
+        if (top > 0) o.put("rateMax", top);
+        o.put("tech", isTech(d.getType()));
+        // встроенный микрофон: где он стоит и что о нём говорит система (getMicrophones, API 28) — по адресу устройства
+        if (Build.VERSION.SDK_INT >= 28 && d.isSource()) {
+            try {
+                for (android.media.MicrophoneInfo m : am.getMicrophones()) {
+                    if (m.getType() != d.getType() || !String.valueOf(m.getAddress()).equals(String.valueOf(d.getAddress()))) continue;
+                    JSObject mi = new JSObject();
+                    mi.put("desc", String.valueOf(m.getDescription()));
+                    mi.put("loc", m.getLocation()); // 1 — корпус, 2 — выдвижная часть, 3 — внешнее
+                    mi.put("dir", m.getDirectionality()); // 1 — всенаправленный, 2 — двусторонний, 3–6 — кардиоиды
+                    android.media.MicrophoneInfo.Coordinate3F pos = m.getPosition();
+                    if (pos != null && pos != android.media.MicrophoneInfo.POSITION_UNKNOWN) { mi.put("x", pos.x); mi.put("y", pos.y); mi.put("z", pos.z); }
+                    o.put("mic", mi);
+                    break;
+                }
+            } catch (Exception e) { /* описание микрофонов есть не везде */ }
+        }
         return o;
+    }
+
+    // Служебные устройства: показываются всё равно (слово автора 07.11.2026 — «любой источник, который я захочу»),
+    // но ниже обычных; записывать или звучать через них может не дать система
+    private static boolean isTech(int t) {
+        switch (t) {
+            case AudioDeviceInfo.TYPE_BUILTIN_MIC: case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER: case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE:
+            case AudioDeviceInfo.TYPE_WIRED_HEADSET: case AudioDeviceInfo.TYPE_WIRED_HEADPHONES: case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
+            case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP: case AudioDeviceInfo.TYPE_USB_DEVICE: case AudioDeviceInfo.TYPE_USB_HEADSET:
+            case AudioDeviceInfo.TYPE_USB_ACCESSORY: case AudioDeviceInfo.TYPE_HDMI: case AudioDeviceInfo.TYPE_LINE_ANALOG:
+            case 23: case 26: case 27: return false;
+            default: return true;
+        }
     }
 
     private AudioDeviceInfo find(int flags, int id) {
@@ -102,16 +149,9 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void devices(PluginCall call) {
         JSArray ins = new JSArray(), outs = new JSArray();
-        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
-            int t = d.getType();
-            if (t == AudioDeviceInfo.TYPE_TELEPHONY || t == AudioDeviceInfo.TYPE_REMOTE_SUBMIX || t == AudioDeviceInfo.TYPE_FM_TUNER) continue;
-            ins.put(devJson(d));
-        }
-        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-            int t = d.getType();
-            if (t == AudioDeviceInfo.TYPE_TELEPHONY || t == AudioDeviceInfo.TYPE_REMOTE_SUBMIX || t == AudioDeviceInfo.TYPE_FM || t == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE) continue;
-            outs.put(devJson(d));
-        }
+        // все входы и выходы, что видит система, — и служебные тоже (они помечены tech)
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_INPUTS)) ins.put(devJson(d));
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) outs.put(devJson(d));
         JSObject r = new JSObject();
         r.put("inputs", ins);
         r.put("outputs", outs);
@@ -411,9 +451,13 @@ public class VoicePlugin extends Plugin {
     public void play(PluginCall call) {
         stopPlayback();
         File f = fileOf(call);
-        int id = call.getInt("deviceId", -1);
         double from = call.getDouble("from", 0.0);
-        AudioDeviceInfo dev = id >= 0 ? find(AudioManager.GET_DEVICES_OUTPUTS, id) : null;
+        // выходы: deviceIds — несколько сразу (слово автора 07.11.2026: «звук сразу в два выхода»; опыт — Android может
+        // оставить один), deviceId — один, -1 — как решит система
+        java.util.List<AudioDeviceInfo> devs = new java.util.ArrayList<>();
+        JSArray ids = call.getArray("deviceIds");
+        try { if (ids != null) for (int i = 0; i < ids.length(); i++) { AudioDeviceInfo d = find(AudioManager.GET_DEVICES_OUTPUTS, ids.getInt(i)); if (d != null && !devs.contains(d)) devs.add(d); } } catch (Exception e) { /* неверный список — как один */ }
+        if (devs.isEmpty()) { int id = call.getInt("deviceId", -1); AudioDeviceInfo d = id >= 0 ? find(AudioManager.GET_DEVICES_OUTPUTS, id) : null; devs.add(d); }
         int rate, ch;
         long dataOff = 44;
         try (RandomAccessFile r = new RandomAccessFile(f, "r")) {
@@ -423,37 +467,48 @@ public class VoicePlugin extends Plugin {
         } catch (Exception e) { call.reject("read"); return; }
         final int fRate = rate, fCh = ch;
         int chMask = ch == 2 ? AudioFormat.CHANNEL_OUT_STEREO : AudioFormat.CHANNEL_OUT_MONO;
-        boolean ear = dev != null && dev.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
-        AudioAttributes attr = new AudioAttributes.Builder().setUsage(ear ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
         int min = AudioTrack.getMinBufferSize(rate, chMask, AudioFormat.ENCODING_PCM_16BIT);
-        final AudioTrack tr = new AudioTrack(attr, new AudioFormat.Builder().setSampleRate(rate).setChannelMask(chMask).setEncoding(AudioFormat.ENCODING_PCM_16BIT).build(),
-            Math.max(min * 2, rate / 5), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE);
-        if (dev != null) tr.setPreferredDevice(dev);
+        final java.util.List<AudioTrack> trs = new java.util.ArrayList<>();
+        for (AudioDeviceInfo dev : devs) {
+            boolean ear = dev != null && dev.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
+            AudioAttributes attr = new AudioAttributes.Builder().setUsage(ear ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
+            try {
+                AudioTrack tr = new AudioTrack(attr, new AudioFormat.Builder().setSampleRate(rate).setChannelMask(chMask).setEncoding(AudioFormat.ENCODING_PCM_16BIT).build(),
+                    Math.max(min * 2, rate / 5), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE);
+                if (tr.getState() != AudioTrack.STATE_INITIALIZED) { tr.release(); continue; }
+                if (dev != null) tr.setPreferredDevice(dev);
+                trs.add(tr);
+            } catch (Exception e) { /* этот выход не открылся — остальные звучат */ }
+        }
+        if (trs.isEmpty()) { call.reject("out"); return; }
         playing = true;
         final long start = dataOff + ((long) (from * rate) * ch * 2);
         playThread = new Thread(() -> {
             try (FileInputStream in = new FileInputStream(f)) {
                 in.skip(start);
                 byte[] buf = new byte[fRate / 20 * fCh * 2];
-                tr.play();
+                for (AudioTrack tr : trs) tr.play();
                 long played = (start - 44) / (fCh * 2);
                 int n;
                 while (playing && (n = in.read(buf)) > 0) {
-                    tr.write(buf, 0, n);
+                    for (AudioTrack tr : trs) tr.write(buf, 0, n); // каждый выход берёт свою копию; идут вровень — у всех одна частота
                     played += n / (fCh * 2);
                     JSObject p = new JSObject(); p.put("sec", played / (double) fRate); notifyListeners("pos", p);
                 }
             } catch (Exception e) { /* остановлено */ }
-            try { tr.stop(); } catch (Exception e) { /* уже */ }
-            tr.release();
+            for (AudioTrack tr : trs) { try { tr.stop(); } catch (Exception e) { /* уже */ } tr.release(); }
             boolean natural = playing;
             playing = false;
             JSObject e = new JSObject(); e.put("done", natural); notifyListeners("end", e);
         });
         playThread.start();
         JSObject r = new JSObject();
-        r.put("routed", tr.getRoutedDevice() == null ? -1 : tr.getRoutedDevice().getId());
+        AudioTrack t0 = trs.get(0);
+        r.put("routed", t0.getRoutedDevice() == null ? -1 : t0.getRoutedDevice().getId());
+        JSArray routed = new JSArray();
+        for (AudioTrack tr : trs) routed.put(tr.getRoutedDevice() == null ? -1 : tr.getRoutedDevice().getId());
+        r.put("routedAll", routed);
         call.resolve(r);
     }
 
