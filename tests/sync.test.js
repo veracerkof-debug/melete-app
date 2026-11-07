@@ -244,3 +244,32 @@ describe('QR сопряжения', () => {
     expect(parsePair('MELETE-PAIR;a=1.2.3.4;c=12')).toBeNull();
   });
 });
+
+// Связь всех со всеми (Melete DEV, 07.11.2026): телефон принимает подключения другого телефона — тот же протокол;
+// сопряжённый телефон — в списке устройств, компьютер остаётся отдельным; синхронизация идёт с выбранным устройством
+describe('связь между телефонами', () => {
+  it('телефон ↔ телефон: сопряжение в список устройств, синхронизация в обе стороны, компьютер не тронут', async () => {
+    const { devsOf } = await import('../src/core/sync.js');
+    globalThis.localStorage = mkLS();
+    const a = mkApp(), b = mkApp(), pcApp = mkApp();
+    const bCtx = { app: b, mem: {}, code: '111222', name: 'Pixel' }, pcCtx = { app: pcApp, mem: {}, code: '333444', name: 'PC' };
+    const phoneLink = (ctx) => { const L = link(ctx); return async (m, url, o = {}) => (new URL(url).pathname === '/melete/v1/hello' ? { app: 'melete', v: 1, name: ctx.name, kind: 'phone' } : L(m, url, o)); };
+    await pair('192.168.1.5', '333444', 'Телефон', link(pcCtx)); // компьютер — как раньше
+    const d = await pair('192.168.1.7', '111222', 'Телефон', phoneLink(bCtx));
+    expect(d.phone).toBe(true);
+    expect(devsOf().map((x) => x.name)).toEqual(['Pixel']);
+    expect(pcOf().name).toBe('PC');
+    a.store.replaceState({ ...a.store.state, songs: [song('s1', 'Песня A', 100)] });
+    b.store.replaceState({ ...b.store.state, songs: [song('s2', 'Песня B', 100)] });
+    await a.files.add({ id: 'fa', name: 'a.wav', type: 'audio/wav', kind: 'audio', blob: bytes(3000, 1) });
+    await b.files.add({ id: 'fb', name: 'b.wav', type: 'audio/wav', kind: 'audio', blob: bytes(2000, 2) });
+    const r = await syncNow(a, () => {}, phoneLink(bCtx), { dev: d.addr });
+    expect(r).toMatchObject({ up: 1, down: 1 });
+    expect(b.store.songs().map((s) => s.title).sort()).toEqual(['Песня A', 'Песня B']);
+    expect(a.files.get('fb').blob.size).toBe(2000);
+    expect(b.files.get('fa').blob.size).toBe(3000);
+    expect(devsOf()[0].last).toBeGreaterThan(0);
+    expect(pcOf().last).toBe(0); // синхронизация с телефоном не трогает запись компьютера
+    expect(pcApp.files.get('fa')).toBeUndefined();
+  });
+});

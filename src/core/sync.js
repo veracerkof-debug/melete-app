@@ -181,58 +181,83 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
 // демо-набор между устройствами не ходит (demo.js)
 const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.list(k)).filter((r) => !isDemoFile(r, CORE_DICTS)) : []);
 
-// Компьютер: сервер в Rust ↔ этот обработчик. → { start, stop, state, forget(key), subscribe }
-export function createSyncServer(app, { isDesktop }) {
-  const avail = isDesktop();
+// Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон тоже принимает подключения — плагин Mesh
+// (MeshServer.java: TLS, свой сертификат), тот же протокол и обработчик, что у компьютера. В pre — только компьютер.
+export const meshAvail = () => Capacitor.getPlatform() === 'android' && typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'dev';
+// Сервер ↔ этот обработчик: компьютер — Rust (sync.rs, события Tauri), телефон DEV — плагин Mesh (transport: 'mesh').
+// → { start, stop, state, forget(key), subscribe }
+export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
+  const mesh = transport === 'mesh', avail = mesh ? meshAvail() : isDesktop(), onKey = mesh ? 'meshOn' : 'on';
   const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
-  let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null;
+  let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null, M = null;
   const mem = readLS(), incoming = new Map();
+  const save = () => writeLS({ ...readLS(), peers: mem.peers, [onKey]: mem[onKey] }); // у телефона там же его собственные подключения
   const core = () => import('@tauri-apps/api/core');
-  async function onReq(e) {
-    const r = e.payload || {}, { invoke } = await core();
+  const plugin = () => (M ??= registerPlugin('Mesh'));
+  // запрос → ответ; r: { rid, method, url, key, raw }
+  async function handle(r) {
     let res;
     try {
-      const u = new URL(r.url, 'http://x'), raw = r.len ? new Uint8Array(await invoke('sync_body', { rid: r.rid })) : new Uint8Array();
+      const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, ens: app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
-      writeLS({ peers: mem.peers, on: mem.on });
-      if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta') { if (app.render) app.render(); emit(); }
+      res = await handleRequest({ app, mem, ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      save();
+      if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta' || u.pathname === '/melete/v1/pair') { if (app.render && u.pathname !== '/melete/v1/pair') app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }
+    return res;
+  }
+  async function onReq(e) {
+    const r = e.payload || {}, { invoke } = await core();
+    const raw = r.len ? new Uint8Array(await invoke('sync_body', { rid: r.rid })) : new Uint8Array();
+    const res = await handle({ ...r, raw });
     const body = res.bytes || new TextEncoder().encode(JSON.stringify(res.json || {}));
     await invoke('sync_reply', body, { headers: { rid: String(r.rid), status: String(res.status), ctype: res.bytes ? 'application/octet-stream' : 'application/json' } }).catch(() => {});
   }
+  async function onMesh(r) {
+    const res = await handle({ ...r, raw: r.b64 ? b64.to(r.b64) : new Uint8Array() });
+    const body = res.bytes || new TextEncoder().encode(JSON.stringify(res.json || {}));
+    await plugin().reply({ rid: r.rid, status: res.status, ctype: res.bytes ? 'application/octet-stream' : 'application/json', b64: b64.from(body) }).catch(() => {});
+  }
   return {
     avail,
+    mesh,
     get state() { return state; },
     get peers() { return Object.entries(mem.peers || {}).map(([key, p]) => ({ key, ...p })); },
-    wasOn: () => !!mem.on,
+    wasOn: () => !!mem[onKey],
     async start() {
       if (!avail) return state;
-      const { invoke } = await core();
-      if (!un) { const { listen } = await import('@tauri-apps/api/event'); un = await listen('sync-req', onReq); }
-      // порт занят (открыто другое окно Melete с «Принимать телефон»): раньше молчали и показывали «вкл», а телефону
-      // отвечало другое приложение — «компьютер забыл этот телефон»
-      if (!unErr) {
-        const { listen } = await import('@tauri-apps/api/event');
-        unErr = await listen('sync-error', (e) => { log('sync', 'порт занят: ' + e.payload, 'w'); state = { ...state, on: false, code: '', err: 'port' }; mem.on = false; writeLS({ peers: mem.peers, on: false }); emit(); });
+      if (mesh) {
+        if (!un) un = await plugin().addListener('req', onMesh);
+        let r;
+        try { r = await plugin().start({ port: PORT }); } catch (e) { state = { ...state, on: false, code: '', err: 'port' }; emit(); throw e; }
+        state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: PORT, err: '', fp: r.fp || '' };
+      } else {
+        const { invoke } = await core();
+        if (!un) { const { listen } = await import('@tauri-apps/api/event'); un = await listen('sync-req', onReq); }
+        // порт занят (открыто другое окно Melete с «Принимать телефон»): раньше молчали и показывали «вкл», а телефону
+        // отвечало другое приложение — «компьютер забыл этот телефон»
+        if (!unErr) {
+          const { listen } = await import('@tauri-apps/api/event');
+          unErr = await listen('sync-error', (e) => { log('sync', 'порт занят: ' + e.payload, 'w'); state = { ...state, on: false, code: '', err: 'port' }; mem[onKey] = false; save(); emit(); });
+        }
+        const r = await invoke('sync_start');
+        state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '', fp: r.fp || '' };
       }
-      const r = await invoke('sync_start');
-      state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '', fp: r.fp || '' };
-      mem.on = true; writeLS({ peers: mem.peers, on: true });
-      log('sync', 'связь с телефоном включена: ' + state.ips.join(', '));
+      mem[onKey] = true; save();
+      log('sync', (mesh ? 'приём подключений включён: ' : 'связь с телефоном включена: ') + state.ips.join(', '));
       emit();
       return state;
     },
     async stop() {
       if (!avail) return;
-      const { invoke } = await core();
-      await invoke('sync_stop').catch(() => {});
+      if (mesh) await plugin().stop().catch(() => {});
+      else { const { invoke } = await core(); await invoke('sync_stop').catch(() => {}); }
       state = { ...state, on: false, code: '' };
-      mem.on = false; writeLS({ peers: mem.peers, on: false });
+      mem[onKey] = false; save();
       emit();
     },
-    forget(key) { if (mem.peers) { delete mem.peers[key]; writeLS({ peers: mem.peers, on: mem.on }); emit(); } },
+    forget(key) { if (mem.peers) { delete mem.peers[key]; save(); emit(); } },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };
 }
@@ -246,7 +271,7 @@ let SyncHttp = null;
 export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000, pin, withFp = false } = {}) {
   const headers = { 'Content-Type': 'application/json', ...(key ? { 'X-Melete-Key': key } : {}) };
   if (Capacitor.isNativePlatform()) {
-    if (pin === undefined) { const pc = readLS().pc; pin = pc && pc.fp && url.startsWith(pc.addr) ? pc.fp : null; }
+    if (pin === undefined) { const m = readLS(), pc = m.pc, dv = Object.values(m.devs || {}).find((d) => d.fp && url.startsWith(d.addr)); pin = pc && pc.fp && url.startsWith(pc.addr) ? pc.fp : dv ? dv.fp : null; }
     if (pin == null) throw Object.assign(new Error('pin'), { reason: 'repair' }); // нет отпечатка — не слать ключ кому попало
     SyncHttp ??= registerPlugin('SyncHttp');
     let r;
@@ -283,6 +308,9 @@ export const pcOf = () => {
 // Прежнее сопряжение без TLS (pcOf его снял): адрес для формы → «192.168.1.5» или ''
 export const oldPc = () => { const o = readLS().old; return o && o.addr ? String(o.addr).replace(/^https?:\/\//, '').replace(':' + PORT, '') : ''; };
 export const forgetPc = () => { const m = readLS(); delete m.pc; writeLS(m); };
+// Другие устройства (Melete DEV): { addr, key, name, fp, last, ids, phone }
+export const devsOf = () => Object.values(readLS().devs || {});
+export const forgetDev = (addr) => { const m = readLS(); if (m.devs) { delete m.devs[addr]; writeLS(m); } };
 
 // Сопряжение: адрес и код с экрана компьютера → ключ. → { name }
 export async function pair(addr, code, myName = 'Телефон', H = http) {
@@ -297,7 +325,10 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   if (Capacitor.isNativePlatform() && !/^[0-9a-f]{64}$/.test(fp)) throw Object.assign(new Error('no fp'), { reason: 'unreachable' });
   const m = readLS();
   delete m.old;
-  m.pc = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };
+  const rec = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };
+  // другой телефон (Melete DEV: связь всех со всеми) — в список устройств; компьютер — как раньше, один
+  if (hello.kind === 'phone') { m.devs = { ...(m.devs || {}), [base]: { ...rec, phone: true } }; writeLS(m); log('sync', 'сопряжено с устройством'); return m.devs[base]; }
+  m.pc = rec;
   writeLS(m);
   log('sync', 'сопряжено с компьютером');
   return m.pc;
@@ -309,8 +340,10 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
 export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   await loadAllLangs(); // демо-файлы на любом языке не синхронизируются
   pcOf(); // переезд адреса DEV (выше)
-  const m = readLS(), pc = m.pc;
+  const m = readLS(), dev = opts.dev ? (m.devs || {})[opts.dev] : null, pc = opts.dev ? dev : m.pc;
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });
+  const put = (o) => { const mm = readLS(); if (opts.dev) mm.devs = { ...(mm.devs || {}), [opts.dev]: o }; else mm.pc = o; writeLS(mm); };
+  const cur = () => { const mm = readLS(); return opts.dev ? (mm.devs || {})[opts.dev] : mm.pc; };
   const base = pc.addr, key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
   const halt = () => { if (opts.stop && opts.stop()) throw Object.assign(new Error('stopped'), { reason: 'stopped' }); };
   const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
@@ -319,7 +352,7 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   onStep({ stage: 'data' });
   const r = await call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
   app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS));
-  pc.work = r.work || null; m.pc = { ...pc }; writeLS(m); // что компьютер считает сам — для «Считать на компьютере»
+  if (!opts.dev) { pc.work = r.work || null; put({ ...pc }); } // что компьютер считает сам — для «Считать на компьютере»
   const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || []);
   const out = { songs: app.store.songs().length - before.songs, sessions: app.store.allSessions().length - before.sessions, up: 0, down: 0, removed: 0, meta: 0 };
   // удаления в обе стороны
@@ -368,8 +401,7 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   // что теперь на обоих — для следующего раза (удаление переносится)
   const now = new Set(manifestOf(allFiles(F)).map((x) => x.id)), theirs = new Set((r.files || []).map((x) => x.id));
   plan.upload.forEach((id) => theirs.add(id)); plan.download.forEach((id) => theirs.add(id)); plan.delTheirs.forEach((id) => theirs.delete(id));
-  m.pc = { ...readLS().pc, last: Date.now(), ids: [...now].filter((id) => theirs.has(id)) };
-  writeLS(m);
+  put({ ...cur(), last: Date.now(), ids: [...now].filter((id) => theirs.has(id)) });
   if (out.songs || out.sessions || out.up || out.down || out.removed || out.meta || !auto) log('sync', (auto ? 'фоновая ' : '') + 'синхронизация: песен +' + out.songs + ', занятий +' + out.sessions + ', на компьютер ' + out.up + ', с компьютера ' + out.down + ', сведений ' + out.meta + ', удалено ' + out.removed);
   if (app.render && (out.songs || out.sessions || out.down || out.removed || out.meta)) app.render();
   return out;

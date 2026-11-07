@@ -48,7 +48,7 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
-import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT } from '../sync.js';
+import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev } from '../sync.js';
 import { setlistsOf } from '../guest.js';
 import { scanQR, parsePair, pairPayload } from './qrscan.js';
 
@@ -417,7 +417,7 @@ function dataHTML(app) {
 const linkAvail = (app) => !!((app.syncSrv && app.syncSrv.avail) || Capacitor.isNativePlatform());
 function linkHTML(app) {
   return '<div class="large">' + t('page.link') + '</div><p class="ftr" style="margin-top:0">' + t(isDesktop() ? 'link.howPc' : 'link.howPh') + '</p>' +
-    syncHTML(app) + guestHTML(app) + localSendHTML(app);
+    meshHTML(app) + syncHTML(app) + guestHTML(app) + localSendHTML(app);
 }
 
 // Связь с компьютером (src/core/sync.js): на компьютере — включить и показать адрес с кодом, на телефоне — ввести их
@@ -460,6 +460,25 @@ function syncHTML(app) {
     '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
     '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('sy.what') + ' ' + t('sy.pcWorkHint') + '</p>';
+}
+// Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон принимает подключения других устройств (QR, адрес и
+// код — как у компьютера), сопряжённые устройства — списком: синхронизировать каждое, забыть. Компьютер — в разделе ниже
+function meshHTML(app) {
+  const S = app.mesh;
+  if (!S || !S.avail) return '';
+  const st = S.state, peers = S.peers, devs = devsOf(), payload = st.ips[0] ? pairPayload(st.ips[0] + hostPort(st), st.code, st.fp || '') : '';
+  return '<div class="hdr">' + t('mesh.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('mesh.sw') + '</span>' + psw('meshOn', st.on, t('mesh.sw')) + '</div>' +
+    (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc(st.ips[0] || '—') + '</b>' +
+      '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
+      (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
+      (payload ? '<div class="syqr" data-qr="' + esc(payload) + '">' + qrHTML(payload) + '</div><span class="l2">' + t('mesh.qrHint') + '</span>' : '') + '</div>' : '') +
+    peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('mesh.in') + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="meshforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+    '</div>' +
+    '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
+    devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
+      '<button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button><button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>').join('') +
+    '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button></div>' +
+    '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('mesh.hint') + '</p>';
 }
 // Раздача в своей сети (src/core/guest.js, docs/guest-web.md): гости открывают песни в браузере телефона.
 // Открытая — вбил адрес, и внутри; закрытая — только по QR-коду и с подтверждением здесь. Ведёт хозяин, можно передать гостю
@@ -659,6 +678,7 @@ export function createPanel(app, onChange) {
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
     if (app.folder) app.folder.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
+    if (app.mesh) app.mesh.subscribe(() => { if (page === 'link' && layer && layer.isConnected && !syncBusy) render(); });
     if (app.syncSrv) app.syncSrv.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.guest) app.guest.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.syncCli) app.syncCli.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected && !syncBusy) render(); });
@@ -750,6 +770,18 @@ export function createPanel(app, onChange) {
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
+      if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }
+      if (g('[data-act="devforget"]')) { forgetDev(g('[data-act="devforget"]').dataset.a); syncMsg = ''; render(); return; }
+      if (g('[data-act="devsync"]') && !syncBusy) {
+        const a = g('[data-act="devsync"]').dataset.a;
+        syncBusy = true; syncMsg = t('sy.step.data'); render();
+        const setMsg = (x) => { syncMsg = x.stage === 'data' ? t('sy.step.data') : t('sy.step.' + x.stage, { n: x.done + 1, total: x.total, name: x.name || '' }); render(); };
+        syncNow(app, setMsg, undefined, { dev: a })
+          .then((r) => { syncMsg = t('sy.done', { songs: r.songs, sessions: r.sessions, up: r.up, down: r.down }); toast(syncMsg); onChange(); })
+          .catch((e) => { syncMsg = syncErr(e); if (e && (e.reason === 'key' || e.reason === 'pin')) forgetDev(a); toast(syncMsg); })
+          .finally(() => { syncBusy = false; render(); });
+        return;
+      }
       if (g('[data-act="sypcforget"]')) { forgetPc(); syncMsg = ''; render(); return; }
       if (g('[data-act="syscan"]') && !syncBusy) {
         scanQR((x) => !!parsePair(x)).then((x) => {
@@ -759,9 +791,10 @@ export function createPanel(app, onChange) {
           pair(q.addr, q.code, t('sy.phoneName'))
             .then((pc) => {
               // отпечаток из QR не совпал — это не тот компьютер: связь не сохраняется
-              if (q.fp && pc.fp && !pc.fp.startsWith(q.fp)) { forgetPc(); throw Object.assign(new Error('fp'), { reason: 'tls' }); }
+              if (q.fp && pc.fp && !pc.fp.startsWith(q.fp)) { if (pc.phone) forgetDev(pc.addr); else forgetPc(); throw Object.assign(new Error('fp'), { reason: 'tls' }); }
               syncMsg = t('sy.paired', { name: pc.name }) + (pc.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(pc.fp) : '');
-              if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {});
+              if (pc.phone) syncNow(app, () => {}, undefined, { dev: pc.addr }).then(() => { onChange(); render(); }).catch(() => {});
+              else if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {});
             })
             .catch((e) => { syncMsg = syncErr(e); })
             .finally(() => { syncBusy = false; render(); });
@@ -772,7 +805,7 @@ export function createPanel(app, onChange) {
         const addr = layer.querySelector('[data-sy="addr"]').value, code = layer.querySelector('[data-sy="code"]').value;
         syncBusy = true; syncMsg = t('sy.pairing'); render();
         pair(addr, code, t('sy.phoneName'))
-          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }) + (pc.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(pc.fp) : ''); if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {}); })
+          .then((pc) => { syncMsg = t('sy.paired', { name: pc.name }) + (pc.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(pc.fp) : ''); if (pc.phone) syncNow(app, () => {}, undefined, { dev: pc.addr }).then(() => { onChange(); render(); }).catch(() => {}); else if (app.syncCli) app.syncCli.run().then(() => { onChange(); render(); }).catch(() => {}); })
           .catch((e) => { syncMsg = syncErr(e); })
           .finally(() => { syncBusy = false; render(); });
         return;
@@ -864,6 +897,7 @@ export function createPanel(app, onChange) {
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
       if (e.target.matches('[data-gset]')) { app.guest.set({ set: e.target.value }); return; }
       if (d.psw === 'helpOn') { app.store.state.settings.helpOff = !e.target.checked; app.store.settingsChanged(); return; }
+      if (d.psw === 'meshOn') { (e.target.checked ? app.mesh.start() : app.mesh.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {

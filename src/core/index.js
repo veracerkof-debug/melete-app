@@ -335,6 +335,9 @@ export function boot(root) {
   // связь с телефоном (sync.js): на компьютере — сервер в своей сети по переключателю; был включён — включается снова
   app.syncSrv = createSyncServer(app, { isDesktop });
   if (app.syncSrv.avail && app.syncSrv.wasOn()) app.syncSrv.start().catch(() => {});
+  // связь всех со всеми (Melete DEV): телефон тоже принимает подключения — по переключателю; был включён — снова
+  app.mesh = createSyncServer(app, { isDesktop, transport: 'mesh' });
+  if (app.mesh.avail && app.mesh.wasOn()) app.mesh.start().catch(() => {});
   // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
   app.syncCli = createSyncClient(app);
   if (!app.syncSrv.avail) app.syncCli.start();
