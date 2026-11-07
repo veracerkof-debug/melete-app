@@ -106,12 +106,17 @@
 .vc-gr span.on{color:var(--ink)}
 /* ===== Один экран (02.11.2026): плашка входа · спектр · пресеты · полоса кнопок ===== */
 .voice .vc-inrow{flex:none;display:flex;align-items:stretch;gap:8px;padding:8px 10px 4px}
-.voice .vc-in{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border:0;border-radius:14px;background:var(--fill);color:var(--ink);text-align:left;cursor:pointer}
-.vc-ink{flex:none;display:grid;place-items:center;width:28px;height:28px;color:var(--tint)}
+.voice .vc-in{flex:1.4;min-width:0;display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border:0;border-radius:14px;background:var(--fill);color:var(--ink);text-align:left;cursor:pointer}
+.vc-ink{flex:none;position:relative;display:grid;place-items:center;width:28px;height:28px;color:var(--tint)}
+.voice .vc-out{flex:1}
+.vc-ink .vc-n{position:absolute;right:-6px;top:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--tint);color:var(--on-tint);font:600 11px/16px system-ui;font-style:normal;text-align:center}
 .vc-ink svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .voice .vc-int{display:flex;flex-direction:column;min-width:0;line-height:1.25}
-.voice .vc-int b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.voice .vc-int .l2{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice .vc-int b{font-weight:600;font-size:14px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:break-word}
+.voice .vc-int .l2{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice .vc-inrow .vc-in{gap:8px;padding:6px 10px}
+.voice .vc-inrow .vc-lamp{min-width:0;width:64px;font-size:11px;line-height:1.15;text-align:center;white-space:normal}
+.voice .vc-inrow .vc-in,.voice .vc-inrow .vc-out{flex:1 1 0}
 .voice .vc-warn{font-size:12.5px;color:#A86A12}
 .voice .vc-lamp{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:72px;min-height:52px;padding:4px 8px;border:0;border-radius:14px;background:var(--fill);color:var(--l2);font:500 11px/1.15 var(--font);text-align:center;cursor:pointer}
 .voice .vc-lamp em{font-style:normal}

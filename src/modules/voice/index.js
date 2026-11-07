@@ -46,6 +46,9 @@ const KI = {
   display: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
   hdmi: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
   other: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
+  speaker: '<svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+  earpiece: '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M10 5.5h4"/></svg>',
+  tech: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>',
 };
 const FX_DEF = { denoise: 0, gate: -90, gain: 0, normalize: true }; // своё у диктофона; остальное — общая цепочка (s.chain)
 const RAW_KEEP_DAYS = 14, RAW_KEEP_MIN = 10; // исходники сохранённых записей: не меньше 10 последних и не старше 14 дней
@@ -61,7 +64,7 @@ const st = () => {
   if (!s.chain) { s.chain = normalizeFx(migrateVoiceFx(s.fx)); ['lowcut', 'eq', 'comp', 'reverb'].forEach((k) => delete s.fx[k]); ctx.store.save(); } // настройки до 2026-10 — перенос один раз
   if (!s.voice) { s.voice = migrateVoice(s.fx); ctx.store.save(); } // режимы обработки (2026-11) — из прежних настроек один раз
   s.voice = normalizeVoiceSet(s.voice);
-  s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
+  s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; if (!Array.isArray(s.outs)) s.outs = s.out ? [s.out] : []; /* выходы — несколько сразу (07.11.2026) */ s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
   s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = [];
   // пресеты (02.11.2026): свой режим или настроенные эффекты становятся своим пресетом «Мой» — звук не меняется
   if (migratePresets(s, t('preset.mine'))) ctx.store.save();
@@ -83,20 +86,45 @@ const fmt = (sec) => { sec = Math.max(0, sec || 0); const m = Math.floor(sec / 6
 
 /* ---------- устройства ---------- */
 
+// Встроенный микрофон: где стоит — по адресу устройства или по координатам из описания системы (getMicrophones)
+function micPlace(d) {
+  const a = String(d.address || '') + ' ' + String((d.mic && d.mic.desc) || '');
+  if (/bottom|низ/i.test(a)) return t('mic.bottom');
+  if (/back|rear|camera|cam/i.test(a)) return t('mic.back');
+  if (/top|верх/i.test(a)) return t('mic.top');
+  if (/front/i.test(a)) return t('mic.front');
+  const all = S.devs.inputs.filter((x) => x.type === 'builtin_mic');
+  if (all.length < 2) return '';
+  const ys = all.filter((x) => x.mic && x.mic.y != null);
+  if (d.mic && d.mic.y != null && ys.length === all.length) {
+    const lo = Math.min(...ys.map((x) => x.mic.y)), hi = Math.max(...ys.map((x) => x.mic.y));
+    if (d.mic.y === lo && lo !== hi) return t('mic.bottom');
+    if (d.mic.y === hi && lo !== hi) return t('mic.top');
+    if (d.mic.z != null && d.mic.z > Math.min(...ys.map((x) => x.mic.z ?? 0))) return t('mic.back');
+  }
+  return t('mic.n', { n: all.indexOf(d) + 1 });
+}
 function devName(d) {
   if (d.type === 'display') return t('dev.display');
-  const k = KIND[d.type] || 'other', nm = d.name && d.name !== 'null' ? d.name : '';
-  const base = t('dev.' + k);
-  if (k === 'phone' || k === 'speaker' || k === 'earpiece') return base + (S.devs.inputs.filter((x) => x.type === d.type).length > 1 && nm ? ' · ' + nm : '');
+  const nm = d.name && d.name !== 'null' ? d.name : '';
+  if (d.tech) return t('dev.t.' + d.type) !== 'dev.t.' + d.type ? t('dev.t.' + d.type) + (nm ? ': ' + nm : '') : t('dev.tech', { type: d.type }) + (nm ? ': ' + nm : '');
+  if (d.type === 'builtin_mic') { const p = micPlace(d); return t('dev.phone') + (p ? ' · ' + p : ''); }
+  if (d.type === 'wired_headset' || d.type === 'wired_headphones') return t(d.type === 'wired_headset' ? 'dev.jackMic' : 'dev.jack') + (nm && !/^(null|h2w|headset)$/i.test(nm) ? ': ' + nm : '');
+  if (d.type === 'line') return t('dev.line') + (nm ? ': ' + nm : '');
+  const k = KIND[d.type] || 'other', base = t('dev.' + k);
+  if (k === 'phone' || k === 'speaker' || k === 'earpiece') return base + ((d.isOut ? S.devs.outputs : S.devs.inputs).filter((x) => x.type === d.type).length > 1 && nm ? ' · ' + nm : '');
   return base + (nm ? ': ' + nm : '');
 }
+// Все входы и выходы, что видит система (слово автора 07.11.2026: «если в телефоне 10 микрофонов — все 10»):
+// встроенные микрофоны — каждый отдельно, служебные — в конце списка
 async function loadDevices() {
   try { S.devs = await engine().devices(); } catch { S.devs = { inputs: [], outputs: [] }; }
-  // одинаковые встроенные микрофоны (низ/верх/камера) — оставить первый: выбирать между ними на практике нечего
-  const seen = new Set();
-  S.devs.inputs = S.devs.inputs.filter((d) => { const k = d.type === 'builtin_mic' ? 'b' : d.id; if (seen.has(k)) return false; seen.add(k); return true; });
+  const order = (l) => l.filter((d) => !d.tech).concat(l.filter((d) => d.tech));
+  S.devs.inputs = order(S.devs.inputs);
+  S.devs.outputs = order(S.devs.outputs.map((d) => ({ ...d, isOut: true })));
   render();
 }
+const curOuts = () => st().outs.map((id) => S.devs.outputs.find((d) => String(d.id) === String(id))).filter(Boolean);
 const curIn = () => S.devs.inputs.find((d) => String(d.id) === String(st().in)) || null;
 
 const sw = (k, on) => '<label class="sw"><input type="checkbox" role="switch" aria-label="' + esc(t(k)) + '" data-v="' + k + '"' + (on ? ' checked' : '') + '><i></i></label>';
@@ -121,7 +149,7 @@ async function liveStart() {
     an.fftSize = 2048;
     inp.src.connect(fx.input); fx.output.connect(an); fx.output.connect(mon).connect(c.destination);
     mon.gain.value = s.hear ? 1 : 0;
-    if (!E.native && s.out) setOutput(c, s.out);
+    if (!E.native && s.outs.length) setOutput(c, s.outs[0]);
     L = { c, inp, fx, an, mon, buf: new Float32Array(an.fftSize), raf: 0 };
     resetMeter(c.sampleRate);
     // какой вход открыт на самом деле (браузер и компьютер: имя и частота дорожки)
@@ -240,7 +268,7 @@ async function processed() {
 async function play() {
   if (S.playing) { await stopPlay(); render(); return; }
   try {
-    const out = st().out ? (S.devs.outputs.find((d) => String(d.id) === String(st().out)) || {}).id : -1;
+    const outs = curOuts().map((d) => d.id), out = outs.length ? outs : -1; // несколько выходов — звук во все сразу
     if (S.mode === 'proc') { const p = await processed(); S.offset = selSec()[0]; await engine().play(p.path, out, 0); }
     else { S.offset = 0; await engine().play(S.take.path, out, selSec()[0]); }
     S.playing = true;
@@ -443,17 +471,53 @@ function inHTML() {
   const other = d && act && act.name && (act.id != null && String(act.id) !== '' ? String(act.id) !== String(d.id) : false);
   const warn = S.inWarn || (other ? t('in.actual', { name: act.type ? devName(act) : act.name }) : '');
   return '<div class="vc-inrow"><button class="vc-in" data-x="insheet" aria-label="' + esc(t('in') + ': ' + name) + '"><span class="vc-ink">' + (KI[kind] || KI.other) + '</span>' +
-    '<span class="vc-int"><b>' + esc(name) + '</b><span class="l2">' + esc(sub) + '</span>' + (warn ? '<span class="vc-warn">' + esc(warn) + '</span>' : '') + '</span></button>' +
+    '<span class="vc-int"><span class="l2">' + esc([t('in'), sub].filter(Boolean).join(' · ')) + '</span><b>' + esc(name) + '</b>' + (warn ? '<span class="vc-warn">' + esc(warn) + '</span>' : '') + '</span></button>' +
+    outHTML() +
     '<button class="vc-lamp ' + M.lamp + '" id="vc-lamp" data-x="lamp" aria-label="' + esc(t('lamp.aria')) + '"><i></i><em>' + t('lamp.' + M.lamp) + '</em></button></div>';
 }
-// Шторка входа: входы строками со значками, выход, стерео и канал, обработка телефона, слушать вход и себя
+// Плашка выхода — рядом с плашкой входа: куда звучит запись (один или несколько выходов сразу)
+const outKind = (d) => (!d ? 'speaker' : d.tech ? 'tech' : d.type === 'speaker' ? 'speaker' : d.type === 'earpiece' ? 'earpiece' : devKind(d));
+function outHTML() {
+  const L = curOuts(), name = !L.length ? t('out.sys') : devName(L[0]) + (L.length > 1 ? ' + ' + (L.length - 1) : '');
+  return '<button class="vc-in vc-out" data-x="outsheet" aria-label="' + esc(t('out') + ': ' + name) + '"><span class="vc-ink">' + (KI[outKind(L[0])] || KI.other) + (L.length > 1 ? '<i class="vc-n num">' + L.length + '</i>' : '') + '</span>' +
+    '<span class="vc-int"><span class="l2">' + esc(t('out')) + '</span><b>' + esc(name) + '</b></span></button>';
+}
+// Шторка выхода: все выходы, служебные ниже; касание — добавить или убрать (несколько — звук во все сразу)
+function outSheet() {
+  const { ui } = ctx;
+  ui.sheet(() => {
+    const s = st(), on = (d) => s.outs.some((x) => String(x) === String(d.id));
+    const row = (d) => '<button class="cell act vc-irow' + (on(d) ? ' on' : '') + '" data-out="' + esc(d.id) + '" aria-pressed="' + on(d) + '"><span class="vc-ink">' + (KI[outKind(d)] || KI.other) + '</span><span class="grow">' + esc(devName(d)) + (d.channels > 1 ? '<span class="st l2">' + esc(t('in.chN', { n: d.channels })) + '</span>' : '') + '</span>' + (on(d) ? '<span class="vc-chk" aria-hidden="true">✓</span>' : '') + '</button>';
+    const main = S.devs.outputs.filter((d) => !d.tech), tech = S.devs.outputs.filter((d) => d.tech);
+    return ui.snav(t('out')) + '<div class="vcsh"><div class="group"><button class="cell act vc-irow' + (!s.outs.length ? ' on' : '') + '" data-out="" aria-pressed="' + !s.outs.length + '"><span class="vc-ink">' + KI.speaker + '</span><span class="grow">' + esc(t('auto')) + '<span class="st l2">' + esc(t('outAuto')) + '</span></span>' + (!s.outs.length ? '<span class="vc-chk" aria-hidden="true">✓</span>' : '') + '</button>' +
+      main.map(row).join('') + '</div>' +
+      (tech.length ? '<div class="hdr">' + t('dev.techHdr') + '</div><div class="group">' + tech.map(row).join('') + '</div>' : '') +
+      '<p class="ftr">' + t(engine().native ? 'out.hint' : 'out.hintWeb') + '</p></div>';
+  }, (el, sh) => {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-out]');
+      if (!b) return;
+      const s = st(), id = b.dataset.out;
+      if (!id) s.outs = [];
+      else s.outs = s.outs.some((x) => String(x) === id) ? s.outs.filter((x) => String(x) !== id) : [...s.outs, id];
+      s.out = s.outs[0] || null; // прежние версии и запись в инструментах — первый выход
+      ctx.store.save();
+      sh.update(); render();
+      if (S.playing) { stopPlay().then(play); } // идёт прослушивание — сразу на новые выходы
+      else if (S.phase === 'idle' && !engine().native) liveRestart();
+    });
+  });
+}
+// Шторка входа: все входы строками со значками (служебные ниже), стерео и канал, обработка телефона, слушать вход и себя
 function inSheet() {
   const { ui } = ctx, rec = S.phase === 'rec';
   ui.sheet(() => {
     const s = st(), row = (id, kind, name, on, extra) => '<button class="cell act vc-irow' + (on ? ' on' : '') + '" data-in="' + esc(id) + '"' + (rec ? ' disabled' : '') + ' aria-pressed="' + on + '"><span class="vc-ink">' + (KI[kind] || KI.other) + '</span><span class="grow">' + esc(name) + (extra ? '<span class="st l2">' + esc(extra) + '</span>' : '') + '</span>' + (on ? '<span class="vc-chk" aria-hidden="true">✓</span>' : '') + '</button>';
     const lav = curIn() && isLav(curIn());
+    const irow = (d) => row(d.id, d.tech ? 'tech' : kindOf(d), devName(d), String(d.id) === String(s.in), [isLav(d) ? t('lav') : '', d.channels > 1 ? t('in.chN', { n: d.channels }) : '', d.mic && d.mic.desc && d.mic.desc !== 'null' && !d.tech ? d.mic.desc : ''].filter(Boolean).join(' · '));
     return ui.snav(t('in')) + '<div class="vcsh">' + (rec ? '<p class="ftr">' + t('in.recLock') + '</p>' : '') +
-      '<div class="group">' + row('', 'other', t('auto'), !s.in, '') + S.devs.inputs.map((d) => row(d.id, kindOf(d), devName(d), String(d.id) === String(s.in), isLav(d) ? t('lav') : d.channels > 1 ? t('in.chN', { n: d.channels }) : '')).join('') + '</div>' +
+      '<div class="group">' + row('', 'other', t('auto'), !s.in, '') + S.devs.inputs.filter((d) => !d.tech).map(irow).join('') + '</div>' +
+      (S.devs.inputs.some((d) => d.tech) ? '<div class="hdr">' + t('dev.techHdr') + '</div><div class="group">' + S.devs.inputs.filter((d) => d.tech).map(irow).join('') + '</div><p class="ftr">' + t('dev.techHint') + '</p>' : '') +
       (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p>') +
       '<div class="hdr">' + t('in.how') + '</div><div class="group">' +
       '<div class="cell"><span class="grow">' + t('stereo') + '</span>' + sw('stereo', s.stereo) + '</div>' +
@@ -462,9 +526,10 @@ function inSheet() {
       '<div class="hdr">' + t('in.mon') + '</div><div class="group">' +
       '<div class="cell"><span class="grow">' + t('live.on') + '</span>' + sw('live', s.live) + '</div>' +
       '<div class="cell"><span class="grow">' + t('live.hear') + '</span>' + sw('hear', s.hear) + '</div>' +
-      '<label class="cell"><span class="vc-lbl">' + t('out') + '</span>' + (S.devs.outputs.length ? '<select class="sortsel" data-v="out" aria-label="' + esc(t('out')) + '"><option value="">' + esc(t('auto')) + '</option>' + S.devs.outputs.map((d) => '<option value="' + esc(d.id) + '"' + (String(d.id) === String(s.out) ? ' selected' : '') + '>' + esc(devName(d)) + '</option>').join('') + '</select>' : '<span class="l2 vc-note">' + t('outAuto') + '</span>') + '</label></div></div>';
+      '<button class="cell act" data-x2="outsheet"><span class="grow">' + t('out') + '</span><span class="l2">' + esc(curOuts().length ? curOuts().map(devName).join(' + ') : t('auto')) + '</span></button></div></div>';
   }, (el, sh) => {
     el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-x2="outsheet"]')) { sh.close(); outSheet(); return; }
       const b = e.target.closest('[data-in]');
       if (b && !rec) { const s = st(); s.in = b.dataset.in || null; ctx.store.save(); S.err = null; S.inWarn = ''; S.liveDev = null; sh.update(); render(); if (S.phase === 'idle') liveRestart(); return; }
       const sg = e.target.closest('[data-seg] [data-v]');
@@ -472,7 +537,6 @@ function inSheet() {
     });
     el.addEventListener('change', (e) => {
       const d = e.target.dataset, s = st();
-      if (d.v === 'out') { s.out = e.target.value || null; ctx.store.save(); if (S.phase === 'idle') liveRestart(); return; }
       if (!['stereo', 'raw', 'live', 'hear'].includes(d.v)) return;
       s[d.v] = e.target.checked; ctx.store.save();
       if (d.v === 'hear') liveHear();
@@ -805,6 +869,7 @@ export default {
       else if (a === 'save') save();
       else if (a === 'mark') addMark();
       else if (a === 'insheet') inSheet();
+      else if (a === 'outsheet') outSheet();
       else if (a === 'preset') presetSheet();
       else if (a === 'more') moreSheet();
       else if (a === 'det') { if (S.phase === 'idle' && !st().live) { st().live = true; ctx.store.save(); liveStart(); return; } detailSheet(); }

@@ -16,7 +16,7 @@ const unb64 = (s) => { const b = atob(s), u8 = new Uint8Array(b.length); for (le
 const LAV = /lark|hollyland|dji|wireless\s*mic|mic\s*(mini|2|se)|rode|wireless\s*go|boya|saramonic|synco|comica|lav|петлич/i;
 export const isLav = (d) => LAV.test(d.name || '');
 // Вид устройства по типу (Android AudioDeviceInfo или догадка по имени в браузере) — для подписей
-export const KIND = { builtin_mic: 'phone', speaker: 'speaker', earpiece: 'earpiece', wired_headset: 'wired', wired_headphones: 'wired', line: 'wired', bt_sco: 'bt', bt_a2dp: 'bt', ble_headset: 'bt', ble_speaker: 'bt', bt: 'bt', usb_device: 'usb', usb_headset: 'usb', usb_accessory: 'usb', hdmi: 'hdmi' };
+export const KIND = { builtin_mic: 'phone', speaker: 'speaker', earpiece: 'earpiece', wired_headset: 'wired', wired_headphones: 'wired', line: 'wired', bt_sco: 'bt', bt_a2dp: 'bt', ble_headset: 'bt', ble_speaker: 'bt', hearing_aid: 'bt', bt: 'bt', usb_device: 'usb', usb_headset: 'usb', usb_accessory: 'usb', hdmi: 'hdmi' };
 export const devKind = (d) => KIND[d && d.type] || 'other';
 
 /* ---------- Android ---------- */
@@ -43,7 +43,8 @@ function nativeEngine() {
     remove: (path) => V.remove({ path }).catch(() => {}),
     // исходники записей в памяти (rec-*.wav): { path, size, at }
     list: () => V.list().then((r) => r.files || []).catch(() => []),
-    play: (path, deviceId, from = 0) => V.play({ path, deviceId: deviceId ?? -1, from }),
+    // deviceId — один выход или список (звук во все сразу; Android может оставить один)
+    play: (path, deviceId, from = 0) => V.play(Array.isArray(deviceId) ? { path, deviceIds: deviceId.map(Number), from } : { path, deviceId: deviceId ?? -1, from }),
     stopPlay: () => V.stopPlay(),
     route: (deviceId) => V.route({ deviceId: deviceId == null || deviceId === '' ? -1 : +deviceId }).catch(() => ({})),
     unroute: () => V.unroute().catch(() => {}),
@@ -106,7 +107,7 @@ function webEngine() {
   const subs = { level: new Set(), pos: new Set(), end: new Set(), devices: new Set(), lost: new Set(), route: new Set() };
   const emit = (k, e) => subs[k].forEach((fn) => fn(e));
   const mem = new Map(); // путь → WAV, если IndexedDB нет
-  let rec = null, audio = null;
+  let rec = null, audio = null, mirrors = [];
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', () => emit('devices', {}));
   const typeOf = (d) => (/bluetooth|bt|airpods|buds/i.test(d.label) ? 'bt' : /usb/i.test(d.label) ? 'usb_device' : /head|гарнитур|наушник/i.test(d.label) ? 'wired_headset' : d.kind === 'audiooutput' ? 'speaker' : 'builtin_mic');
   const putFile = async (path, u8, meta = {}) => { const ok = await tx('files', 'readwrite', (s) => req(s.put({ u8, at: Date.now(), ...meta }, path))).then(() => true, () => false); if (!ok) mem.set(path, u8); };
@@ -262,8 +263,14 @@ function webEngine() {
     async play(path, deviceId, from = 0) {
       this.stopPlay();
       const u8 = await this.read(path), url = URL.createObjectURL(new Blob([u8], { type: 'audio/wav' }));
+      const ids = Array.isArray(deviceId) ? deviceId : [deviceId];
+      const sink = async (a, id) => { if (id && id !== -1 && a.setSinkId) { try { await a.setSinkId(id); } catch (e) { log('voice', 'выбранный выход недоступен — звучит выход по умолчанию: ' + ((e && e.name) || e), 'w'); } } };
       audio = new Audio(url);
-      if (deviceId && deviceId !== -1 && audio.setSinkId) { try { await audio.setSinkId(deviceId); } catch (e) { log('voice', 'выбранный выход недоступен — звучит выход по умолчанию: ' + ((e && e.name) || e), 'w'); } }
+      await sink(audio, ids[0]);
+      // остальные выходы — копии того же файла, идут вместе с первым (события — только у первого)
+      mirrors = [];
+      for (const id of ids.slice(1)) { const a = new Audio(url); await sink(a, id); a.currentTime = from; mirrors.push(a); }
+      mirrors.forEach((a) => a.play().catch(() => {}));
       audio.currentTime = from;
       audio.ontimeupdate = () => emit('pos', { sec: audio.currentTime });
       audio.onended = () => { emit('end', { done: true }); URL.revokeObjectURL(url); };
@@ -272,7 +279,7 @@ function webEngine() {
     },
     route: async () => ({}), // в браузере вход выбирается deviceId при открытии микрофона
     unroute: async () => {},
-    async stopPlay() { if (audio) { audio.pause(); audio.onended = null; emit('end', { done: false }); audio = null; } },
+    async stopPlay() { mirrors.forEach((a) => a.pause()); mirrors = []; if (audio) { audio.pause(); audio.onended = null; emit('end', { done: false }); audio = null; } },
   };
 }
 
