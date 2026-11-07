@@ -4,11 +4,14 @@
     "_": "Пакеты (DECISIONS 2026-10-28, модульность шаг 2): модели с полем pack не встраиваются в сборку перечисленных систем, а скачиваются по кнопке из релиза packs (build/packs.mjs, build/packs.json, src/core/packs.js). Windows — всё встроено (решение автора 28.10: «не телефон, память до трёх гигов нормально»)",
     "piano": ["android"],
     "vocals": ["android"],
-    "ffmpeg": ["android"]
+    "ffmpeg": ["android"],
+    "stems": ["android-dev"],
+    "roformer": ["android-dev"]
   },
   "models": [
     {
       "file": "public/models/demucs/htdemucs_embedded.onnx",
+      "pack": "stems",
       "url": "https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx",
       "sha256": "e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077",
       "bytes": 180534758,
@@ -17,6 +20,7 @@
     },
     {
       "file": "public/models/demucs/htdemucs_6s.onnx",
+      "pack": "stems",
       "url": "https://huggingface.co/Andremi/audioweb-models/resolve/main/demucs_htdemucs_6s_s78_fp16w_ca.onnx",
       "sha256": "05079e586874d966ceb1b8bca286f38f78d5602ed2c51d475a4092839891e0d5",
       "bytes": 55439704,
@@ -110,6 +114,7 @@
     },
     {
       "file": "src-tauri/models/roformer/mel-roformer.fp16.onnx",
+      "pack": "roformer",
       "url": "https://huggingface.co/audiojs/mel-roformer/resolve/main/mel-roformer.fp16.onnx",
       "sha256": "adcbbb826f12453fbb86652b503242d565a9c81cdef1bca2fe0e54752eba91ef",
       "bytes": 464050097,

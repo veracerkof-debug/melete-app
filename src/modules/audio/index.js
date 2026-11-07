@@ -372,7 +372,8 @@ function lyricsToSong(tr, sh) {
 function stemsSheet() {
   const { t, ui } = ctx, tr = AU.cur, jobs = ctx.jobs;
   if (!tr || !jobs) return;
-  const can = jobs.supported(), hq = () => !!(ctx.auto && ctx.auto.hq());
+  const hq = () => !!(ctx.auto && ctx.auto.hq());
+  let can = jobs.supported('2');
   const job = () => (jobs.current && jobs.current.id === tr.id ? jobs.current : null);
   const first = stemsFor(tr)[0];
   let m = (first && first.stem.mode) || (ctx.auto && ctx.auto.mode()) || '4';
@@ -387,24 +388,26 @@ function stemsSheet() {
   };
   const body = () => {
     const j = job(), set = stemsFor(tr, m), notes = notesOf(ctx.files, tr.id), absent = ((tr.stemsAbsent && tr.stemsAbsent[m]) || []);
+    can = jobs.supported(m); // телефон DEV: 4 и 6 дорожек — из пакета «Полное разделение»
     let h = ui.snav(t('stems.title')) + '<div class="group"><div class="cellcol">' + (MODES.length > 1 ? ui.seg('smode', MODES.map((k) => [k, k]), m, t('stems.modeTitle')) : '') + '<div class="segcap">' + ui.esc(t('stems.mode.' + m)) + '</div></div>';
     if (j && j.kind === 'stems') h += progress(j, 'data-sjcancel');
     else if (set.length) {
       h += stemRowsHTML(tr, set) +
         '<button class="cell act" data-sreset>' + ui.esc(t('stems.reset')) + '</button>' + (ctx.hasTool('looper') ? '<button class="cell act" data-sstudio>' + ui.esc(t('stems.toStudio')) + '</button>' : '');
     } else if (can) h += '<button class="cell act center b" data-sgo>' + ui.esc(t('stems.go', { t: fmtT(estimateSec(tr.dur || 60, m, hq())) })) + '</button>' + (jobs.busy() ? '<div class="cellcol"><span class="l2">' + ui.esc(t('job.busy')) + '</span></div>' : '');
-    else if (jobs.pack && jobs.pack() && ctx.packs) h += ctx.packs.row(jobs.pack()); // модель — в пакете, ещё не скачана
+    else if (jobs.pack && jobs.pack(m) && ctx.packs) h += ctx.packs.row(jobs.pack(m)); // модель — в пакете, ещё не скачана
     else h += '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.web')) + '</span></div>';
     // «ночное» качество — один переключатель с настройкой «Дорожки автоматически»: в фоне пересчитает и готовые наборы
     if (can && !(j && j.kind === 'stems')) {
       // обе версии есть — выбор; улучшенное включено, а есть только обычная — «Улучшить»
       if (set.length && hasVer(tr, m, true) && hasVer(tr, m, false)) h += '<div class="cellcol"><span>' + ui.esc(t('stems.ver')) + '</span>' + ui.seg('sver', [['std', t('stems.verStd')], ['hq', t('stems.verHq')]], verOf(tr), t('stems.ver')) + '</div>';
       h += '<button class="cell act" data-shq aria-pressed="' + hq() + '"><span class="grow">' + ui.esc(t('stems.hq')) + '<span class="bksub">' + ui.esc(t(hqVocalsModel() ? 'stems.hqHintPc' : 'stems.hqHint')) + '</span></span><span class="val">' + (hq() ? '✓' : '') + '</span></button>' +
+        (hq() && jobs.hqPack && jobs.hqPack() && ctx.packs ? ctx.packs.row(jobs.hqPack()) + '<div class="cellcol"><span class="l2">' + ui.esc(t('stems.hqPackHint')) + '</span></div>' : '') + // телефон DEV: улучшенный вокал — пакетом
         (set.length && hq() && !hasVer(tr, m, true) ? '<button class="cell act center" data-sgo>' + ui.esc(t('stems.improve', { t: fmtT(estimateSec(tr.dur || 60, m, true)) })) + '</button>' : '');
     }
     h += '</div>';
     if (set.length && absent.length) h += '<p class="ftr">' + ui.esc(t('stems.absent', { list: absent.map((p) => t('part.' + p)).join(', ') })) + '</p>';
-    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : jobs.pack && jobs.pack() ? 'stems.packHint' : 'stems.webHint')) + '</p>';
+    else h += '<p class="ftr">' + ui.esc(t(set.length ? 'stems.hint' : can ? 'stems.goHint' : jobs.pack && jobs.pack(m) ? (m === '2' ? 'stems.packHint' : 'stems.packHintFull') : 'stems.webHint')) + '</p>';
     // ноты
     h += '<div class="hdr">' + ui.esc(t('notes.hdr')) + '</div><div class="group">';
     if (j && j.kind === 'notes') h += progress(j, 'data-njcancel');

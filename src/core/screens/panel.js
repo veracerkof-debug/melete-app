@@ -10,6 +10,7 @@ import { DEV, VARIANTS } from '../variants.js';
 import { t, tn, getLang, LANGS, LANG_NAMES, loadLang } from '../../i18n/index.js';
 import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 import { autoMode, autoAna, autoHq, autoPower, autoLyr } from '../autostems.js';
+import { fullStems } from '../../audio/stems.js';
 import { sortable } from '../../ui/hold.js';
 import { isDesk } from '../../ui/desk.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
@@ -215,7 +216,7 @@ function soundHTML(app) {
   const st = app.store.state.settings;
   return '<div class="large">' + t('page.sound') + '</div>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
-    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', (isDesktop() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : 'auto.stemsHintPhone') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
+    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', (fullStems() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : fullStems() ? 'auto.stemsHintDev' : 'auto.stemsHintPhone') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : fullStems() ? 'auto.hqHintDev' : 'auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
       '<div class="cellcol">' + seg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
     '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
     (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' +

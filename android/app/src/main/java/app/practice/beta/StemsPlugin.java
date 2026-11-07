@@ -14,7 +14,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 // «Дорожки» нативно (ONNX Runtime на всех ядрах): на телефоне — вокал и инструментал (Mdx.java, UVR MDX-Net);
-// Demucs.java (4/6 дорожек) — его модели только в программе для Windows, в APK их нет. WebView не даёт WebAssembly больше одного потока,
+// Melete DEV — ещё 4/6 дорожек (Demucs.java, пакет stems) и «улучшенное разделение»: вокал RoFormer.java (пакет roformer),
+// остальное — HTDemucs по инструменталу, как на компьютере (слово автора 07.11.2026). В pre этих пакетов нет. WebView не даёт WebAssembly больше одного потока,
 // а здесь считают все ядра — в разы быстрее. Протокол: begin() → push({ ch, b64 }) кусками float32 LE обоих
 // каналов → run() (ход — событие progress { f }) → { files: { drums, bass, other, vocals } } — файлы float32 LE
 // с чередованием L R в кэше, JS читает их по Capacitor.convertFileSrc и кладёт в медиатеку; clean() — убрать.
@@ -23,9 +24,10 @@ import java.io.OutputStream;
 @CapacitorPlugin(name = "Stems")
 public class StemsPlugin extends Plugin {
     private static final String MODEL2 = "models/mdx/vocals.onnx", MODEL4 = "models/demucs/htdemucs_embedded.onnx", MODEL6 = "models/demucs/htdemucs_6s.onnx";
+    private static final String ROFORMER = "models/roformer/mel-roformer.fp16.onnx";
     private FileOutputStream[] ins = new FileOutputStream[2];
     private volatile Engine job = null;
-    private volatile boolean busy = false;
+    private volatile boolean busy = false, cancelledNow = false; // отмена между RoFormer и HTDemucs
 
     private File dir() { return new File(getContext().getCacheDir(), "stems"); }
 
@@ -64,6 +66,7 @@ public class StemsPlugin extends Plugin {
     public void run(PluginCall call) {
         if (busy) { call.reject("busy"); return; }
         busy = true;
+        cancelledNow = false;
         final String mode = call.getString("model", "2");
         final String modelAsset = "6".equals(mode) ? MODEL6 : "4".equals(mode) ? MODEL4 : MODEL2;
         final boolean hq = Boolean.TRUE.equals(call.getBoolean("hq", false));
@@ -78,17 +81,49 @@ public class StemsPlugin extends Plugin {
             try {
                 PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
                 if (pm != null) { lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "melete:stems"); lock.acquire(3 * 60 * 60 * 1000L); }
-                File model = modelFile(ctx, modelAsset);
                 int threads = Math.max(1, Math.min(8, Runtime.getRuntime().availableProcessors()));
-                dm = modelAsset.equals(MODEL2) ? new Mdx(model.getAbsolutePath(), threads) : new Demucs(model.getAbsolutePath(), threads);
-                job = dm;
+                Engine.Progress prog = (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); };
                 File out = new File(d, "out");
-                dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> { JSObject p = new JSObject(); p.put("f", f); notifyListeners("progress", p); }, hq);
+                // улучшенное: вокал — RoFormer (если пакет скачан), режим 2 — им и заканчивается; 4 и 6 — HTDemucs по инструменталу
+                File rof = hq ? PacksPlugin.file(ctx, "roformer", ROFORMER) : null;
+                String[] parts;
+                String vocals = "";
+                if (rof != null) {
+                    final boolean two = MODEL2.equals(modelAsset);
+                    RoFormer rf = new RoFormer(rof.getAbsolutePath(), threads);
+                    rf.planar = !two;
+                    dm = rf; job = rf;
+                    rf.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, (f) -> prog.at(two ? f : f * 0.45), false);
+                    rf.close(); dm = null; job = null;
+                    vocals = "roformer";
+                    if (two) parts = RoFormer.PARTS;
+                    else {
+                        // вокал RoFormer — в сторону, HTDemucs считает по записи без вокала; его остаток вокала отбрасывается
+                        File keep = new File(d, "rvocals.f32"), inL = new File(d, "rin0.f32"), inR = new File(d, "rin1.f32");
+                        if (!new File(out, "vocals.f32").renameTo(keep) || !new File(out, "inst0.f32").renameTo(inL) || !new File(out, "inst1.f32").renameTo(inR)) throw new Exception("rename");
+                        new File(out, "inst.f32").delete();
+                        if (cancelledNow) throw new Exception("cancel");
+                        Demucs de = new Demucs(modelFile(ctx, modelAsset).getAbsolutePath(), threads);
+                        dm = de; job = de;
+                        de.separate(inL, inR, total, out, (f) -> prog.at(0.45 + f * 0.55), true);
+                        File v = new File(out, "vocals.f32");
+                        if (v.exists() && !v.delete()) throw new Exception("delete");
+                        if (!keep.renameTo(v)) throw new Exception("rename");
+                        parts = de.parts();
+                    }
+                } else {
+                    File model = modelFile(ctx, modelAsset);
+                    dm = modelAsset.equals(MODEL2) ? new Mdx(model.getAbsolutePath(), threads) : new Demucs(model.getAbsolutePath(), threads);
+                    job = dm;
+                    dm.separate(new File(d, "in0.f32"), new File(d, "in1.f32"), total, out, prog, hq);
+                    parts = dm.parts();
+                }
                 JSObject files = new JSObject();
-                for (String part : dm.parts()) files.put(part, new File(out, part + ".f32").getAbsolutePath());
+                for (String part : parts) files.put(part, new File(out, part + ".f32").getAbsolutePath());
                 JSObject r = new JSObject();
                 r.put("files", files);
-                r.put("stems", dm.parts().length);
+                r.put("stems", parts.length);
+                r.put("vocals", vocals);
                 r.put("total", total);
                 r.put("threads", threads);
                 call.resolve(r);
@@ -96,7 +131,7 @@ public class StemsPlugin extends Plugin {
                 String m = e.getMessage();
                 call.reject(m == null ? e.getClass().getSimpleName() : m);
             } finally {
-                job = null; busy = false;
+                job = null; busy = false; cancelledNow = false;
                 if (dm != null) dm.close();
                 if (lock != null && lock.isHeld()) lock.release();
             }
@@ -108,6 +143,7 @@ public class StemsPlugin extends Plugin {
     @PluginMethod
     public void cancel(PluginCall call) {
         Engine j = job;
+        cancelledNow = true;
         if (j != null) j.cancel();
         call.resolve();
     }
@@ -132,7 +168,7 @@ public class StemsPlugin extends Plugin {
     // Модель — из скачанного пакета (PacksPlugin: вокал телефона — пакет vocals); иначе из assets (сборка с моделью):
     // файл в files/models (один раз; размер сверяется, чтобы обновление приложения подменило файл). Нет нигде — "nopack"
     private static File modelFile(Context ctx, String rel) throws Exception {
-        File packed = PacksPlugin.file(ctx, MODEL2.equals(rel) ? "vocals" : "stems", rel);
+        File packed = PacksPlugin.file(ctx, MODEL2.equals(rel) ? "vocals" : ROFORMER.equals(rel) ? "roformer" : "stems", rel);
         if (packed != null) return packed;
         File dst = new File(ctx.getFilesDir(), rel);
         long size;

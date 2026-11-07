@@ -15,11 +15,13 @@
 import { time as dTime, gauge as dGauge } from './diag.js';
 import { hasStems } from './jobs.js';
 import { isDesktop } from './desktop.js';
+import { fullStems } from '../audio/stems.js';
 import { log } from './log.js';
 
 export const AUTO_MODES = ['off', '2', '4', '6'];
-// Телефон — только вокал и инструментал (MDX-Net): прежние «4» и «6» становятся «2»; компьютер — все режимы, по умолчанию 4
-export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '4' : '2'; return !desk && m !== 'off' ? '2' : m; };
+// Телефон — только вокал и инструментал (MDX-Net): прежние «4» и «6» становятся «2»; компьютер — все режимы, по умолчанию 4.
+// Телефон Melete DEV с полным разделением (fullStems) — тоже все, по умолчанию 2
+export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '4' : '2'; return !desk && !fullStems() && m !== 'off' ? '2' : m; };
 export const autoAna = (settings) => settings.autoAna !== false;
 export const autoHq = (settings) => settings.autoHq === true; // улучшенное разделение (вторая очередь)
 export const autoLyr = (settings) => settings.autoLyr !== false; // текст песни (только где есть whisper — Windows)
@@ -54,10 +56,10 @@ export function createAutoStems(app) {
   // режим записи: свой, а запись с телефона — как просил телефон (rec.want); своё выключено — не считаем
   const modeOf = (r) => { const m = autoMode(settings(), desk); return m !== 'off' && r.want && ['2', '4', '6'].includes(r.want.stems) ? r.want.stems : m; };
   const hqOf = (r) => autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings(), desk) !== 'off');
-  const needsStems = (r) => { const m = modeOf(r); return m !== 'off' && jobs.supported() && !hasStems(files, r.id, m) && ok(r) && !pcWaits(r, 'stems'); };
+  const needsStems = (r) => { const m = modeOf(r); return m !== 'off' && jobs.supported(m) && !hasStems(files, r.id, m) && ok(r) && !pcWaits(r, 'stems'); };
   // текст — после дорожек (по вокалу точнее); дорожки выключены — по записи целиком
-  const needsLyr = (r) => { const m = modeOf(r); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported() || hasStems(files, r.id, m)); };
-  const needsHq = (r) => { const m = modeOf(r); return hqOf(r) && m !== 'off' && jobs.supported() && !hasStems(files, r.id, m, true) && ok(r) && !pcWaits(r, 'stems'); };
+  const needsLyr = (r) => { const m = modeOf(r); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported(m) || hasStems(files, r.id, m)); };
+  const needsHq = (r) => { const m = modeOf(r); return hqOf(r) && m !== 'off' && jobs.supported(m) && !hasStems(files, r.id, m, true) && ok(r) && !pcWaits(r, 'stems'); };
   const usedAt = (r) => Math.max(r.created || 0, ((app.device.audio || {}).used || {})[r.id] || 0);
   const recent = () => files.list('audio').filter(candidate).sort((a, b) => usedAt(b) - usedAt(a));
   // первая очередь — тональность и обычное разделение у всех; вторая — улучшенное, когда первая пуста

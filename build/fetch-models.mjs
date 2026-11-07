@@ -59,7 +59,8 @@ async function extract(m, { buf, src }) {
 
 // platform: 'windows' — модель только Windows-версии: на других системах не качается (MODELS_ALL=1 — качать всё)
 for (const m of models) {
-  if (m.platform === 'windows' && process.platform !== 'win32' && !process.env.MODELS_ALL) { console.log('не для этой системы: ' + m.file); continue; }
+  // MODELS_PACKS=1 (сборка пакетов) — ещё и модели Windows, которые идут пакетом на другие системы (полное разделение телефона DEV)
+  if (m.platform === 'windows' && process.platform !== 'win32' && !process.env.MODELS_ALL && !(process.env.MODELS_PACKS && m.pack)) { console.log('не для этой системы: ' + m.file); continue; }
   if (m.extract) {
     if (existsSync(m.file)) {
       try { const pk = JSON.parse(readFileSync(m.file, 'utf8')); if (pk.sha256 === m.sha256 && pk.files.every((f) => existsSync(join(m.extract.dir, f)))) { console.log('есть: ' + m.extract.dir); continue; } } catch { /* перекачать */ }

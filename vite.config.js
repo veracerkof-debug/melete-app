@@ -73,7 +73,9 @@ function ortAssets(mode) {
 const PACKED = (() => {
   const t = process.env.MELETE_TARGET;
   if (!t || !existsSync('build/packs.json')) return [];
-  return JSON.parse(readFileSync('build/packs.json', 'utf8')).list.filter((p) => p.on.includes(t));
+  // цель с каналом: android-dev — пакеты только Melete DEV (полное разделение на телефоне; в pre их нет совсем)
+  const tc = t + '-' + (process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev');
+  return JSON.parse(readFileSync('build/packs.json', 'utf8')).list.filter((p) => p.on.includes(t) || p.on.includes(tc));
 })();
 const packsOut = () => {
   let out = 'dist';

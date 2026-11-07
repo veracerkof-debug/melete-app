@@ -37,8 +37,11 @@ jobs:
         with:
           path: |
             public/models
+            src-tauri/models
           key: packs-models-${{ hashFiles('build/models.json') }}
       - name: Модели
+        env:
+          MODELS_PACKS: '1' # и модели Windows, которые идут пакетом на телефон DEV (полное разделение, улучшенный вокал)
         run: npm run models
 
       - name: Опись не устарела

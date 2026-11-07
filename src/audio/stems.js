@@ -22,17 +22,23 @@ if (!Native && isDesktop()) import('./stemsdesktop.js').then((m) => { Native = m
 const onDesktop = () => !Capacitor.isNativePlatform() && isDesktop();
 export const stemsNative = () => !!Native || isDesktop();
 // В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся.
-// APK (и Windows) — модель в пакете (src/core/packs.js): пока не скачан, разделения нет, stemsPack() — какой скачать
-const packId = () => (isDesktop() ? 'stems' : 'vocals');
-export const stemsSupported = () => !(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__) && hasPack(packId());
-export const stemsPack = () => (!(typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__) && isPacked(packId()) && !hasPack(packId()) ? packId() : null);
+// APK (и Windows) — модель в пакете (src/core/packs.js): пока не скачан, разделения нет, stemsPack() — какой скачать.
+// Телефон в Melete DEV (слово автора 07.11.2026: «полное разделение — обязательно»): ещё 4 и 6 дорожек (пакет stems,
+// HTDemucs) и улучшенный вокал RoFormer (пакет roformer); в pre этих пакетов нет — телефон делит на вокал и инструментал
+const WEB = typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__;
+export const fullStems = () => isDesktop() || (Capacitor.getPlatform() === 'android' && isPacked('stems'));
+const packId = (mode = '2') => (isDesktop() ? 'stems' : mode === '4' || mode === '6' ? 'stems' : 'vocals');
+export const stemsSupported = (mode = '2') => !WEB && (mode === '2' || fullStems()) && hasPack(packId(mode));
+export const stemsPack = (mode = '2') => (!WEB && isPacked(packId(mode)) && !hasPack(packId(mode)) ? packId(mode) : null);
+// Пакет улучшенного вокала (телефон DEV), который ещё не скачан, — или null
+export const hqPack = () => (!WEB && !isDesktop() && isPacked('roformer') && !hasPack('roformer') ? 'roformer' : null);
 
 const SR = 44100;
 // Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,
 // остальное (модель htdemucs, 180 МБ), '6' — ещё гитара и клавиши (htdemucs_6s, 55 МБ, fp16). Порядок — как показывать
 export const MODES = ['2', '4', '6'];
 // Режимы этого устройства: телефон и браузер — только вокал и инструментал; компьютер — все
-export const modesHere = () => (isDesktop() ? MODES : ['2']);
+export const modesHere = () => (fullStems() ? MODES : ['2']);
 export const PARTS_OF = { '2': ['vocals', 'inst'], '4': ['vocals', 'drums', 'bass', 'other'], '6': ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'] };
 export const PARTS = PARTS_OF['4'];
 export const ALL_PARTS = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other'];
@@ -67,10 +73,12 @@ export const stemsThreads = () => (Native || isDesktop() ? Math.max(1, Math.min(
 // hq — «ночное» качество (три прохода со сдвигом и шаг окна вдвое короче): ≈ ×4,5
 export const HQ_MUL = 4.5;
 export const estimateSec = (dur, mode = '4', hq = false) => (hq && isDesktop() ? Math.round(dur * 5 * (mode === '6' ? 1.2 : 1)) // RoFormer ≈ ×2,5 + HTDemucs в три прохода
+  : hq && hqVocalsModel() ? Math.round(dur * (12 + (mode === '2' ? 0 : 2 * HQ_MUL * (mode === '6' ? 1.5 : 1)))) // телефон: RoFormer ≈ ×12 (на компьютере 4 потока — ×3,5) + HTDemucs
   : !isDesktop() && mode === '2' ? Math.round(dur * (Native ? 2.5 : stemsThreads() > 1 ? 3 : 7) * (hq ? 2 : 1)) // MDX-Net: «улучшенное» — два прохода
   : Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1)));
-// Улучшенное разделение на компьютере — вокал моделью Mel-RoFormer (src-tauri/src/roformer.rs), остальное — HTDemucs по инструменталу
-export const hqVocalsModel = () => isDesktop();
+// Улучшенное разделение — вокал моделью Mel-RoFormer (компьютер — src-tauri/src/roformer.rs, телефон DEV — RoFormer.java
+// из пакета roformer), остальное — HTDemucs по инструменталу
+export const hqVocalsModel = () => isDesktop() || (!WEB && isPacked('roformer') && hasPack('roformer'));
 
 let worker = null, ready = null, readyModel = '';
 // Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново

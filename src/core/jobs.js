@@ -7,7 +7,7 @@
 // Без DOM: имена дорожек — через t() ядра.
 import { time as dTime, gauge as dGauge } from './diag.js';
 import { t } from '../i18n/index.js';
-import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported, stemsPack } from '../audio/stems.js';
+import { separate, PARTS_OF, stemEmpty, stemLevelDb, stemsSupported, stemsPack, hqPack } from '../audio/stems.js';
 import { transcribe } from '../audio/transcribe.js';
 import { transcribeYmt, ymtAvailable } from '../audio/ymt.js';
 import { transcribeLyrics, lyricsSupported } from '../audio/lyrics.js';
@@ -142,15 +142,16 @@ export function createJobs(files) {
     get current() { return cur; },
     busy: () => !!cur,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
-    supported: () => stemsSupported(),
+    supported: (mode) => stemsSupported(mode), // mode — '2' | '4' | '6' (телефон DEV: 4 и 6 — из пакета stems)
     // сколько дорожек делит это устройство: компьютер — 4, телефон — вокал и инструментал (DECISIONS «Телефон лёгкий»)
     mode: () => (isDesktop() ? '4' : '2'),
     // пакет модели, который нужно скачать для разделения (src/core/packs.js), или null
-    pack: () => stemsPack(),
+    pack: (mode) => stemsPack(mode),
+    hqPack: () => hqPack(), // улучшенный вокал (RoFormer) телефона DEV — не скачан
     // → Promise<{ stems, absent }>; занято — отказ 'busy'
     separate(rec, mode = '4', { onDone = () => {}, auto = false, hq = false } = {}) {
       if (cur) return Promise.reject(new Error('busy'));
-      if (!stemsSupported()) return Promise.reject(new Error('web'));
+      if (!stemsSupported(mode)) return Promise.reject(new Error('web'));
       cur = { kind: 'stems', id: rec.id, rec, stage: 'load', frac: 0, mode, hq: !!hq, auto, t0: Date.now() };
       cur.job = separate(rec.blob, { mode, hq, onStage: (stage, frac) => set({ stage, frac, ...(cur && stage !== cur.stage ? { stageAt: Date.now() } : {}) }) });
       emit();
