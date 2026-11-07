@@ -48,7 +48,7 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
-import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev } from '../sync.js';
+import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev, meshClient } from '../sync.js';
 import { setlistsOf } from '../guest.js';
 import { scanQR, parsePair, pairPayload } from './qrscan.js';
 
@@ -465,21 +465,30 @@ function syncHTML(app) {
 // Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон принимает подключения других устройств (QR, адрес и
 // код — как у компьютера), сопряжённые устройства — списком: синхронизировать каждое, забыть. Компьютер — в разделе ниже
 function meshHTML(app) {
-  const S = app.mesh;
-  if (!S || !S.avail) return '';
-  const st = S.state, peers = S.peers, devs = devsOf(), payload = st.ips[0] ? pairPayload(st.ips[0] + hostPort(st), st.code, st.fp || '') : '';
-  return '<div class="hdr">' + t('mesh.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('mesh.sw') + '</span>' + psw('meshOn', st.on, t('mesh.sw')) + '</div>' +
-    (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc(st.ips[0] || '—') + '</b>' +
-      '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
-      (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
-      (payload ? '<div class="syqr" data-qr="' + esc(payload) + '">' + qrHTML(payload) + '</div><span class="l2">' + t('mesh.qrHint') + '</span>' : '') + '</div>' : '') +
-    peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('mesh.in') + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="meshforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
-    '</div>' +
-    '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
+  const S = app.mesh, srv = !!(S && S.avail), desk = isDesktop() && meshClient();
+  if (!srv && !desk) return '';
+  let h = '';
+  if (srv) {
+    const st = S.state, peers = S.peers, payload = st.ips[0] ? pairPayload(st.ips[0] + hostPort(st), st.code, st.fp || '') : '';
+    h += '<div class="hdr">' + t('mesh.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('mesh.sw') + '</span>' + psw('meshOn', st.on, t('mesh.sw')) + '</div>' +
+      (st.on ? '<div class="cellcol sypair"><span class="l2">' + t('sy.addr') + '</span><b class="num sybig">' + esc(st.ips[0] || '—') + '</b>' +
+        '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
+        (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
+        (payload ? '<div class="syqr" data-qr="' + esc(payload) + '">' + qrHTML(payload) + '</div><span class="l2">' + t('mesh.qrHint') + '</span>' : '') + '</div>' : '') +
+      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('mesh.in') + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="meshforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+      '</div>';
+  }
+  const devs = devsOf();
+  h += '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
     devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
       '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button><button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button><button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>').join('') +
-    '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button></div>' +
-    '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('mesh.hint') + '</p>';
+    // подключить: телефон — QR камерой; везде — адрес и код с экрана того устройства
+    (srv ? '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button>' : '') +
+    '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-mesh="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
+    '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-mesh="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
+    '<button class="cell act" data-act="meshpair"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.pair') + '</button></div>' +
+    '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t(desk ? 'mesh.hintPc' : 'mesh.hint') + '</p>';
+  return h;
 }
 // Раздача в своей сети (src/core/guest.js, docs/guest-web.md): гости открывают песни в браузере телефона.
 // Открытая — вбил адрес, и внутри; закрытая — только по QR-коду и с подтверждением здесь. Ведёт хозяин, можно передать гостю
@@ -774,6 +783,15 @@ export function createPanel(app, onChange) {
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }
       if (g('[data-act="devrc"]')) { const dv = devsOf().find((x) => x.addr === g('[data-act="devrc"]').dataset.a); if (dv) import('./remote.js').then((m) => m.remoteSheet(app, dv)); return; }
       if (g('[data-act="pcrc"]')) { const pc = pcOf(); if (pc) import('./remote.js').then((m) => m.remoteSheet(app, pc)); return; }
+      if (g('[data-act="meshpair"]') && !syncBusy) {
+        const addr = layer.querySelector('[data-mesh="addr"]').value, code = layer.querySelector('[data-mesh="code"]').value;
+        syncBusy = true; syncMsg = t('sy.pairing'); render();
+        pair(addr, code, t(isDesktop() ? 'sy.pcName' : 'sy.phoneName'))
+          .then((d) => { syncMsg = t('sy.paired', { name: d.name }) + (d.fp ? ' · ' + t('sy.check') + ' ' + fpCheck(d.fp) : ''); if (d.phone) return syncNow(app, () => {}, undefined, { dev: d.addr }).then(() => onChange()).catch(() => {}); if (app.syncCli) app.syncCli.run().then(() => onChange()).catch(() => {}); return null; })
+          .catch((e) => { syncMsg = syncErr(e); })
+          .finally(() => { syncBusy = false; render(); });
+        return;
+      }
       if (g('[data-act="devforget"]')) { forgetDev(g('[data-act="devforget"]').dataset.a); syncMsg = ''; render(); return; }
       if (g('[data-act="devsync"]') && !syncBusy) {
         const a = g('[data-act="devsync"]').dataset.a;

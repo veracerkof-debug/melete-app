@@ -16,8 +16,9 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { pickParts, applyParts } from './backupparts.js';
 import { stripDemo, isDemoFile } from './demo.js';
-import { CORE_DICTS, loadAllLangs } from '../i18n/index.js';
+import { CORE_DICTS, loadAllLangs, t as i18nT } from '../i18n/index.js';
 import { log } from './log.js';
+import { isDesktop } from './desktop.js';
 
 // Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
 export const PORT_PRE = 53319, PORT_DEV = 53329;
@@ -174,6 +175,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
       incoming.delete(meta.id);
       await F.add({ ...meta, blob: new Blob(cur.parts, { type: meta.type || '' }) });
       if (meta.ens && ctx.ens) ctx.ens.gotFile(req.key, meta);
+      if (meta.sent && ctx.got) ctx.got(meta, peer); // отправили именно сюда — сказать
       return { status: 200, json: { done: true } };
     }
     return { status: 200, json: { got: cur.got } };
@@ -185,6 +187,8 @@ const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.li
 
 // Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон тоже принимает подключения — плагин Mesh
 // (MeshServer.java: TLS, свой сертификат), тот же протокол и обработчик, что у компьютера. В pre — только компьютер.
+// Подключаться к другим устройствам как к «Моим устройствам»: телефон DEV и компьютер DEV
+export const meshClient = () => typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'dev' && (Capacitor.getPlatform() === 'android' || isDesktop());
 export const meshAvail = () => Capacitor.getPlatform() === 'android' && typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'dev';
 // Сервер ↔ этот обработчик: компьютер — Rust (sync.rs, события Tauri), телефон DEV — плагин Mesh (transport: 'mesh').
 // → { start, stop, state, forget(key), subscribe }
@@ -203,7 +207,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
       const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      res = await handleRequest({ app, mem, got: (meta, peer) => import('../ui/index.js').then((U) => U.toast(i18nT('net.got', { name: meta.name || '', from: peer.name || '' }))), rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
       if (!u.pathname.startsWith('/melete/v1/rc/')) save(); // пульт опрашивает раз в секунду — хранить нечего
       if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta' || u.pathname === '/melete/v1/pair') { if (app.render && u.pathname !== '/melete/v1/pair') app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }
@@ -283,6 +287,18 @@ export async function http(method, url, { key = '', json = null, bin = false, ti
     const data = bin ? b64.to(r.data || '') : JSON.parse(r.data || '{}');
     return withFp ? { data, fp: r.fp || '' } : data;
   }
+  // компьютер (Melete DEV) — к телефону: TLS с закреплённым отпечатком в Rust (src-tauri/src/netcli.rs, команда net_http)
+  if (isDesktop() && meshClient()) {
+    if (pin === undefined) { const dv = Object.values(readLS().devs || {}).find((d) => d.fp && url.startsWith(d.addr)); pin = dv ? dv.fp : null; }
+    if (pin == null) throw Object.assign(new Error('pin'), { reason: 'repair' });
+    const { invoke } = await import('@tauri-apps/api/core');
+    let r;
+    try { r = await invoke('net_http', { method, url, key, body: json ? JSON.stringify(json) : null, bin, pin, timeout }); }
+    catch (e) { const m = String(e && e.message || e); throw Object.assign(new Error(m), m === 'pin' ? { reason: 'pin' } : {}); }
+    if (r.status >= 400) throw Object.assign(new Error('http ' + r.status), { status: r.status });
+    const data = bin ? b64.to(r.data || '') : JSON.parse(r.data || '{}');
+    return withFp ? { data, fp: r.fp || '' } : data;
+  }
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), timeout);
   try {
     const r = await fetch(url, { method, headers, body: json ? JSON.stringify(json) : undefined, signal: ctl.signal });
@@ -329,7 +345,8 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   delete m.old;
   const rec = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };
   // другой телефон (Melete DEV: связь всех со всеми) — в список устройств; компьютер — как раньше, один
-  if (hello.kind === 'phone') { m.devs = { ...(m.devs || {}), [base]: { ...rec, phone: true } }; writeLS(m); log('sync', 'сопряжено с устройством'); return m.devs[base]; }
+  // компьютер подключается только к другим устройствам — всё в список
+  if (hello.kind === 'phone' || isDesktop()) { m.devs = { ...(m.devs || {}), [base]: { ...rec, phone: true } }; writeLS(m); log('sync', 'сопряжено с устройством'); return m.devs[base]; }
   m.pc = rec;
   writeLS(m);
   log('sync', 'сопряжено с компьютером');
@@ -407,6 +424,24 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   if (out.songs || out.sessions || out.up || out.down || out.removed || out.meta || !auto) log('sync', (auto ? 'фоновая ' : '') + 'синхронизация: песен +' + out.songs + ', занятий +' + out.sessions + ', на компьютер ' + out.up + ', с компьютера ' + out.down + ', сведений ' + out.meta + ', удалено ' + out.removed);
   if (app.render && (out.songs || out.sessions || out.down || out.removed || out.meta)) app.render();
   return out;
+}
+
+// Отправить файл на устройство (Melete DEV): тем же путём, что синхронизация, кусками; там он появляется в медиатеке.
+// opts.dev — адрес из «Моих устройств», иначе компьютер. onStep(доля 0…1). → { have } — уже было там
+export async function sendFile(app, rec, onStep = () => {}, H = http, opts = {}) {
+  const m = readLS(), d = opts.dev ? (m.devs || {})[opts.dev] : m.pc;
+  if (!d) throw Object.assign(new Error('no dev'), { reason: 'nopc' });
+  if (!rec || !rec.blob) throw Object.assign(new Error('no file'), { reason: 'file' });
+  const meta = { ...metaOf(rec), size: rec.blob.size, sent: true };
+  let off = 0;
+  do {
+    const u8 = new Uint8Array(await rec.blob.slice(off, off + CHUNK).arrayBuffer());
+    const res = await H('POST', d.addr + '/melete/v1/put', { key: d.key, json: { meta, off, b64: b64.from(u8) }, timeout: 120000 }).catch((e) => { throw e.reason ? e : Object.assign(new Error('send'), { reason: e.status === 401 ? 'key' : e.status ? 'off' : 'unreachable' }); });
+    if (res.done) { onStep(1); log('sync', 'файл отправлен на устройство'); return { have: !!res.have }; }
+    off = res.got != null ? res.got : off + u8.length;
+    onStep(Math.min(1, off / meta.size));
+  } while (off < meta.size);
+  return { have: false };
 }
 
 const DAY = 86400000, MIN = 60000;

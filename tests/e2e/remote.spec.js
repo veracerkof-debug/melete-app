@@ -105,3 +105,16 @@ test('пульт: звук — метроном, пэды, арпеджиато�
   await page.locator('.sheet [data-rc="metro"]').click();
   expect(errors).toEqual([]);
 });
+
+test('медиатека: «На устройство…» — список сопряжённых устройств', async ({ page, melete, errors }) => {
+  await page.addInitScript(() => localStorage.setItem('melete.sync', JSON.stringify({ devs: { 'https://192.168.1.7:53329': { addr: 'https://192.168.1.7:53329', key: 'k', name: 'Pixel 8', fp: 'ab'.repeat(32), phone: true } } })));
+  await melete.open();
+  await page.waitForFunction(() => window.__melete && window.__melete.files);
+  await page.evaluate(async () => { const app = window.__melete; await app.files.ready; await app.files.add({ id: 'sd1', name: 'Отправить.wav', type: 'audio/wav', kind: 'audio', blob: new Blob([new Uint8Array(100)]), dur: 3, created: Date.now() }); });
+  await melete.tab('tools');
+  await melete.click('[data-open-tool="audio"]'); await page.waitForTimeout(900);
+  await page.locator('[data-x="mlmenu"][data-id="sd1"]').first().click();
+  await page.locator('.sheet [data-m="todev"]').click();
+  await expect(page.locator('.sheet [data-to="https://192.168.1.7:53329"]')).toContainText('Pixel 8');
+  expect(errors).toEqual([]);
+});

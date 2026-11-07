@@ -235,6 +235,16 @@ pub fn sync_reply(st: State<'_, SyncSrv>, request: Request<'_>) -> Result<(), St
     Ok(())
 }
 
+// Окно → запрос к другому устройству; bin — тело ответа base64 (куски файлов), иначе текст (JSON)
+#[tauri::command]
+pub async fn net_http(method: String, url: String, key: String, body: Option<String>, bin: bool, pin: String, timeout: Option<u64>) -> Result<crate::netcli::HttpOut, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let r = crate::netcli::request(&method, &url, &key, body.as_deref().map(|s| s.as_bytes()), &pin, std::time::Duration::from_millis(timeout.unwrap_or(60000)))?;
+        let data = if bin { crate::netcli::b64(&r.body) } else { String::from_utf8_lossy(&r.body).to_string() };
+        Ok(crate::netcli::HttpOut { status: r.status, data, fp: r.fp })
+    }).await.map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -194,6 +194,9 @@ export function makeCtx(app, mod) {
     // Пульт снаружи (медиасессия — браслет, часы, наушники; core/player.js): { title() — что звучит или null, next(), prev() }
     remote: (o) => { (app.remote || (app.remote = {}))[mod.id] = o; },
     // Пульт с другого устройства (Melete DEV, src/core/netctl.js): { state() — что сейчас, cmd(c) — сделать }; null — убрать
+    // Отправить файл на сопряжённое устройство (Melete DEV: screens/sendto.js); есть ли куда
+    canSendTo: () => typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'dev' && hasTargets(),
+    sendTo: (rec) => import('./screens/sendto.js').then((m) => m.sendSheet(app, rec)),
     net: (o) => { const N = app.net || (app.net = {}); if (o) N[mod.id] = o; else delete N[mod.id]; },
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
     openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
@@ -224,6 +227,8 @@ export function makeCtx(app, mod) {
   };
 }
 
+// есть ли сопряжённые устройства или компьютер (melete.sync) — без загрузки sync.js
+const hasTargets = () => { try { const m = JSON.parse(localStorage.getItem('melete.sync')) || {}; return !!(m.pc || Object.keys(m.devs || {}).length); } catch { return false; } };
 export const moduleName = (mod) => mod.name[getLang()] || mod.name.ru;
 
 // Тяжёлый модуль (heavy: true — модели, банки звуков) в веб-сборке не работает: его файлов там нет (DECISIONS: размер)

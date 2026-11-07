@@ -1261,6 +1261,7 @@ function menuSheet(id) {
       // конвертер (src/modules/convert): «Поделиться как …» — в нужном формате одним касанием, «Конвертировать…» — с настройкой
       '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' +
       (isVideo(x) ? '<button class="cell act" data-m="vaudio">' + t('videoAudio') + '</button>' : '') +
+      (ctx.canSendTo && ctx.canSendTo() ? '<button class="cell act" data-m="todev">' + t('toDevice') + '</button>' : '') + // на сопряжённое устройство (Melete DEV)
       '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
@@ -1274,6 +1275,7 @@ function menuSheet(id) {
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
     else if (m === 'send') shareRec(x, b);
+    else if (m === 'todev') { sh.close(); ctx.sendTo(x); }
     else if (m === 'conv') { sh.close(); convSheet([x.id]); }
     else if (m === 'vaudio') { sh.close(); convSheet([x.id], { fmt: 'm4a' }); }
     else if (m === 'shareAs') shareAsSheet(x, sh);

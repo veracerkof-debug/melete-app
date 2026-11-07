@@ -284,3 +284,22 @@ describe('пульт через связь', () => {
     expect(calls[0]).toEqual(['/melete/v1/rc/cmd', { a: 'play' }, { key: 'k1', name: 'Pixel' }]);
   });
 });
+
+describe('отправка файла на устройство', () => {
+  it('файл кусками доходит до медиатеки устройства, там сообщают, повтор — «уже есть»', async () => {
+    const { sendFile } = await import('../src/core/sync.js');
+    globalThis.localStorage = mkLS();
+    const a = mkApp(), b = mkApp(), got = [];
+    const bCtx = { app: b, mem: {}, code: '555666', name: 'Pixel', got: (meta, peer) => got.push([meta.name, peer.name]) };
+    const L = link(bCtx), H = async (m, url, o = {}) => (new URL(url).pathname === '/melete/v1/hello' ? { app: 'melete', v: 1, name: 'Pixel', kind: 'phone' } : L(m, url, o));
+    const d = await pair('192.168.1.9', '555666', 'Телефон', H);
+    await a.files.add({ id: 'big', name: 'Репетиция.wav', type: 'audio/wav', kind: 'audio', blob: bytes(5 << 20, 9) });
+    const steps = [];
+    const r = await sendFile(a, a.files.get('big'), (f) => steps.push(f), H, { dev: d.addr });
+    expect(r.have).toBe(false);
+    expect(b.files.get('big').blob.size).toBe(5 << 20);
+    expect(steps.at(-1)).toBe(1);
+    expect(got).toEqual([['Репетиция.wav', 'Телефон']]);
+    expect((await sendFile(a, a.files.get('big'), () => {}, H, { dev: d.addr })).have).toBe(true);
+  });
+});

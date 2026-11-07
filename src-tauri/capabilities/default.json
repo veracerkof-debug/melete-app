@@ -45,6 +45,7 @@
     "allow-sync-status",
     "allow-sync-body",
     "allow-sync-reply",
+    "allow-net-http",
     "allow-guest-start",
     "allow-guest-stop",
     "allow-guest-status",
