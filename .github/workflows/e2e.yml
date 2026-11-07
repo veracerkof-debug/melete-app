@@ -32,6 +32,10 @@ jobs:
       - name: Зависимости
         run: npm ci
 
+      # Тесты обоих каналов: сборки pre идут редко, и падение только в pre (тест ждал dev) жило незамеченным с 25.10 по 07.11
+      - name: Тесты (dev и pre)
+        run: MELETE_CHANNEL=dev npm test && MELETE_CHANNEL=pre npm test
+
       - name: Браузер
         run: npx playwright install --with-deps chromium
 
