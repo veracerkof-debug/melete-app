@@ -23,6 +23,23 @@ export const FILES = {
   windows: { pre: 'Melete-Setup.exe', dev: 'Melete-Dev-Setup.exe' },
   linux: { pre: 'Melete.AppImage', dev: 'Melete-Dev.AppImage' },
 };
+// Сборка на GitHub Actions своего канала (слово автора 07.11.2026: «пока собирается — видно, примерно когда будет»)
+export const WORKFLOWS = { android: 'android-beta.yml', windows: 'windows.yml', linux: 'linux.yml' };
+const BRANCH = { dev: 'main', pre: 'pre' };
+const ACTIVE = ['queued', 'in_progress', 'waiting', 'requested', 'pending'];
+// Прогоны сборки (ответ GitHub) → { n, left, started, late } или null: идёт сборка новее установленной; сколько осталось —
+// по медиане длительности последних удачных сборок (нет данных — 15 минут); дольше обычного — late
+export function buildingOf(runs, build, now = Date.now()) {
+  const list = Array.isArray(runs) ? runs : [];
+  const act = list.filter((r) => ACTIVE.includes(r.status) && +r.run_number > build).sort((a, b) => b.run_number - a.run_number)[0];
+  if (!act) return null;
+  const durs = list.filter((r) => r.status === 'completed' && r.conclusion === 'success' && r.run_started_at && r.updated_at)
+    .map((r) => Date.parse(r.updated_at) - Date.parse(r.run_started_at)).filter((d) => d > 0).sort((a, b) => a - b).slice(0, 7);
+  const typical = durs.length ? durs[Math.floor(durs.length / 2)] : 15 * 60000;
+  const started = Date.parse(act.run_started_at || act.created_at) || now, gone = Math.max(0, now - started);
+  const left = Math.max(60000, typical - gone);
+  return { n: +act.run_number, left, eta: now + left, started, typical, late: gone > typical, queued: act.status !== 'in_progress' };
+}
 const KEY = 'melete.upd'; // { at — последняя проверка, skip — номер сборки, от которой отказались }
 const DAY = 864e5;
 
@@ -74,6 +91,15 @@ export function createUpdater(app) {
     }
   }
 
+  // Идёт ли сборка канала (один запрос; не вышло — просто ничего не показываем)
+  async function fetchBuilding() {
+    try {
+      const r = await fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + WORKFLOWS[platform] + '/runs?branch=' + BRANCH[CHANNEL] + '&per_page=12&t=' + Date.now(), { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+      if (!r.ok) return null;
+      return buildingOf((await r.json()).workflow_runs, Math.max(BUILD, (s.info && s.info.build) || 0));
+    } catch { return null; }
+  }
+
   async function check() {
     if (!platform || s.st === 'checking' || s.st === 'down') return s;
     // лимит GitHub ещё действует (помнится и после перезапуска) — не спрашивать зря, ответ всё равно «лимит»
@@ -86,6 +112,9 @@ export function createUpdater(app) {
       const fresh = isNewer(info, BUILD);
       log('upd', 'проверка ' + CHANNEL + ': у нас ' + BUILD + ', на GitHub ' + (info ? info.build : '—') + (fresh ? ' — есть новая' : ''));
       set({ st: fresh ? 'avail' : 'none', info: fresh ? info : null, at });
+      const building = await fetchBuilding();
+      if (building) log('upd', 'на GitHub собирается сборка ' + building.n + ', осталось около ' + Math.round(building.left / 60000) + ' мин');
+      set({ building });
     } catch (e) {
       // лимит запросов — не ошибка приложения: запомнить срок и подождать (предупреждение, не ошибка в диагностике)
       if (e.limit) { writeMem({ ...readMem(), limit: e.limit }); log('upd', e.message, 'w'); } else logErr('upd', e);

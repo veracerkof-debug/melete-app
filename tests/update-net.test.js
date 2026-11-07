@@ -13,7 +13,9 @@ describe('update: сеть', () => {
     globalThis.fetch = vi.fn(async () => { if (n++ === 0) throw new TypeError('Failed to fetch'); return { ok: true, status: 200, json: async () => rel, headers: { get: () => null } }; });
     const U = createUpdater(app);
     const s = await U.check();
-    expect(fetch).toHaveBeenCalledTimes(2);
+    // сбой, повтор релиза — и один запрос о сборке на GitHub (07.11.2026: «собирается — примерно когда будет»)
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(String(fetch.mock.calls[2][0])).toMatch(/actions\/workflows\/.+\/runs\?branch=/);
     expect(s.st).toBe('none'); // собрано у себя (номер 0) — не обновляется, но ответ получен
     expect(String(fetch.mock.calls[0][0])).toMatch(new RegExp('releases/tags/' + CHANNEL + '\\?t=\\d+'));
   }, 10000);

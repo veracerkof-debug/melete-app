@@ -589,3 +589,4 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rcchip.on{background:var(--tint);color:var(--on-tint)}
 .rc .rcstem.idle .rcpart{color:var(--l2)}
 .rc input[type=range]{accent-color:var(--tint)}
+.updbuild .updprog{width:100%;margin:8px 0 2px}

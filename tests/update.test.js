@@ -58,3 +58,25 @@ describe('«Что нового»', () => {
     for (const e of NEWS) for (const l of ['ru', 'en', 'uz']) { expect(e[l].length, e.n + ' ' + l).toBe(e.ru.length); expect(e[l].every((x) => x.length > 5)).toBe(true); }
   });
 });
+
+// Сборка идёт на GitHub (07.11.2026): сколько осталось — по медиане прошлых удачных сборок
+import { buildingOf } from '../src/core/update.js';
+describe('сборка на GitHub', () => {
+  const T = Date.parse('2026-11-07T12:00:00Z'), iso = (ms) => new Date(ms).toISOString();
+  const done = (n, min) => ({ run_number: n, status: 'completed', conclusion: 'success', run_started_at: iso(T - 864e5), updated_at: iso(T - 864e5 + min * 60000) });
+  it('идёт новее установленной — осталось по медиане; старше или своя — ничего', () => {
+    const runs = [{ run_number: 412, status: 'in_progress', run_started_at: iso(T - 5 * 60000) }, done(411, 14), done(410, 16), done(409, 30)];
+    const b = buildingOf(runs, 411, T);
+    expect(b.n).toBe(412);
+    expect(Math.round(b.left / 60000)).toBe(11); // медиана 16 − прошло 5
+    expect(b.late).toBe(false);
+    expect(buildingOf(runs, 412, T)).toBe(null);
+    expect(buildingOf([done(411, 14)], 400, T)).toBe(null);
+  });
+  it('дольше обычного — «вот-вот»; без истории — 15 минут; в очереди — помечено', () => {
+    expect(buildingOf([{ run_number: 5, status: 'in_progress', run_started_at: iso(T - 40 * 60000) }, done(4, 10)], 4, T).late).toBe(true);
+    const q = buildingOf([{ run_number: 5, status: 'queued', created_at: iso(T) }], 4, T);
+    expect(q.queued).toBe(true);
+    expect(q.left).toBe(15 * 60000);
+  });
+});
