@@ -579,3 +579,13 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rc .rcpart{width:96px;flex:none}
 .rc .rcpct{width:36px;text-align:right;color:var(--l2)}
 .rc .rcq{width:100%;margin:0 0 8px}
+.rc .rcseg{margin:0 0 10px}
+.rc .rcline .rcb{min-width:40px;min-height:40px;padding:0 8px}
+.rc .rcline b{min-width:44px;text-align:center}
+.rcsw{min-width:56px;min-height:40px;padding:0 12px;border-radius:999px;background:var(--fill);color:var(--l2);font-weight:600;font-size:14px;flex:none}
+.rcsw.on{background:var(--tint);color:var(--on-tint)}
+.rc .rcchips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
+.rcchip{min-height:40px;padding:0 14px;border-radius:999px;background:var(--fill);color:var(--ink);font-size:14px}
+.rcchip.on{background:var(--tint);color:var(--on-tint)}
+.rc .rcstem.idle .rcpart{color:var(--l2)}
+.rc input[type=range]{accent-color:var(--tint)}
