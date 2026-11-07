@@ -233,5 +233,6 @@ export function createFFmpeg(url) {
 
 // Есть ли ядро (файл на месте): url(rel) — адрес файла (пакет на телефоне или сборка); → true/false
 export async function ffAvailable(url) {
-  try { const r = await fetch(url(CORE), { method: 'HEAD' }); return r.ok; } catch { return false; }
+  // сервер разработки на отсутствующий файл отдаёт index.html с кодом 200 — это не ядро
+  try { const r = await fetch(url(CORE), { method: 'HEAD' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; }
 }

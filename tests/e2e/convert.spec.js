@@ -63,7 +63,7 @@ test('экран: из файлов → FLAC → в медиатеке; «Под
 test('FFmpeg: длинная запись без пределов, разрез и громкость по LUFS', async ({ page, melete, errors }) => {
   test.setTimeout(300_000);
   await melete.open();
-  const has = await page.evaluate(() => fetch('models/ffmpeg/ffmpeg-core.js', { method: 'HEAD' }).then((r) => r.ok).catch(() => false));
+  const has = await page.evaluate(() => fetch('models/ffmpeg/ffmpeg-core.js', { method: 'HEAD' }).then((r) => r.ok && !/text\/html/.test(r.headers.get('content-type') || '')).catch(() => false));
   test.skip(!has, 'нет ядра FFmpeg (npm run models)');
   const r = await page.evaluate(async () => {
     const { createFFmpeg } = await import('/src/audio/convert/ffmpeg.js');

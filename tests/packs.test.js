@@ -57,7 +57,9 @@ describe('пакеты: tar', () => {
 
 describe('пакеты: что вынуто из этой сборки', () => {
   // у себя и в тестах — всё встроено; сборка APK (MELETE_TARGET=android, и CI) — пакеты своей системы вынуты
-  const target = process.env.MELETE_TARGET, want = idx.list.filter((p) => target && p.on.includes(target)).map((p) => p.id);
+  // цель с каналом (как в vite.config.js): android-dev — пакеты только Melete DEV
+  const target = process.env.MELETE_TARGET, tc = target + '-' + (process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev');
+  const want = idx.list.filter((p) => target && (p.on.includes(target) || p.on.includes(tc))).map((p) => p.id);
   it('список пакетов сборки — по MELETE_TARGET', () => {
     expect(packList().map((p) => p.id)).toEqual(want);
   });
