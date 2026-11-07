@@ -3,9 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false }, registerPlugin: () => ({}) }));
 vi.mock('../src/core/desktop.js', () => ({ isDesktop: () => true }));
 vi.mock('../src/core/log.js', () => ({ log: () => {}, logErr: () => {} }));
-const { createUpdater } = await import('../src/core/update.js');
+const { createUpdater, CHANNEL } = await import('../src/core/update.js'); // канал — как у сборки (MELETE_CHANNEL: main → dev, pre → pre)
 const app = { store: { state: { settings: {} } } };
-const rel = { assets: [{ name: 'Melete-Dev-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'x' }, { name: 'windows-1.ver', state: 'uploaded' }] }; // номер 1 — не новее сборки CI (BUILD_NUMBER ≥ 1)
+const rel = { assets: [{ name: 'Melete-Dev-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'x' }, { name: 'Melete-Setup.exe', state: 'uploaded', size: 1, browser_download_url: 'x' }, { name: 'windows-1.ver', state: 'uploaded' }] }; // номер 1 — не новее сборки CI (BUILD_NUMBER ≥ 1)
 
 describe('update: сеть', () => {
   it('сбой сети (Wi-Fi ↔ мобильная) — повтор, проверка проходит', async () => {
@@ -15,7 +15,7 @@ describe('update: сеть', () => {
     const s = await U.check();
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(s.st).toBe('none'); // собрано у себя (номер 0) — не обновляется, но ответ получен
-    expect(String(fetch.mock.calls[0][0])).toMatch(/releases\/tags\/dev\?t=\d+/);
+    expect(String(fetch.mock.calls[0][0])).toMatch(new RegExp('releases/tags/' + CHANNEL + '\\?t=\\d+'));
   }, 10000);
   it('лимит GitHub — без повторов, с временем', async () => {
     const reset = Math.floor(Date.now() / 1000) + 600;
