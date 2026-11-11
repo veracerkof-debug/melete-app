@@ -28,3 +28,28 @@ test('медиатека: «Отправить» нескольких — все
   expect(names.sort()).toEqual(['a.wav', 'b.wav']);
   expect(errors).toEqual([]);
 });
+// Форматы (слово автора 08.11): сконвертированный файл — не отдельная строка, а формат своей записи; удалить формат —
+// запись остаётся; удалить исходный — его место занимает сделанный
+test('медиатека: форматы записи — одна строка, удалить формат', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ settings: { upOk: 2 } });
+  await melete.free('F', ['audio']); await page.waitForTimeout(1200);
+  const fc = page.waitForEvent('filechooser'); await page.locator('.session [data-x="aadd"]').first().click(); await (await fc).setFiles(wav().slice(0, 1));
+  await page.waitForTimeout(1500);
+  await page.evaluate(async () => {
+    const F = window.__melete.files, src = F.list('audio')[0];
+    await F.add({ id: 'cvtest1', name: 'a.flac', size: 10, type: 'audio/flac', kind: 'audio', created: Date.now(), blob: new Blob([new Uint8Array(10)], { type: 'audio/flac' }), conv: { src: [src.id], fmt: 'flac' } });
+  });
+  await melete.free('F', ['audio']); await page.waitForTimeout(1200);
+  await expect(page.locator('.mlist .mlrow')).toHaveCount(1);
+  await expect(page.locator('.mlist .mlrow small')).toContainText(' + FLAC');
+  await page.locator('.mlist [data-x="mlmenu"]').click(); await page.waitForTimeout(500);
+  await expect(page.locator('.sheet [data-m="fdel"]')).toHaveCount(2);
+  page.once('dialog', (d) => d.accept());
+  await page.locator('.sheet [data-m="fdel"][data-f="cvtest1"]').click();
+  await page.locator('.confirm [data-ok], .sheet [data-ok], .cfm .ok, button:has-text("Удалить")').last().click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  expect(await page.evaluate(() => !!window.__melete.files.get('cvtest1'))).toBe(false);
+  expect(await page.evaluate(() => window.__melete.files.list('audio').length)).toBe(1);
+  expect(errors).toEqual([]);
+});

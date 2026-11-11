@@ -30,6 +30,7 @@ import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './
 
 import meta, { ICON } from './meta.js';
 const I = {
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
   mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
   vol: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
@@ -130,9 +131,29 @@ let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = []
 const fmtT = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const st = () => ctx.store.all();
 // записи медиатеки — без дорожек разделения: они живут внутри своей записи (панель «Дорожки», шторка), в списке их нет
-const tracks = () => ctx.files.list('audio').filter((x) => !x.stem);
+// Варианты форматов (слово автора 08.11.2026): сконвертированный файл (conv.src — из одной записи, она на месте) — не
+// отдельная строка, а формат той же записи; в меню записи — «Форматы»: отправить и удалить каждый
+const variantOf = (x) => !!(x && x.conv && Array.isArray(x.conv.src) && x.conv.src.length === 1 && ctx.files.get(x.conv.src[0]));
+const variantsOf = (x) => ctx.files.list('audio').filter((r) => r.conv && Array.isArray(r.conv.src) && r.conv.src.length === 1 && r.conv.src[0] === x.id);
+const fmtOf = (x) => (((x.conv && x.conv.fmt) || (x.name.match(/\.([a-z0-9]{2,5})$/i) || [])[1] || (x.type || '').split('/')[1] || '?') + '').toUpperCase();
+const tracks = () => ctx.files.list('audio').filter((x) => !x.stem && !variantOf(x));
 // удалить запись вместе с её дорожками
-async function removeWithStems(id) { for (const r of stemsOf(ctx.files, id)) await ctx.files.remove(r.id); await ctx.files.remove(id); }
+// Запись целиком: дорожки, ноты и все её форматы
+async function removeWithStems(id) { const x = ctx.files.get(id); for (const r of [...stemsOf(ctx.files, id), ...(x ? variantsOf(x) : [])]) await ctx.files.remove(r.id); await ctx.files.remove(id); }
+// Удалить один формат. Исходный — его место занимает первый из сделанных (песни и метки переходят к нему)
+async function removeFormat(x, r) {
+  if (r.id !== x.id) { await ctx.files.remove(r.id); return x; }
+  const vs = variantsOf(x);
+  if (!vs.length) { await removeWithStems(x.id); return null; }
+  const [m, ...rest] = vs;
+  m.conv = null; m.songs = x.songs || m.songs || []; if (x.marks) m.marks = x.marks;
+  await ctx.files.save(m);
+  for (const v of rest) { v.conv = { ...v.conv, src: [m.id] }; await ctx.files.save(v); }
+  for (const s of stemsOf(ctx.files, x.id)) await ctx.files.remove(s.id);
+  if (AU.cur && AU.cur.id === x.id) { pl().pause(); AU.cur = null; }
+  await ctx.files.remove(x.id);
+  return m;
+}
 const curSong = () => (ctx.session && ctx.session.songId) || null;
 const audKey = () => (curSong() ? 'song:' + curSong() : 'free');
 const style = () => (st().style === 'vinyl' && !ctx.mono ? 'vinyl' : 'wave'); // «Минимал» — волна
@@ -935,7 +956,8 @@ function libHTML() {
   else {
     h += '<div class="mlist">' + list.map((x) => {
       const sn = songTitles(x), cur = AU.cur && AU.cur.id === x.id, mk = (x.marks || []).length;
-      const info = [x.dur ? fmtT(x.dur) : '', anaTxt(x), stemsTxt(x), sizeMb(x), mk ? t('marksN', { n: mk }) : '', sn.join(', ')].filter(Boolean).join(' · ');
+      const vs = variantsOf(x), fm = vs.length ? [x, ...vs].map(fmtOf).join(' + ') : '';
+      const info = [x.dur ? fmtT(x.dur) : '', anaTxt(x), stemsTxt(x), sizeMb(x), fm, mk ? t('marksN', { n: mk }) : '', sn.join(', ')].filter(Boolean).join(' · ');
       if (sel) {
         const on = sel.has(x.id);
         return '<div class="mlrow' + (on ? ' cur' : '') + '"><button class="mlmain" data-x="mlsel" data-id="' + x.id + '" role="checkbox" aria-checked="' + on + '"><span class="mlchk' + (on ? ' on' : '') + '">' +
@@ -1268,6 +1290,28 @@ function pickSheet(sid) {
   }));
 }
 
+// Форматы записи: исходный и сделанные конвертером — у каждого «Отправить» и «Удалить»
+function formatsHTML(x) {
+  const vs = variantsOf(x), { t } = ctx;
+  if (!vs.length) return '';
+  return '<div class="hdr">' + t('formats') + '</div><div class="group">' + [x, ...vs].map((r) => '<div class="cell"><span class="grow"><b>' + esc(fmtOf(r)) + '</b> <span class="l2">' + esc(sizeMb(r)) +
+    (r.id === x.id ? ' · ' + t('fmtSource') : '') + '</span></span><button class="ic sm plain" data-m="fsend" data-f="' + r.id + '" aria-label="' + esc(t('fmtSend', { fmt: fmtOf(r) })) + '">' + I.share +
+    '</button><button class="ic sm plain" data-m="fdel" data-f="' + r.id + '" aria-label="' + esc(t('fmtDel', { fmt: fmtOf(r) })) + '">' + I.trash + '</button></div>').join('') + '</div>';
+}
+// В каком формате отправить: исходные или сделанные (у записи без такого формата — исходный). done(list) — файлы
+function pickFormat(xs, done) {
+  const { t, ui } = ctx, fmts = [...new Set(xs.flatMap((x) => variantsOf(x).map(fmtOf)))];
+  if (!fmts.length) { done(xs); return; }
+  ui.sheet(() => ui.snav(t('fmtPick')) + '<div class="group"><button class="cell act" data-pf="">' + t('fmtSource') + '</button>' + fmts.map((f) => '<button class="cell act" data-pf="' + esc(f) + '">' + esc(f) + '</button>').join('') + '</div>' +
+    (xs.length > 1 ? '<p class="ftr">' + t('fmtPickHint') + '</p>' : ''), (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pf]');
+    if (!b) return;
+    sh.close();
+    const f = b.dataset.pf;
+    done(xs.map((x) => (f ? variantsOf(x).find((r) => fmtOf(r) === f) || x : x)));
+  }));
+}
+
 function menuSheet(id) {
   const { t, ui } = ctx, x = ctx.files.get(id);
   if (!x) return;
@@ -1279,7 +1323,7 @@ function menuSheet(id) {
       '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' +
       (isVideo(x) ? '<button class="cell act" data-m="vaudio">' + t('videoAudio') + '</button>' : '') +
       (ctx.canSendTo && ctx.canSendTo() ? '<button class="cell act" data-m="todev">' + t('toDevice') + '</button>' : '') + // на сопряжённое устройство (Melete DEV)
-      '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' +
+      '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' + formatsHTML(x) +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
       '<div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>';
@@ -1291,7 +1335,13 @@ function menuSheet(id) {
     if (m === 'play') { load(x); playEl(); sh.close(); render(); }
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
-    else if (m === 'send') shareRec(x, b);
+    else if (m === 'send') { if (variantsOf(x).length) pickFormat([x], (list) => shareMany(list)); else shareRec(x, b); }
+    else if (m === 'fsend') { const r = ctx.files.get(b.dataset.f); if (r) shareMany([r]); }
+    else if (m === 'fdel') {
+      const r = ctx.files.get(b.dataset.f);
+      if (!r) return;
+      ui.confirm(t('fmtDelTitle', { fmt: fmtOf(r) }), r.name, t('delete')).then(async (ok) => { if (!ok) return; const nx = await removeFormat(x, r); sh.close(); render(); if (nx) menuSheet(nx.id); });
+    }
     else if (m === 'todev') { sh.close(); ctx.sendTo(x); }
     else if (m === 'conv') { sh.close(); convSheet([x.id]); }
     else if (m === 'vaudio') { sh.close(); convSheet([x.id], { fmt: 'm4a' }); }
@@ -1573,7 +1623,7 @@ function act(a, el) {
     }
     case 'mlsong': if (ML.sel && ML.sel.size) selSongsSheet(); break;
     case 'mldel': if (ML.sel && ML.sel.size) removeSelected(); break;
-    case 'mlsend': if (ML.sel && ML.sel.size) shareMany([...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean)); break;
+    case 'mlsend': if (ML.sel && ML.sel.size) pickFormat([...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean), (list) => shareMany(list)); break;
     case 'mlconv': if (ML.sel && ML.sel.size) convSheet([...ML.sel]); break;
     case 'mlselon': ML.sel = new Set(); render(); break;
     case 'amadd': markAdd(); break;
