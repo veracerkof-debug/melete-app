@@ -183,4 +183,31 @@ describe('копии в папке: раз в неделю, архив по ме
     expect([...k].sort()).toEqual(['2026-06-04', '2026-07-02', '2026-08-06', '2026-09-03', '2026-10-01', '2026-11-05'].map(n).sort());
     expect(k.size).toBeLessThanOrEqual(7);
   });
+
+  it('зеркало: удалено в медиатеке — уходит из папки, удалено в папке — из медиатеки; пропало сразу много — придержано', async () => {
+    const drv = memDrive(), app = memApp(), mem = {};
+    const removed = [];
+    app.api.removeFile = async (id) => { removed.push(id); const i = app.files.findIndex((x) => x.id === id); if (i >= 0) app.files.splice(i, 1); };
+    for (let i = 1; i <= 8; i++) app.files.push({ id: 'r' + i, name: 't' + i + '.wav', size: 4, blob: new Blob(['RIFF']), kind: 'audio' });
+    await syncFolder(drv, mem, app.api);
+    expect(Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).length).toBe(8);
+    // удалили в медиатеке
+    app.files.splice(app.files.findIndex((x) => x.id === 'r1'), 1);
+    let r = await syncFolder(drv, mem, app.api);
+    expect(r.removedDir).toBe(1);
+    expect(drv.fs['Media/t1.wav']).toBeUndefined();
+    // удалили в папке
+    delete drv.fs['Media/t2.wav'];
+    r = await syncFolder(drv, mem, app.api);
+    expect(r.removedApp).toBe(1);
+    expect(removed).toEqual(['r2']);
+    expect(app.files.map((x) => x.id)).not.toContain('r2');
+    // папка вдруг пустая (сменили, потеряли доступ) — ничего не удаляется, файлы выгружаются заново
+    Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).forEach((p) => delete drv.fs[p]);
+    r = await syncFolder(drv, mem, app.api);
+    expect(r.held).toContain('folder:6');
+    expect(r.removedApp).toBe(0);
+    expect(app.files.length).toBe(6);
+    expect(Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).length).toBe(6);
+  });
 });

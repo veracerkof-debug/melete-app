@@ -122,11 +122,23 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   // хранятся свежая и по одной на каждый из 6 последних месяцев (архив) — всего до 7 (backupKeep)
   if (api.by && weekDue((await listBackups(drv)).map((x) => x.name), now)) { await writeBackup(drv, api.backup(), api.by(), now); await pruneBackups(drv); out.backup = true; }
 
-  // 2. Файлы приложения → папка (один раз на файл; удалённый человеком из папки не возвращается)
+  // 2. Зеркало (слово автора 11.11.2026): медиатека и папка — одно и то же. Удалено в медиатеке — убрать из папки;
+  // удалено в папке — убрать из медиатеки; остальное — выгрузить. Защита от потери: если пропало сразу много (папку
+  // сменили, доступ потерян, база не прочиталась) — ничего не удаляется, только в журнал (out.held)
   const recs = api.files().filter((r) => r.blob && dirOfRec(r) && !no('skipFile', r));
-  const known = new Set(recs.flatMap((r) => [r.name + '|' + (r.size || r.blob.size), fileNameOf(r) + '|' + (r.size || r.blob.size)]));
+  const ids = new Set(api.files().map((r) => r.id));
+  const goneApp = Object.keys(mem.files).filter((id) => !ids.has(id));
+  const goneDir = recs.filter((r) => mem.files[r.id] && !at(mem.files[r.id]));
+  const mapped0 = Object.keys(mem.files).length, risky = (n) => n > 3 && n > mapped0 / 2;
+  out.removedDir = 0; out.removedApp = 0;
+  if (api.removeFile && risky(goneApp.length)) out.held = 'app:' + goneApp.length;
+  else if (api.removeFile) for (const id of goneApp) { const path = mem.files[id]; try { if (at(path)) { await drv.remove(path); out.removedDir++; const i = path.lastIndexOf('/'), d = path.slice(0, i); ls[d] = (ls[d] || []).filter((x) => x.name !== path.slice(i + 1)); } } catch { /* уже нет */ } delete mem.files[id]; delete mem.seen[path]; }
+  if (api.removeFile && risky(goneDir.length)) out.held = (out.held ? out.held + ', ' : '') + 'folder:' + goneDir.length;
+  else if (api.removeFile) for (const r of goneDir) { delete mem.seen[mem.files[r.id]]; delete mem.files[r.id]; await api.removeFile(r.id); r.gone = true; out.removedApp++; }
+  const known = new Set(recs.filter((r) => !r.gone).flatMap((r) => [r.name + '|' + (r.size || r.blob.size), fileNameOf(r) + '|' + (r.size || r.blob.size)]));
   for (const r of recs) {
-    if (mem.files[r.id]) continue;
+    if (r.gone) continue;
+    if (mem.files[r.id] && (!api.removeFile || at(mem.files[r.id]))) continue; // на месте; нет файла, а удаление придержано — выгрузится заново
     const d = dirOfRec(r), fn = safeName(fileNameOf(r)), same = (ls[d] || []).find((x) => x.name === fn && x.size === (r.size || r.blob.size));
     const name = same ? same.name : freeName(fn, taken(d)), path = d + '/' + name;
     if (!same) { await writeAll(drv, path, r.blob, r.type || mimeOf(name)); (ls[d] ||= []).push({ name, size: r.blob.size, mtime: now }); out.wrote++; }

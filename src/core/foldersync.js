@@ -24,6 +24,8 @@ export function initFolder(app) {
   const api = {
     files: () => [...app.files.list('audio'), ...app.files.list('tab')],
     addFile: async (r) => { r.id = 'fd' + uid(); await app.files.add(r); return r.id; },
+    // зеркало: файл удалили в папке — и из медиатеки (с её дорожками и форматами — они тоже в папке и уйдут следом)
+    removeFile: (id) => app.files.remove(id),
     songs: () => app.store.songs(),
     addSong: (p) => saveSong(app.store, null, { ...emptySong(st()), title: p.title || 'Melete', artist: p.artist || '', key: normKey(p.key), targetBpm: p.bpm || '', notes: p.notes || '' }),
     setNotes: (id, notes) => { const s = app.store.songById(id); if (!s) return; s.notes = notes; s.updatedAt = app.store.now(); app.store.save(); },
@@ -50,10 +52,11 @@ export function initFolder(app) {
     if (!state.ok && !(await status()).ok) return null;
     busy = true; emit();
     try {
-      const mem = load(), r = await syncFolder(nativeDriver, mem, api);
+      const mem = load(), r = await syncFolder(nativeDriver, mem, app.files.noDb ? { ...api, removeFile: null } : api); // без базы — без удалений
       keep(mem); last = Date.now();
-      if (r.wrote || r.read || r.songs || r.texts || r.sorted || r.cleaned) log('folder', 'синхронизация: выгружено ' + r.wrote + ', принято файлов ' + r.read + ', песен ' + r.songs + ', текстов ' + r.texts + ', разложено ' + r.sorted + ', убрано демо ' + r.cleaned);
-      if ((r.read || r.songs || r.texts) && app.render && !app.openTool) app.render();
+      if (r.wrote || r.read || r.songs || r.texts || r.sorted || r.cleaned || r.removedDir || r.removedApp) log('folder', 'синхронизация: выгружено ' + r.wrote + ', принято файлов ' + r.read + ', песен ' + r.songs + ', текстов ' + r.texts + ', разложено ' + r.sorted + ', убрано демо ' + r.cleaned + ', удалено из папки ' + r.removedDir + ', из медиатеки ' + r.removedApp);
+      if (r.held) log('folder', 'зеркало придержано — пропало сразу много файлов (' + r.held + '): ничего не удалено; если так и задумано — удалить вручную', 'w');
+      if ((r.read || r.songs || r.texts || r.removedApp) && app.render && !app.openTool) app.render();
       return r;
     } catch (e) { logErr('folder', e); return null; }
     finally { busy = false; emit(); }
@@ -104,7 +107,7 @@ export function initFolder(app) {
   if (avail) {
     status().then((s) => { if (s.ok) app.files.ready.then(() => schedule(3000)); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.ok && Date.now() - last > 60000) schedule(1500); });
-    app.files.subscribe(() => { if (state.ok) schedule(10000); });
+    app.files.subscribe(() => { if (state.ok) schedule(3000); }); // зеркало: правка медиатеки — в папку через пару секунд
     app.store.subscribe(() => { if (state.ok) schedule(15000); });
   }
   return folder;
