@@ -5,7 +5,7 @@ import { test, expect } from './melete.js';
 const open = async (page, melete, conf) => {
   await melete.open({ tools: { beat: { bpm: 200, ...conf } } });
   await melete.tab('tools');
-  await melete.click('[data-open-tool="train"]'); await page.waitForTimeout(700); await melete.click('.tview [data-trch="beat"]'); // «Слух и ритм» (06.11.2026)
+  await melete.click('[data-open-tool="beat"]'); await page.waitForTimeout(700);
   await page.waitForSelector('.rywrap', { timeout: 10_000 });
 };
 
@@ -54,8 +54,7 @@ test('смахивание по карточке — новый ритм; тем
 
 test('окно в занятии рядом с метрономом', async ({ page, melete, errors }) => {
   await melete.open({ tools: { beat: { drill: 'pulse' } } });
-  await melete.free('HH', ['train', 'metro']); // «Слух и ритм» — глава «Ритм» (06.11.2026)
-  await page.click('.ws .pane .csw [data-csub="beat"]'); await page.waitForTimeout(900);
+  await melete.free('HH', ['beat', 'metro']); await page.waitForTimeout(900);
   await expect(page.locator('.session .pane .rywrap')).toHaveCount(1);
   await expect(page.locator('.session .pane .rypad')).toBeVisible();
   expect(errors).toEqual([]);

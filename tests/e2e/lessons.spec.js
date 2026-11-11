@@ -6,7 +6,7 @@ const data = (page, id) => page.evaluate((id) => JSON.parse(localStorage.getItem
 test('слух: урок до итога, прогресс сохраняется; проверка уровня — выход', async ({ page, melete, errors }) => {
   await melete.open({ tools: { ear: { view: 'course' } } });
   await melete.tab('tools');
-  await melete.click('[data-open-tool="train"]'); await page.waitForTimeout(700); await melete.click('.tview [data-trch="ear"]'); // «Слух и ритм» (06.11.2026)
+  await melete.click('[data-open-tool="ear"]'); await page.waitForTimeout(700);
   await page.waitForSelector('.crs', { timeout: 10_000 });
   await expect(page.locator('.crsl')).toHaveCount(40);
   await melete.click('[data-x="lgo"][data-v="i1"]');
@@ -35,7 +35,7 @@ test('слух: урок до итога, прогресс сохраняетс�
 test('ритм: урок-диктант до итога', async ({ page, melete, errors }) => {
   await melete.open({ tools: { beat: { view: 'course' } } });
   await melete.tab('tools');
-  await melete.click('[data-open-tool="train"]'); await page.waitForTimeout(700); await melete.click('.tview [data-trch="beat"]'); // «Слух и ритм» (06.11.2026)
+  await melete.click('[data-open-tool="beat"]'); await page.waitForTimeout(700);
   await page.waitForSelector('.crs', { timeout: 10_000 });
   await melete.click('[data-x="lgo"][data-v="r6"]');
   for (let k = 0; k < 4; k++) {

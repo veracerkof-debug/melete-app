@@ -24,4 +24,13 @@ describe('учёба', () => {
     expect(shouldOffer(st, 'ear')).toBe(false);
     expect(studyRows(st, ses, now)).toEqual([]);
   });
+  it('прежний «Слух и ритм» (train) — «Слух»; окна внутри занятия — по своему времени, не больше занятия', () => {
+    const st = {};
+    setGoal(st, 'ear', 60); setGoal(st, 'beat', 60); setGoal(st, 'book', 60);
+    const more = [
+      { type: 'tool', tool: 'train', start: now - 7200000, dur: 300 },
+      { type: 'free', start: now - 5000000, dur: 1000, study: { beat: 400, book: 5000 } },
+    ];
+    expect(studyRows(st, [...ses, ...more], now)).toEqual([{ id: 'book', goal: 60, sec: 1000 }, { id: 'ear', goal: 60, sec: 2100 }, { id: 'beat', goal: 60, sec: 400 }]);
+  });
 });

@@ -58,7 +58,7 @@ test('«Инструменты»: компактно, на карточке — 
   await melete.open({ settings: { metro: { bpm: 233, num: 4, den: 4, sub: 1 } } });
   await page.click('.tab[data-tab="tools"]'); await page.waitForTimeout(1500);
   await expect(page.locator('.tgrid [data-open-tool="metro"] .tcs2')).toContainText('233');
-  await expect(page.locator('.tgrid [data-open-tool="train"] .tcs2')).toBeEmpty(); // описаний нет
+  await expect(page.locator('.tgrid [data-open-tool="ear"] .tcs2')).toBeEmpty(); // описаний нет
   // все карточки — на одном экране телефона
   const last = await page.locator('.tgrid [data-open-tool]').last().boundingBox();
   expect(last.y + last.height).toBeLessThan(page.viewportSize().height);

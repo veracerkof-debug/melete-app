@@ -175,6 +175,8 @@ export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', n
     updatedAt: now,
   };
   if (quiet > 0) rec.quiet = Math.round(quiet);
+  // учёба в окнах занятия (учебник, слух, ритм): секунды на экране — для блока «Учёба» (study.js); печать не касается
+  if (a.study && typeof a.study === 'object') { const s = {}; Object.entries(a.study).forEach(([k, v]) => { const n = Math.min(Math.round(v / 1000), rec.dur); if (n > 0) s[k] = n; }); if (Object.keys(s).length) rec.study = s; }
   if (a.clk) rec.clk = a.clk; // во время сессии часы переводили — запись не подтверждается
   return rec;
 }

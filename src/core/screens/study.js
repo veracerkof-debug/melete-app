@@ -21,11 +21,8 @@ export function studyCard(app) {
   }).join('') + '</div>';
 }
 
-// Открыть строку: учебник; «Слух» и «Ритм» — «Слух и ритм» на этой главе
-export function openStudy(app, id, openToolView, done) {
-  if (id === 'ear' || id === 'beat') { (app.device.train ??= {}).ch = id; app.saveDevice(); openToolView(app, 'train', done); }
-  else openToolView(app, id, done);
-}
+// Открыть строку: учебник, «Слух», «Ритм» — каждый своим инструментом
+export function openStudy(app, id, openToolView, done) { openToolView(app, id, done); }
 
 // Часы в неделю: готовые и своё; 0 — убрать с главной
 export function goalSheet(app, id, onDone = () => {}) {

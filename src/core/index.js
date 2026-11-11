@@ -9,7 +9,7 @@ import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.j
 import { loadDevice, saveDevice, onDeviceWriteFail } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
-import { applyTheme, tabsMigrate, trainMigrate, calmMigrate, mascotOf } from './settings.js';
+import { applyTheme, tabsMigrate, trainSplit, calmMigrate, mascotOf } from './settings.js';
 import { registerTools } from './palettes.js';
 import { dropTestMode } from './cleanup.js';
 import { removeDemoFiles, cleanDemoCopies } from './demo.js';
@@ -87,7 +87,7 @@ export function boot(root) {
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   const st0 = store.state.settings;
   if (tabsMigrate(st0)) store.settingsChanged();
-  if (trainMigrate(st0)) store.settingsChanged(); // «Слух» и «Ритм» → «Слух и ритм»
+  if (trainSplit(st0)) store.settingsChanged(); // «Слух и ритм» → снова «Слух» и «Ритм» (11.11.2026)
   if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);

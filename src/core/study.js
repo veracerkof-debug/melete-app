@@ -10,9 +10,16 @@ const DAY = 86400000;
 
 export const studyOf = (st) => { const s = st.study && typeof st.study === 'object' ? st.study : {}; return { goals: { ...(s.goals || {}) }, asked: { ...(s.asked || {}) } }; };
 // Строки программы по порядку: [{ id, goal (мин), sec (за эту неделю) }]
+// Время: инструмент вне занятия (type 'tool'; прежний «Слух и ритм» — train — считается «Слухом») и окна внутри занятия
+// (s.study — секунды, пока окно было на экране; screens/session.js)
 export function studyRows(st, sessions, now = Date.now()) {
   const { goals } = studyOf(st), ws = weekStart(now), we = ws + 7 * DAY, sec = {};
-  sessions.forEach((s) => { if (s.type === 'tool' && s.start >= ws && s.start < we && STUDY_IDS.includes(s.tool)) sec[s.tool] = (sec[s.tool] || 0) + s.dur; });
+  const add = (id, v) => { if (STUDY_IDS.includes(id) && v > 0) sec[id] = (sec[id] || 0) + v; };
+  sessions.forEach((s) => {
+    if (!(s.start >= ws && s.start < we)) return;
+    if (s.type === 'tool') add(s.tool === 'train' ? 'ear' : s.tool, s.dur);
+    else if (s.study && typeof s.study === 'object') Object.entries(s.study).forEach(([id, v]) => add(id, Math.min(+v || 0, s.dur || 0)));
+  });
   return STUDY_IDS.filter((id) => goals[id] > 0).map((id) => ({ id, goal: goals[id], sec: sec[id] || 0 }));
 }
 export function setGoal(st, id, min) {

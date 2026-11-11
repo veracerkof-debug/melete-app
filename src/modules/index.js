@@ -76,7 +76,11 @@ list.sort((a, b) => (a.order ?? 1000) - (b.order ?? 1000) || a.id.localeCompare(
 
 export const modules = list;
 export const skippedModules = skipped;
-export const moduleById = (id) => modules.find((m) => m.id === id);
+// «Слух и ритм» (train, 06–11.11.2026) снова разделён на «Слух» и «Ритм»; записи занятий с печатью не переписываются —
+// старое имя при чтении считается «Слухом» (DECISIONS 2026-11-11)
+export const TOOL_ALIAS = { train: 'ear' };
+export const toolId = (id) => TOOL_ALIAS[id] || id;
+export const moduleById = (id) => modules.find((m) => m.id === toolId(id));
 // Сервер разработки (npm run dev, сквозные проверки) отдаёт каждый файл отдельно — сотни запросов на модуль; когда окна
 // сессии догружают модули на ходу между частыми перезагрузками, Chromium в проверках срывается (ERR_INSUFFICIENT_RESOURCES).
 // Поэтому там модули догружаются сразу после запуска, по очереди; путь тот же (load()). Сборки (APK, Windows, веб) — по

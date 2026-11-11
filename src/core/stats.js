@@ -145,7 +145,7 @@ export const totalTime = (sessions) => sum(sessions);
 // Инструменты, открытые вне сессии: [{ n: id инструмента, v }]
 export function byTool(sessions) {
   const m = {};
-  sessions.filter((s) => s.type === 'tool').forEach((s) => { m[s.tool] = (m[s.tool] || 0) + s.dur; });
+  sessions.filter((s) => s.type === 'tool').forEach((s) => { const k = s.tool === 'train' ? 'ear' : s.tool; m[k] = (m[k] || 0) + s.dur; }); // train — прежний «Слух и ритм»
   return toList(m);
 }
 

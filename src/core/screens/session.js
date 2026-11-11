@@ -4,6 +4,7 @@
 // Перенесено из legacy/practice.html (startSession, openSession, sessionClick, renderWS, classify, paneMenu, layoutSheet,
 // жесты DRG, finish, checkIdle, pchipHTML, pomoPanel, rotCheck).
 import '../../ui/session.css';
+import { STUDY_IDS } from '../study.js';
 import { t } from '../../i18n/index.js';
 import { esc, icb, sheet, snav, toast, leave, icons } from '../../ui/index.js';
 import { isDesk } from '../../ui/desk.js';
@@ -509,8 +510,18 @@ export function createSessionScreen(app) {
   }
 
   function tick() { return bareScope(() => tickNow()); }
+  // Учёба в окнах занятия (блок «Учёба» на главной): пока окно учебника, слуха или ритма на экране и занятие идёт —
+  // его время копится в a.study (мс); в запись — секундами (session.js: buildRecord)
+  let studyAt = 0;
+  function studyTick() {
+    const a = app.active, now = Date.now(), dt = studyAt ? Math.min(2000, now - studyAt) : 0;
+    studyAt = now;
+    if (!a || a.pausedAt || !w || document.visibilityState !== 'visible' || !dt) return;
+    visible(w).forEach((id) => { if (STUDY_IDS.includes(id)) { a.study = a.study || {}; a.study[id] = (a.study[id] || 0) + dt; } });
+  }
   function tickNow() {
     updClock();
+    studyTick();
     const pc = layer && layer.querySelector('#pchip');
     if (pc) { const h = pchipHTML(); pc.hidden = !app.pomodoro.active(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
     rotCheck();
