@@ -312,3 +312,12 @@ describe('платформа компьютера в отчёте', () => {
     expect(desktopOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15')).toBe('macOS');
   });
 });
+
+describe('сопряжение без ключа (Linux 11.11.2026: ответ окна приходил кашей байтов)', () => {
+  it('ответ 200 без ключа — ошибка, компьютер не сохраняется', async () => {
+    localStorage.removeItem('melete.sync');
+    const H = async (m, url) => (url.endsWith('/hello') ? { app: 'melete', name: 'PC' } : { 0: 123, 1: 34 });
+    await expect(pair('192.168.1.5', '123456', 'Телефон', H)).rejects.toMatchObject({ reason: 'off' });
+    expect(pcOf()).toBe(null);
+  });
+});

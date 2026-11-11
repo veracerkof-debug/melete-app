@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use ort::value::{Tensor, TensorRef};
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::Request;
 use tauri::{AppHandle, Emitter, State};
 
 pub const ENC: &str = "models/ymt/ymt_enc.onnx";
@@ -132,7 +132,7 @@ pub fn notes_begin(st: State<'_, Notes>) -> Result<(), String> {
 // Кусок звука: тело запроса — float32 LE, 16 кГц моно
 #[tauri::command]
 pub fn notes_push(st: State<'_, Notes>, request: Request<'_>) -> Result<(), String> {
-    let bytes = match request.body() { InvokeBody::Raw(b) => b, _ => return Err("raw body expected".into()) };
+    let bytes = crate::ipcbody::bytes(request.body());
     let mut inp = st.input.lock().map_err(|_| "lock")?;
     inp.reserve(bytes.len() / 4);
     for c in bytes.chunks_exact(4) { inp.push(f32::from_le_bytes([c[0], c[1], c[2], c[3]])); }

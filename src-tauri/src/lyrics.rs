@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::Request;
 use tauri::{AppHandle, Emitter, State};
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
@@ -47,7 +47,7 @@ pub fn lyrics_begin(st: State<'_, Lyrics>) -> Result<(), String> {
 // Кусок звука: тело запроса — float32 LE, 16 кГц моно
 #[tauri::command]
 pub fn lyrics_push(st: State<'_, Lyrics>, request: Request<'_>) -> Result<(), String> {
-    let bytes = match request.body() { InvokeBody::Raw(b) => b, _ => return Err("raw body expected".into()) };
+    let bytes = crate::ipcbody::bytes(request.body());
     let mut inp = st.input.lock().map_err(|_| "lock")?;
     inp.reserve(bytes.len() / 4);
     for c in bytes.chunks_exact(4) { inp.push(f32::from_le_bytes([c[0], c[1], c[2], c[3]])); }

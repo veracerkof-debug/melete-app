@@ -9,6 +9,7 @@ mod demucs;
 mod lyrics;
 mod roformer;
 mod denoise;
+mod ipcbody; // тело запроса окна → байты, в том числе когда Tauri на Linux передаёт его JSON-ом
 mod localsend;
 mod netcli; // компьютер подключается к телефону (связь всех со всеми, Melete DEV)
 mod sync; // связь с телефоном: посредник между телефоном в сети и окном (src/core/sync.js)
@@ -21,7 +22,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request, Response};
+use tauri::ipc::{Request, Response};
 use tauri::webview::{PermissionKind, PermissionResponse};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
@@ -100,7 +101,7 @@ fn stems_begin(st: State<'_, Stems>) -> Result<(), String> {
 #[tauri::command]
 fn stems_push(st: State<'_, Stems>, request: Request<'_>) -> Result<(), String> {
     let ch: usize = request.headers().get("ch").and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()).unwrap_or(0);
-    let bytes = match request.body() { InvokeBody::Raw(b) => b, _ => return Err("raw body expected".into()) };
+    let bytes = crate::ipcbody::bytes(request.body());
     let mut inp = st.input.lock().map_err(|_| "lock")?;
     let dst = &mut inp[ch.min(1)];
     dst.reserve(bytes.len() / 4);

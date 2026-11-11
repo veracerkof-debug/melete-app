@@ -348,6 +348,8 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   let r, fp = '';
   try { const x = await H('POST', base + '/melete/v1/pair', { json: { code: String(code).replace(/\D/g, ''), name: myName }, pin: '', withFp: true }); r = x && x.data && 'fp' in x ? x.data : x; fp = (x && x.fp) || ''; } catch (e) { throw Object.assign(new Error('pair'), { reason: e.status === 403 ? 'code' : e.status === 429 ? 'wait' : 'off' }); }
   if (Capacitor.isNativePlatform() && !/^[0-9a-f]{64}$/.test(fp)) throw Object.assign(new Error('no fp'), { reason: 'unreachable' });
+  // нет ключа — сопряжение не удалось, хоть ответ и «200»: не сохранять пустое (иначе следом 401 и «компьютер забыл»)
+  if (!r || typeof r.key !== 'string' || !r.key) { log('sync', 'сопряжение: в ответе нет ключа — пришло ' + String(JSON.stringify(r)).slice(0, 80), 'w'); throw Object.assign(new Error('no key'), { reason: 'off' }); }
   const m = readLS();
   delete m.old;
   const rec = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };

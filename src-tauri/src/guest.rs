@@ -14,7 +14,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::Request;
 use tauri::{AppHandle, Emitter, State};
 
 pub const PORT: u16 = 53320;
@@ -218,7 +218,7 @@ pub fn guest_reply(st: State<'_, GuestSrv>, request: Request<'_>) -> Result<(), 
     let code: u16 = get("status").parse().unwrap_or(200);
     let ctype = { let c = get("ctype"); if c.is_empty() { "application/json".to_string() } else { c } };
     let cache = get("cache") == "1";
-    let body = match request.body() { InvokeBody::Raw(b) => b.clone(), InvokeBody::Json(v) => v.to_string().into_bytes() };
+    let body = crate::ipcbody::bytes(request.body()).into_owned();
     if let Ok(mut w) = st.waits.lock() { if let Some(tx) = w.remove(&rid) { let _ = tx.send((code, ctype, body, cache)); } }
     Ok(())
 }

@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request, Response};
+use tauri::ipc::{Request, Response};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -230,7 +230,7 @@ pub fn sync_reply(st: State<'_, SyncSrv>, request: Request<'_>) -> Result<(), St
     let rid: u64 = get("rid").parse().map_err(|_| "rid")?;
     let code: u16 = get("status").parse().unwrap_or(200);
     let ctype = { let c = get("ctype"); if c.is_empty() { "application/json".to_string() } else { c } };
-    let body = match request.body() { InvokeBody::Raw(b) => b.clone(), InvokeBody::Json(v) => v.to_string().into_bytes() };
+    let body = crate::ipcbody::bytes(request.body()).into_owned();
     if let Ok(mut w) = st.waits.lock() { if let Some(tx) = w.remove(&rid) { let _ = tx.send((code, ctype, body)); } }
     Ok(())
 }

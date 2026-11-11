@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::ipc::{InvokeBody, Request, Response};
+use tauri::ipc::{Request, Response};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 #[derive(Default)]
@@ -36,7 +36,7 @@ pub fn denoise_begin(st: State<'_, Denoise>) -> Result<(), String> {
 // Кусок звука: тело запроса — float32 LE, 48 кГц моно
 #[tauri::command]
 pub fn denoise_push(st: State<'_, Denoise>, request: Request<'_>) -> Result<(), String> {
-    let bytes = match request.body() { InvokeBody::Raw(b) => b, _ => return Err("raw body expected".into()) };
+    let bytes = crate::ipcbody::bytes(request.body());
     let mut inp = st.input.lock().map_err(|_| "lock")?;
     inp.reserve(bytes.len() / 4);
     for c in bytes.chunks_exact(4) { inp.push(f32::from_le_bytes([c[0], c[1], c[2], c[3]])); }
