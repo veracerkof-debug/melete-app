@@ -643,3 +643,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pchk input{width:22px;height:22px}
 .gform .gflink{width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;align-items:center}
 .gform .gfchev{width:18px;height:18px;flex:none;fill:none;stroke:var(--l3);stroke-width:2}
+/* Отступы (отчёт автора 11.11: группы наезжали друг на друга): подсказка под группой — отступ до следующей группы;
+   подсказка внутри карточки расписания — с полем снизу */
+.ftr+.group,.ftr+.plan,.plan+.group{margin-top:18px}
+.plan>.ftr{margin:10px 14px 0;padding-bottom:14px}
