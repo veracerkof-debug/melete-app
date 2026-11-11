@@ -2,3 +2,5 @@ target/
 gen/schemas/
 # модель текста песни (build/models.json, скачивается перед сборкой)
 models/
+# среда выполнения Visual C++ — кладёт сборка Windows (windows.yml), рядом с melete.exe в установщике
+vcrt/

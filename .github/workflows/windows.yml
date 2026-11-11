@@ -65,6 +65,23 @@ jobs:
           if [ ! -f "/c/Program Files/LLVM/bin/libclang.dll" ]; then choco install llvm -y --no-progress; fi
           echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> "$GITHUB_ENV"
 
+      # Среда выполнения Visual C++ (MSVCP140, VCRUNTIME140) — рядом с melete.exe (tauri.windows.conf.json): без неё на
+      # компьютере, где её не ставила другая программа, Melete не запускается («система не обнаружила MSVCP140.dll»,
+      # отчёт автора 11.11.2026). Файлы — из комплекта распространяемых библиотек Visual Studio (Microsoft разрешает класть
+      # их в папку программы), запасной ход — System32 образа
+      - name: Среда выполнения Visual C++
+        shell: pwsh
+        run: |
+          $dst = "src-tauri/vcrt"; New-Item -ItemType Directory -Force $dst | Out-Null
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | ForEach-Object { Get-ChildItem "$($_.FullName)\x64" -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue } | Select-Object -First 1
+          $names = "msvcp140.dll","msvcp140_1.dll","msvcp140_2.dll","vcruntime140.dll","vcruntime140_1.dll"
+          foreach ($n in $names) {
+            $src = if ($crt -and (Test-Path "$($crt.FullName)\$n")) { "$($crt.FullName)\$n" } else { "$env:WINDIR\System32\$n" }
+            Copy-Item $src "$dst\$n" -Force
+            Write-Host "$n <- $src"
+          }
+
       # beforeBuildCommand в tauri.conf.json собирает веб-часть (npm run build)
       - name: Сборка установщика
         shell: bash
