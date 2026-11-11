@@ -33,7 +33,7 @@ function preview(st, mode) {
 // who — выбор маскота, remind — напоминания о практике, tama — тамагочи (настройки делят их по разделам: «Маскот» и «Уведомления»)
 // Напоминания формой события, как в Google Календаре (слово автора 08.11, решение 11.11.2026): одна страница сверху
 // вниз, у строки — значок слева; время крупно, дни недели кружками (касание — день практики или отдыха), уведомления
-// списком («за 1 ч» ×, «Добавить уведомление»), тихие часы, по имени. Под формой — наглядная неделя (remindview.js)
+// списком («за 1 ч» ×, «Добавить уведомление»), тихие часы, по имени. Дни и время — в расписании на «Неделе» (plan.js)
 const GI = {
   time: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
   rep: '<svg viewBox="0 0 24 24"><path d="M17 3l3 3-3 3M4 11V9a3 3 0 0 1 3-3h13M7 21l-3-3 3-3M20 13v2a3 3 0 0 1-3 3H4"/></svg>',
@@ -41,16 +41,15 @@ const GI = {
   moon: '<svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>',
   user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
 };
+const CHEV_R = '<svg class="gfchev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
 const gRow = (ic, body, cls = '') => '<div class="gfrow ' + cls + '"><span class="gfic" aria-hidden="true">' + GI[ic] + '</span><div class="gfbody">' + body + '</div></div>';
-export function remindFormHTML(st, { days = [], wdNames = [], test = true } = {}) {
+export function remindFormHTML(st, { plan = '', test = true } = {}) {
   const r = remindOf(st), mode = r.mode;
   let h = '<div class="group gform"><div class="cellcol"><div class="mlhead">' + faceOr(st, FACE[mode]) +
     seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div></div>';
   if (mode === 'quiet') return h + '</div><p class="ftr">' + t('rem.quietHint') + '</p>';
-  h += gRow('time', '<label class="gftime"><span class="l2">' + t('rem.time') + '</span><input type="time" class="gtime num" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '"></label>');
-  const on = wdNames.map((_, i) => !!days[i]), n = on.filter(Boolean).length;
-  h += gRow('rep', '<div class="gfdays" role="group" aria-label="' + esc(t('rem.days')) + '">' + wdNames.map((nm, i) => '<button type="button" class="gfday' + (on[i] ? ' on' : '') + '" data-rvday="' + i + '" aria-pressed="' + on[i] + '">' + esc(String(nm).slice(0, 2)) + '</button>').join('') + '</div>' +
-    '<span class="l2 gfsub">' + (n === 7 ? t('rem.everyDay') : n ? t('rem.onDays', { days: wdNames.filter((_, i) => on[i]).join(', ') }) : t('rem.noDays')) + '</span>');
+  // когда занятия — одно место, «Неделя» (расписание, screens/plan.js); здесь — только ссылка туда
+  h += '<button class="gfrow gflink" data-pp="week"><span class="gfic" aria-hidden="true">' + GI.time + '</span><span class="gfbody"><span>' + t('rem.schedule') + '</span><span class="l2 gfsub">' + esc(plan || t('rem.noDays')) + '</span></span>' + CHEV_R + '</button>';
   let list = '';
   if (mode === 'classic') list = r.leads.slice().sort((a, b) => b - a).map((m) => '<div class="gfitem"><span class="grow">' + leadName(m) + '</span>' + (r.leads.length > 1 ? '<button class="ic sm plain" data-mllead="' + m + '" aria-label="' + esc(t('rem.del') + ': ' + leadName(m)) + '">×</button>' : '') + '</div>').join('') +
     (r.leads.length < LEADS.length ? '<button class="gfadd" data-mlleadadd>' + t('rem.addNotif') + '</button>' : '');

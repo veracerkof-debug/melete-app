@@ -183,7 +183,9 @@ describe('своё расписание', () => {
 // Своё время занятия по дням недели (вид «Неделя», 06.11.2026)
 describe('время по дням', async () => {
   const { timeOn } = await import('../src/core/reminders.js');
-  const { setDayTime } = await import('../src/core/screens/remindview.js');
+  // прежний вид «Неделя» (remindview.js) заменён расписанием (schedule.js); поле dayTimes осталось — его заполняет расписание
+  const { setRemind } = await import('../src/core/reminders.js');
+  const setDayTime = (st, i, tm) => { const r = remindOf(st), dt = { ...r.dayTimes }; if (!tm || tm === r.time) delete dt[i]; else dt[i] = tm; setRemind(st, { dayTimes: dt }); };
   it('свой день — своё время, остальные — общее; напоминания считаются от него', () => {
     const st = { days: [true, true, true, true, true, true, true], remind: { mode: 'classic', time: '19:00', leads: [60] } };
     setDayTime(st, 2, '09:30'); // среда

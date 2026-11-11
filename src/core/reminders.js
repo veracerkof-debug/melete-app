@@ -9,6 +9,7 @@
 // - «Своё»: человек сам собирает список — до занятия, после или в точное время, каждое в своём стиле (до 10 в день);
 // - «Без уведомлений»: напоминаний нет совсем, Мелета спокойна.
 // Тихие часы — без напоминаний. Тексты — src/core/remindtexts.js.
+import { planOf, slotsOn } from './schedule.js';
 import { Capacitor } from '@capacitor/core';
 import { dayKey, weekday } from './time.js';
 import { log, errText } from './log.js';
@@ -50,6 +51,8 @@ export function remindOf(settings) {
   // своё время занятия по дням недели (0 — понедельник): { '2': '07:30' }; нет — общее r.time
   r.dayTimes = Object.fromEntries(Object.entries(r.dayTimes && typeof r.dayTimes === 'object' ? r.dayTimes : {}).filter(([k, v]) => /^[0-6]$/.test(k) && /^\d\d:\d\d$/.test(v) && v !== r.time));
   r.custom = (Array.isArray(r.custom) ? r.custom : DEFAULT_REMIND.custom).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX);
+  // расписание (schedule.js, 11.11.2026): начала занятий дня — несколько в день, перерывы, правки одного дня
+  if (settings.plan) { const p = planOf(settings); r.startsOn = (d) => slotsOn(p, d).map((s) => s.from); }
   return r;
 }
 // Сохранить выбор (settings.remind): только поля нового вида
@@ -70,13 +73,17 @@ export function remindTimes(r, d) {
   r = r.leads && r.mode ? r : remindOf({ remind: r });
   if (r.mode === 'quiet') return [];
   const quiet = (ts) => { const hr = new Date(ts).getHours(); return r.quietFrom > r.quietTo ? hr >= r.quietFrom || hr < r.quietTo : hr >= r.quietFrom && hr < r.quietTo; };
-  const t0 = at(d, timeOn(r, d));
+  const starts = (r.startsOn ? r.startsOn(d) : [timeOn(r, d)]).map((hm) => at(d, hm));
+  if (!starts.length) return []; // перерыв или день без занятий
+  const t0 = starts[0];
   if (r.mode === 'custom') {
     const seen = new Set();
-    return r.custom.map((x) => (x.at ? { ts: at(d, x.at), slot: 'abs', tone: x.tone } : { ts: t0 + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone }))
+    return r.custom.flatMap((x) => (x.at ? [{ ts: at(d, x.at), slot: 'abs', tone: x.tone }] : starts.map((s) => ({ ts: s + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone }))))
       .filter((x) => x.ts >= d && x.ts < d + DAY && !quiet(x.ts) && !seen.has(x.ts) && seen.add(x.ts)).sort((a, b) => a.ts - b.ts);
   }
-  let list = (r.mode === 'pushy' ? [60, 5] : r.leads).map((m) => ({ ts: t0 - m * MIN, slot: 'lead:' + m }));
+  // перед каждым занятием дня; два занятия рядом — одно напоминание не дублируется
+  const seen = new Set();
+  let list = starts.flatMap((s, i) => (r.mode === 'pushy' && i > 0 ? [5] : r.mode === 'pushy' ? [60, 5] : r.leads).map((m) => ({ ts: s - m * MIN, slot: 'lead:' + m }))).filter((x) => !seen.has(x.ts) && seen.add(x.ts));
   if (r.mode === 'pushy') {
     list.push({ ts: t0 + 60 * MIN, slot: 'after' });
     // точки дня — если не слишком близко (20 мин) к напоминаниям у занятия
@@ -94,7 +101,7 @@ export function plan(settings, practicedToday, now = Date.now()) {
   const out = [], d0 = new Date(now); d0.setHours(0, 0, 0, 0);
   for (let i = 0; i < 7; i++) {
     const d = new Date(d0.getTime() + i * DAY + 3600000); d.setHours(0, 0, 0, 0); // переход на летнее время
-    if (!settings.days[weekday(d.getTime())]) continue;
+    if (r.startsOn ? !r.startsOn(d.getTime()).length : !settings.days[weekday(d.getTime())]) continue;
     if (i === 0 && practicedToday) continue;
     remindTimes(r, d.getTime()).forEach((x, n) => { if (x.ts > now + MIN) out.push({ ...x, n }); });
   }

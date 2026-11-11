@@ -19,14 +19,14 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, goalProgress, goalPerDay, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, changeGoal, toggleDay, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX, FIXED_TABS } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX, FIXED_TABS } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
 import { isBackup } from '../store.js';
 import { exportSheet, importSheet } from './backupsheet.js';
 import { playerAvailable, bgCtl, canOverlay, askOverlay } from '../player.js';
 import { remindFormHTML, meleteHTML, bindMelete, mountMelete } from './melete.js';
-import { remindViewHTML, bindRemindView } from './remindview.js';
+import { planHTML, bindPlan, mountPlan, planSummary } from './plan.js';
 import { setsOf, QSETS, qsetsFor } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
 import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
@@ -192,8 +192,9 @@ function meHTML(app) {
 
 function weekHTML(app) {
   const st = app.store.state.settings, WD = weekdays();
-  return '<div class="large">' + t('week.title') + '</div>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
+  // расписание занятий — единственное место для дней и времени, наверху (слово автора 11.11.2026; screens/plan.js)
+  return '<div class="large">' + t('week.title') + '</div>' + planHTML(app) +
+    '<div class="group" style="margin-top:22px"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
     '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div></div>' +
@@ -203,12 +204,7 @@ function weekHTML(app) {
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
     '<p class="ftr">' + t('presence.hint') + '</p>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
-    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => featRow(st, k, k === 'mastery' ? STONE_IC : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>') +
-    '<div class="hdr">' + t('week.days') + '</div><div class="group"><div class="cellcol"><div class="seg" role="group" aria-label="' + t('week.days') + '">' +
-    WD.map((d, i) => '<button data-day="' + i + '" aria-pressed="' + !!st.days[i] + '">' + d + '</button>').join('') + '</div></div></div>' +
-    '<p class="ftr">' + t('week.restHint') + '</p>' +
-    '<div class="hdr">' + t('week.goal') + '</div><div class="group"><div class="cell"><span class="grow">' + t('week.perWeek') + '</span><span class="val num" style="color:var(--ink);margin-right:6px">' + fmtDur(st.goalMin * 60) +
-    '</span><span class="stepper"><button data-goal="-30" aria-label="' + t('week.minus30') + '">−</button><button data-goal="30" aria-label="' + t('week.plus30') + '">+</button></span></div></div>';
+    (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => featRow(st, k, k === 'mastery' ? STONE_IC : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>');
 }
 
 // Звук (своя страница по карте 06.11.2026): буфер, ресурсы, движок, реверберация, нагрузка; дорожки и разбор записей
@@ -275,7 +271,7 @@ function mascotHTML(app) {
 
 function notifHTML(app) {
   const st = app.store.state.settings;
-  return '<div class="large">' + t('page.notif') + '</div>' + remindFormHTML(st, { days: st.days || [], wdNames: weekdays() }) + remindViewHTML(app);
+  return '<div class="large">' + t('page.notif') + '</div>' + remindFormHTML(st, { plan: planSummary(st) });
 }
 
 // Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
@@ -673,6 +669,7 @@ export function createPanel(app, onChange) {
     if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') coreHelp(app, 'melete');
     if (page === 'notif') mountMelete(layer);
+    if (page === 'week' || shown === 'week') mountPlan(layer, app);
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
     if (bb) {
@@ -693,7 +690,7 @@ export function createPanel(app, onChange) {
     if (app.guest) app.guest.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.syncCli) app.syncCli.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected && !syncBusy) render(); });
     // характер Мелеты (страница «Уведомления»)
-    bindRemindView(layer, app, (ch) => (ch ? changed() : render()));
+    bindPlan(layer, app, (ch) => (ch ? changed() : render()));
     bindMelete(layer, () => app.store.state.settings, { save: () => { app.store.settingsChanged(); onChange(); }, rerender: () => render() });
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
     const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };
@@ -713,7 +710,6 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-tabmk]'))) { if (makeTab(app.store, b.dataset.tabmk, tabIds(app.store.state.settings)) === 'max') toast(t('tabs.max', { max: TABS_MAX })); render(); onChange(); return; }
       if ((b = g('[data-tabun]'))) { if (unmakeTab(app.store, b.dataset.tabun)) { render(); onChange(); } return; }
-      if ((b = g('[data-day]'))) { toggleDay(app.store, +b.dataset.day); render(); onChange(); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }
@@ -721,7 +717,6 @@ export function createPanel(app, onChange) {
       if (g('[data-bplannew]')) { planSheet(app, () => { render(); onChange(); }); return; }
       if (g('[data-bplanedit]')) { planSheet(app, () => { render(); onChange(); }, app.bible.st().plan); return; }
       if (g('[data-brestart]')) { app.bible.setPlan(app.bible.st().plan, dayKeyOf(Date.now())); toast(t('church.restarted')); render(); onChange(); return; }
-      if ((b = g('[data-goal]'))) { changeGoal(app.store, +b.dataset.goal); render(); onChange(); return; }
       if ((b = g('[data-appicon]'))) { app.store.state.settings.appIconOwn = true; setAppIcon(app.store.state.settings, b.dataset.appicon).then((ok) => { app.store.settingsChanged(); render(); toast(t(ok ? 'icon.done' : 'icon.fail')); }); return; }
       if ((b = g('[data-seg="theme"] [data-v]'))) { app.store.state.settings.theme = b.dataset.v; applyTheme(app.store.state.settings); changed(); return; }
       if ((b = g('[data-seg="uistyle"] [data-v]'))) {

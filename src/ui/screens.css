@@ -606,3 +606,40 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .gform .gfitem{display:flex;align-items:center;gap:8px;min-height:40px;flex-wrap:wrap}
 .gform .gfadd{align-self:flex-start;background:none;border:0;color:var(--tint);font-weight:600;font-size:15px;min-height:40px;padding:0}
 .gform .gfq{display:flex;align-items:center;gap:8px}
+
+/* Расписание занятий — по образцу Google Календаря (screens/plan.js, 11.11.2026): полоса дней, день по часам */
+.plan{background:var(--cell);border-radius:14px;overflow:hidden}
+.pstrip{display:flex;align-items:stretch;gap:2px;padding:8px 4px 6px}
+.pstrip .pwk{flex:none;width:30px;min-width:30px;font-size:22px;color:var(--l2)}
+.pday{flex:1 1 0;min-width:0;min-height:56px;border:0;background:none;color:var(--ink);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 0}
+.pday small{font-size:11.5px;color:var(--l2);text-transform:capitalize}
+.pday b{font-size:18px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.pday.today b{color:var(--tint)}
+.pday.on b{background:var(--tint);color:var(--on-tint)}
+.pday i{width:5px;height:5px;border-radius:50%}
+.pday i.dot{background:var(--tint)}
+.pday.off b{text-decoration:line-through;opacity:.55}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 8px}
+.phead b{font-size:17px}
+.pnote{margin:0 14px 8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--tint) 12%,transparent);font-size:13.5px}
+.pnote.off{background:color-mix(in srgb,var(--l2) 14%,transparent)}
+.pscroll{height:min(56vh,520px);overflow-y:auto;overscroll-behavior:contain;border-top:.5px solid var(--sep);touch-action:pan-y}
+.pgrid{position:relative;margin-left:54px;margin-right:10px;user-select:none;-webkit-user-select:none}
+.pgrid.isoff{background:repeating-linear-gradient(-45deg,transparent 0 10px,color-mix(in srgb,var(--l2) 8%,transparent) 10px 20px)}
+.phr{position:absolute;left:0;right:0;border-top:.5px solid var(--sep);height:0}
+.phr span{position:absolute;left:-50px;top:-8px;font-size:11px;color:var(--l2);width:44px;text-align:right}
+.pnow{position:absolute;left:-6px;right:0;height:2px;background:var(--red,#d33);z-index:2}
+.pnow::before{content:'';position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:inherit}
+.pblk{position:absolute;left:2px;right:2px;border-radius:8px;background:var(--tint);color:var(--on-tint);padding:4px 8px;overflow:hidden;font-size:13px;line-height:1.25;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.12);z-index:1;touch-action:pan-y}
+.pblk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pblk.once{background:color-mix(in srgb,var(--tint) 70%,var(--cell));outline:1.5px dashed var(--on-tint);outline-offset:-3px}
+.pblk.ghost{opacity:.75;justify-content:center;font-weight:600}
+.pblk.drag{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:3}
+.pgrip{position:absolute;left:0;right:0;bottom:0;height:14px;cursor:ns-resize;touch-action:none}
+.pgrip::after{content:'';position:absolute;left:50%;bottom:4px;width:22px;height:3px;margin-left:-11px;border-radius:2px;background:currentColor;opacity:.55}
+.ptimes{display:flex;align-items:center;gap:10px}
+.ptimes .inp{font-size:20px;flex:1}
+.pchk{display:flex;align-items:center;gap:8px;margin-top:12px;min-height:40px;font-size:15px}
+.pchk input{width:22px;height:22px}
+.gform .gflink{width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;align-items:center}
+.gform .gfchev{width:18px;height:18px;flex:none;fill:none;stroke:var(--l3);stroke-width:2}
