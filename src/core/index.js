@@ -223,6 +223,8 @@ export function boot(root) {
     set active(a) { active = a; saveActive(a); },
   };
   app.rec = createRecorder(app);
+  // запись, оборванная сбоем или выгрузкой приложения, — склеить из кусков на диске и вернуть в медиатеку
+  setTimeout(() => app.rec.recover().then((l) => l.forEach((r) => toast(t('rec.recoveredToast', { name: r.name })))).catch(() => {}), 2500);
   app.jobs = createJobs(files); // долгие обработки записей: дорожки, ноты (jobs.js)
   app.packs = packsApi; packsReady(); // пакеты моделей: что скачано (packs.js)
   app.auto = createAutoStems(app); // дорожки и тональность с темпом — сами, в тишине (autostems.js)

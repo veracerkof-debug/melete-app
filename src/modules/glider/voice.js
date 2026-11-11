@@ -5,6 +5,7 @@ import { holdAt } from '../../audio/param.js';
 import { synWave } from '../../audio/waves.js';
 import { reverbNode, sendToHall } from '../../audio/context.js';
 import { airVoice } from '../../audio/airsound.js';
+import { after } from '../../audio/clock.js';
 
 // На голос: яркость (фильтр с резонансом), вибрато, тремоло, громкость, перегруз, фузз. На шину: эхо, реверберация
 export const FX = ['bright', 'vib', 'trem', 'vol', 'drive', 'fuzz', 'echo', 'verb'];
@@ -167,7 +168,12 @@ export function createGlideVoice(c, dest, patch, { hold = true, a4 = 440, hallVi
       amp.gain.setTargetAtTime(0.0001, t, r / 4);
       const end = t + r * 1.4 + 0.05;
       [...os, ...(air ? air.srcs : []), vibLfo, trLfo].forEach((o) => { try { o.stop(end); } catch { /* ignore */ } });
-      setTimeout(() => { try { fz.output.disconnect(); } catch { /* ignore */ } }, (end - t + 0.2) * 1000);
+      // Отпущенный голос отключается целиком: выход в шину, посыл в зал (он идёт от out) и модуляция. Раньше рвался только
+      // fz.output, а посыл в зал держал цепочку lp → amp → vol → out живой — каждый палец терменвокса оставлял её в
+      // графе. Таймер — часы звука (clock.js), не setTimeout: при погашенном экране setTimeout засыпает.
+      after((end - t + 0.2) * 1000, () => {
+        for (const n of [out, fz.output, vibG, trG, lp]) { try { n.disconnect(); } catch { /* уже */ } }
+      });
     },
     get dead() { return dead; },
   };

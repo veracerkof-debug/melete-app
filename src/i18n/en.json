@@ -726,6 +726,8 @@
   "rec.fmt.videoHint": "Camera video with the on-screen hints, plus sound. The camera must be on.",
   "rec.hint": "A red button with time means recording; tap to stop and save to the media library.",
   "rec.saved": "Saved to the media library: {name}",
+  "rec.recovered": "recovered",
+  "rec.recoveredToast": "Interrupted recording recovered: {name}",
   "rec.noVideo": "The camera is off — recording sound only",
   "rec.unsupported": "Recording is not available on this device",
   "rec.micDenied": "No microphone access — recording the app sound only",

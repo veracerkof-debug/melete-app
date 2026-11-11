@@ -4,7 +4,7 @@ import { holdAt } from './param.js';
 import { getContext, masterNode, sendToReverb, sendToHall, midiFreq } from './context.js';
 import { wave, pinkNoise } from './waves.js';
 import { airVoice, sideInto } from './airsound.js';
-import { cancel } from './clock.js';
+import { cancel, after } from './clock.js';
 
 // Тембры: id → яркость по умолчанию. Названия — ключи i18n drone.sound.<id>
 // Первыми — воздушные для поклонения (airsound.js): воздух, свет, тепло, хор
@@ -185,6 +185,9 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
     holdAt(g.gain, t);
     g.gain.linearRampToValueAtTime(0, t + fade);
     os.forEach((o) => { try { o.stop(t + fade + 0.1); } catch { /* ignore */ } });
+    // отзвучавший голос отключается от шины, реверберации и зала: иначе каждое нажатие клавиши пэда и каждая смена
+    // тональности оставляют цепочку в графе (голос уже убран из nodes/keys — к нему никто не вернётся)
+    after((fade + 0.3) * 1000, () => { try { g.disconnect(); } catch { /* уже */ } });
   }
   // Клавиши: нарастание и затухание короче, чем у пэда, — клавиша отвечает пальцу
   const keyAtt = (d) => Math.min(d.fade, 0.3), keyRel = (d) => Math.max(0.5, Math.min(d.fade, 2));

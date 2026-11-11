@@ -11,6 +11,9 @@
 import { engine } from '../audio/voiceengine.js';
 import { setOutput } from '../audio/livefx.js';
 import { writeMidi, takeDur } from '../music/midi.js';
+import { idbBackend, spoolTake, leftovers, headOk } from './recspool.js';
+import { log } from './log.js';
+import { t } from '../i18n/index.js';
 
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
 const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4', 'video/webm'];
@@ -49,7 +52,8 @@ export function createGate() {
 }
 
 // app.audio.tap() — отвод звука, app.files — медиатека, app.store.state.settings.rec — настройки. Одна запись за раз.
-export function createRecorder(app) {
+// spool — хранилище кусков записи (recspool.js; по умолчанию IndexedDB)
+export function createRecorder(app, { spool = idbBackend() } = {}) {
   let cur = null, chain = null;
   const subs = new Set();
   const emit = () => subs.forEach((fn) => fn(cur));
@@ -73,6 +77,19 @@ export function createRecorder(app) {
     apply();
     return chain;
   }
+  // Готовая (или восстановленная) запись → медиатека; куски на диске удаляются только после удачного сохранения —
+  // не сохранилось (место, база) — останутся и придут при следующем запуске
+  async function saveTake(id, blob, m, dur, extra = {}) {
+    let head = null;
+    try { head = new Uint8Array(await blob.slice(0, 16).arrayBuffer()); } catch { /* нечем прочитать */ }
+    if (head && !headOk(head, m.type || '')) log('rec', 'запись ' + id + ': начало файла не похоже на ' + (m.type || '?') + ' — сохранена как есть', 'w');
+    const rec = { id, name: m.name + '.' + extOf(m.type || ''), size: blob.size, type: blob.type, songs: m.songs || [],
+      created: Date.now(), blob, kind: 'audio', ...(dur ? { dur } : {}), ...(m.video ? { video: true } : {}), ...extra };
+    try { await app.files.add(rec); } catch (e) { log('rec', 'запись ' + id + ' не сохранилась: ' + (e && e.message || e) + ' — куски остаются на диске', 'e'); return null; }
+    await spool.drop(id).catch(() => {});
+    return rec;
+  }
+
   async function openMic() {
     const ch = build();
     if (!ch) return 'nosound';
@@ -164,6 +181,16 @@ export function createRecorder(app) {
       L.push({ ...e, t });
     },
     get prefs() { return prefs(); },
+    // При запуске: записи, оборванные сбоем или выгрузкой, — склеить и сохранить в медиатеку. → [запись]
+    async recover() {
+      const out = [];
+      for (const x of await leftovers(spool, (id) => !!(cur && cur.id === id))) {
+        if (!x.blob || !x.blob.size) { await spool.drop(x.id).catch(() => {}); continue; }
+        const rec = await saveTake(x.id, x.blob, { ...x.meta, name: (x.meta.name || recName('Melete', x.meta.t0 || Date.now())) + ' (' + t('rec.recovered') + ')' }, 0, { recovered: true });
+        if (rec) { out.push(rec); log('rec', 'восстановлена оборванная запись ' + x.id + ' (' + Math.round(x.blob.size / 1024) + ' КБ)', 'w'); }
+      }
+      return out;
+    },
     meter,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     apply,
@@ -196,9 +223,11 @@ export function createRecorder(app) {
         teardown();
         return 'unsupported';
       }
-      const chunks = [];
-      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-      cur = { mr, chunks, video, tool, songs, t0: Date.now(), type: mr.mimeType || type || (video ? 'video/webm' : 'audio/webm') };
+      const t0 = Date.now(), rtype = mr.mimeType || type || (video ? 'video/webm' : 'audio/webm'), id = 'r' + t0.toString(36);
+      // куски — сразу на диск (recspool.js): сбой или выгрузка посреди записи не уносят её целиком
+      const take = spoolTake(spool, id, { name: recName(tool, t0), type: rtype, tool, songs, t0, video: !!video });
+      mr.ondataavailable = (e) => { if (e.data && e.data.size) { take.add(e.data); } };
+      cur = { mr, take, id, video, tool, songs, t0, type: rtype };
       mr.start(1000);
       emit();
       return res === 'ok' ? 'ok' : res;
@@ -216,11 +245,10 @@ export function createRecorder(app) {
           teardown();
           if (r.video) r.video.stop();
           const dur = (Date.now() - r.t0) / 1000;
-          if (dur < 1 || !r.chunks.length) { done(null); return; }
-          const blob = new Blob(r.chunks, { type: r.type.split(';')[0] });
-          const rec = { id: 'r' + Date.now().toString(36), name: recName(r.tool, r.t0) + '.' + extOf(r.type), size: blob.size, type: blob.type, songs: r.songs,
-            created: Date.now(), blob, kind: 'audio', dur, ...(r.video ? { video: true } : {}) };
-          try { await app.files.add(rec); done(rec); } catch { done(null); }
+          const blob = await r.take.blob(r.type.split(';')[0]);
+          if (dur < 1 || !blob || !blob.size) { r.take.drop(); done(null); return; }
+          const rec = await saveTake(r.id, blob, { name: recName(r.tool, r.t0), type: r.type, songs: r.songs, video: !!r.video }, dur);
+          done(rec);
         };
         try { r.mr.stop(); } catch { done(null); }
       });
