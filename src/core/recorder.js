@@ -90,10 +90,15 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
     return rec;
   }
 
-  async function openMic() {
+  // Микрофон открывается одним запросом на цепочку: «лист открыт» и «Запись» вместе не открывают его дважды
+  function openMic() {
     const ch = build();
-    if (!ch) return 'nosound';
-    if (ch.mic) return 'ok';
+    if (!ch) return Promise.resolve('nosound');
+    if (ch.mic) return Promise.resolve('ok');
+    if (!ch.opening) ch.opening = openMicNow(ch).finally(() => { ch.opening = null; });
+    return ch.opening;
+  }
+  async function openMicNow(ch) {
     let stream;
     const p0 = prefs(), E = engine(), want = p0.in;
     // выбранный вход: Android — маршрут (микрофон страницы берёт звук с него), браузер — deviceId
@@ -102,6 +107,13 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
     try { stream = await navigator.mediaDevices.getUserMedia({ audio }); } catch {
       // выбранного входа нет (отключили) — по умолчанию
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); } catch { if (E.native) E.unroute(); return 'mic'; }
+    }
+    // пока система спрашивала разрешение, лист записи закрыли (цепочку разобрали) — микрофон сразу отпускается,
+    // иначе он остаётся открытым до перезапуска приложения (значок микрофона, таймер уровня 50 раз в секунду)
+    if (chain !== ch) {
+      stream.getTracks().forEach((t) => t.stop());
+      if (E.native) E.unroute();
+      return 'gone';
     }
     const c = ch.c, src = c.createMediaStreamSource(stream), micGain = c.createGain(), an = c.createAnalyser(), monGain = c.createGain(), gateGain = c.createGain();
     an.fftSize = 1024;
@@ -215,6 +227,7 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
       if (!build()) return 'nosound';
       let res = 'ok';
       if (p.mic) res = await openMic();
+      if (!chain) return 'nosound'; // лист закрыли, пока ждали микрофон
       const tracks = [...chain.dest.stream.getAudioTracks(), ...(video ? video.stream.getVideoTracks() : [])];
       const stream = new MediaStream(tracks), type = pickType(video ? VIDEO_TYPES : AUDIO_TYPES);
       let mr;

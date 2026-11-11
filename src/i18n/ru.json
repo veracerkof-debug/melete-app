@@ -1267,6 +1267,7 @@
   "ymt.part.drums": "Ударные",
   "ymt.part.other": "Другое",
   "stems.notesSuffix": "ноты",
+  "stems.cleanSuffix": "без шума",
   "auto.title": "Медиатека",
   "auto.stems": "Дорожки автоматически",
   "auto.off": "Выкл",

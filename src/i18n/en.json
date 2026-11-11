@@ -1253,6 +1253,7 @@
   "ymt.part.drums": "Drums",
   "ymt.part.other": "Other",
   "stems.notesSuffix": "notes",
+  "stems.cleanSuffix": "denoised",
   "auto.title": "Media library",
   "auto.stems": "Stems automatically",
   "auto.off": "Off",
