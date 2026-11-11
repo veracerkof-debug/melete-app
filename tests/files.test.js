@@ -15,7 +15,8 @@ describe('файлы', () => {
   });
 
   it('без IndexedDB файлы живут в памяти, noDb = true', async () => {
-    const f = createFiles({ indexedDB: { open() { throw new Error('нет'); } } });
+    const errs = [];
+    const f = createFiles({ indexedDB: { open() { throw new Error('нет'); } }, onError: (op, e, rec) => errs.push(op + ':' + (rec ? rec.id : '')) });
     await f.ready;
     expect(f.noDb).toBe(true);
     let n = 0;
@@ -28,6 +29,8 @@ describe('файлы', () => {
     await f.remove('a');
     expect(f.list('audio')).toEqual([]);
     expect(n).toBe(3);
+    // ошибки базы не теряются молча
+    expect(errs).toEqual(['open:', 'add:a', 'add:t', 'remove:a']);
   });
 
   it('нет места в базе: файл в памяти помечен, сигнал onWriteFail, база не считается пропавшей', async () => {

@@ -239,9 +239,7 @@ export const heavyStub = (mod) => !!(mod && mod.heavy && WEB_BUILD);
 const RELEASE = 'https://github.com/veracerkof-debug/Practice-app/releases/tag/pre';
 function heavyHTML(ctx, mod) {
   const { t, ui } = ctx, name = moduleName(mod);
-  let what = ''; try { what = t('heavy.desc'); } catch { /* */ }
-  if (!what || what === 'heavy.desc') what = '';
-  return '<div class="heavy"><span class="hvic" style="--c:' + mod.color + '">' + mod.icon + '</span><h2>' + ui.esc(name) + '</h2>' + (what ? '<p>' + ui.esc(what) + '</p>' : '') +
+  return '<div class="heavy"><span class="hvic" style="--c:' + mod.color + '">' + mod.icon + '</span><h2>' + ui.esc(name) + '</h2>' +
     '<p class="hvnote">' + ui.esc(t('heavy.web', { mb: mod.heavyMb || '' })) + '</p>' +
     '<a class="cell act center b" href="' + RELEASE + '" target="_blank" rel="noopener">' + ui.esc(t('heavy.get')) + '</a></div>';
 }

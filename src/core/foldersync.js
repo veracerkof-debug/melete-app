@@ -55,7 +55,7 @@ export function initFolder(app) {
       const mem = load(), r = await syncFolder(nativeDriver, mem, app.files.noDb ? { ...api, removeFile: null } : api); // без базы — без удалений
       keep(mem); last = Date.now();
       if (r.wrote || r.read || r.songs || r.texts || r.sorted || r.cleaned || r.removedDir || r.removedApp) log('folder', 'синхронизация: выгружено ' + r.wrote + ', принято файлов ' + r.read + ', песен ' + r.songs + ', текстов ' + r.texts + ', разложено ' + r.sorted + ', убрано демо ' + r.cleaned + ', удалено из папки ' + r.removedDir + ', из медиатеки ' + r.removedApp);
-      if (r.held) log('folder', 'зеркало придержано — пропало сразу много файлов (' + r.held + '): ничего не удалено; если так и задумано — удалить вручную', 'w');
+      if (r.held) log('folder', 'зеркало придержано — пропало сразу много или все файлы (' + r.held + '): ничего не удалено; если так и задумано — удалить вручную', 'w');
       if ((r.read || r.songs || r.texts || r.removedApp) && app.render && !app.openTool) app.render();
       return r;
     } catch (e) { logErr('folder', e); return null; }

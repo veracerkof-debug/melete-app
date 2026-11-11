@@ -84,20 +84,25 @@ export function spoolTake(be, id, meta) {
   };
 }
 
-// Записи, которые начались, но не дошли до медиатеки (сбой, выгрузка) — склеенными; кроме тех, что идут сейчас
+// Записи, которые начались, но не дошли до медиатеки (сбой, выгрузка), кроме тех, что идут сейчас. Склейка — по одной,
+// по запросу (load): двухчасовая запись не держится в памяти вместе с другими. → [{ id, meta, load() → { blob, n } }]
 export async function leftovers(be, busy = () => false) {
   let list = [];
   try { list = await be.metas(); } catch { return []; }
-  const out = [];
-  for (const { id, meta } of list) {
-    if (busy(id)) continue;
-    let parts = [];
-    try { parts = await be.parts(id); } catch { /* нет кусков */ }
-    parts.sort((a, b) => a.seq - b.seq);
-    out.push({ id, meta: meta || {}, blob: parts.length ? new Blob(parts.map((p) => p.blob), { type: (meta && meta.type || '').split(';')[0] }) : null });
-  }
-  return out;
+  return list.filter(({ id }) => !busy(id)).map(({ id, meta }) => ({
+    id, meta: meta || {},
+    async load() {
+      let parts = [];
+      try { parts = await be.parts(id); } catch { /* нет кусков */ }
+      parts.sort((a, b) => a.seq - b.seq);
+      return { n: parts.length, blob: parts.length ? new Blob(parts.map((p) => p.blob), { type: ((meta && meta.type) || '').split(';')[0] }) : null };
+    },
+  }));
 }
+
+// Длительность оборванной записи по числу кусков: кусок — slice мс (MediaRecorder.start(slice)), последний неполный —
+// ошибка меньше одного куска; медиатека уточнит, когда раскроет файл ради волны. → секунды или 0
+export const durOfParts = (n, slice) => (n > 0 && slice > 0 ? Math.max(0, n - 0.5) * slice / 1000 : 0);
 
 // Похоже ли начало файла на свой формат: WebM/Matroska — EBML 1A 45 DF A3, MP4 — «ftyp» на 4-м байте, Ogg — «OggS».
 // Не похоже — файл всё равно сохраняется (исходник не выбрасывается), только с предупреждением в журнал.

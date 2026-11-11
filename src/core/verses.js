@@ -226,7 +226,7 @@ export const CORE = {
   'page.stats': 'num1_2', 'stats.title': 'num1_2', 'page.look': 'lk3_22', 'look.title': 'lk3_22',
   'page.data': 'mt6_21', 'data.title': 'mt6_21', 'page.tabs': 'ps23_7', 'tabs.title': 'ps23_7',
   'page.notif': 'ps80_4', 'mix.title': 'lev19_36', 'stone.title': 'rev2_17',
-  'rank.title': 'tim1_3_13', 'streak.title': 'lk8_15', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
+  'streak.title': 'lk8_15', 'mastery.title': 'ps110_10', 'tos.title': 'gen1_1',
   'lay.title': 'co1_14_40', 'track.title': 'eccl3_1', 'mono.title': 'jn7_24',
 };
 // Инструменты (по id модуля) и строки помодоро и секундомера

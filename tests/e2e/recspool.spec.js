@@ -23,11 +23,12 @@ test('запись: оборванная сбоем запись возвращ�
   const got = await page.evaluate(async () => {
     const l = await window.__melete.files.list();
     const x = l.find((f) => f.recovered);
-    return x ? { name: x.name, size: x.size } : null;
+    return x ? { name: x.name, size: x.size, dur: x.dur || 0 } : null;
   });
   expect(got).not.toBeNull();
   expect(got.name).toContain('восстановлено');
   expect(got.size).toBeGreaterThan(0);
+  expect(got.dur).toBeGreaterThan(1); // длительность — по числу кусков
   // куски убраны с диска
   const left = await page.evaluate(() => new Promise((res) => {
     const q = indexedDB.open('melete-rec', 1);

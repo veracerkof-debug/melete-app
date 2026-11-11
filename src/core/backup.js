@@ -27,6 +27,27 @@ export function songFiles(app) {
 }
 export const filesSize = (list) => list.reduce((a, r) => a + (r.blob ? r.blob.size : r.size || 0), 0);
 
+// Потолок файлов в копии. Копия собирается в памяти целиком: файл → base64 (+⅓) → строка JSON (ещё копия) — примерно
+// вчетверо больше файлов; 100 МБ записей на телефоне — ~400 МБ строк, и система выгружает приложение посреди сохранения.
+// Телефон — 24 МБ, компьютер — 160 МБ. Сверх потолка файлы не берутся (свежие — первыми); полностью файлы
+// сохраняет папка Melete (зеркало медиатеки, folder.js).
+export const FILES_LIMIT = { phone: 24 * 1048576, desktop: 160 * 1048576 };
+const isPhone = () => {
+  try { if (globalThis.Capacitor && globalThis.Capacitor.getPlatform && globalThis.Capacitor.getPlatform() !== 'web') return true; } catch { /* */ }
+  try { return !!(globalThis.matchMedia && globalThis.matchMedia('(pointer: coarse)').matches); } catch { return false; }
+};
+export const filesLimit = () => (isPhone() ? FILES_LIMIT.phone : FILES_LIMIT.desktop);
+// Какие файлы войдут в копию → { take, skip, size }
+export function pickFiles(list, limit = filesLimit()) {
+  const take = [], skip = [];
+  let size = 0;
+  [...list].sort((a, b) => (b.created || 0) - (a.created || 0)).forEach((r) => {
+    const n = r.blob ? r.blob.size : r.size || 0;
+    if (size + n <= limit) { take.push(r); size += n; } else skip.push(r);
+  });
+  return { take, skip, size };
+}
+
 async function toB64(blob) {
   const u = new Uint8Array(await blob.arrayBuffer());
   let s = '';
@@ -36,12 +57,17 @@ async function toB64(blob) {
 const fromB64 = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 
 // Текст копии из выбранных частей; files — с файлами песен
-export async function backupData(app, parts = PARTS, { files = false } = {}) {
+// report — сюда пишется, сколько файлов не вошло по потолку (skipped)
+export async function backupData(app, parts = PARTS, { files = false, limit = filesLimit(), report = {} } = {}) {
   await loadAllLangs(); // демо-файлы на любом языке — мимо копии
   const p = pickParts(stripDemo(app.store.state), parts, { tools: parts.includes('settings') ? readTools() : null }); // без демо
+  report.skipped = 0;
   if (files && parts.includes('songs')) {
     p.files = [];
-    for (const r of songFiles(app).filter((x) => !isDemoFile(x, CORE_DICTS))) {
+    const { take, skip } = pickFiles(songFiles(app).filter((x) => !isDemoFile(x, CORE_DICTS)), limit);
+    report.skipped = skip.length;
+    if (skip.length) log('backup', 'в копию не вошло файлов: ' + skip.length + ' (потолок ' + Math.round(limit / 1048576) + ' МБ)', 'w');
+    for (const r of take) {
       const meta = { ...r };
       delete meta.blob; delete meta._busy;
       p.files.push({ ...meta, data: await toB64(r.blob) });
@@ -74,13 +100,14 @@ export async function restoreParts(app, p, parts) {
 // Сохранить копию. opts: { parts, files } — по частям; без них — всё (как раньше).
 // → { where: 'folder' | 'shared' | 'saved' | 'cancel', name }
 export async function saveBackup(app, opts = null) {
-  const text = opts ? await backupData(app, opts.parts, opts) : backupText(app);
+  const report = { skipped: 0 };
+  const text = opts ? await backupData(app, opts.parts, { ...opts, report }) : backupText(app);
   const F = app.folder;
   if (F && F.state && F.state.ok && F.saveBackup) {
     const name = await F.saveBackup(text);
-    if (name) return { where: 'folder', name };
+    if (name) return { where: 'folder', name, skipped: report.skipped };
   }
   const { backupName } = await import('./folder.js'), { sendFile } = await import('./screens/share.js');
   const name = backupName(backupBy(app)), where = await sendFile(new TextEncoder().encode(text), name, name, 'application/json');
-  return { where, name };
+  return { where, name, skipped: report.skipped };
 }

@@ -11,10 +11,10 @@
 import { engine } from '../audio/voiceengine.js';
 import { setOutput } from '../audio/livefx.js';
 import { writeMidi, takeDur } from '../music/midi.js';
-import { idbBackend, spoolTake, leftovers, headOk } from './recspool.js';
+import { idbBackend, spoolTake, leftovers, headOk, durOfParts } from './recspool.js';
 import { log } from './log.js';
 import { t } from '../i18n/index.js';
-
+const SLICE = 1000; // мс: кусок записи на диск (и мера длительности оборванной записи)
 const AUDIO_TYPES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
 const VIDEO_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4', 'video/webm'];
 export const VOL_MAX = 2;               // громкость источника в записи: 0…200 %
@@ -85,7 +85,7 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
     if (head && !headOk(head, m.type || '')) log('rec', 'запись ' + id + ': начало файла не похоже на ' + (m.type || '?') + ' — сохранена как есть', 'w');
     const rec = { id, name: m.name + '.' + extOf(m.type || ''), size: blob.size, type: blob.type, songs: m.songs || [],
       created: Date.now(), blob, kind: 'audio', ...(dur ? { dur } : {}), ...(m.video ? { video: true } : {}), ...extra };
-    try { await app.files.add(rec); } catch (e) { log('rec', 'запись ' + id + ' не сохранилась: ' + (e && e.message || e) + ' — куски остаются на диске', 'e'); return null; }
+    try { if ((await app.files.add(rec)) === false) throw new Error(rec.unsaved ? 'нет места' : 'база недоступна'); } catch (e) { log('rec', 'запись ' + id + ' не сохранилась: ' + (e && e.message || e) + ' — куски остаются на диске', 'e'); return null; }
     await spool.drop(id).catch(() => {});
     return rec;
   }
@@ -197,9 +197,11 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
     async recover() {
       const out = [];
       for (const x of await leftovers(spool, (id) => !!(cur && cur.id === id))) {
-        if (!x.blob || !x.blob.size) { await spool.drop(x.id).catch(() => {}); continue; }
-        const rec = await saveTake(x.id, x.blob, { ...x.meta, name: (x.meta.name || recName('Melete', x.meta.t0 || Date.now())) + ' (' + t('rec.recovered') + ')' }, 0, { recovered: true });
-        if (rec) { out.push(rec); log('rec', 'восстановлена оборванная запись ' + x.id + ' (' + Math.round(x.blob.size / 1024) + ' КБ)', 'w'); }
+        const { blob, n } = await x.load();
+        if (!blob || !blob.size) { await spool.drop(x.id).catch(() => {}); continue; }
+        const dur = durOfParts(n, x.meta.slice || SLICE);
+        const rec = await saveTake(x.id, blob, { ...x.meta, name: (x.meta.name || recName('Melete', x.meta.t0 || Date.now())) + ' (' + t('rec.recovered') + ')' }, dur, { recovered: true });
+        if (rec) { out.push(rec); log('rec', 'восстановлена оборванная запись ' + x.id + ' (' + Math.round(blob.size / 1024) + ' КБ, ~' + Math.round(dur) + ' с)', 'w'); }
       }
       return out;
     },
@@ -238,10 +240,10 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
       }
       const t0 = Date.now(), rtype = mr.mimeType || type || (video ? 'video/webm' : 'audio/webm'), id = 'r' + t0.toString(36);
       // куски — сразу на диск (recspool.js): сбой или выгрузка посреди записи не уносят её целиком
-      const take = spoolTake(spool, id, { name: recName(tool, t0), type: rtype, tool, songs, t0, video: !!video });
+      const take = spoolTake(spool, id, { name: recName(tool, t0), type: rtype, tool, songs, t0, video: !!video, slice: SLICE });
       mr.ondataavailable = (e) => { if (e.data && e.data.size) { take.add(e.data); } };
       cur = { mr, take, id, video, tool, songs, t0, type: rtype };
-      mr.start(1000);
+      mr.start(SLICE);
       emit();
       return res === 'ok' ? 'ok' : res;
     },

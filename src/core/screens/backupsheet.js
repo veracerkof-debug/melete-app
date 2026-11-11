@@ -3,7 +3,7 @@
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, sw, sheet, snav, toast } from '../../ui/index.js';
 import { PARTS, partCounts, partsOf } from '../backupparts.js';
-import { saveBackup, restoreParts, songFiles, filesSize, infoOf } from '../backup.js';
+import { saveBackup, restoreParts, songFiles, filesSize, infoOf, pickFiles, filesLimit } from '../backup.js';
 
 const MB = (n) => (n / 1048576 < 10 ? (n / 1048576).toFixed(1) : Math.round(n / 1048576)).toString().replace('.', getLang() === 'en' ? '.' : ',');
 const BIG = 60 * 1048576; // больше — файлы по умолчанию не берём: копия долго пишется и тяжела для почты
@@ -16,6 +16,7 @@ function rows(list, sel, sub) {
 // Сохранить копию: выбор частей и файлов. done(r) — после сохранения ({ where, name })
 export function exportSheet(app, done = () => {}) {
   const st = app.store.state, n = partCounts(st), files = songFiles(app), size = filesSize(files);
+  const lim = filesLimit(), fit = pickFiles(files, lim); // сверх потолка — не войдут (предупреждение заранее)
   // «План чтения» — в церковном режиме или если уже что-то прочитано
   const list = PARTS.filter((k) => k !== 'reading' || n.reading || st.settings.church);
   const sel = new Set(list);
@@ -24,7 +25,7 @@ export function exportSheet(app, done = () => {}) {
     k === 'calendar' ? tn('bkp.calendarN', n.calendar) : t('bkp.settingsSub'));
   const body = () => snav(t('bkp.saveTitle')) + rows(list, sel, sub) +
     (files.length && sel.has('songs') ? '<div class="group"><label class="cell"><span class="grow">' + esc(t('bkp.files')) + '<span class="bksub">' + esc(tn('bkp.filesN', files.length) + ' · ' + MB(size) + ' ' + t('bkp.mb')) + '</span></span>' +
-      sw('bkpfiles', withFiles, t('bkp.files')) + '</label></div>' + (withFiles && size > BIG ? '<p class="ftr">' + esc(t('bkp.big')) + '</p>' : '') : '') +
+      sw('bkpfiles', withFiles, t('bkp.files')) + '</label></div>' + (withFiles && fit.skip.length ? '<p class="ftr">' + esc(t('bkp.tooBig', { n: fit.take.length, all: files.length, mb: Math.round(lim / 1048576) })) + '</p>' : withFiles && size > BIG ? '<p class="ftr">' + esc(t('bkp.big')) + '</p>' : '') : '') +
     '<div class="group" style="margin-top:16px"><button class="cell center b" data-bksave' + (sel.size ? '' : ' disabled') + '>' + esc(t(busy ? 'bkp.saving' : 'bkp.save')) + '</button></div>';
   sheet(body, (el, sh) => {
     el.addEventListener('change', (e) => {

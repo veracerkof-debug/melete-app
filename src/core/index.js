@@ -173,7 +173,12 @@ export function boot(root) {
   // после перезагрузки: «вдали», начатое при закрытии страницы, заканчивается сразу
   setTimeout(awayCheck, 0);
 
-  const files = createFiles({ onWriteFail: writeFail('файлы') });
+  // прочие ошибки базы файлов — в журнал (раз в минуту на действие): иначе молча теряются разбор записи и удаления
+  const filesErrAt = {};
+  const files = createFiles({ onWriteFail: writeFail('файлы'), onError: (op, e, rec) => {
+    const n = Date.now(); if (n - (filesErrAt[op] || 0) < 60000) return; filesErrAt[op] = n;
+    try { log('files', 'база файлов: ' + op + (rec && rec.id ? ' ' + rec.id : '') + ' не прошло — ' + (e && (e.name || e.message) || e), 'e'); } catch { /* */ }
+  } });
 
   // Перед первой загрузкой файла — предупреждение о правах (прототип: uploadGuard)
   async function confirmUpload() {

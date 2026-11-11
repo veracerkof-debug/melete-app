@@ -837,8 +837,10 @@ export function createPanel(app, onChange) {
       }
       if (g('[data-act="export"]')) {
         exportSheet(app, (r) => {
-          if (r.where === 'folder') { toast(t('bk.savedFolder', { name: r.name.replace(/\.json$/, '') })); copies = null; loadCopies(app, render); }
-          else if (r.where === 'saved') toast(t('data.saved'));
+          const skip = r.skipped ? ' · ' + t('bk.filesSkipped', { n: r.skipped }) : '';
+          if (r.where === 'folder') { toast(t('bk.savedFolder', { name: r.name.replace(/\.json$/, '') }) + skip); copies = null; loadCopies(app, render); }
+          else if (r.where === 'saved') toast(t('data.saved') + skip);
+          else if (skip && r.where !== 'cancel') toast(t('bk.filesSkipped', { n: r.skipped }));
         });
         return;
       }

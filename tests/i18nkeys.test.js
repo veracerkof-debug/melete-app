@@ -6,7 +6,6 @@ import path from 'path';
 // Ядро и общие элементы — словарь ядра (src/i18n/ru.json); модуль (ctx.t) — свой словарь или словарь ядра.
 // Ключи с точкой в конце — префиксы (t('cal.' + x)), их не проверить по тексту — пропускаются.
 const ALLOW = new Set([
-  'src/core/modules.js heavy.desc', // необязательное описание тяжёлого модуля: есть — показывается, нет — пусто
   'src/ui/scalepick.js notes', 'src/ui/scalepick.js chrom', // получает переводчик модуля параметром
 ]);
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.js') ? [path.join(d, e.name)] : []));

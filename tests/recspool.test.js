@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { memBackend, spoolTake, leftovers, headOk } from '../src/core/recspool.js';
+import { memBackend, spoolTake, leftovers, headOk, durOfParts } from '../src/core/recspool.js';
 
 const txt = async (b) => (b ? await b.text() : null);
 
@@ -39,8 +39,17 @@ describe('запись кусками на диск (recspool)', () => {
     const l = await leftovers(be, (id) => id === 'now');
     expect(l.map((x) => x.id)).toEqual(['old']);
     expect(l[0].meta.name).toBe('Терменвокс');
-    expect(l[0].blob.type).toBe('audio/webm');
-    expect(await txt(l[0].blob)).toBe('hello');
+    const { blob, n } = await l[0].load();
+    expect(n).toBe(2);
+    expect(blob.type).toBe('audio/webm');
+    expect(await txt(blob)).toBe('hello');
+  });
+
+  it('длительность оборванной записи — по числу кусков', () => {
+    expect(durOfParts(0, 1000)).toBe(0);
+    expect(durOfParts(1, 1000)).toBe(0.5);
+    expect(durOfParts(120, 1000)).toBe(119.5);
+    expect(durOfParts(5, 0)).toBe(0);
   });
 
   it('проверка начала файла: WebM, MP4, Ogg', () => {

@@ -210,4 +210,31 @@ describe('копии в папке: раз в неделю, архив по ме
     expect(app.files.length).toBe(6);
     expect(Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).length).toBe(6);
   });
+  it('зеркало при одном файле: папка недоступна или база пуста — ничего не удаляется', async () => {
+    const drv = memDrive(), app = memApp(), mem = {};
+    const removed = [];
+    app.api.removeFile = async (id) => { removed.push(id); };
+    app.files.push({ id: 'r1', name: 'one.wav', size: 4, blob: new Blob(['RIFF']), kind: 'audio' });
+    await syncFolder(drv, mem, app.api);
+    // папка вернула пустой список
+    const list = drv.list;
+    drv.list = async () => [];
+    let r = await syncFolder(drv, mem, app.api);
+    expect(r.held).toContain('folder:1');
+    expect(removed).toEqual([]);
+    drv.list = list;
+    // записи приложения не прочитались
+    const files = app.files.splice(0);
+    r = await syncFolder(drv, mem, app.api);
+    expect(r.held).toContain('app:1');
+    expect(drv.fs['Media/one.wav']).toBeDefined();
+    app.files.push(...files);
+    // а из двух файлов удалили один — удаляется как обычно
+    app.files.push({ id: 'r2', name: 'two.wav', size: 4, blob: new Blob(['RIFF']), kind: 'audio' });
+    await syncFolder(drv, mem, app.api);
+    delete drv.fs['Media/two.wav'];
+    r = await syncFolder(drv, mem, app.api);
+    expect(r.removedApp).toBe(1);
+    expect(removed).toEqual(['r2']);
+  });
 });
