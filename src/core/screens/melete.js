@@ -1,7 +1,7 @@
 // Характер Мелеты: режим (классика / навязчивая / без уведомлений), время занятий, «напомнить за», обращение по имени,
 // наборы слов. Один и тот же блок — при регистрации (src/core/screens/onboard.js) и в «Уведомлениях» (panel.js).
 import { t, getLang } from '../../i18n/index.js';
-import { esc, seg, toast } from '../../ui/index.js';
+import { esc, seg, toast, sheet, snav } from '../../ui/index.js';
 import { setMascotGender } from '../../i18n/index.js';
 import { setMascotLook } from '../../ui/mascot.js';
 import { STYLES, LEADS, OFFSETS, TONES, CUSTOM_MAX, remindOf, setRemind, remindAvailable, remindPermission, remindTest, exactAllowed, openExactSettings, remindNext } from '../reminders.js';
@@ -31,6 +31,50 @@ function preview(st, mode) {
 
 // sets — показать выбор наборов слов (при регистрации); test — кнопка проверки (в «Уведомлениях»)
 // who — выбор маскота, remind — напоминания о практике, tama — тамагочи (настройки делят их по разделам: «Маскот» и «Уведомления»)
+// Напоминания формой события, как в Google Календаре (слово автора 08.11, решение 11.11.2026): одна страница сверху
+// вниз, у строки — значок слева; время крупно, дни недели кружками (касание — день практики или отдыха), уведомления
+// списком («за 1 ч» ×, «Добавить уведомление»), тихие часы, по имени. Под формой — наглядная неделя (remindview.js)
+const GI = {
+  time: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  rep: '<svg viewBox="0 0 24 24"><path d="M17 3l3 3-3 3M4 11V9a3 3 0 0 1 3-3h13M7 21l-3-3 3-3M20 13v2a3 3 0 0 1-3 3H4"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4"/></svg>',
+  moon: '<svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>',
+  user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+};
+const gRow = (ic, body, cls = '') => '<div class="gfrow ' + cls + '"><span class="gfic" aria-hidden="true">' + GI[ic] + '</span><div class="gfbody">' + body + '</div></div>';
+export function remindFormHTML(st, { days = [], wdNames = [], test = true } = {}) {
+  const r = remindOf(st), mode = r.mode;
+  let h = '<div class="group gform"><div class="cellcol"><div class="mlhead">' + faceOr(st, FACE[mode]) +
+    seg('mlmode', STYLES.map((k) => [k, t('rem.' + k)]), mode, t('rem.style')) + '</div><div class="segcap">' + t('rem.' + mode + 'Hint') + '</div></div>';
+  if (mode === 'quiet') return h + '</div><p class="ftr">' + t('rem.quietHint') + '</p>';
+  h += gRow('time', '<label class="gftime"><span class="l2">' + t('rem.time') + '</span><input type="time" class="gtime num" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '"></label>');
+  const on = wdNames.map((_, i) => !!days[i]), n = on.filter(Boolean).length;
+  h += gRow('rep', '<div class="gfdays" role="group" aria-label="' + esc(t('rem.days')) + '">' + wdNames.map((nm, i) => '<button type="button" class="gfday' + (on[i] ? ' on' : '') + '" data-rvday="' + i + '" aria-pressed="' + on[i] + '">' + esc(String(nm).slice(0, 2)) + '</button>').join('') + '</div>' +
+    '<span class="l2 gfsub">' + (n === 7 ? t('rem.everyDay') : n ? t('rem.onDays', { days: wdNames.filter((_, i) => on[i]).join(', ') }) : t('rem.noDays')) + '</span>');
+  let list = '';
+  if (mode === 'classic') list = r.leads.slice().sort((a, b) => b - a).map((m) => '<div class="gfitem"><span class="grow">' + leadName(m) + '</span>' + (r.leads.length > 1 ? '<button class="ic sm plain" data-mllead="' + m + '" aria-label="' + esc(t('rem.del') + ': ' + leadName(m)) + '">×</button>' : '') + '</div>').join('') +
+    (r.leads.length < LEADS.length ? '<button class="gfadd" data-mlleadadd>' + t('rem.addNotif') + '</button>' : '');
+  else if (mode === 'pushy') list = '<span class="l2 gfsub">' + t('rem.pushyList') + '</span>';
+  else list = r.custom.map((x, i) => '<div class="gfitem"><select class="sortsel" data-mlwhen="' + i + '" aria-label="' + esc(t('rem.when')) + '">' +
+      OFFSETS.map((m) => '<option value="' + m + '"' + (!x.at && x.min === m ? ' selected' : '') + '>' + offName(m) + '</option>').join('') +
+      (!x.at && !OFFSETS.includes(x.min) ? '<option value="' + x.min + '" selected>' + offName(x.min) + '</option>' : '') +
+      '<option value="abs"' + (x.at ? ' selected' : '') + '>' + t('rem.atTime') + '</option></select>' +
+      (x.at ? '<input type="time" class="inp" data-mlat="' + i + '" value="' + esc(x.at) + '" aria-label="' + esc(t('rem.atTime')) + '">' : '') +
+      '<select class="sortsel" data-mltone="' + i + '" aria-label="' + esc(t('rem.tone')) + '">' + TONES.map((k) => '<option value="' + k + '"' + (x.tone === k ? ' selected' : '') + '>' + t('rem.tone.' + k) + '</option>').join('') + '</select>' +
+      '<button class="ic sm plain" data-mldel="' + i + '" aria-label="' + esc(t('rem.del')) + '">×</button></div>').join('') +
+    (r.custom.length < CUSTOM_MAX ? '<button class="gfadd" data-mladd>' + t('rem.addNotif') + '</button>' : '');
+  h += gRow('bell', list, 'gflist');
+  const hs = (k, v) => '<select class="sortsel" data-mlq="' + k + '" aria-label="' + esc(t('rem.quietHours')) + '">' + Array.from({ length: 24 }, (_, i) => '<option value="' + i + '"' + (i === v ? ' selected' : '') + '>' + String(i).padStart(2, '0') + ':00</option>').join('') + '</select>';
+  h += gRow('moon', '<span>' + t('rem.quietHours') + '</span><div class="gfq">' + hs('from', r.quietFrom) + '<span class="l2">—</span>' + hs('to', r.quietTo) + '</div>');
+  h += gRow('user', '<span class="grow"><span>' + t('rem.byName') + '</span><span class="st l2" style="display:block;font-size:13px">' + t('rem.byNameHint') + '</span></span>' +
+    '<label class="sw"><input type="checkbox" data-ml="byName"' + (r.byName ? ' checked' : '') + ' aria-label="' + esc(t('rem.byName')) + '"><i></i></label>', 'gfsw');
+  if (test && remindAvailable()) h += '<button class="cell act" data-mltest>' + t('rem.test') + '</button>' +
+    '<button class="cell act" data-mlexact hidden><span class="grow">' + t('rem.exact') + '<span class="psub">' + t('rem.exactHint') + '</span></span></button>' +
+    '<button class="cell act" data-mlauto><span class="grow">' + t('rem.auto') + '<span class="psub">' + t('rem.autoHint') + '</span></span></button>' +
+    '<div class="cell l2" data-mlnext hidden style="font-size:13.5px"></div>';
+  return h + '</div><p class="ftr">' + t('rem.formHint') + (remindAvailable() ? '' : ' ' + t('rem.webOnly')) + '</p>';
+}
+
 export function meleteHTML(st, { sets = false, test = false, who = true, remind = true, tama = true } = {}) {
   const r = remindOf(st), mode = r.mode;
   const tm = '<input type="time" class="inp" data-ml="time" value="' + esc(r.time) + '" aria-label="' + esc(t('rem.time')) + '">';
@@ -108,6 +152,13 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
       if (s.has(m) && s.size > 1) s.delete(m); else s.add(m);
       setRemind(st, { leads: LEADS.filter((x) => s.has(x)) });
       save(); rerender();
+    } else if (g('[data-mlleadadd]')) {
+      const have = new Set(remindOf(st).leads), free = LEADS.filter((m) => !have.has(m)).sort((a, b) => b - a);
+      const api = sheet(() => snav(t('rem.addNotif')) + '<div class="group">' + free.map((m) => '<button class="cell act" data-mlpick="' + m + '">' + leadName(m) + '</button>').join('') + '</div>', (x) => x.addEventListener('click', (ev) => {
+        const p = ev.target.closest('[data-mlpick]');
+        if (!p) return;
+        have.add(+p.dataset.mlpick); setRemind(st, { leads: LEADS.filter((m) => have.has(m)) }); api.close(); save(); rerender();
+      }));
     } else if (g('[data-mlauto]')) {
       bgAsk.autostart();
     } else if (g('[data-mlexact]')) {
@@ -128,6 +179,7 @@ export function bindMelete(el, getSt, { save, rerender, ask = true }) {
     if (d.ml === 'time' && e.target.value) { setRemind(st, { time: e.target.value }); save(); }
     else if (d.mltama) { st.tama = { ...tamaOf(st), [d.mltama]: e.target.checked }; save(); rerender(); }
     else if (d.ml === 'byName') { setRemind(st, { byName: e.target.checked }); save(); rerender(); }
+    else if (d.mlq) { setRemind(st, { [d.mlq === 'from' ? 'quietFrom' : 'quietTo']: +e.target.value }); save(); rerender(); }
     else if (d.mlwhen != null || d.mlat != null || d.mltone != null) {
       const r = remindOf(st), c = r.custom.map((x) => ({ ...x })), i = +(d.mlwhen ?? d.mlat ?? d.mltone), x = c[i];
       if (!x) return;

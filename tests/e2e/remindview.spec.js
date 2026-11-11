@@ -39,3 +39,23 @@ test('настройки по карте: звук, маскот, связь —
   expect(ta.width).toBeGreaterThan(gr.width * 0.8);
   expect(errors).toEqual([]);
 });
+
+// Форма, как событие в Google Календаре (слово автора 08.11): время крупно, дни кружками, уведомления списком
+test('уведомления: форма — дни кружками, добавить и убрать уведомление, тихие часы', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ settings: { remind: { mode: 'classic', time: '19:00', leads: [60] }, days: [true, false, true, false, true, false, false] } });
+  await melete.click('[data-act="panel"]'); await page.waitForTimeout(600);
+  await melete.click('#panelLayer [data-pp="notif"]'); await page.waitForTimeout(600);
+  await expect(page.locator('.gform .gfday.on')).toHaveCount(3);
+  await page.click('.gform .gfday[data-rvday="1"]'); await page.waitForTimeout(400);
+  await expect(page.locator('.gform .gfday.on')).toHaveCount(4);
+  await page.screenshot({ path: 'test-results/remind-form.png', fullPage: false });
+  await page.click('.gform [data-mlleadadd]'); await page.waitForTimeout(400);
+  await page.click('.sheet [data-mlpick="5"]'); await page.waitForTimeout(500);
+  expect((await melete.settings()).remind.leads.sort((a, b) => a - b)).toEqual([5, 60]);
+  await page.click('.gform [data-mllead="60"]'); await page.waitForTimeout(400);
+  expect((await melete.settings()).remind.leads).toEqual([5]);
+  await page.selectOption('.gform [data-mlq="from"]', '21'); await page.waitForTimeout(300);
+  expect((await melete.settings()).remind.quietFrom).toBe(21);
+  expect(errors).toEqual([]);
+});
