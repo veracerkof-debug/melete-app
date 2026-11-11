@@ -64,3 +64,20 @@ test('смахивание: нижние вкладки', async ({ page, melete,
   expect(await cur()).toBe(order[0]);
   expect(errors).toEqual([]);
 });
+
+// «Песни» (отчёт автора 08.11): по списку — между вкладками; по полосе жанров у её края — тоже (как в телефонах)
+test('смахивание: «Песни» — по списку и по полосе чипов у края', async ({ page, melete, errors }) => {
+  await melete.open();
+  const cur = () => page.evaluate(() => document.querySelector('.tabbar .tab[aria-current="page"]')?.dataset.tab);
+  await melete.tab('library'); await page.waitForTimeout(300);
+  const demo = page.locator('#main [data-act="demoAdd"]');
+  if (await demo.count()) { await demo.first().click(); await page.waitForTimeout(1500); }
+  const fy = await page.evaluate((sel) => { const m = document.querySelector('#main').getBoundingClientRect(), r = document.querySelector(sel).getBoundingClientRect(); return (r.y + r.height / 2 - m.y) / m.height; }, '#main .slist');
+  await melete.swipe('#main', -170, 0, { fy: Math.min(0.9, fy) });
+  expect(await cur()).not.toBe('library');
+  await melete.tab('library'); await page.waitForTimeout(300);
+  const fb = await page.evaluate(() => { const m = document.querySelector('#main').getBoundingClientRect(), r = (document.querySelector('#main .fbar') || document.querySelector('#main .catbar')).getBoundingClientRect(); return (r.y + r.height / 2 - m.y) / m.height; });
+  await melete.swipe('#main', 170, 0, { fy: fb }); // полоса в начале — вправо можно сразу
+  expect(await cur()).toBe('home');
+  expect(errors).toEqual([]);
+});

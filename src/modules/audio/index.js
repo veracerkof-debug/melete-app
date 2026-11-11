@@ -824,13 +824,30 @@ const icb = (...a) => ctx.ui.icb(...a);
 const esc = (s) => ctx.ui.esc(s);
 const hueOf = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; };
 
+// Рисунок обложки: 16 полосок с промежутками. Высота — средняя громкость своего участка, растянутая между самым тихим
+// и самым громким участком записи: у длинной ровной записи (речь, семинар) пики почти одинаковы, и прежние 28 полосок
+// по пикам, налезая друг на друга, сливались в сплошной белый прямоугольник
+export function artPath(pk, N = 16) {
+  const s = pk.length / N, avg = [];
+  for (let i = 0; i < N; i++) {
+    const a = Math.floor(i * s), b = Math.max(a + 1, Math.floor((i + 1) * s));
+    let sum = 0, n = 0;
+    for (let j = a; j < b && j < pk.length; j++) { sum += pk[j] || 0; n++; }
+    avg.push(n ? sum / n : 0);
+  }
+  const lo = Math.min(...avg), hi = Math.max(...avg), span = hi - lo;
+  let p = '';
+  avg.forEach((v, i) => {
+    const k = span > 0.02 ? 0.25 + 0.75 * ((v - lo) / span) : hi > 0.01 ? 0.6 : 0.1, hh = Math.max(1, k * 12);
+    p += 'M' + (5 + i * 2).toFixed(1) + ' ' + (20 - hh).toFixed(1) + 'V' + (20 + hh).toFixed(1);
+  });
+  return p;
+}
+
 function artHTML(t, cls) {
   const pk = t.peaks && t.peaks.length ? t.peaks : null;
   let p = '';
-  if (pk) {
-    const N = 28, s = pk.length / N;
-    for (let i = 0; i < N; i++) { const v = pk[Math.floor(i * s)] || 0, hh = Math.max(1, v * 12); p += 'M' + (4 + i * 1.15).toFixed(2) + ' ' + (20 - hh).toFixed(1) + 'V' + (20 + hh).toFixed(1); }
-  }
+  if (pk) p = artPath(pk);
   return '<span class="mlart ' + (cls || '') + '" style="--h:' + hueOf(t.name) + '">' + (isVideo(t) ? I.film : pk ? '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + p + '"/></svg>' : ICON) +
     (AU.cur && AU.cur.id === t.id && !pl().paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
 }
@@ -1293,13 +1310,17 @@ function convSheet(ids, { fmt = null, share = false } = {}) {
   }, { tall: true, onClose: () => { if (h) { try { h.unmount(); } catch (e) { ctx.logErr(e); } } render(); } });
 }
 // Отправить несколько файлов как есть (по одному через «Поделиться»); сбой — сказать, а не молчать
+let sharing = false;
 async function shareMany(xs) {
-  let bad = 0;
-  for (const x of xs) {
-    try { const b = x.blob; if (!b) throw new Error('nofile'); await ctx.sendFile(new Uint8Array(await b.arrayBuffer()), x.name, x.name, x.type || b.type || (x.video ? 'video/mp4' : 'audio/wav')); }
-    catch (e) { bad++; ctx.logErr(e); }
-  }
-  if (bad) ctx.ui.toast(ctx.t('shareFail'));
+  if (sharing) return;
+  const list = xs.filter((x) => x.blob).map((x) => ({ blob: x.blob, name: x.name, type: x.type || x.blob.type || (x.video ? 'video/mp4' : 'audio/wav') }));
+  if (!list.length) { ctx.ui.toast(ctx.t('shareFail')); return; }
+  sharing = true;
+  // большие записи готовятся заметное время — показать ход, а не молчать
+  if (list.length > 1 || list[0].blob.size > (20 << 20)) ctx.ui.toast(ctx.t('sharePrep', { n: 1, total: list.length }));
+  try { await ctx.sendFiles(list, ctx.t('selSend'), (i, n) => { if (i > 0) ctx.ui.toast(ctx.t('sharePrep', { n: i + 1, total: n })); }); }
+  catch (e) { ctx.logErr(e); ctx.ui.toast(ctx.t('shareFail')); }
+  finally { sharing = false; }
 }
 
 // Поделиться как MP3 / M4A / OGG / WAV / FLAC: конвертер делает файл (он же — в медиатеке) и сразу отдаёт «Поделиться»

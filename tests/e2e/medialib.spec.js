@@ -12,3 +12,19 @@ test('медиатека: выбор нескольких → конвертер
   await expect(page.locator('.sheet .mlconv .cvc')).toHaveCount(2);
   expect(errors).toEqual([]);
 });
+// «Отправить» нескольких (отчёт автора 08.11: не реагировала): все файлы одним разом — в браузере без «Поделиться» скачиваются
+test('медиатека: «Отправить» нескольких — все файлы разом', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ settings: { upOk: 2 } });
+  await page.addInitScript(() => { try { Object.defineProperty(navigator, 'canShare', { value: () => false }); } catch { /* */ } });
+  await page.evaluate(() => { try { Object.defineProperty(navigator, 'canShare', { value: () => false, configurable: true }); } catch { /* */ } });
+  await melete.free('F', ['audio']); await page.waitForTimeout(1200);
+  const fc = page.waitForEvent('filechooser'); await page.locator('.session [data-x="aadd"]').first().click(); await (await fc).setFiles(wav());
+  await page.waitForTimeout(1500);
+  const names = [];
+  page.on('download', (d) => names.push(d.suggestedFilename()));
+  await page.locator('[data-x="mlsend"]').click();
+  await expect.poll(() => names.length, { timeout: 8000 }).toBe(2);
+  expect(names.sort()).toEqual(['a.wav', 'b.wav']);
+  expect(errors).toEqual([]);
+});

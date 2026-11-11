@@ -86,10 +86,11 @@ public class SharePlugin extends Plugin {
     public void put(PluginCall call) {
         String name = call.getString("name", "file").replaceAll("[\\\\/:*?\"<>|]", "_");
         boolean append = Boolean.TRUE.equals(call.getBoolean("append", false));
+        boolean keep = Boolean.TRUE.equals(call.getBoolean("keep", false)); // несколько файлов: следующий не стирает прежние
         try {
             File dir = new File(getContext().getCacheDir(), "share");
             if (!dir.exists()) dir.mkdirs();
-            if (!append) { File[] old = dir.listFiles(); if (old != null) for (File f : old) f.delete(); }
+            if (!append && !keep) { File[] old = dir.listFiles(); if (old != null) for (File f : old) f.delete(); }
             try (FileOutputStream out = new FileOutputStream(new File(dir, name), append)) {
                 out.write(Base64.decode(call.getString("data", ""), Base64.DEFAULT));
             }
@@ -124,6 +125,41 @@ public class SharePlugin extends Plugin {
             if (!text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
             send.putExtra(Intent.EXTRA_SUBJECT, title);
             send.setClipData(ClipData.newRawUri(name, uri));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(send, title);
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getActivity().startActivity(chooser);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
+    }
+
+    // Отправить несколько файлов одним выбором приложения: { names (уже собраны put), title, mime } — ACTION_SEND_MULTIPLE.
+    // Раньше медиатека отправляла по одному: каждый следующий файл стирал папку, пока предыдущий ещё не ушёл
+    @PluginMethod
+    public void sendMany(PluginCall call) {
+        String title = call.getString("title", "Melete");
+        String mime = call.getString("mime", "*/*");
+        try {
+            com.getcapacitor.JSArray arr = call.getArray("names");
+            java.util.List<String> names = arr == null ? new java.util.ArrayList<>() : arr.toList();
+            File dir = new File(getContext().getCacheDir(), "share");
+            java.util.ArrayList<Uri> uris = new java.util.ArrayList<>();
+            ClipData clip = null;
+            for (String n : names) {
+                File f = new File(dir, n.replaceAll("[\\\\/:*?\"<>|]", "_"));
+                if (!f.isFile()) continue;
+                Uri u = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+                uris.add(u);
+                if (clip == null) clip = ClipData.newRawUri(n, u); else clip.addItem(new ClipData.Item(u));
+            }
+            if (uris.isEmpty()) { call.reject("nofile"); return; }
+            Intent send = new Intent(uris.size() == 1 ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE);
+            send.setType(mime);
+            if (uris.size() == 1) send.putExtra(Intent.EXTRA_STREAM, uris.get(0)); else send.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+            send.putExtra(Intent.EXTRA_SUBJECT, title);
+            send.setClipData(clip);
             send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             Intent chooser = Intent.createChooser(send, title);
             chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

@@ -1,4 +1,5 @@
 {
+  "ofN": "{n} / {total}",
   "name": "Konverter",
   "about": "Har qanday tovush va video — kerakli formatga: MP3, M4A, WAV, FLAC, OGG va boshqalar; kesish, balandlik, temp, birlashtirish. Istalgan uzunlikdagi yozuvlar",
   "st.idle": "Fayl yoʻq",

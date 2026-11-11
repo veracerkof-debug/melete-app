@@ -1,4 +1,5 @@
 {
+  "ofN": "{n} of {total}",
   "name": "Converter",
   "about": "Any audio or video to the format you need: MP3, M4A, WAV, FLAC, OGG and more; trim, loudness, tempo, join. Recordings of any length",
   "st.idle": "No files",

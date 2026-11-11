@@ -114,7 +114,7 @@ async function run({ share = false } = {}) {
   const o = { ...q(), ...S.p, vol: { ...S.p.vol } }, jobs = S.q.filter((x) => x.state !== 'done');
   if (!jobs.length) return;
   if (needsFF(o.fmt) && !hasFF()) { needFF(); return; }
-  S.busy = true; S.abort = new AbortController(); render();
+  S.busy = true; S.abort = new AbortController(); S.run = jobs; render();
   const results = [], taken = new Set(ctx.files.list('audio').map((x) => x.name));
   const groups = o.join && jobs.length > 1 ? [jobs] : jobs.map((j) => [j]);
   // M4A и Opus — системными кодировщиками (на телефоне — аппаратные, в разы быстрее FFmpeg), если звук помещается
@@ -166,7 +166,7 @@ async function run({ share = false } = {}) {
   let next = 0;
   const lane = async (ff) => { while (next < groups.length && !S.abort.signal.aborted) { const g = groups[next++]; g.forEach((j) => (j.out = null)); await one(g, ff); } };
   await Promise.all(Array.from({ length: lanes }, (_, i) => lane(hasFF() ? (i ? S.ff2 : S.ff) : null)));
-  S.busy = false; S.abort = null;
+  S.busy = false; S.abort = null; S.run = null;
   render();
   if (results.length) {
     ctx.ui.toast(t('doneLib'));
@@ -277,7 +277,7 @@ function subHTML(j) {
   return '<span class="l2">' + [hms(j.dur), j.ext, mb(j.size)].filter(Boolean).join(' · ') + '</span>';
 }
 function rowHTML(j) {
-  return '<div class="cvc ' + j.state + '" data-key="' + j.key + '">' +
+  return '<div class="cvc ' + j.state + '" data-key="' + j.key + '" data-out="' + !!(j.out && j.out.length) + '">' +
     '<span class="cvic" aria-hidden="true">' + (j.video ? I.film : I.wave) + '</span>' +
     '<div class="cvn"><b>' + esc(j.name) + '</b>' + subHTML(j) + '</div>' +
     (j.state === 'done' && j.out && j.out.length ? '<button class="cvbtn" data-share="' + j.key + '" aria-label="' + esc(t('share')) + '">' + I.share + '</button>' : '') +
@@ -305,7 +305,12 @@ function pickFmt(k) {
 }
 function goLabel() {
   const n = S.q.filter((j) => j.state !== 'done').length, o = q();
-  if (S.busy) { const run = S.q.find((j) => j.state === 'run'); return t('cancel') + (run && run.p ? ' · ' + Math.round(run.p * 100) + ' %' : ''); }
+  // общий ход всех файлов этого запуска (а не одного текущего): «Остановить · 3 из 7 · 41 %»
+  if (S.busy) {
+    const js = S.run || [], tot = js.length, done = js.filter((j) => j.state === 'done' || j.state === 'err').length;
+    const p = tot ? js.reduce((a, j) => a + (j.state === 'done' || j.state === 'err' ? 1 : j.state === 'run' ? j.p || 0 : 0), 0) / tot : 0;
+    return t('cancel') + (tot > 1 ? ' · ' + t('ofN', { n: Math.min(tot, done + 1), total: tot }) : '') + (p ? ' · ' + Math.round(p * 100) + ' %' : '');
+  }
   if (!n) return t('go') + ' → ' + LABEL[o.fmt];
   return (S.p.join && n > 1 ? t('goJoin', { n }) : ctx.tn('goN', n)) + ' → ' + LABEL[o.fmt];
 }
@@ -326,11 +331,28 @@ function html() {
     '<div class="cvbot">' + '<button class="cvgo' + (S.busy ? ' stop' : '') + '" data-x="' + (S.busy ? 'stop' : 'go') + '"' + (n || S.busy ? '' : ' disabled') + '>' + esc(goLabel()) + '</button>' +
     (S.q.some((j) => j.state === 'done' && j.out && j.out.length) && !S.busy ? '<button class="cvround" data-x="shareall" aria-label="' + esc(t('shareAll')) + '">' + I.share + '</button>' : '') + '</div></div>';
 }
-function render() { if (host) host.innerHTML = '<div class="cvm ' + size + '">' + html() + '</div>'; }
+// Перерисовка не сбрасывает прокрутку списка (раньше список прыгал наверх — «моргал» при прокрутке)
+function render() {
+  if (!host) return;
+  const l = host.querySelector('.cvlist'), top = l ? l.scrollTop : 0;
+  host.innerHTML = '<div class="cvm ' + size + '">' + html() + '</div>';
+  const l2 = host.querySelector('.cvlist');
+  if (l2 && top) l2.scrollTop = top;
+}
+// Строка во время работы: меняется только то, что изменилось. Ход — ширина полосы и подпись на месте; строка целиком
+// заменяется, только когда сменилось её состояние (ждёт → идёт → готово). Раньше каждая строка заменялась на каждом шаге
+// хода — весь список перерисовывался под пальцем, и прокрутка мигала
 function paintRow(j) {
   if (!host) return;
   const row = host.querySelector('.cvc[data-key="' + j.key + '"]');
-  if (row) { const tmp = document.createElement('div'); tmp.innerHTML = rowHTML(j); row.replaceWith(tmp.firstChild); }
+  if (!row) return;
+  if (row.classList.contains(j.state) && row.dataset.out === String(!!(j.out && j.out.length))) {
+    const bar = row.querySelector('.cvbar'), sub = row.querySelector('.cvn'), sh = subHTML(j);
+    if (bar) bar.style.setProperty('--p', j.p);
+    if (sub && sub.dataset.sub !== sh) { sub.dataset.sub = sh; const b = sub.querySelector(':scope > b'); sub.innerHTML = ''; if (b) sub.appendChild(b); sub.insertAdjacentHTML('beforeend', sh); }
+    return;
+  }
+  const tmp = document.createElement('div'); tmp.innerHTML = rowHTML(j); row.replaceWith(tmp.firstChild);
 }
 // во время работы — перерисовать только строки и надпись кнопки (кнопки под пальцем не прыгают)
 function paint() {

@@ -5,7 +5,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 
-export const ICON = '<svg viewBox="0 0 24 24"><path d="M4.3 15.8v-3.4a7.7 7.7 0 0 1 15.4 0v3.4"/><rect x="3.4" y="13.7" width="4.5" height="7.3" rx="2.2"/><rect x="16.1" y="13.7" width="4.5" height="7.3" rx="2.2"/></svg>'; // наушники — как вкладка студии
+export const ICON = '<svg viewBox="0 0 24 24"><path d="M5 14v-2a7 7 0 0 1 14 0v2"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg>'; // наушники — как вкладка студии; дуга садится ровно на середину чашек (11.11.2026: без «усиков»)
 
 export default {
   id: 'studio',

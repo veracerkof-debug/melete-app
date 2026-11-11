@@ -87,3 +87,35 @@ test('FFmpeg: длинная запись без пределов, разрез 
   expect(Math.abs(r.lufs + 16)).toBeLessThan(0.3);
   expect(errors).toEqual([]);
 });
+
+// Несколько файлов: на кнопке — общий ход («3 из 4 · %»), а не одного файла; список не перерисовывается целиком
+// на каждом шаге (прокрутка не прыгает — отчёт автора 08.11)
+test('экран: несколько файлов — общий ход на кнопке, строки не заменяются на каждом шаге', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await melete.open();
+  await melete.free('F', ['convert']);
+  await page.waitForSelector('.cvm .cvempty');
+  const fc = page.waitForEvent('filechooser');
+  await melete.click('.cvm [data-x="files"]');
+  await (await fc).setFiles([wavFile(6), wavFile(6), wavFile(6), wavFile(6)]);
+  await expect(page.locator('.cvm .cvc')).toHaveCount(4);
+  await melete.click('.cvm [data-fmt="flac"]');
+  // помечаем строки: строка, не заменённая целиком, сохранит метку, пока у неё не сменится состояние
+  const seen = await page.evaluate(() => new Promise((res) => {
+    const labels = new Set();
+    let kept = 0, checks = 0;
+    const tick = () => {
+      const go = document.querySelector('.cvm .cvgo');
+      if (go) labels.add(go.textContent);
+      const run = document.querySelector('.cvm .cvc.run');
+      if (run) { checks++; if (run.dataset.mark === '1') kept++; run.dataset.mark = '1'; }
+      if (document.querySelectorAll('.cvm .cvc.done').length === 4) { res({ labels: [...labels], kept, checks }); return; }
+      requestAnimationFrame(tick);
+    };
+    document.querySelector('.cvm [data-x="go"]').click();
+    requestAnimationFrame(tick);
+  }));
+  expect(seen.labels.some((l) => / из 4/.test(l))).toBe(true);
+  expect(seen.kept).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});

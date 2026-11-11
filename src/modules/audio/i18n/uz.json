@@ -253,6 +253,7 @@
   "rpre.def": "Asli: 50 · 75 · 90 · 100",
   "shareRec": "Ulashish",
   "shareFail": "Yozuvni ulashib boʻlmadi",
+  "sharePrep": "Yuborishga tayyorlanmoqda: {n} / {total}",
   "stems.packHint": "Ajratish uchun model kerak — «Vokal va cholgʻu» paketi, bir marta yuklanadi.",
   "stems.packHintFull": "4 va 6 yoʻlak uchun model kerak — «Toʻliq ajratish» paketi, bir marta yuklanadi.",
   "shareAs": "… sifatida ulashish",

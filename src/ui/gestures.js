@@ -117,12 +117,16 @@ export function zoom2(el, { start, move, end, ok = () => true }) {
 // внутри области [data-swtabs]), смахивание по странице влево — следующая, вправо — предыдущая; переход — тем же
 // касанием по вкладке, что и рукой. Не действует там, где жест значит другое: клавиши, холсты, пэды
 // ([data-noswipe], NOSWIPE), полосы с прокруткой вбок и места со своим смахиванием (оно срабатывает раньше).
+const PAGE_NOSWIPE = NOSWIPE.replace('.hscroll, ', '');
+// → полоса с прокруткой вбок, внутри которой палец (или null)
 const scrollsX = (el, stop) => {
   for (let x = el; x && x !== stop; x = x.parentElement) {
-    if (x.scrollWidth > x.clientWidth + 2) { const o = getComputedStyle(x).overflowX; if (o === 'auto' || o === 'scroll') return true; }
+    if (x.scrollWidth > x.clientWidth + 2) { const o = getComputedStyle(x).overflowX; if (o === 'auto' || o === 'scroll') return x; }
   }
-  return false;
+  return null;
 };
+// полоса упёрлась в край в сторону смахивания (d = 1 — влево, к следующей вкладке)
+const atEdge = (sc, d) => (d > 0 ? sc.scrollLeft + sc.clientWidth >= sc.scrollWidth - 2 : sc.scrollLeft <= 2);
 export function pageStep(reg, d) {
   const tl = reg && reg.querySelector('[role="tablist"]');
   if (!tl) return false;
@@ -142,10 +146,15 @@ export function pageSwipe(root = document, { min = 70, other = null } = {}) {
     s = null;
     if (e.touches.length !== 1) return;
     const tg = e.target, reg = tg.closest && tg.closest('[data-swtabs]');
-    if (!tg.closest || tg.closest(NOSWIPE) || tg.closest('[role="tablist"]') || scrollsX(tg, reg)) return;
+    // полоса чипов (.hscroll) мешает, только если ей есть что прокручивать вбок (scrollsX): короткая полоса категорий
+    // в «Песнях» раньше съедала смахивание между вкладками по всей своей ширине
+    if (!tg.closest || tg.closest(PAGE_NOSWIPE) || tg.closest('[role="tablist"]')) return;
     if (!reg && !(other && other.ok(tg))) return;
-    const p = e.touches[0];
-    s = { x: p.clientX, y: p.clientY, t: performance.now(), reg };
+    // полоса с прокруткой: сначала она листается; уже у края — смахивание дальше переключает (как в телефонах)
+    // гриф, ноты и прочие рабочие поверхности с прокруткой — без исключения у края: там случайное переключение мешает играть
+    const sc = scrollsX(tg, reg), p = e.touches[0];
+    if (sc && !sc.classList.contains('hscroll')) return;
+    s = { x: p.clientX, y: p.clientY, t: performance.now(), reg, sc, sl: sc ? sc.scrollLeft : 0 };
   };
   const end = (e) => {
     if (!s || e.touches.length) { if (e.touches.length) s = null; return; }
@@ -153,6 +162,7 @@ export function pageSwipe(root = document, { min = 70, other = null } = {}) {
     s = null;
     const dx = p.clientX - q.x, dy = p.clientY - q.y, now = performance.now();
     if (now - q.t > 700 || Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 2) return;
+    if (q.sc) { const d = dx < 0 ? 1 : -1, was = q.sc.scrollLeft; q.sc.scrollLeft = q.sl; const edge = atEdge(q.sc, d); q.sc.scrollLeft = was; if (!edge) return; }
     if (now - lastSwipe < 400) return; // взял ближний обработчик
     if (document.getSelection && String(document.getSelection()).length) return;
     if (q.reg) pageStep(q.reg, dx < 0 ? 1 : -1); else other.step(dx < 0 ? 1 : -1);

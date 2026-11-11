@@ -50,6 +50,49 @@ export async function sendFile(u8, name, title, type = 'application/octet-stream
   return 'saved';
 }
 
+// Отправить несколько файлов одним «Поделиться». list: [{ blob, name, type }]; onStep(i, n) — ход подготовки.
+// Android — каждый файл кусками по 3 МБ прямо из Blob (запись на сотни мегабайт целиком в память не читается),
+// потом один выбор приложения на все (ACTION_SEND_MULTIPLE); компьютер — «Сохранить как» по очереди;
+// веб — «Поделиться» браузера всеми файлами, не умеет — скачивание по одному. → 'shared' | 'saved' | 'cancel'
+export async function sendFiles(list, title = 'Melete', onStep = () => {}) {
+  const xs = list.filter((x) => x && x.blob);
+  if (!xs.length) throw new Error('nofile');
+  if (xs.length === 1 && !Share) return sendFile(new Uint8Array(await xs[0].blob.arrayBuffer()), xs[0].name, title, xs[0].type || xs[0].blob.type);
+  if (Share) {
+    const CH = 3 << 20, names = [];
+    for (let i = 0; i < xs.length; i++) {
+      onStep(i, xs.length);
+      const { blob } = xs[i];
+      let name = xs[i].name;
+      while (names.includes(name)) name = name.replace(/(\.[^.]*)?$/, (e) => ' (' + (names.length + 1) + ')' + (e || ''));
+      names.push(name);
+      for (let o = 0; o === 0 || o < blob.size; o += CH) {
+        const part = new Uint8Array(await blob.slice(o, o + CH).arrayBuffer());
+        await Share.put({ name, data: b64(part), append: o > 0, keep: i > 0 });
+      }
+    }
+    const types = [...new Set(xs.map((x) => (x.type || x.blob.type || '').split('/')[0]).filter(Boolean))];
+    await Share.sendMany({ names, title, mime: types.length === 1 ? types[0] + '/*' : '*/*' });
+    return 'shared';
+  }
+  if (isDesktop()) {
+    let r = 'saved';
+    for (let i = 0; i < xs.length; i++) { onStep(i, xs.length); r = await saveFile(new Uint8Array(await xs[i].blob.arrayBuffer()), xs[i].name, xs[i].type || xs[i].blob.type); if (r === 'cancel') break; }
+    return r;
+  }
+  const files = xs.map((x) => new File([x.blob], x.name, { type: x.type || x.blob.type }));
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try { await navigator.share({ files, title }); return 'shared'; } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+  }
+  for (const f of files) {
+    const url = URL.createObjectURL(f), a = document.createElement('a');
+    a.href = url; a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  return 'saved';
+}
+
 // Шторка «Отправить команде». songIds — отмеченные сразу; ev — событие календаря (сет-лист) или null;
 // all — показать все песни для выбора (из списка песен)
 export function shareSheet(app, { songIds = [], ev = null, all = false } = {}) {

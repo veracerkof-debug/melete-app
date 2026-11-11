@@ -127,6 +127,8 @@ export function makeCtx(app, mod) {
     },
     // Отправить файл («Поделиться» на Android, «Сохранить как» на Windows): u8, имя, заголовок, тип
     sendFile: async (u8, name, title, type) => { const { sendFile } = await import('./screens/share.js'); return sendFile(u8, name, title, type); },
+    // несколько файлов одним «Поделиться» (list: [{ blob, name, type }]), onStep(i, n) — ход подготовки
+    sendFiles: async (list, title, onStep) => { const { sendFiles } = await import('./screens/share.js'); return sendFiles(list, title, onStep); },
     sendText: async (text, title) => { const { sendText } = await import('./screens/share.js'); return sendText(text, title); },
     confirmUpload: () => app.confirmUpload(),
     // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
