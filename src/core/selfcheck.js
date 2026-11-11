@@ -11,7 +11,7 @@ import { createStretchPlayer, stretchAvailable } from '../audio/stretchplayer.js
 import { stemsNative } from '../audio/stems.js';
 import { hasPack, packUrl } from './packs.js';
 import { canRecord, pickType } from './recorder.js';
-import { isDesktop } from './desktop.js';
+import { isDesktop, platformName } from './desktop.js';
 import { log } from './log.js';
 import { setLast } from './diag.js';
 
@@ -182,7 +182,7 @@ const checks = {
     const list = [...want.map(([n, p]) => [n, packUrl(p)]), ...packed.filter(([, , id]) => hasPack(id)).map(([n, p]) => [n, packUrl(p)])];
     const got = await Promise.all(list.map(([, u]) => have(u)));
     const missing = list.filter((_, i) => !got[i]).map(([n]) => n);
-    const eng = stemsNative() ? (isDesktop() ? 'нативный (Windows)' : 'нативный (Android)') : 'веб (WebAssembly)';
+    const eng = stemsNative() ? 'нативный (' + platformName(Capacitor.isNativePlatform()) + ')' : 'веб (WebAssembly)';
     const tail = '; движок дорожек ' + eng + (notYet.length ? '; пакеты не скачаны: ' + notYet.join(', ') : '');
     return missing.length ? { st: missing.length === list.length ? 'fail' : 'warn', info: 'нет: ' + missing.join(', ') + tail } : { st: 'ok', info: 'все на месте' + tail };
   },
@@ -196,7 +196,7 @@ const checks = {
   // Окружение — только сведения: платформа, потоки, WebAssembly, MIDI, камеры, уведомления
   async env() {
     const n = navigator, out = [];
-    out.push(Capacitor.isNativePlatform() ? 'Android' : isDesktop() ? 'Windows' : 'веб');
+    out.push(platformName(Capacitor.isNativePlatform()));
     out.push('ядер ' + (n.hardwareConcurrency || '?') + (n.deviceMemory ? ', память ' + n.deviceMemory + ' ГБ' : ''));
     out.push(typeof WebAssembly === 'undefined' ? 'без WebAssembly' : globalThis.crossOriginIsolated ? 'WebAssembly с потоками' : 'WebAssembly без потоков');
     out.push(typeof AudioWorkletNode === 'undefined' ? 'без AudioWorklet' : 'AudioWorklet есть');

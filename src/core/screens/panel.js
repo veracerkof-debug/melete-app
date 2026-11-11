@@ -4,7 +4,7 @@
 // barsSVG, hbars, legalSheet, doExport, импорт копии).
 import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
-import { logErr } from '../log.js';
+import { log, logErr } from '../log.js';
 import { updateSheet, variantsSheet } from './update.js';
 import { DEV, VARIANTS } from '../variants.js';
 import { t, tn, getLang, LANGS, LANG_NAMES, loadLang } from '../../i18n/index.js';
@@ -427,7 +427,7 @@ let syncMsg = '', syncBusy = false, syncAddr = '';
 const hostPort = (st) => (st.port && st.port !== PORT ? ':' + st.port : '');
 // «Компьютер забыл этот телефон»: старый ключ не поможет — сразу форма подключения с прежним адресом, нужен только код
 function onSyncErr(e) {
-  if (e && (e.reason === 'key' || e.reason === 'pin')) { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); } }
+  if (e && (e.reason === 'key' || e.reason === 'pin')) { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); log('sync', 'компьютер забыт: ' + e.reason + ' — нужно подключиться заново', 'w'); } }
   return syncErr(e);
 }
 const ago = (ts) => { if (!ts) return t('sy.never'); const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('sy.just') : m < 60 ? t('sy.min', { n: m }) : new Date(ts).toLocaleString(); };

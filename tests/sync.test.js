@@ -303,3 +303,12 @@ describe('отправка файла на устройство', () => {
     expect((await sendFile(a, a.files.get('big'), () => {}, H, { dev: d.addr })).have).toBe(true);
   });
 });
+
+import { desktopOS } from '../src/core/desktop.js';
+describe('платформа компьютера в отчёте', () => {
+  it('Linux (WebKitGTK), Windows (WebView2), macOS', () => {
+    expect(desktopOS('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko)')).toBe('Linux');
+    expect(desktopOS('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Edg/120')).toBe('Windows');
+    expect(desktopOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15')).toBe('macOS');
+  });
+});

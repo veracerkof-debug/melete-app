@@ -107,6 +107,7 @@ const writeLS = (v) => { try { localStorage.setItem(LS_KEY, JSON.stringify(v)); 
 // Подбор кода: после PAIR_TRIES неверных попыток — пауза PAIR_LOCK мс (шесть цифр иначе перебираются за минуты)
 export const PAIR_TRIES = 5, PAIR_LOCK = 60000;
 const pairGuard = { fails: 0, until: 0 };
+const refused = new Map(); // ключ → когда последний раз записали отказ (не чаще раза в минуту)
 export const resetPairGuard = () => { pairGuard.fails = 0; pairGuard.until = 0; };
 export async function handleRequest(ctx, req, incoming = new Map()) {
   if (req.path === '/melete/v1/sync') await loadAllLangs(); // демо-файлы на любом языке — мимо обмена; опрос ансамбля не ждёт
@@ -126,7 +127,13 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     return { status: 200, json: { key, name: ctx.name || 'PC' } };
   }
   const peer = mem.peers && mem.peers[req.key];
-  if (!peer) return { status: 401, json: { error: 'key' } };
+  if (!peer) {
+    // причина отказа — в журнал (раньше молчали, и в отчёте было видно только сопряжения): незнакомый ключ, без ключа
+    const k = String(req.key || '').slice(0, 6) || '—', t = (ctx.now || Date.now)();
+    if (!refused.has(k) || t - refused.get(k) > 60000) { refused.set(k, t); log('sync', 'отказ: незнакомый ключ ' + k + ' (' + req.path + '), знакомых устройств: ' + Object.keys(mem.peers || {}).length, 'w'); }
+    return { status: 401, json: { error: 'key' } };
+  }
+  if (req.path === '/melete/v1/sync') log('sync', 'синхронизация: ' + String(peer.name || '').slice(0, 30) + ', ключ ' + String(req.key).slice(0, 6) + (req.query.auto || (req.json && req.json.auto) ? ' (фон)' : ''));
   // фоновая синхронизация телефона ждёт, пока на компьютере звучит музыка или идёт занятие: приём файлов нагружает окно
   if ((req.query.auto || (req.json && req.json.auto)) && ctx.busy && ctx.busy()) return { status: 503, json: { error: 'busy' } };
   const F = app.files;
@@ -218,12 +225,12 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
     const raw = r.len ? new Uint8Array(await invoke('sync_body', { rid: r.rid })) : new Uint8Array();
     const res = await handle({ ...r, raw });
     const body = res.bytes || new TextEncoder().encode(JSON.stringify(res.json || {}));
-    await invoke('sync_reply', body, { headers: { rid: String(r.rid), status: String(res.status), ctype: res.bytes ? 'application/octet-stream' : 'application/json' } }).catch(() => {});
+    await invoke('sync_reply', body, { headers: { rid: String(r.rid), status: String(res.status), ctype: res.bytes ? 'application/octet-stream' : 'application/json' } }).catch((e) => log('sync', 'ответ телефону не ушёл (' + r.url + '): ' + String(e && e.message || e).slice(0, 120), 'w'));
   }
   async function onMesh(r) {
     const res = await handle({ ...r, raw: r.b64 ? b64.to(r.b64) : new Uint8Array() });
     const body = res.bytes || new TextEncoder().encode(JSON.stringify(res.json || {}));
-    await plugin().reply({ rid: r.rid, status: res.status, ctype: res.bytes ? 'application/octet-stream' : 'application/json', b64: b64.from(body) }).catch(() => {});
+    await plugin().reply({ rid: r.rid, status: res.status, ctype: res.bytes ? 'application/octet-stream' : 'application/json', b64: b64.from(body) }).catch((e) => log('sync', 'ответ не ушёл (' + r.url + '): ' + String(e && e.message || e).slice(0, 120), 'w'));
   }
   return {
     avail,
@@ -349,7 +356,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   if (hello.kind === 'phone' || isDesktop()) { m.devs = { ...(m.devs || {}), [base]: { ...rec, phone: true } }; writeLS(m); log('sync', 'сопряжено с устройством'); return m.devs[base]; }
   m.pc = rec;
   writeLS(m);
-  log('sync', 'сопряжено с компьютером');
+  log('sync', 'сопряжено с компьютером: ключ ' + String(r.key || '').slice(0, 6) + (fp ? ', отпечаток ' + fp.slice(0, 8) : ''));
   return m.pc;
 }
 
@@ -366,7 +373,11 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   const base = pc.addr, key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
   const halt = () => { if (opts.stop && opts.stop()) throw Object.assign(new Error('stopped'), { reason: 'stopped' }); };
   const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
-  const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => { throw e.reason ? e : fail(e); });
+  const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => {
+    const x = e.reason ? e : fail(e);
+    if (x.reason !== 'stopped' && x.reason !== 'busy') log('sync', 'синхронизация: отказ ' + path + ' — ' + x.reason + (e.status ? ' (' + e.status + ')' : '') + (e.message && !e.status ? ': ' + String(e.message).slice(0, 120) : '') + ', ключ ' + String(key || '').slice(0, 6), 'w');
+    throw x;
+  });
   const before = { songs: app.store.songs().length, sessions: app.store.allSessions().length };
   onStep({ stage: 'data' });
   const r = await call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });

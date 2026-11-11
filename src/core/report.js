@@ -2,6 +2,7 @@
 // Собирается и отправляется только по нажатию: системное меню «Поделиться» — человек сам выбирает Telegram,
 // почту или другое приложение и получателя. Без названий песен и файлов, текстов, имени и скрытых настроек.
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { platformName } from './desktop.js';
 import { logText, entries, stamp, important } from './log.js';
 import { state as dState, flushDiag } from './diag.js';
 import { diagnose, weekly, machine } from './diagnose.js';
@@ -18,7 +19,7 @@ const mb = (n) => (n / 1048576).toFixed(1) + ' МБ';
 // Сведения об устройстве и приложении — только технические, без личного
 export async function deviceInfo(app) {
   const n = navigator, s = app.store.state.settings, out = [];
-  out.push('Melete ' + APP_VERSION + (Capacitor.isNativePlatform() ? ' (Android)' : ' (веб)'));
+  out.push('Melete ' + APP_VERSION + ' (' + platformName(Capacitor.isNativePlatform()) + ')');
   out.push('Система: ' + n.userAgent);
   out.push('Экран: ' + screen.width + '×' + screen.height + ' @' + (window.devicePixelRatio || 1) + ', окно ' + innerWidth + '×' + innerHeight);
   out.push('Память: ' + (n.deviceMemory ? n.deviceMemory + ' ГБ' : '?') + ', ядер: ' + (n.hardwareConcurrency || '?'));

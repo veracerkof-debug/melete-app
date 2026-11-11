@@ -4,6 +4,11 @@
 // двойным щелчком (.melete, табы, .mid, проекты студий), F11 — во весь экран. Модули Tauri подгружаются по
 // требованию, в веб-версию и APK не попадают. Команды Rust — src-tauri/src/lib.rs (allow_dir, startup_files).
 export const isDesktop = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+// Какая система у программы для компьютера: Windows, Linux или macOS (по строке браузера окна; WebView2 — Windows,
+// WebKitGTK — Linux). Для отчёта и самопроверки: раньше на Linux там стояло «Windows» и «(веб)»
+export const desktopOS = (ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '') => (/Windows/i.test(ua) ? 'Windows' : /Mac OS X|Macintosh/i.test(ua) ? 'macOS' : /Linux|X11/i.test(ua) ? 'Linux' : 'Windows');
+// Платформа одним словом: Android, Windows, Linux, macOS или веб
+export const platformName = (native) => (native ? 'Android' : isDesktop() ? desktopOS() : 'веб');
 
 const EXT = { 'audio/midi': 'mid', 'application/json': 'json', 'text/markdown': 'md', 'text/calendar': 'ics', 'audio/wav': 'wav', 'application/pdf': 'pdf' };
 const KEY = 'practice.v1.folderPath'; // путь к папке Melete на этом компьютере
