@@ -5,11 +5,13 @@ import { Capacitor } from '@capacitor/core';
 import { t, initI18n, getLang, CORE_DICTS, loadAllLangs } from '../i18n/index.js';
 import { modules } from '../modules/index.js';
 import { createStore } from './store.js';
+import { migrate, STEPS } from './migrate.js';
+import { createProjStore } from './projstore.js';
 import { loadActive, saveActive, recoverToolView, addBpmTime } from './session.js';
 import { loadDevice, saveDevice, onDeviceWriteFail } from './device.js';
 import { createAudio } from '../audio/index.js';
 import { ensureLib } from './library.js';
-import { applyTheme, tabsMigrate, trainSplit, calmMigrate, mascotOf } from './settings.js';
+import { applyTheme, mascotOf } from './settings.js';
 import { registerTools } from './palettes.js';
 import { dropTestMode } from './cleanup.js';
 import { removeDemoFiles, cleanDemoCopies } from './demo.js';
@@ -83,12 +85,15 @@ export function boot(root) {
     setTimeout(() => { try { toast(t('data.noSpace'), { action: t('data.free'), onAction: () => { device.audio = { ...(device.audio || {}), sortOnce: 'size' }; import('./screens/tools.js').then((m) => m.openToolView(app, 'audio')); } }); } catch { /* */ } }, 0);
   };
   onDeviceWriteFail(writeFail('настройки'));
-  const store = createStore({ clockBad: () => !!(clock && clock.bad), onWriteFail: writeFail('данные') });
+  // Шаги формата данных (migrate.js) — при запуске, после копии и синхронизации; проекты студии — в своей базе
+  // (projstore.js), пишется только изменённый проект
+  const store = createStore({
+    clockBad: () => !!(clock && clock.bad), onWriteFail: writeFail('данные'),
+    migrate: (s) => migrate(s, STEPS, (m, lv) => log('data', m, lv)),
+    side: createProjStore(), onLog: (m, lv) => log('data', m, lv),
+  });
   // Язык из настроек (выбран в «Оформлении»), иначе — язык системы
   const st0 = store.state.settings;
-  if (tabsMigrate(st0)) store.settingsChanged();
-  if (trainSplit(st0)) store.settingsChanged(); // «Слух и ритм» → снова «Слух» и «Ритм» (11.11.2026)
-  if (calmMigrate(store.state)) store.settingsChanged(); // прежние яркие цвета меток и событий — спокойнее
   initI18n(st0.uiStyle === 'mono' && st0.monoLang !== false ? 'el' : st0.lang);
   ensureLib(store.state, t);
   registerTools(modules); // цвет инструментов — от палитры

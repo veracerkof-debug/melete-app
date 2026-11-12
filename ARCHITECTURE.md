@@ -92,7 +92,8 @@ src/main.js ─► core/index.js: boot()           ← собирает прил
 
 | Что | Где | Модуль |
 |---|---|---|
-| Песни, занятия, календарь, проекты студии, общие настройки | localStorage `practice.v1` (JSON, `version: 1`, формат прототипа) | `core/store.js` |
+| Песни, занятия, календарь, общие настройки | localStorage `practice.v1` (JSON, `version: 1`, формат прототипа; номер формата — `schema`, шаги — `core/migrate.js`) | `core/store.js` |
+| Проекты студии и лупера | IndexedDB `melete-proj` (пишется только изменённый проект) | `core/projstore.js`, `core/store.js` |
 | Настройки инструментов этого устройства (микшер, пианино, тюнер…) | localStorage `practice.v1.tools` | `core/device.js` |
 | Идущее занятие | localStorage `practice.v1.active` | `core/session.js` |
 | Файлы: записи, видео, табы, MIDI, модули Библии | IndexedDB `practice-audio` | `core/files.js` |

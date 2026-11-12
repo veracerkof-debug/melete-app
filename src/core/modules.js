@@ -145,8 +145,8 @@ export function makeCtx(app, mod) {
     projects: {
       list: () => (app.store.state.projects || []).filter((x) => !x.deleted),
       get: (id) => (app.store.state.projects || []).find((x) => x.id === id && !x.deleted) || null,
-      save(p) { const L = (app.store.state.projects ||= []), i = L.findIndex((x) => x.id === p.id); p.updatedAt = app.store.now(); if (i >= 0) L[i] = p; else L.push(p); app.store.save(); },
-      remove(id) { const x = (app.store.state.projects || []).find((y) => y.id === id); if (x) { x.deleted = true; x.updatedAt = app.store.now(); app.store.save(); } },
+      save(p) { const L = (app.store.state.projects ||= []), i = L.findIndex((x) => x.id === p.id); p.updatedAt = app.store.now(); if (i >= 0) L[i] = p; else L.push(p); app.store.projectChanged?.(p.id); app.store.save(); },
+      remove(id) { const x = (app.store.state.projects || []).find((y) => y.id === id); if (x) { x.deleted = true; x.updatedAt = app.store.now(); app.store.projectChanged?.(id); app.store.save(); } },
     },
     // Данные модуля в общем состоянии (попадают в резервную копию): state.settings[id]
     // Общая панель эффектов (src/ui/fxpanel.js) для слоя, дорожки и т. п.: { get, set } → { html(), bind(el, api) }
@@ -273,12 +273,15 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     const midiOff = mod.midiIn && app.midi ? app.midi.attach(mod.id, mod) : () => {};
     live = { guarded, midiOff };
   };
-  if (mod.loaded) start();
+  // проекты студии ещё читаются из своей базы (store.js, первые миллисекунды после запуска) — модуль ждёт их,
+  // иначе открытый при запуске редактор не нашёл бы свой проект
+  const dataWait = app.store.projMode === 'wait' ? app.store.ready : null;
+  if (mod.loaded && !dataWait) start();
   else {
     // модуль ещё не загружен (src/modules/index.js): тихая заставка в окне, затем — сам модуль на том же месте
     host.innerHTML = '<div class="modload" role="status" aria-busy="true" aria-label="' + ui.esc(moduleName(mod)) + '"><span class="mlic" style="--c:' + mod.color + '">' + mod.icon + '</span></div>';
     const t0 = performance.now();
-    mod.load().then(() => {
+    Promise.all([mod.loaded ? null : mod.load(), dataWait]).then(() => {
       if (closed) return;
       host.replaceChildren();
       start();

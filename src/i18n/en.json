@@ -484,6 +484,7 @@
   "sy.paired": "Connected: {name}",
   "sy.phoneName": "Phone",
   "sy.step.data": "Data…",
+  "sy.step.search": "No answer at the previous address — searching the Wi-Fi network…",
   "sy.step.up": "To computer {n} of {total}: {name}",
   "sy.step.down": "From computer {n} of {total}: {name}",
   "sy.done": "Done: songs +{songs}, sessions +{sessions}, files to computer {up}, from computer {down}",

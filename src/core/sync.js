@@ -281,14 +281,14 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
 // pin: отпечаток, которому верить; '' — любой (только при сопряжении); не задан — отпечаток подключённого компьютера.
 // withFp — вернуть { data, fp }: отпечаток, который предъявил компьютер
 let SyncHttp = null;
-export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000, pin, withFp = false } = {}) {
+export async function http(method, url, { key = '', json = null, bin = false, timeout = 60000, pin, withFp = false, connect = 6000 } = {}) {
   const headers = { 'Content-Type': 'application/json', ...(key ? { 'X-Melete-Key': key } : {}) };
   if (Capacitor.isNativePlatform()) {
     if (pin === undefined) { const m = readLS(), pc = m.pc, dv = Object.values(m.devs || {}).find((d) => d.fp && url.startsWith(d.addr)); pin = pc && pc.fp && url.startsWith(pc.addr) ? pc.fp : dv ? dv.fp : null; }
     if (pin == null) throw Object.assign(new Error('pin'), { reason: 'repair' }); // нет отпечатка — не слать ключ кому попало
     SyncHttp ??= registerPlugin('SyncHttp');
     let r;
-    try { r = await SyncHttp.request({ method, url, headers, body: json ? JSON.stringify(json) : null, bin, pin, connectTimeout: 6000, readTimeout: timeout }); }
+    try { r = await SyncHttp.request({ method, url, headers, body: json ? JSON.stringify(json) : null, bin, pin, connectTimeout: connect, readTimeout: timeout }); }
     catch (e) { throw Object.assign(new Error(String(e && e.message)), e && (e.code === 'pin' || e.code === 'tls') ? { reason: e.code } : {}); }
     if (r.status >= 400) throw Object.assign(new Error('http ' + r.status), { status: r.status });
     const data = bin ? b64.to(r.data || '') : JSON.parse(r.data || '{}');
@@ -362,6 +362,44 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   return m.pc;
 }
 
+/* ---------- компьютер сменил адрес ----------
+   Роутер выдаёт компьютеру адрес на время (DHCP); после перезагрузки адрес бывает другим, и телефон стучится в
+   пустоту — для человека это «компьютер забыл телефон». Телефон сам обходит свою сеть (те же первые три числа
+   адреса, ближние номера — первыми) и спрашивает /hello только у сертификата с запомненным отпечатком: ключ при
+   поиске не отправляется никому, чужие компьютеры и устройства отсеиваются ещё на рукопожатии TLS. */
+
+// https://192.168.1.5:53319 → соседние адреса той же сети /24, ближние первыми; не своя сеть (не 10/172.16–31/192.168) — []
+export function nearAddrs(base) {
+  const m = /^https:\/\/(\d+)\.(\d+)\.(\d+)\.(\d+)(:\d+)?$/.exec(String(base || ''));
+  if (!m) return [];
+  const [a, b, c, d] = m.slice(1, 5).map(Number), port = m[5] || '';
+  const lan = a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  if (!lan || [a, b, c, d].some((x) => x > 255)) return [];
+  const out = [];
+  for (let k = 1; k < 254; k++) for (const x of [d - k, d + k]) if (x >= 1 && x <= 254) out.push('https://' + a + '.' + b + '.' + c + '.' + x + port);
+  return out;
+}
+
+// → новый адрес компьютера с этим отпечатком или null. Параллельно по `wide` запросов, первый найденный — ответ.
+export async function findMoved(base, fp, H = http, { wide = 48, connect = 1500 } = {}) {
+  if (!/^[0-9a-f]{64}$/.test(String(fp || ''))) return null;
+  const list = nearAddrs(base);
+  let i = 0, found = null;
+  const one = async () => {
+    while (!found && i < list.length) {
+      const u = list[i++];
+      try {
+        const h = await H('GET', u + '/melete/v1/hello', { timeout: 3000, connect, pin: fp });
+        if (h && h.app === 'melete' && h.kind !== 'phone' && !found) found = u;
+      } catch { /* не он */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(wide, list.length) }, one));
+  return found;
+}
+let searchedAt = 0; // фоновая синхронизация ищет не чаще раза в полчаса: компьютер может быть просто выключен
+const SEARCH_GAP = 30 * 60 * 1000;
+
 // Синхронизировать с сопряжённым компьютером. onStep({ stage, done, total }) — ход. opts: auto — фоновая (компьютер
 // может отказать, если у него звучит музыка), stop() — прервать между кусками (у телефона зазвучало), want — какие
 // дорожки нужны телефону (уходит с записью). → итог { songs, sessions, up, down, removed, meta }
@@ -372,7 +410,8 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });
   const put = (o) => { const mm = readLS(); if (opts.dev) mm.devs = { ...(mm.devs || {}), [opts.dev]: o }; else mm.pc = o; writeLS(mm); };
   const cur = () => { const mm = readLS(); return opts.dev ? (mm.devs || {})[opts.dev] : mm.pc; };
-  const base = pc.addr, key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
+  let base = pc.addr;
+  const key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
   const halt = () => { if (opts.stop && opts.stop()) throw Object.assign(new Error('stopped'), { reason: 'stopped' }); };
   const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
   const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => {
@@ -382,7 +421,23 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   });
   const before = { songs: app.store.songs().length, sessions: app.store.allSessions().length };
   onStep({ stage: 'data' });
-  const r = await call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
+  const first = () => call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
+  let r;
+  try { r = await first(); } catch (e) {
+    // не отвечает по старому адресу — поискать тот же компьютер в сети (только телефон с отпечатком; устройства
+    // Melete DEV — по-прежнему по своему адресу)
+    const can = e.reason === 'unreachable' && !opts.dev && pc.fp && (H !== http || Capacitor.isNativePlatform()) && (!auto || Date.now() - searchedAt > SEARCH_GAP);
+    if (!can) throw e;
+    searchedAt = Date.now();
+    onStep({ stage: 'search' });
+    const nb = await findMoved(base, pc.fp, H);
+    if (!nb) { log('sync', 'компьютер не найден ни по старому адресу, ни в сети ' + base.replace(/\.\d+(:\d+)?$/, '.*'), 'w'); throw e; }
+    log('sync', 'компьютер сменил адрес: ' + base.replace(/^https:\/\//, '') + ' → ' + nb.replace(/^https:\/\//, '') + ' (тот же отпечаток)');
+    base = nb; pc.addr = nb; // pc ниже сохраняется целиком — со старым адресом затёр бы новый
+    put({ ...cur(), addr: nb });
+    onStep({ stage: 'data' });
+    r = await first();
+  }
   app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS));
   if (!opts.dev) { pc.work = r.work || null; put({ ...pc }); } // что компьютер считает сам — для «Считать на компьютере»
   const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || []);

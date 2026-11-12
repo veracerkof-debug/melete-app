@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64, mergeMeta, metaHash, createSyncClient, PORT, PORT_DEV } from '../src/core/sync.js';
+import { planFiles, baseOf, manifestOf, handleRequest, pair, syncNow, pcOf, newCode, b64, mergeMeta, metaHash, createSyncClient, PORT, PORT_DEV, nearAddrs, findMoved } from '../src/core/sync.js';
 import { createStore } from '../src/core/store.js';
 
 // localStorage для node: и у телефона, и у компьютера своё — переключаем подменой
@@ -168,6 +168,25 @@ describe('связь телефона и компьютера: целиком', 
     expect(puts).toBe(2); // первый кусок уже был у компьютера: отказ «с какого» + два оставшихся без повтора первого
   });
 
+  it('обрыв Wi-Fi посреди передачи: ошибка «не отвечает», полфайла не появляется, данные целы, повтор доходит', async () => {
+    phone.store.replaceState({ ...phone.store.state, songs: [song('s1', 'Калинка', 100)] });
+    await phone.files.add({ id: 'big', name: 'big.wav', kind: 'audio', type: 'audio/wav', blob: bytes(5 << 20, 7) });
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    let puts = 0, down = true;
+    const H2 = async (m, url, o) => {
+      if (url.includes('/put') && ++puts === 2 && down) throw Object.assign(new Error('connect timed out'), {});
+      return H(m, url, o);
+    };
+    await expect(syncNow(phone, () => {}, H2)).rejects.toBeTruthy();
+    expect(pc.files.get('big')).toBeUndefined(); // недокачанное не становится файлом
+    expect(phone.store.songs().map((x) => x.title)).toEqual(['Калинка']); // у телефона ничего не пропало
+    expect(phone.files.get('big').blob.size).toBe(5 << 20);
+    down = false;
+    await syncNow(phone, () => {}, H2);
+    expect(pc.files.get('big').blob.size).toBe(5 << 20);
+    expect(pc.store.songs().map((x) => x.title)).toEqual(['Калинка']);
+  });
+
   it('телефон ждёт компьютер только для свежих записей и того, что компьютер умеет', async () => {
     await pair('192.168.1.5', '482913', 'Телефон', H);
     pcCtx.work = () => ({ stems: '4', ana: true, lyr: true });
@@ -319,5 +338,63 @@ describe('сопряжение без ключа (Linux 11.11.2026: ответ �
     const H = async (m, url) => (url.endsWith('/hello') ? { app: 'melete', name: 'PC' } : { 0: 123, 1: 34 });
     await expect(pair('192.168.1.5', '123456', 'Телефон', H)).rejects.toMatchObject({ reason: 'off' });
     expect(pcOf()).toBe(null);
+  });
+});
+
+describe('компьютер сменил адрес (DHCP)', () => {
+  let phone, pc, H;
+  beforeEach(() => {
+    globalThis.localStorage = mkLS();
+    phone = mkApp(); pc = mkApp();
+    H = link({ app: pc, mem: {}, code: '482913', name: 'PC' });
+  });
+  const FP = 'ab'.repeat(32);
+  // сеть: наш компьютер — на .7; на .6 — чужой Melete с другим сертификатом; остальных адресов нет
+  const net = (at, seen) => async (m, url, o = {}) => {
+    const host = new URL(url).hostname;
+    if (host === at) return H(m, url, o);
+    if (host === '192.168.1.6') {
+      if (o.pin && o.pin !== 'cd'.repeat(32)) throw Object.assign(new Error('pin'), { reason: 'pin' }); // рукопожатие не прошло
+      if (o.key) seen.push(o.key);
+      return { app: 'melete', name: 'Чужой' };
+    }
+    throw new Error('connect timed out');
+  };
+
+  it('соседние адреса: та же сеть, ближние первыми; не своя сеть — не ищем', () => {
+    const L = nearAddrs('https://192.168.1.5:53319');
+    expect(L.slice(0, 4)).toEqual(['https://192.168.1.4:53319', 'https://192.168.1.6:53319', 'https://192.168.1.3:53319', 'https://192.168.1.7:53319']);
+    expect(L.length).toBe(253);
+    expect(L).not.toContain('https://192.168.1.5:53319');
+    expect(L.every((u) => /^https:\/\/192\.168\.1\.(\d+):53319$/.test(u) && +u.split('.')[3].split(':')[0] >= 1 && +u.split('.')[3].split(':')[0] <= 254)).toBe(true);
+    expect(nearAddrs('https://8.8.8.8:53319')).toEqual([]);
+    expect(nearAddrs('https://10.0.0.9:53319').length).toBe(253);
+  });
+
+  it('телефон находит тот же компьютер по отпечатку, запоминает адрес, ключ чужому не уходит', async () => {
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    phone.store.replaceState({ ...phone.store.state, songs: [song('s1', 'Калинка', 100)] });
+    const seen = [], steps = [];
+    await syncNow(phone, (x) => steps.push(x.stage), net('192.168.1.7', seen));
+    expect(pcOf().addr).toBe('https://192.168.1.7:' + PORT);
+    expect(steps).toContain('search');
+    expect(seen).toEqual([]); // чужой компьютер ключа не видел
+    expect(pc.store.songs().map((x) => x.title)).toEqual(['Калинка']);
+  });
+
+  it('компьютер выключен — «не отвечает», адрес прежний; фоновая не ищет снова раньше получаса', async () => {
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    let hellos = 0;
+    const off = async (m, url) => { if (url.endsWith('/hello')) hellos++; throw new Error('connect timed out'); };
+    await expect(syncNow(phone, () => {}, off)).rejects.toMatchObject({ reason: 'unreachable' });
+    expect(hellos).toBe(253);
+    expect(pcOf().addr).toBe('https://192.168.1.5:' + PORT);
+    hellos = 0;
+    await expect(syncNow(phone, () => {}, off, { auto: true })).rejects.toMatchObject({ reason: 'unreachable' });
+    expect(hellos).toBe(0);
+  });
+
+  it('без отпечатка не ищем', async () => {
+    expect(await findMoved('https://192.168.1.5:53319', '', H)).toBe(null);
   });
 });

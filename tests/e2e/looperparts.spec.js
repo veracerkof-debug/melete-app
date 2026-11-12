@@ -82,7 +82,7 @@ test('«В лупер»: проект — партиями, дорожки за�
   await melete.free('F', ['looper']); await page.waitForTimeout(800);
   await expect(page.locator('.lpwrap.parts')).toHaveCount(1); // присланное открывает «Партии»
   await expect(page.locator('.lprow[data-tr]')).toHaveCount(2);
-  const left = await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).projects.filter((p) => !p.deleted).map((p) => p.id + ':' + !!p.looper));
+  const left = (await melete.projects()).filter((p) => !p.deleted).map((p) => p.id + ':' + !!p.looper);
   expect(left.some((x) => x === 'pjin:true')).toBe(false); // присланный — временный, в лупере — своя копия
   // дорожки — в следующую свободную петлю
   await page.evaluate(async () => { const m = (await import('/src/modules/looper/index.js')).default; void m; });

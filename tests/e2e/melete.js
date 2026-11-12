@@ -97,6 +97,8 @@ function helpers(page) {
     count: (sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel),
     settings: () => page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).settings),
     toolsNow: () => page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1.tools') || '{}')),
+    // Проекты студии и лупера (с 12.11.2026 — в своей базе melete-proj, не в practice.v1): как их видит приложение
+    projects: () => page.evaluate(async () => { const st = window.__melete.store; await st.ready; return JSON.parse(JSON.stringify(st.state.projects || [])); }),
     // Элементы шире окна (горизонтальное переполнение) — кроме прокручиваемых по горизонтали
     overflow: () => page.evaluate(() => {
       const W = innerWidth, bad = [];

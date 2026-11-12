@@ -472,6 +472,7 @@
   "sy.paired": "Ulandi: {name}",
   "sy.phoneName": "Telefon",
   "sy.step.data": "Maʼlumotlar…",
+  "sy.step.search": "Kompyuter oldingi manzilda javob bermayapti — Wi-Fi tarmogʻida qidirilmoqda…",
   "sy.step.up": "Kompyuterga {n}/{total}: {name}",
   "sy.step.down": "Kompyuterdan {n}/{total}: {name}",
   "sy.done": "Tayyor: qoʻshiqlar +{songs}, mashgʻulotlar +{sessions}, kompyuterga {up}, kompyuterdan {down} fayl",

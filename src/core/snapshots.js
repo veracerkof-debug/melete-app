@@ -41,6 +41,7 @@ export function createSnapshots(app) {
   }
   async function take(kind = 'day', { build = 0 } = {}) {
     try {
+      if (app.store.ready) await app.store.ready; // проекты студии прочитаны из своей базы — копия полная
       const text = backupText(app), at = Date.now(), id = kind === 'day' ? dayId(at) : 'upd-' + at + '-' + Math.random().toString(36).slice(2, 6);
       const before = await list();
       await tx('readwrite', (s) => s.put({ id, at, kind, build, size: text.length, text }));

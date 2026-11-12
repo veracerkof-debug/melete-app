@@ -69,7 +69,7 @@ test('студия: масштаб в пиано-ролле и в шагах у�
     await page.mouse.move(cv.x + 70, cv.y + 30 + row * 64 + 32); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up(); await page.waitForTimeout(500);
     await page.click('.sheet [data-ce="edit"]'); await page.waitForTimeout(800);
   };
-  const rows = await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).projects.find((p) => p.name === 'Масштаб').tracks.map((t) => t.kind));
+  const rows = (await melete.projects()).find((p) => p.name === 'Масштаб').tracks.map((t) => t.kind);
   await open(rows.indexOf('notes'));
   const rc = await page.locator('.tview .stroll canvas').boundingBox(), x = rc.x + rc.width / 2, y = rc.y + rc.height / 2;
   await two([[x - 30, y], [x + 30, y]], [[x - 90, y], [x + 90, y]]);

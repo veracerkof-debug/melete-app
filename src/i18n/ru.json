@@ -492,6 +492,7 @@
   "sy.paired": "Подключено: {name}",
   "sy.phoneName": "Телефон",
   "sy.step.data": "Данные…",
+  "sy.step.search": "Компьютер не отвечает по прежнему адресу — поиск в сети Wi-Fi…",
   "sy.step.up": "На компьютер {n} из {total}: {name}",
   "sy.step.down": "С компьютера {n} из {total}: {name}",
   "sy.done": "Готово: песен +{songs}, занятий +{sessions}, файлов на компьютер {up}, с компьютера {down}",
