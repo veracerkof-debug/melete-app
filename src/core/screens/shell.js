@@ -185,6 +185,7 @@ export function createShell(app, root) {
     else if (d.act === 'panel') panel.open('root');
     else if (d.pp) panel.open(d.pp);
     else if (d.act === 'libman') libManager(app, render);
+    else if (d.act === 'compare') import('./compare.js').then((m) => m.compareSheet(app, d.sid));
     else if (d.act === 'quickedit') quickEdit(app, render);
     // чтение дня: Библия — на нужной главе
     else if (d.act === 'bible') {

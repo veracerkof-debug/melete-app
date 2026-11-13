@@ -2,6 +2,7 @@
 // Перенесено из legacy/practice.html (libraryHTML, songHTML, tempoChart, songForm, libManager, itemEditor, pickHTML).
 import { routinesHTML } from './routine.js';
 import { dueSongs } from '../review.js';
+import { takesOf } from './compare.js';
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, icb, seg, sheet, snav, toast, icons } from '../../ui/index.js';
 import { isDemo } from '../demo.js';
@@ -104,6 +105,8 @@ export function songHTML(app, id) {
     '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div></div></div>';
   if (!plain && st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
   if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
+  const nTakes = takesOf(app, s.id).length; // записи песни: «неделю назад и сейчас» (screens/compare.js)
+  if (nTakes >= 2) h += '<div class="group" style="margin-top:12px"><button class="cell act" data-act="compare" data-sid="' + s.id + '"><span class="grow">' + t('cmp.open') + '</span><span class="l2 num">' + nTakes + '</span></button></div>';
   h += '</div><div class="sdside">' + songEventsHTML(app, s.id);
   h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div></div></div>';
   h += '<div class="fab"><button class="btn fill" data-play="' + s.id + '" aria-label="' + t('song.playAria') + '">' + PLAY + '<span>' + t('song.play') + '</span></button></div>';

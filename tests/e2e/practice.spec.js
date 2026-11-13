@@ -91,3 +91,25 @@ test('повторение репертуара: выученная песня, 
   await expect(page.locator('.rvmark')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+test('сравнение дублей: две записи песни — А/Б, переключение без остановки', async ({ page, melete, errors }) => {
+  await melete.open({ songs: [{ id: 's1', title: 'Песня', createdAt: 1 }] });
+  await page.evaluate(async () => {
+    const wav = (amp) => { const sr = 8000, n = sr * 2, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(amp * 32767 * Math.sin(i / 10)), true); return new Blob([b], { type: 'audio/wav' }); };
+    const F = window.__melete.files, day = 86400000;
+    await F.add({ id: 'r1', name: 'Неделя назад.wav', type: 'audio/wav', songs: ['s1'], created: Date.now() - 7 * day, blob: wav(0.05) });
+    await F.add({ id: 'r2', name: 'Сейчас.wav', type: 'audio/wav', songs: ['s1'], created: Date.now(), blob: wav(0.5) });
+  });
+  await melete.tab('library');
+  await melete.click('[data-song="s1"]');
+  await melete.click('[data-act="compare"]');
+  await page.waitForSelector('.cmpk[data-ab="A"]');
+  await melete.click('[data-cp]'); await page.waitForTimeout(400);
+  await melete.click('.cmpk[data-ab="B"]'); await page.waitForTimeout(200);
+  await expect(page.locator('.cmpk[data-ab="B"]')).toHaveClass(/on/);
+  await expect(page.locator('[data-cp]')).toHaveText('❚❚'); // играет дальше
+  await expect(page.locator('.cmpk[data-ab="A"] span')).toContainText('0:02');
+  expect(errors).toEqual([]);
+});

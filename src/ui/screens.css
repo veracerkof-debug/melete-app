@@ -671,3 +671,14 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rtopts .sortsel{flex:1 1 40%;min-width:0;min-height:40px}
 .rtact .ic{min-width:40px;min-height:40px}
 .rvmark{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:var(--tint-text,var(--tint));background:color-mix(in srgb,var(--tint) 14%,transparent)}
+/* сравнение дублей (screens/compare.js) */
+.cmpab{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 14px}
+.cmpk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:110px;padding:10px;border-radius:18px;background:var(--fill);color:var(--ink);border:2px solid transparent}
+.cmpk b{font-size:40px;font-weight:300;line-height:1}
+.cmpk span{font-size:13px;color:var(--l2);text-align:center}
+.cmpk.on{border-color:var(--tint);background:color-mix(in srgb,var(--tint) 16%,var(--fill))}
+.cmpctl{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.cmpplay{min-width:56px;min-height:48px;font-size:18px}
+.cmpseek{flex:1;min-width:0;accent-color:var(--tint)}
+.cmpt{min-width:44px;text-align:right;color:var(--l2)}
+.cmpl{min-width:24px;font-weight:600}
