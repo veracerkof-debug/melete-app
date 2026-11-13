@@ -208,3 +208,13 @@ body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный
 .sbrk button{min-height:40px;padding:0 14px;border-radius:999px;font-weight:600;font-size:14px;background:var(--fill);color:var(--ink)}
 .sbrk button[data-brk="go"],.sbrk button[data-brk="back"]{background:var(--tint);color:var(--on-tint)}
 @media (prefers-reduced-motion: reduce){.sbrk{animation:none}}
+/* план занятия: тонкая полоса под шапкой — пункт, название, сколько осталось; смахнуть — следующий */
+.splan{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;margin:2px 0 6px;padding:0 4px 0 12px;border-radius:12px;background:var(--fill);overflow:hidden;font-size:14px;cursor:pointer;touch-action:pan-y;flex:none}
+.splan .spn{color:var(--l2);font-weight:600}
+.splan .spt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.splan .spl{color:var(--l2)}
+.splan .spnext{min-width:40px;min-height:36px;border-radius:10px;font-size:22px;line-height:1;color:var(--ink)}
+.splan .spbar{position:absolute;left:0;bottom:0;height:3px;background:var(--tint);pointer-events:none;transition:width .5s linear}
+.splan.due{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}
+.splan.due .spl{color:var(--tint-text,var(--tint));font-weight:600}
+.splan.due .spnext{background:var(--tint);color:var(--on-tint)}

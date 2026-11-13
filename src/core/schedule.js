@@ -21,6 +21,7 @@ const okHM = (v) => /^\d\d:\d\d$/.test(v);
 const cleanSlot = (s, withDays) => {
   if (!s || !okHM(s.from) || !okHM(s.to) || minOf(s.to) <= minOf(s.from)) return null;
   const x = { id: String(s.id || newId()), from: s.from, to: s.to, title: String(s.title || '').slice(0, 60) };
+  if (s.routine) x.routine = String(s.routine); // план занятия (routine.js)
   if (withDays) { x.days = [...new Set((s.days || []).map(Number).filter((d) => d >= 0 && d <= 6))].sort(); if (!x.days.length) return null; }
   return x;
 };
@@ -81,7 +82,7 @@ export function savePlan(st, p) {
 }
 
 // Правки. mode: 'all' — повторяющийся блок целиком; 'day' — только дата (свой набор блоков на этот день)
-const dayCopy = (p, d) => slotsOn(p, d).map(({ id, from, to, title }) => ({ id: id + '-' + dateKey(d), from, to, title }));
+const dayCopy = (p, d) => slotsOn(p, d).map(({ id, from, to, title, routine }) => ({ id: id + '-' + dateKey(d), from, to, title, routine }));
 export function addSlot(p, slot, { d = null, once = false } = {}) {
   if (once && d != null) { const k = dateKey(d); const cur = p.once[k] || dayCopy(p, d); p.once[k] = [...cur, cleanSlot({ ...slot, id: newId() }, false)].filter(Boolean); return p; }
   const s = cleanSlot({ ...slot, id: newId() }, true);

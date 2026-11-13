@@ -1,5 +1,6 @@
 // «Песни»: список с категориями, поиском, фильтрами и сортировкой; карточка песни; форма песни; метки.
 // Перенесено из legacy/practice.html (libraryHTML, songHTML, tempoChart, songForm, libManager, itemEditor, pickHTML).
+import { routinesHTML } from './routine.js';
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, icb, seg, sheet, snav, toast, icons } from '../../ui/index.js';
 import { isDemo } from '../demo.js';
@@ -37,6 +38,7 @@ export function libraryHTML(app, view) {
     '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>') + '<div class="large">' + t('songs.title') + '</div>';
   // демо-набор — сверху, убрать одним нажатием (песни с занятиями остаются в статистике)
   const nDemo = songs.filter((x) => isDemo(x.id)).length;
+  h += routinesHTML(app); // планы занятия (screens/routine.js)
   if (nDemo) h += '<div class="demobar"><span>' + tn('demo.bar', nDemo) + '</span><button class="btn sm" data-act="demoDel">' + t('demo.removeShort') + '</button></div>';
   if (!songs.length) return h + '<div class="empty"><b>' + t('songs.emptyTitle') + '</b>' + t('songs.emptyText') + '<br><button class="btn fill" data-act="addSong"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" style="stroke:currentColor;stroke-width:2.4;fill:none"/></svg></i>' + t('songs.add') + '</button>' +
     (st.church ? '<br><button class="btn" style="margin-top:10px" data-act="songImport">' + t('songs.import') + '</button>' : '') +

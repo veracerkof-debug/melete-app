@@ -13,6 +13,7 @@ import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
+import { routinesClick } from './routine.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet, ideaSheet } from './report.js';
 import { checkSheet } from './selfcheck.js';
@@ -171,6 +172,7 @@ export function createShell(app, root) {
     const d = b.dataset;
     // правка главной (блоки: меньше, больше, убрать, вернуть, готово)
     if (d.hbe) { if (homeEditAct(app, d.hbe)) render(); return true; }
+    if (routinesClick(app, e, render)) return true; // планы занятия на экране «Песни»
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);
     else if (d.play) app.startSession('song', d.play);

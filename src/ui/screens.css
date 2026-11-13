@@ -649,3 +649,24 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
    подсказка внутри карточки расписания — с полем снизу */
 .ftr+.group,.ftr+.plan,.plan+.group{margin-top:18px}
 .plan>.ftr{margin:10px 14px 0;padding-bottom:14px}
+
+/* планы занятия (screens/routine.js) */
+.rthdr{display:flex;align-items:center;justify-content:space-between}
+.rthdr .link{min-height:40px;text-transform:none;letter-spacing:0;font-size:15px}
+.rtrow{display:flex;align-items:center;gap:8px}
+.rtrow .rtopen,.rtrow.cell .grow{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:44px;justify-content:center}
+.rtrow .st{font-size:13px}
+.rtplay,.rtrow>svg,.rtfree svg{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--tint)}
+.rtplay svg,.rtrow>svg,.rtfree svg{width:22px;height:22px;fill:currentColor}
+.rtfree{display:flex;align-items:center;gap:8px}
+.rtempty{gap:10px}
+.rtex{display:flex;flex-wrap:wrap;gap:8px}
+.rtitem{margin-bottom:10px}
+.rtitem .cell{gap:8px}
+.rtn{min-width:20px;color:var(--l2);font-weight:600}
+.rtitem .inp,[data-rtt]{text-align:left}
+.rtmin{width:64px;text-align:right!important}
+.rtbpm{width:88px;margin-left:8px}
+.rtopts{flex-wrap:wrap}
+.rtopts .sortsel{flex:1 1 40%;min-width:0;min-height:40px}
+.rtact .ic{min-width:40px;min-height:40px}

@@ -52,3 +52,32 @@ test('«перерыв?»: после 50 минут — полоска; «Пер
   await expect(page.locator('.sbrk')).toHaveCount(0); // отсчёт — заново с конца перерыва
   expect(errors).toEqual([]);
 });
+
+test('план занятия: пример в «Песнях», выбор при начале, полоса пунктов, разбивка в записи', async ({ page, melete, errors }) => {
+  await melete.open({ songs: [{ id: 's1', title: 'Песня', createdAt: 1 }] });
+  await melete.tab('library');
+  await melete.click('[data-rtex="guitar"]');
+  await page.waitForSelector('[data-rtsave]');
+  await melete.click('[data-rtsave]'); await page.waitForTimeout(400);
+  await expect(page.locator('.rtrow')).toHaveCount(1);
+  await melete.click('[data-rtgo]');
+  await page.waitForSelector('#splan', { timeout: 10_000 });
+  await expect(page.locator('#splan .spn')).toHaveText('1/3');
+  await melete.click('#splan [data-s="pnext"]'); await page.waitForTimeout(300);
+  await expect(page.locator('#splan .spn')).toHaveText('2/3');
+  // начать с главной — выбор «Свободно» или план
+  await page.evaluate(() => { const a = window.__melete.active; a.startedAt -= 120000; a.routine.at -= 120000; a.last = Date.now(); });
+  await melete.click('[data-s="finish"]');
+  await page.waitForSelector('[data-rv="next"]');
+  await melete.click('[data-k="save"]'); await page.waitForTimeout(500);
+  const rec = await page.evaluate(() => window.__melete.store.sessions().slice(-1)[0]);
+  expect(rec.plan.items).toHaveLength(3);
+  expect(rec.plan.items[1].sec).toBeGreaterThan(100);
+  await melete.tab('home');
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await expect(page.locator('[data-pk]')).toHaveCount(2);
+  await melete.click('[data-pk=""]');
+  await page.waitForSelector('.session', { timeout: 10_000 });
+  await expect(page.locator('#splan')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

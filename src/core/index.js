@@ -292,7 +292,7 @@ export function boot(root) {
   const sti = store.state.settings, wantIcon = ICON_BY_MASCOT[mascotOf(sti)];
   if (!sti.appIconOwn && (sti.appIcon !== wantIcon || sti.iconSync !== 1)) { sti.iconSync = 1; setAppIcon(sti, wantIcon).then(() => store.settingsChanged()); }
   webIcon(iconOf(sti));
-  app.startSession = (type, songId, tool) => session.start(type, songId, tool);
+  app.startSession = (type, songId, tool, opts) => session.start(type, songId, tool, opts);
   // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
   app.relang = () => {
     const st = store.state.settings;

@@ -5,6 +5,8 @@
 // день. Повторяющееся занятие, сдвинутое в одном дне, — вопрос «только этот день или все». Ниже — сумма недели и
 // перерывы по датам. Логика — src/core/schedule.js.
 import { t, getLang } from '../../i18n/index.js';
+import { routinesOf } from '../routine.js';
+import { routineOptions } from './routine.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { weekday } from '../time.js';
 import { weekdays } from './common.js';
@@ -70,7 +72,8 @@ function slotSheet(app, slot, done) {
     '<div class="group"><label class="cell"><input class="inp grow" data-pt placeholder="' + esc(t('plan.titlePh')) + '" value="' + esc(slot.title || '') + '" maxlength="60" style="border:0;background:none;font-size:17px"></label>' +
     '<div class="cell ptimes"><input type="time" class="inp num" data-pfrom value="' + esc(slot.from) + '" step="900" aria-label="' + esc(t('plan.from')) + '"><span class="l2">—</span><input type="time" class="inp num" data-pto value="' + esc(slot.to) + '" step="900" aria-label="' + esc(t('plan.to')) + '"></div>' +
     '<div class="cellcol"><span class="l2" style="font-size:13px">' + t('plan.repeat') + '</span><div class="gfdays" style="margin-top:8px">' + WD.map((n, i) => '<button type="button" class="gfday' + (days.has(i) && !onlyDay ? ' on' : '') + '" data-pdw="' + i + '" aria-pressed="' + (days.has(i) && !onlyDay) + '">' + esc(String(n).slice(0, 2)) + '</button>').join('') + '</div>' +
-    '<label class="pchk"><input type="checkbox" data-ponly' + (onlyDay ? ' checked' : '') + '> ' + esc(t('plan.onlyThis', { d: dShort(d) })) + '</label></div></div>' +
+    '<label class="pchk"><input type="checkbox" data-ponly' + (onlyDay ? ' checked' : '') + '> ' + esc(t('plan.onlyThis', { d: dShort(d) })) + '</label></div>' +
+    (routinesOf(app.store.state.settings).length ? '<label class="cell"><span class="grow">' + t('rt.title1') + '</span><select class="sortsel" data-proutine aria-label="' + esc(t('rt.title1')) + '">' + routineOptions(app.store.state.settings, slot.routine) + '</select></label>' : '') + '</div>' +
     (isNew ? '' : '<div class="group" style="margin-top:16px"><button class="cell danger center" data-pdel>' + t('plan.delete') + '</button></div>'),
   (el) => {
     el.addEventListener('click', (e) => {
@@ -78,10 +81,11 @@ function slotSheet(app, slot, done) {
       if (w) { const i = +w.dataset.pdw; if (days.has(i)) days.delete(i); else days.add(i); w.classList.toggle('on', days.has(i)); w.setAttribute('aria-pressed', days.has(i)); el.querySelector('[data-ponly]').checked = false; onlyDay = false; return; }
       if (e.target.closest('[data-psave]')) {
         const from = el.querySelector('[data-pfrom]').value, to = el.querySelector('[data-pto]').value, title = el.querySelector('[data-pt]').value.trim();
+        const routine = (el.querySelector('[data-proutine]') || {}).value || undefined;
         if (!from || !to || minOf(to) <= minOf(from)) { toast(t('plan.badTime')); return; }
         const q = planOf(app.store.state.settings);
-        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title }, { d, once: true }); else addSlot(q, { from, to, title, days: [...days] }); api.close(); commit(app, q, done); return; }
-        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
+        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title, routine }, { d, once: true }); else addSlot(q, { from, to, title, routine, days: [...days] }); api.close(); commit(app, q, done); return; }
+        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, routine, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
         if (onlyDay && !slot.once) apply('day'); else if (slot.once) apply('day'); else apply('all');
         return;
       }

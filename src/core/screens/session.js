@@ -27,7 +27,9 @@ import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave } from '../pure.js';
 import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
-import { spread, NOSPREAD } from '../../ui/gestures.js';
+import { spread, swipe, NOSPREAD } from '../../ui/gestures.js';
+import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
+import { pickRoutine } from './routine.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -101,20 +103,71 @@ export function createSessionScreen(app) {
   addEventListener('melete:modloaded', () => rotCheck()); // модуль окна догрузился (src/modules/index.js) — поворот мог появиться
 
   /* ---------- старт ---------- */
-  function start(type, songId = null, tool = null) {
+  function start(type, songId = null, tool = null, opts = {}) {
     const a = app.active;
     if (a) {
       if (!isSameActive(a, type, songId, tool)) toast(t('ses.finishFirst'));
       open();
       return;
     }
+    // свободное занятие при планах — «Свободно» или план (план из расписания на это время — первым)
+    if (type === 'free' && opts.routine === undefined && !st().toolsOnly && routinesOf(st()).length) {
+      pickRoutine(app, (id) => start(type, songId, tool, { routine: id || null }));
+      return;
+    }
     const s = songId ? store.songById(songId) : null;
     if (app.clock && app.clock.bad) clockNotice(app); // занятие при сбитых часах не подтвердится — предупредить
     app.active = createActive({ type, songId, tool, mode: trackMode(st()) });
+    const rt = opts.routine && type === 'free' ? routineById(st(), opts.routine) : null;
+    if (rt) app.active.routine = startRun(rt, 0);
     audio.metro.cfg = metroForSession(s, st().metro);
     lockWake();
     open();
+    if (rt) applyItem();
     lastBanner();
+  }
+
+  /* ---------- план занятия (routine.js): полоса пунктов ---------- */
+  let planSwiped = 0;
+  // Пункт начался: его темп — метроному, его инструмент — в окно
+  function applyItem() {
+    const run = app.active && app.active.routine;
+    if (!run) return;
+    const it = run.items[run.i], sg = it.songId ? store.songById(it.songId) : null, bpm = it.bpm || (sg && (sg.currentBpm || sg.targetBpm)) || 0;
+    if (bpm) audio.metro.setBpm(bpm);
+    if (it.tool && moduleById(it.tool)) openTool(it.tool);
+    planTick(true);
+  }
+  function planStep(j) {
+    const a = app.active, run = a && a.routine;
+    if (!run || !goTo(run, elapsed(a), j)) return;
+    run.due = false;
+    saveActive(a);
+    applyItem();
+  }
+  function planTick(force = false) {
+    const a = app.active, run = a && a.routine, bar = layer && layer.querySelector('#splan');
+    if (!run || !bar) return;
+    const it = run.items[run.i], left = itemLeft(run, elapsed(a)), due = left <= 0, last = run.i === run.items.length - 1;
+    if (due && !run.due) { run.due = true; try { navigator.vibrate && navigator.vibrate(60); } catch { /* нет вибрации */ } }
+    const sg = it.songId ? store.songById(it.songId) : null;
+    const h = '<span class="spn num">' + (run.i + 1) + '/' + run.items.length + '</span><span class="spt">' + esc(it.title || (sg ? sg.title : '')) + '</span>' +
+      '<span class="spl num">' + (due ? t(last ? 'rt.doneAll' : 'rt.timeUp') : fmtClock(Math.ceil(left))) + '</span>' +
+      (last ? '' : '<button class="spnext" data-s="pnext" aria-label="' + esc(t('rt.next')) + '">›</button>') +
+      '<i class="spbar" style="width:' + Math.min(100, Math.max(0, 100 * (1 - left / (it.min * 60)))) + '%"></i>';
+    bar.classList.toggle('due', due);
+    if (force || bar.dataset.h !== h) { bar.dataset.h = h; bar.innerHTML = h; }
+  }
+  function planSheet() {
+    const a = app.active, run = a && a.routine;
+    if (!run) return;
+    const api = sheet(() => snav(run.title || t('rt.untitled')) + '<div class="group">' + run.items.map((x, i) => '<button class="cell' + (i === run.i ? ' on' : '') + '" data-pj="' + i + '"><span class="rtn num">' + (i + 1) + '</span><span class="grow">' + esc(x.title) + '</span><span class="l2 num">' + x.min + ' ' + t('rt.minShort') + '</span></button>').join('') + '</div>' +
+      '<div class="group" style="margin-top:12px"><button class="cell danger center" data-pstop>' + t('rt.stop') + '</button></div>',
+    (el) => el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pj]');
+      if (b) { api.close(); planStep(+b.dataset.pj); return; }
+      if (e.target.closest('[data-pstop]')) { api.close(); a.planDone = runRecord(run, elapsed(a)); delete a.routine; saveActive(a); const bar = layer && layer.querySelector('#splan'); if (bar) bar.remove(); }
+    }));
   }
   // «В прошлый раз: …» — что человек сам себе оставил на это занятие; поверх края окна, касание или 15 с — прячется
   function lastBanner() {
@@ -152,6 +205,7 @@ export function createSessionScreen(app) {
       // помодоро (слово автора 06.11.2026): касание времени — пауза, удержание — помодоро; идущий помодоро виден кольцом рядом
       (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '"' + (app.pomodoro.active() ? '' : ' hidden') + '>' + pchipHTML() + '</button>') +
       '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + (tm ? '' : '<button class="sstage" data-s="stage" aria-label="' + esc(t('stage.btn')) + '">' + STAGE_IC + '<span>' + esc(t('stage.btn')) + '</span></button>') + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
+      (a.routine ? '<div class="splan" id="splan" role="button" tabindex="0" aria-label="' + esc(t('rt.bar')) + '"></div>' : '') +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
         dockGroups(st(), song()).map((g) => '<button class="tb" data-pill="' + g + '" role="tab" aria-label="' + esc(groupName(st(), g)) + '" title="' + esc(groupName(st(), g)) + '">' + groupIcon(g) + '<span class="tl" aria-hidden="true">' + esc(groupName(st(), g)) + '</span></button>').join('') +
@@ -159,6 +213,12 @@ export function createSessionScreen(app) {
     document.body.appendChild(layer);
     layer.pureExit = () => (pureI >= 0 ? (setPanePure(-1), true) : false);
     wsEl = layer.querySelector('.ws');
+    const pb = layer.querySelector('#splan');
+    if (pb) { // план: смахнуть влево — следующий пункт, вправо — прошлый; касание — список пунктов
+      swipe(pb, { left: () => { planSwiped = Date.now(); planStep(); }, right: () => { planSwiped = Date.now(); const r = app.active && app.active.routine; if (r) planStep(r.i - 1); } });
+      pb.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); planSheet(); } });
+      planTick(true);
+    }
     if (!tm) coreHelp(app, 'session'); // сессия с окнами (у инструмента вне сессии — своя инструкция)
     const ses = layer.querySelector('.session');
     ses.addEventListener('pointerdown', (e) => {
@@ -376,6 +436,7 @@ export function createSessionScreen(app) {
       rotCheck();
       return;
     }
+    if (e.target.closest('#splan') && !e.target.closest('[data-s]')) { if (Date.now() - planSwiped > 400) planSheet(); return; }
     const b = e.target.closest('[data-s]');
     if (!b) return;
     const a = b.dataset.s;
@@ -389,6 +450,7 @@ export function createSessionScreen(app) {
       gripTap = { i, t: now, tm: setTimeout(() => { gripTap = null; paneMenu(i); }, 320) };
       return;
     }
+    if (a === 'pnext') { planStep(); return; }
     if (a === 'pause') {
       audio.metro.flush(); // темп до паузы засчитан, пауза — нет
       togglePause(app.active);
@@ -576,6 +638,7 @@ export function createSessionScreen(app) {
     updClock();
     studyTick();
     breakTick();
+    planTick();
     const pc = layer && layer.querySelector('#pchip');
     if (pc) { const h = pchipHTML(); pc.hidden = !app.pomodoro.active(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
     rotCheck();
@@ -588,10 +651,16 @@ export function createSessionScreen(app) {
     if (audio.metro.running) audio.metro.stop();
     audio.metro.flush();
     const sum = summarize(a, { endAt, mic: app.activity.listening });
-    if (!sum.short) commitSession(store, buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt }));
+    if (!sum.short) { const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt }); planInto(rec, a); commitSession(store, rec); }
     app.pomodoro.reset();
     end();
     toast(sum.short ? t('idle.ended0') : t('idle.ended', { d: fmtDur(sum.dur) }));
+  }
+
+  // разбивка по пунктам плана — в запись занятия (одно занятие, пункты внутри)
+  function planInto(rec, a) {
+    const p = a.routine ? runRecord(a.routine, Math.min(elapsed(a), rec.dur)) : a.planDone || null;
+    if (p) rec.plan = p;
   }
 
   /* ---------- завершение ---------- */
@@ -623,6 +692,7 @@ export function createSessionScreen(app) {
       return;
     }
     let tag = '', readM = null;
+    const planNow = a.routine ? runRecord(a.routine, elapsed(a)) : a.planDone || null;
     // «Назад» — значком (как везде), «Сохранить» — внизу, под большим пальцем
     sheet(() => snav(t('fin.title'), { left: '<button class="ic sm plain" data-k="back" aria-label="' + esc(t('ui.back')) + '">' + icons.back + '</button>', right: '<span></span>' }) +
       '<div style="text-align:center;margin:4px 0 18px"><div class="num' + (a.mode === 'strict' ? ' gold' : '') + '" style="font-size:44px;font-weight:300;letter-spacing:-.03em">' + fmtDur(sum.dur) + '</div><div class="l2" style="font-size:15px">' +
@@ -631,6 +701,7 @@ export function createSessionScreen(app) {
         '</span><input class="inp num" id="cb" type="number" inputmode="numeric" min="20" max="300" placeholder="bpm" aria-label="' + t('fin.confident') + '" value="' + (sum.best || s.currentBpm || '') + '"></label></div>'
         : a.type === 'tool' ? '' : '<div class="hdr">' + t('fin.what') + '</div><div class="group"><div class="cellcol"><div class="hscroll" style="padding:0;flex-wrap:wrap" id="tg">' +
           FREE_TAGS.map((x) => '<button type="button" class="pill" aria-pressed="false" data-t="' + x + '">' + esc(freeTagName(x)) + '</button>').join('') + '</div></div></div>') +
+      (planNow ? '<div class="hdr">' + esc(planNow.title || t('rt.untitled')) + '</div><div class="group">' + planNow.items.map((x) => '<div class="cell"><span class="grow">' + esc(x.title) + '</span><span class="l2 num">' + fmtDur(x.sec) + ' / ' + x.min + ' ' + t('rt.minShort') + '</span></div>').join('') + '</div>' : '') +
       // разбор (слово автора 13.11.2026): три коротких поля, все необязательные; «Дальше» — в начале следующего занятия
       '<div class="hdr">' + t('fin.review') + '</div><div class="group frev">' + ['good', 'bad', 'next'].map((k) => '<label class="cellcol"><span class="frl">' + t('fin.' + k) + '</span><textarea class="ta" data-rv="' + k + '" rows="1" maxlength="500" aria-label="' + esc(t('fin.' + k)) + '" placeholder="' + esc(t('fin.' + k + 'Ph')) + '"></textarea></label>').join('') + '</div>' +
       '<div class="sheetfoot"><button class="btn fill block" data-k="save">' + t('fin.save') + '</button></div>',
@@ -645,6 +716,7 @@ export function createSessionScreen(app) {
         // сессию уже завершило бездействие, пока окно было открыто
         if (app.active !== a) { sh.close(); return; }
         const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt, tag, review: Object.fromEntries([...el.querySelectorAll('[data-rv]')].map((x) => [x.dataset.rv, x.value])) });
+        planInto(rec, a);
         commitSession(store, rec, s ? { masteryPct: readM(), confidentBpm: parseInt((el.querySelector('#cb') || {}).value, 10), metro: audio.metro.cfg } : null);
         app.pomodoro.reset();
         sh.close();
