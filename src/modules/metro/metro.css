@@ -192,3 +192,5 @@
 .mslq{gap:8px}
 .mslbpm{width:84px;flex:none}
 .mslstep{gap:6px}
+/* Полный экран: поля по краям (16 px и вырез экрана) — колесо и кнопки не упираются в край */
+.pane.pfull .mv{padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));box-sizing:border-box}

@@ -90,6 +90,9 @@ test('занятие: кнопка полного экрана видна в к�
   expect(box.width).toBe(vp.width); expect(box.height).toBe(vp.height);
   const b = await page.locator('.ws .pane.pfull > .pfbtn').boundingBox();
   expect(b.width).toBeGreaterThanOrEqual(40); // в полном экране — крупная «Свернуть»
+  // закрытая шторка микшера не торчит у правого края (слово автора 13.11.2026)
+  const mx = await page.evaluate(() => { const m = document.querySelector('#mixd'); if (!m) return null; const r = m.getBoundingClientRect(); return { left: r.left, vis: getComputedStyle(m).visibility }; });
+  if (mx) expect(mx.left >= vp.width || mx.vis === 'hidden').toBe(true);
   await page.locator('.ws .pane.pfull > .pfbtn').click(); await page.waitForTimeout(600);
   await expect(page.locator('.ws .pane.pfull')).toHaveCount(0);
   await expect(btn).toBeVisible();

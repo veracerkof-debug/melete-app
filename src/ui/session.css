@@ -179,6 +179,8 @@
 .pane.pfull>.pfbtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--bg) 70%,transparent);box-shadow:0 1px 4px rgba(0,0,0,.18);z-index:81;color:var(--l2)}
 .pane.pfull>.pfbtn svg{width:20px;height:20px}
 body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный экран — без язычка микшера */
+/* …и закрытая шторка уходит за край целиком (иначе без язычка торчит 16 px тёмной панели с тенью) */
+body:has(.tview.pure,.session.pure) #mixd:not(.open){transform:translateX(100%);visibility:hidden}
 /* Переключатель окон занятия — значок и подпись (слово автора 06.11.2026: как у вкладок) */
 .sdock .tb{flex-direction:column;gap:2px;width:64px;height:56px;padding:4px 2px 3px}
 .sdock .tb svg{width:24px;height:24px}
