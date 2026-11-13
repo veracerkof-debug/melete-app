@@ -4,7 +4,7 @@ import { t, tn, getLang, hasMascot } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
-import { weekData, goalProgress, songStatsMap, streakInfo } from '../stats.js';
+import { weekData, songStatsMap, streakInfo, weekPlan } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
 import { gemSec } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
@@ -132,12 +132,12 @@ function readingCard(app, mono = false) {
 function moodNow(app) {
   const st = app.store.state.settings, po = app.pomodoro;
   return moodOf({ active: !!app.active, pomoBreak: !!(po && po.active() && po.phase !== 'work'), weekSec: weekData(app.store.sessions()).total,
-    goalSec: st.toolsOnly ? 0 : st.goalMin * 60, days: st.days, sessions: app.store.sessions(), mode: remindOf(st).mode });
+    goalSec: st.toolsOnly ? 0 : weekPlan(st).goal, days: weekPlan(st).days, sessions: app.store.sessions(), mode: remindOf(st).mode });
 }
 // Навязчивая Мелета: в день практики, пока не занимались, — строка-просьба, к вечеру сильнее
 function pleaHTML(app, cls) {
   const st = app.store.state.settings, now = new Date(), h = now.getHours();
-  if (remindOf(st).mode !== 'pushy' || app.active || !st.days[weekday(now.getTime())] || h < 8 || h >= 23) return '';
+  if (remindOf(st).mode !== 'pushy' || app.active || !weekPlan(st).days[weekday(now.getTime())] || h < 8 || h >= 23) return '';
   if (app.store.sessions().some((x) => dayKey(x.start) === dayKey(now.getTime()))) return '';
   return '<b class="' + cls + '">' + esc(pleaLine(h, getLang())) + '</b>';
 }
@@ -157,10 +157,11 @@ function homeMonoHTML(app) {
   const st = app.store.state.settings, plain = !!st.toolsOnly, P = {};
   P.voice = '<div class="mvoice">' + quoteHTML(app, true) + '</div>';
   if (!plain) {
-    const w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st), today = weekday(Date.now()), WD = weekdays();
+    const w = weekData(app.store.sessions()), wp = weekPlan(st), goal = wp.goal, p = w.total / Math.max(1, goal), today = weekday(Date.now()), WD = weekdays();
     P.week = '<button class="mweek" data-pp="' + (st.configured ? 'stats' : 'week') + '"><span class="mbig num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span>' +
       '<span class="mof num">/ ' + fmtDur(goal) + '</span></button><div class="mline"><i style="width:' + Math.min(100, p * 100) + '%"></i></div>' +
-      '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : st.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>';
+      '<div class="mdays">' + WD.map((d, i) => '<span class="' + (w.per[i] > 0 ? 'done' : wp.off[i] ? 'off' : wp.days[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '">' + d + '</span>').join('') + '</div>' +
+      (wp.now ? '<p class="moff">' + esc(offText(wp.now)) + '</p>' : '');
     if (isOn(st, 'mastery')) {
       // «Минимал»: лиг нет — только камень с дороги, который с часами занятий круглеет (src/ui/stone.js)
       const all = app.store.sessions(), sec = leagueHours(app) * 3600;
@@ -189,6 +190,12 @@ function homeMonoHTML(app) {
   return '<div class="mono-home">' + topbar(logoHTML(), pomoBtn(app)) + blocks(st, P) + '</div>';
 }
 
+// Перерыв по расписанию: «Перерыв до 20 нояб.» (или своё название перерыва)
+function offText(o) {
+  const [y, m, d] = o.to.split('-').map(Number), loc = getLang() === 'uz' ? 'uz-Latn' : getLang();
+  return t('home.offTill', { title: o.title || t('plan.break'), d: new Date(y, m - 1, d).toLocaleDateString(loc, { day: 'numeric', month: 'short' }) });
+}
+
 // До цели — коротко, чтобы влезло в кольцо: «5 ч», «40 мин», «4:30»
 function shortDur(sec) {
   const m = Math.max(0, Math.ceil(sec / 60)), h = Math.floor(m / 60), r = m % 60;
@@ -197,8 +204,8 @@ function shortDur(sec) {
 
 export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
-  const st = app.store.state.settings, w = weekData(app.store.sessions()), goal = st.goalMin * 60, p = goalProgress(w.total, st);
-  const today = weekday(Date.now()), plan = st.days, WD = weekdays(), P = {};
+  const st = app.store.state.settings, w = weekData(app.store.sessions()), wp = weekPlan(st), goal = wp.goal, p = w.total / Math.max(1, goal);
+  const today = weekday(Date.now()), plan = wp.days, WD = weekdays(), P = {};
   // «Только инструменты»: без недели, цели и лиги — сразу рабочее место и инструменты
   const plain = !!st.toolsOnly;
   P.voice = quoteHTML(app, false);
@@ -208,10 +215,10 @@ export function homeHTML(app) {
   if (!plain) P.week = '<div class="hcard' + (gemIn ? ' hwgem' : '') + '"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) }), { cap: t('home.left'), v: shortDur(goal - w.total) }) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
     streakPill(app) + '</div>' + (gemIn ? gemRing(app) : '') + '</div>' +
-    '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
-      esc(w.per[i] ? fmtDur(w.per[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d"></span>' + d + '</div>').join('') + '</div>' +
+    '<div class="days hdays">' + WD.map((d, i) => '<div class="day ' + (w.per[i] > 0 ? 'done' : wp.off[i] ? 'off' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
+      esc(w.per[i] ? fmtDur(w.per[i]) : wp.off[i] ? offText(wp.off[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d"></span>' + d + '</div>').join('') + '</div>' +
     '<button class="hlink" data-pp="' + (st.configured ? 'stats' : 'week') + '">' +
-    (st.configured ? (plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
+    (st.configured ? (wp.now ? offText(wp.now) : plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
   P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
   P.study = plain ? '' : studyCard(app); // учёба: учебник, слух, ритм — часы в неделю

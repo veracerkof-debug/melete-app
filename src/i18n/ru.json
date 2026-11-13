@@ -76,6 +76,7 @@
   "home.dayPlan": "день практики",
   "home.dayRest": "отдых",
   "home.todayPlan": "Сегодня день практики",
+  "home.offTill": "{title} до {d}",
   "home.todayRest": "Сегодня по плану отдых",
   "home.stats": "статистика",
   "home.setup": "Настроить дни и цель",

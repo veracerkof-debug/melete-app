@@ -1,6 +1,7 @@
 // Статистика и ударный режим. Чистые функции: (sessions, songs, settings, now) → данные для экранов.
 // Длительности — в секундах.
 import { DAY, dayKey, dayStart, weekStart, monthStart, weekday } from './time.js';
+import { planOf, offOn } from './schedule.js';
 
 const sum = (arr) => arr.reduce((t, s) => t + s.dur, 0);
 const inRange = (all, a, b) => all.filter((s) => s.start >= a && s.start < b);
@@ -48,6 +49,16 @@ export function songStatsMap(sessions) {
   return out;
 }
 
+// Неделя с учётом перерывов расписания (settings.plan.off — отпуск, болезнь, гастроли): дни перерыва — не дни практики,
+// цель недели меньше на их долю. → { goal (с), days [0/1 ×7], off [перерыв|null ×7], now (перерыв сегодня|null) }
+export function weekPlan(settings, now = Date.now()) {
+  const ws = weekStart(now), p = settings.plan ? planOf(settings) : null, plan = settings.days || [];
+  const off = Array.from({ length: 7 }, (_, i) => (p ? offOn(p, ws + i * DAY + 12 * 3600000) : null));
+  const n = plan.filter(Boolean).length, nOff = off.filter(Boolean).length;
+  const k = !nOff ? 1 : n ? plan.filter((d, i) => d && !off[i]).length / n : 1 - nOff / 7;
+  return { goal: Math.round((settings.goalMin || 0) * 60 * k), days: plan.map((d, i) => (d && !off[i] ? 1 : 0)), off, now: off[weekday(now)] || null };
+}
+
 // Цель на один день практики (для линии на графике недели)
 export const goalPerDay = (settings) =>
   (settings.goalMin * 60) / Math.max(1, settings.days.filter(Boolean).length);
@@ -58,21 +69,25 @@ export const goalProgress = (weekTotal, settings) => weekTotal / Math.max(1, set
 /* ---------- ударный режим (по неделям) ---------- */
 
 export function streakInfo(sessions, settings, now = Date.now()) {
-  const goal = settings.goalMin * 60, ws = weekStart(now), wt = [];
+  const goal = settings.goalMin * 60, ws = weekStart(now), wt = [], gw = [];
+  const hasOff = !!(settings.plan && settings.plan.off && settings.plan.off.length), P = hasOff ? planOf(settings) : null;
   for (let i = 0; i < 104; i++) {
     const a = ws - i * 7 * DAY, b = a + 7 * DAY;
     wt.push(sum(inRange(sessions, a, b)));
+    gw.push(hasOff ? weekPlan(settings, a + 3 * DAY).goal : goal);
   }
-  const met = wt.map((v) => goal > 0 && v >= goal);
+  // неделя целиком в перерыве (цель 0 при заданной цели) — не рвёт серию и не прибавляет к ней
+  const pause = wt.map((v, i) => hasOff && goal > 0 && gw[i] <= 0 && !v);
+  const met = wt.map((v, i) => gw[i] > 0 ? v >= gw[i] : goal > 0 && hasOff && v > 0);
   let prev = 0;
   for (let i = 1; i < met.length; i++) {
     if (met[i]) prev++;
-    else break;
+    else if (!pause[i]) break;
   }
   const weeks = prev + (met[0] ? 1 : 0);
   let best = 0, run = 0;
   for (let i = met.length - 1; i >= 0; i--) {
-    run = met[i] ? run + 1 : 0;
+    run = met[i] ? run + 1 : pause[i] ? run : 0;
     if (run > best) best = run;
   }
   // Дни подряд с практикой; дни отдыха по плану серию не ломают
@@ -86,7 +101,7 @@ export function streakInfo(sessions, settings, now = Date.now()) {
   for (let i = 0; i < 500; i++) {
     const t = t0 - i * DAY, did = perDay[dayKey(t)] > 0;
     if (did) days++;
-    else if (settings.days[weekday(t)] && i > 0) break;
+    else if (settings.days[weekday(t)] && i > 0 && !(P && offOn(P, t + 12 * 3600000))) break;
   }
   return {
     weeks,

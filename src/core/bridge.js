@@ -3,7 +3,7 @@
 // как в статистике) и чтение дня (в церковном режиме); принимает переходы melete://free | session | bible и
 // ▶/❚❚ (player.js). Только Android (BridgePlugin.java): адресные рассылки в пакеты главного экрана, без сети.
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { weekData } from './stats.js';
+import { weekData, weekPlan } from './stats.js';
 import { readingFor } from './reading.js';
 import { refText } from './bible.js';
 import { t } from '../i18n/index.js';
@@ -24,7 +24,7 @@ export function bridgeState(app, now = Date.now()) {
     playing: !!src.length && !(P && P.paused),
     sounding: src.length > 0,
     what: src.map((s) => s.name).join(' · '),
-    week: { total: Math.round(w.total), goal: Math.round((st.goalMin || 0) * 60), per: w.per.map((x) => Math.round(x)) },
+    week: { total: Math.round(w.total), goal: weekPlan(st, now).goal, per: w.per.map((x) => Math.round(x)) },
     reading: rd && rd.keys.length ? { ref: refText(rd.keys), done: rd.done, total: rd.keys.length, day: rd.day } : null,
   };
 }

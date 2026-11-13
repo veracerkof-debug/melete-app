@@ -74,6 +74,7 @@
   "home.dayPlan": "mashq kuni",
   "home.dayRest": "dam olish",
   "home.todayPlan": "Bugun mashq kuni",
+  "home.offTill": "{title} {d} gacha",
   "home.todayRest": "Bugun reja boʻyicha dam olish",
   "home.stats": "statistika",
   "home.setup": "Kunlar va maqsadni sozlash",

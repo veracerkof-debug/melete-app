@@ -75,6 +75,7 @@
   "home.dayPlan": "practice day",
   "home.dayRest": "rest",
   "home.todayPlan": "Today is a practice day",
+  "home.offTill": "{title} until {d}",
   "home.todayRest": "Today is a planned rest day",
   "home.stats": "statistics",
   "home.setup": "Set up days and goal",
