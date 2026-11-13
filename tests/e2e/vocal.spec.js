@@ -104,6 +104,7 @@ test('вокал: задержка наушников — шторка из на
   await melete.open();
   await melete.free('F', ['vocal']);
   await page.locator('.vctypes [data-type="alto"]').click(); await page.waitForTimeout(200);
+  await page.locator('[data-seg="vcsec"] [data-v="warm"]').click(); await page.waitForTimeout(300);
   await page.locator('.vcbar [data-x="set"]').click(); await page.waitForTimeout(400);
   await page.locator('.sheet [data-lat]').click(); await page.waitForTimeout(400);
   await expect(page.locator('.sheet').last()).toContainText('Динамик телефона');
