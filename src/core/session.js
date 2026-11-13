@@ -201,6 +201,16 @@ export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', n
   return rec;
 }
 
+/* ---------- «перерыв?» (слово автора 13.11.2026) ---------- */
+// После breakMin минут игры без перерыва (по умолчанию 50; 0 — выключено) — мягкий вопрос. a.brk — отметка (секунды
+// занятия), с которой считать: после перерыва — с его конца, после «Позже» — ещё 15 минут.
+export const BREAK_DEF = 50, BREAK_LATER = 15, BREAK_LEN = 5;
+export const breakMin = (st) => (st.breakMin === 0 ? 0 : +st.breakMin || BREAK_DEF);
+export function breakDue(a, st, sec) {
+  const m = breakMin(st);
+  return !!m && !!a && !a.pausedAt && a.type !== 'tool' && sec - (a.brk || 0) >= m * 60;
+}
+
 /* ---------- метроном и песня ---------- */
 
 // Настройки метронома на старте сессии. Возвращает settings.metro (общий объект) или копию для песни

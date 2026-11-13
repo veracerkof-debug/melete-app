@@ -12,7 +12,7 @@ import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
 import {
-  createActive, isSameActive, elapsed, togglePause, touch, summarize, buildRecord, lastNext,
+  createActive, isSameActive, elapsed, togglePause, touch, summarize, buildRecord, lastNext, breakDue, breakMin, BREAK_LATER, BREAK_LEN,
   metroForSession, commitSession, saveActive, FREE_TAGS, trackMode,
 } from '../session.js';
 import {
@@ -533,9 +533,49 @@ export function createSessionScreen(app) {
     if (!a || a.pausedAt || !w || document.visibilityState !== 'visible' || !dt) return;
     visible(w).forEach((id) => { if (STUDY_IDS.includes(id)) { a.study = a.study || {}; a.study[id] = (a.study[id] || 0) + dt; } });
   }
+  // «Перерыв?» — тихая полоска сверху: без звука, метроном не останавливает; помодоро ведёт свои перерывы
+  let brkEnd = 0;
+  function breakTick() {
+    const a = app.active, sin = layer && layer.querySelector('.sin');
+    if (!a || !sin) return;
+    let b = sin.querySelector('.sbrk');
+    if (brkEnd) { // идёт перерыв: обратный отсчёт
+      const left = Math.max(0, Math.ceil((brkEnd - Date.now()) / 1000));
+      if (b) b.querySelector('.sbt').textContent = left ? t('brk.on', { t: fmtClock(left) }) : t('brk.over');
+      if (!a.pausedAt) { brkEnd = 0; if (b) b.remove(); } // продолжили касанием времени
+      return;
+    }
+    if (b || app.pomodoro.active() || !breakDue(a, st(), elapsed(a))) return;
+    b = document.createElement('div');
+    b.className = 'sbrk';
+    b.setAttribute('role', 'status');
+    b.innerHTML = '<span class="sbt">' + esc(t('brk.ask', { m: breakMin(st()) })) + '</span><button data-brk="go">' + esc(t('brk.go', { m: BREAK_LEN })) + '</button><button data-brk="later">' + esc(t('brk.later')) + '</button>';
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const k = e.target.closest('[data-brk]'), a2 = app.active;
+      if (!k || !a2) return;
+      if (k.dataset.brk === 'go') {
+        audio.metro.flush();
+        if (!a2.pausedAt) togglePause(a2);
+        brkEnd = Date.now() + BREAK_LEN * 60000;
+        a2.brk = elapsed(a2);
+        b.querySelector('.sbt').textContent = t('brk.on', { t: fmtClock(BREAK_LEN * 60) });
+        b.querySelectorAll('button').forEach((x) => x.remove());
+        const r = document.createElement('button'); r.dataset.brk = 'back'; r.textContent = t('brk.back'); b.appendChild(r);
+      } else if (k.dataset.brk === 'back') {
+        if (a2.pausedAt) togglePause(a2);
+        brkEnd = 0; a2.brk = elapsed(a2); b.remove();
+      } else { // «Позже» — ещё 15 минут
+        a2.brk = elapsed(a2) - (breakMin(st()) - BREAK_LATER) * 60; b.remove();
+      }
+      saveActive(a2); updClock();
+    });
+    sin.appendChild(b);
+  }
   function tickNow() {
     updClock();
     studyTick();
+    breakTick();
     const pc = layer && layer.querySelector('#pchip');
     if (pc) { const h = pchipHTML(); pc.hidden = !app.pomodoro.active(); if (pc.dataset.h !== h) { pc.dataset.h = h; pc.innerHTML = h; } }
     rotCheck();

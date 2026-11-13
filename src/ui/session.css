@@ -201,3 +201,10 @@ body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный
 .frev .cellcol{display:flex;flex-direction:column;gap:2px;padding:8px 14px}
 .frev .frl{font-size:13px;color:var(--l2);font-weight:600}
 .frev .ta{min-height:44px;font-family:var(--font);font-size:16px;field-sizing:content;max-height:160px}
+/* «Перерыв?» — тихая полоска у верхнего края, без звука */
+.sbrk{position:absolute;z-index:6;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;
+  padding:6px 6px 6px 14px;border-radius:999px;background:var(--cell);color:var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:15px;animation:slastin .3s ease}
+.sbrk .sbt{flex:1 1 auto;min-width:0}
+.sbrk button{min-height:40px;padding:0 14px;border-radius:999px;font-weight:600;font-size:14px;background:var(--fill);color:var(--ink)}
+.sbrk button[data-brk="go"],.sbrk button[data-brk="back"]{background:var(--tint);color:var(--on-tint)}
+@media (prefers-reduced-motion: reduce){.sbrk{animation:none}}

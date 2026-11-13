@@ -34,3 +34,21 @@ test('разбор после занятия: три поля, «Дальше» 
   await expect(page.locator('.slast')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('«перерыв?»: после 50 минут — полоска; «Перерыв» ставит паузу, «Продолжить» снимает', async ({ page, melete, errors }) => {
+  await melete.open();
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await page.waitForSelector('.session', { timeout: 10_000 });
+  await page.waitForTimeout(800);
+  await expect(page.locator('.sbrk')).toHaveCount(0);
+  await page.evaluate(() => { const a = window.__melete.active; a.startedAt -= 51 * 60000; a.last = Date.now(); });
+  await expect(page.locator('.sbrk')).toBeVisible({ timeout: 3000 });
+  await page.click('.sbrk [data-brk="go"]');
+  expect(await page.evaluate(() => !!window.__melete.active.pausedAt)).toBe(true);
+  await expect(page.locator('.sbrk')).toContainText('Перерыв ·');
+  await page.click('.sbrk [data-brk="back"]');
+  expect(await page.evaluate(() => !!window.__melete.active.pausedAt)).toBe(false);
+  await page.waitForTimeout(1200);
+  await expect(page.locator('.sbrk')).toHaveCount(0); // отсчёт — заново с конца перерыва
+  expect(errors).toEqual([]);
+});
