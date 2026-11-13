@@ -3,6 +3,7 @@
 // weekReport — данные (чистая функция, тесты); reportPNG — рисунок на холсте (screens/teacher.js).
 import { weekStart, weekday, DAY } from './time.js';
 import { weekPlan } from './stats.js';
+import { weekSummary } from '../music/vocalprog.js';
 
 // sessions, songs, settings, now → { ws, per[7], total, goal, songs: [{ title, sec, from, to }], notes: [{ ts, title, text }], plans: [{ title, n }] }
 export function weekReport(sessions, songs, settings, now = Date.now()) {
@@ -24,5 +25,6 @@ export function weekReport(sessions, songs, settings, now = Date.now()) {
     ws, per, total, goal: weekPlan(settings, now).goal,
     songs: [...by.values()].filter((r) => r.title).sort((a, b) => b.sec - a.sec),
     notes, plans: [...plans].map(([title, n]) => ({ title, n })),
+    vocal: weekSummary((settings.vocal && settings.vocal.log) || [], now), // вокал недели: минуты, чистота, выше всего (DECISIONS «Вокал: прогресс»)
   };
 }

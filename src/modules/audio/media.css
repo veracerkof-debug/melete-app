@@ -76,7 +76,7 @@
 .mcard.av.pv{display:flex;flex-direction:column;min-height:0}
 .pview{flex:1;min-height:80px;overflow:auto;overscroll-behavior:contain;border-radius:10px}
 .pempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--l2);font-size:14px;padding:16px;background:var(--fill)}
-.pvsw{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:none;margin-top:4px}
+.pvsw{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;flex:none;margin-top:4px}
 .pvb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;border-radius:12px;background:transparent;color:var(--l2);font-size:11px;line-height:1;min-height:44px}
 .pvb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .pvb.on{background:var(--fill);color:var(--tint)}
@@ -144,3 +144,19 @@
 .mlselbar .cell{flex:1 1 0;min-width:0;min-height:48px;padding:4px 6px;font-size:13.5px;line-height:1.15;white-space:normal;text-align:center}
 .mlselon{flex:none;min-height:40px;padding:0 6px;font-weight:600}
 .mlconv{height:min(78vh,720px);display:flex;flex-direction:column;container-type:size}
+
+/* Вид «Петь» (sing.js): счёт и строка текста сверху, полоса мелодии и голоса, итог дубля, кнопки */
+.psing{display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.sghd{display:flex;align-items:baseline;gap:12px;min-height:30px;padding:0 4px}
+.sghd b{font-size:clamp(22px,7cqmin,34px);font-weight:700;color:var(--tint-text,var(--tint));min-width:2ch}
+.sghd span{flex:1;min-width:0;font-size:clamp(15px,4.4cqmin,20px);font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgsurf{position:relative;flex:1;min-height:90px;border-radius:12px;background:var(--cell);box-shadow:inset 0 0 0 1px var(--sep);overflow:hidden}
+.sgsurf canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.sgnow{position:absolute;right:10px;top:6px;font-size:14px;font-weight:700;color:var(--l2);pointer-events:none}
+.sgres{display:flex;flex-direction:column;gap:6px;padding:2px 4px}
+.sgsum{font-size:13px;color:var(--l2)}
+.sgphr{display:flex;flex-wrap:wrap;gap:5px}
+.sgp{min-width:40px;height:40px;border-radius:12px;font-weight:700;font-size:13px;color:#fff}
+.sgp.ok{background:#3E9A5E}.sgp.near{background:#C9962C}.sgp.miss{background:#C2564B}
+.sgbtns{display:flex;gap:8px;justify-content:center}
+.sgbtns .btn.on{background:var(--tint);color:var(--on-tint)}

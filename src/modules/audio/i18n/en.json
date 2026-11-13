@@ -271,5 +271,19 @@
   "selSend": "Send",
   "selConv": "Convert",
   "select": "Select",
-  "videoAudio": "Audio from video"
+  "videoAudio": "Audio from video",
+  "pv.sing": "Sing",
+  "sing.needStems": "“Sing” needs a separate vocal track: the melody is taken from it, and the backing plays without the voice.",
+  "sing.melody": "Taking the melody from the vocal track…",
+  "sing.melErr": "Could not take the melody — the vocal track is unreadable",
+  "sing.minus": "Backing",
+  "sing.go": "Sing a take",
+  "sing.stop": "Stop",
+  "sing.sum": "Phrases: clean {ok} · close {near} · off {miss}",
+  "sing.flat": "flat by {c} ¢",
+  "sing.sharp": "sharp by {c} ¢",
+  "sing.hi": "highest {n}",
+  "sing.phr": "Phrase {n}: {p} % — sing again",
+  "sing.micDenied": "No microphone access",
+  "sing.micNone": "No microphone found"
 }

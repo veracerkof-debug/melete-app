@@ -270,5 +270,19 @@
   "selSend": "Yuborish",
   "selConv": "Konvertatsiya",
   "select": "Tanlash",
-  "videoAudio": "Videodan tovush"
+  "videoAudio": "Videodan tovush",
+  "pv.sing": "Kuylash",
+  "sing.needStems": "«Kuylash» uchun alohida vokal yo‘lagi kerak: kuy undan olinadi, minus esa ovozsiz yangraydi.",
+  "sing.melody": "Vokal yo‘lagidan kuy olinmoqda…",
+  "sing.melErr": "Kuyni olib bo‘lmadi — vokal yo‘lagi o‘qilmaydi",
+  "sing.minus": "Minus",
+  "sing.go": "Dubl kuylash",
+  "sing.stop": "To‘xtatish",
+  "sing.sum": "Jumlalar: toza {ok} · yaqin {near} · noto‘g‘ri {miss}",
+  "sing.flat": "{c} ¢ past",
+  "sing.sharp": "{c} ¢ baland",
+  "sing.hi": "eng baland {n}",
+  "sing.phr": "Jumla {n}: {p} % — qayta kuylash",
+  "sing.micDenied": "Mikrofonga ruxsat yo‘q",
+  "sing.micNone": "Mikrofon topilmadi"
 }

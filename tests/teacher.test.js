@@ -20,3 +20,14 @@ describe('отчёт для педагога', () => {
     expect(R.goal).toBe(18000);
   });
 });
+
+// Вокал недели — строкой в отчёте (DECISIONS «Вокал: прогресс и «Петь»»)
+describe('отчёт педагогу: вокал', () => {
+  it('минуты пения, чистота, выше всего — из прогресса «Вокала»; нет пения — нет строки', () => {
+    const now = new Date(2026, 10, 12, 20).getTime();
+    const vocal = { log: [{ d: '2026-11-11', sec: 600, n: 20, ok: 16, near: 2, cs: 0, cn: 0, hi: 66, lo: 48, up: 0, dn: 0, takes: [] }] };
+    const R = weekReport([], [], { goalMin: 0, days: [1, 1, 1, 1, 1, 1, 1], vocal }, now);
+    expect([R.vocal.min, Math.round(R.vocal.purity * 100), R.vocal.hi]).toEqual([10, 85, 66]);
+    expect(weekReport([], [], { goalMin: 0, days: [1, 1, 1, 1, 1, 1, 1] }, now).vocal).toBe(null);
+  });
+});

@@ -150,3 +150,22 @@
 .vcdeg .ok{color:#3E9A5E}.vcdeg .mid{color:#B8862A}.vcdeg .bad{color:#CC5546}
 .vcdeg .l2{background:none;font-weight:500;color:var(--l2)}
 .vchist i{font-style:normal;color:var(--l2);font-size:12px}
+
+/* Прогресс (14.11.2026): неделя, график по дням, предложение расширить рабочий */
+.vcweek{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vcweek div{background:var(--fill);border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.vcweek b{font-size:18px}
+.vcweek span{font-size:11px;color:var(--l2);line-height:1.2}
+.vcchart{width:100%;height:auto;display:block}
+.vcchart .ph{fill:color-mix(in srgb,var(--tint) 14%,transparent)}
+.vcchart .wk{fill:color-mix(in srgb,var(--tint) 30%,transparent)}
+.vcchart .rg{stroke:var(--ink);stroke-width:5;stroke-linecap:round}
+.vcchart .up{fill:var(--tint);stroke:var(--cell);stroke-width:1.5}
+.vcchart .pu{fill:#3E9A5E;opacity:.75}
+.vcchart text{font:600 9px var(--font);fill:var(--l2)}
+.vcchart .dt{text-anchor:middle}
+.vclegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--l2)}
+.vclegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.vclegend i.wk{background:color-mix(in srgb,var(--tint) 45%,var(--fill))}.vclegend i.ph{background:color-mix(in srgb,var(--tint) 18%,var(--fill))}
+.vclegend i.rg{background:var(--ink);width:4px}.vclegend i.pu{background:#3E9A5E}
+.vcsug{background:color-mix(in srgb,var(--tint) 12%,var(--cell));border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}

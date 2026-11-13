@@ -23,6 +23,7 @@ import { EXERCISES, PROGRAMS, PROGRAM_IDS, LEVELS, exById } from './exercises.js
 import { buildRun, runSeconds, syllable, spellNote, noteName, trainRange } from '../../music/warmup.js';
 import { TYPES, voiceType, typeComfort, typeRange, createNoteTracker, rangeOf, workingOf, scoreNote, improvSummary, detectMode } from '../../music/voicetype.js';
 import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
+import { addToDay, purity, drift, weekSummary, suggestExpand } from '../../music/vocalprog.js';
 import { every, after, cancel } from '../../audio/clock.js';
 import { presetOf } from '../../audio/synth.js';
 import { SCALES } from '../../music/theory.js';
@@ -165,9 +166,37 @@ function tick() {
   while (P.next < steps.length && P.t0 + steps[P.next].t0 * P.spb < t + 1.2) schedStep(steps[P.next++]);
   if (t > P.t0 + P.run.beats * P.spb + 0.2) finish();
 }
+// Итог распевки по нотам: чистота, уход в центах (знак: + выше), выше и ниже всего чисто, вылазки за рабочий диапазон,
+// счёт 0…100 (точно — 1, рядом — 0,5) → в день прогресса (vocalprog.js). Оценено меньше трёх нот — не пишется
+function warmStats() {
+  if (!P || !P.run || P.ex.free || !P.t0) return null;
+  const r = myRange(), x = { n: 0, ok: 0, near: 0, cs: 0, cn: 0, hi: 0, lo: 0, up: 0, dn: 0 };
+  for (const st of P.run.steps) for (const nt of st.sing) {
+    const key = st.i + ':' + nt.k, res = noteRes(key);
+    if (!res) continue;
+    x.n++;
+    const a = P.acc[key].slice().sort((p, q) => p - q), med = a[a.length >> 1];
+    if (res !== 'miss') { x.cs += med * 100; x.cn++; }
+    if (res === 'near') x.near++;
+    if (res === 'ok') { x.ok++; x.hi = Math.max(x.hi, nt.m); x.lo = x.lo ? Math.min(x.lo, nt.m) : nt.m; if (r && nt.m > r.hi) x.up = Math.max(x.up, nt.m); if (r && nt.m < r.lo) x.dn = x.dn ? Math.min(x.dn, nt.m) : nt.m; }
+  }
+  if (x.n < 3) return null;
+  x.sec = Math.max(0, Math.min(now() - P.t0, P.run.beats * P.spb));
+  x.score = Math.round(((x.ok + x.near * 0.5) / x.n) * 100);
+  return x;
+}
+function logWarm() {
+  const x = warmStats();
+  if (!x) return null;
+  addToDay(D(), { ...x, take: { k: 'ex', id: P.ex.id, s: x.score } });
+  ctx.saveData();
+  return x;
+}
+const sumText = (x) => ctx.t('res.line', { p: x.score, hi: x.hi ? noteName(x.hi) : '–' }) + (Math.abs(x.cn ? x.cs / x.cn : 0) >= 8 ? ' · ' + ctx.t(x.cs < 0 ? 'res.flat' : 'res.sharp', { c: Math.abs(Math.round(x.cs / x.cn)) }) : '');
+
 function finish() {
-  const prog = P && P.prog, p = hitPct();
-  stopPlay(true);
+  const prog = P && P.prog, x = logWarm();
+  stopPlay(true, true);
   if (prog && prog.i + 1 < PROGRAMS[prog.id].length) {
     const i = prog.i + 1, ex = exById(PROGRAMS[prog.id][i]);
     S().ex = ex.id; ctx.store.save();
@@ -176,11 +205,13 @@ function finish() {
     const id = every(1600, () => { cancel(id); if (P && P.wait && P.ex === ex) startEx(ex, { ...prog, i }); });
     return;
   }
-  ctx.ui.toast(p != null ? ctx.t('hit', { p }) : ctx.t('done'));
+  ctx.ui.toast(x ? sumText(x) : ctx.t('done'));
   render();
 }
-function stopPlay(quiet) {
+// logged — итог уже записан (конец прогона); остановка посреди — записать спетое
+function stopPlay(quiet, logged = false) {
   if (!P) return;
+  if (!logged && playing()) { const x = logWarm(); if (x && !quiet) ctx.ui.toast(sumText(x)); }
   cancel(P.timer);
   P.timer = 0;
   releaseAll();
@@ -196,12 +227,6 @@ function noteRes(key) {
   if (!a || a.length < 3) return null;
   const s = a.slice().sort((x, y) => x - y), md = Math.abs(s[s.length >> 1]);
   return md <= 0.5 ? 'ok' : md <= 1 ? 'near' : 'miss';
-}
-function hitPct() {
-  if (!P || P.ex.free) return null;
-  const ks = Object.keys(P.acc);
-  if (ks.length < 3) return null;
-  return Math.round((ks.filter((k) => noteRes(k) === 'ok').length / ks.length) * 100);
 }
 function warmSample(t, m) {
   if (!playing() || !P.run) return;
@@ -559,8 +584,24 @@ function improvGo() {
 function improvStop() {
   if (!IM) return;
   droneOff();
-  if (IM.on) micOff();
+  if (IM.on) { micOff(); logImprov(); }
   IM.on = false;
+}
+// Импровизация — в день прогресса: ноты (≥ 0,2 с) против лада: точно — ±25 центов от ступени, рядом — в ладу
+function logImprov() {
+  const { sc, pcs } = imStats(), r = myRange();
+  if (!IM || !pcs) return;
+  const x = { n: 0, ok: 0, near: 0, cs: 0, cn: 0, hi: 0, lo: 0, up: 0, dn: 0, sec: 0 };
+  IM.notes.filter((n) => n.dur >= 0.2).forEach((n) => {
+    const tn = nearestTone(n.m, pcs), m = tn.m;
+    x.n++; x.sec += n.dur;
+    if (!tn.in) return;
+    x.cs += tn.c; x.cn++;
+    if (Math.abs(tn.c) <= 25) { x.ok++; x.hi = Math.max(x.hi, m); x.lo = x.lo ? Math.min(x.lo, m) : m; if (r && m > r.hi) x.up = Math.max(x.up, m); if (r && m < r.lo) x.dn = x.dn ? Math.min(x.dn, m) : m; } else x.near++;
+  });
+  if (x.n < 3) return;
+  addToDay(D(), { ...x, take: { k: 'im', id: sc.id, s: Math.round(((x.ok + x.near * 0.5) / x.n) * 100) } });
+  ctx.saveData();
 }
 function improvSample(t, m) {
   const done = IM.tr.push(t, m);
@@ -700,6 +741,34 @@ function rangeText(r) {
   return '<div class="vcrt"><div><span class="dot w"></span>' + esc(t('v.work')) + ' <b>' + noteName(r.lo) + '–' + noteName(r.hi) + '</b></div><div><span class="dot p"></span>' + esc(t('v.phys')) + ' <b>' + noteName(r.plo) + '–' + noteName(r.phi) + '</b></div></div>';
 }
 
+// Прогресс: итог недели, график последних 14 дней пения (полосы рабочего и физического диапазона; за день — от низшей
+// до высшей чисто спетой ноты, точка — вылазка выше рабочего; внизу — чистота), предложение расширить рабочий
+function progressHTML() {
+  const { t } = ctx, d = D(), r = myRange(), log = (d.log || []).filter((x) => x.n > 0).slice(-14);
+  const w = weekSummary(d.log || []);
+  let h = '<div class="card vcprog"><h3>' + esc(t('pr.title')) + '</h3>';
+  if (!log.length) return h + '<div class="l2">' + esc(t('pr.empty')) + '</div></div>';
+  if (w) h += '<div class="vcweek"><div><b class="num">' + (w.min || (w.sec > 0 ? '<1' : 0)) + '</b><span>' + esc(t('pr.min')) + '</span></div><div><b class="num">' + (w.purity == null ? '–' : Math.round(w.purity * 100) + ' %') + '</b><span>' + esc(t('pr.purity')) + '</span></div>' +
+    '<div><b>' + (w.hi ? noteName(w.hi) : '–') + '</b><span>' + esc(t('pr.hi')) + '</span></div><div><b class="num">' + (w.drift ? (w.drift > 0 ? '+' : '−') + Math.abs(w.drift) + ' ¢' : '0') + '</b><span>' + esc(t(w.drift < 0 ? 'pr.flat' : w.drift > 0 ? 'pr.sharp' : 'pr.drift')) + '</span></div></div>';
+  // график
+  const his = log.map((x) => x.hi).filter(Boolean), los = log.map((x) => x.lo).filter(Boolean);
+  const top = Math.max(r.phi, ...his) + 2, bot = Math.min(r.plo, ...los) - 2, W = 300, H = 150, P2 = 22, n = log.length, cw = (W - P2) / 14; // 14 мест: дни — справа, последний — у края
+  const y = (m) => 4 + ((top - m) / (top - bot)) * (H - 46);
+  let g = '<rect class="ph" x="' + P2 + '" y="' + y(r.phi + 0.5) + '" width="' + (W - P2) + '" height="' + (y(r.plo - 0.5) - y(r.phi + 0.5)) + '"/><rect class="wk" x="' + P2 + '" y="' + y(r.hi + 0.5) + '" width="' + (W - P2) + '" height="' + (y(r.lo - 0.5) - y(r.hi + 0.5)) + '"/>';
+  [r.hi, r.lo].forEach((m) => { g += '<text class="ax" x="2" y="' + (y(m) + 3) + '">' + noteName(m) + '</text>'; });
+  log.forEach((x, i) => {
+    const cx = P2 + cw * (14 - n + i + 0.5), pu = purity(x);
+    if (x.hi && x.lo) g += '<line class="rg" x1="' + cx + '" x2="' + cx + '" y1="' + y(x.hi) + '" y2="' + y(x.lo) + '"/>';
+    if (x.up) g += '<circle class="up" cx="' + cx + '" cy="' + y(x.up) + '" r="4"/>';
+    if (pu != null) g += '<rect class="pu" x="' + (cx - cw * 0.3) + '" y="' + (H - 4 - 30 * pu) + '" width="' + cw * 0.6 + '" height="' + 30 * pu + '" rx="2"/>';
+    if (i === n - 1 || i === 0) g += '<text class="dt" x="' + cx + '" y="' + (H - 36) + '">' + x.d.slice(8) + '.' + x.d.slice(5, 7) + '</text>';
+  });
+  h += '<svg class="vcchart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(t('pr.chart')) + '">' + g + '</svg><div class="vclegend"><span><i class="wk"></i>' + esc(t('v.work')) + '</span><span><i class="ph"></i>' + esc(t('v.phys')) + '</span><span><i class="rg"></i>' + esc(t('pr.sung')) + '</span><span><i class="pu"></i>' + esc(t('pr.purity')) + '</span></div>';
+  const sg = suggestExpand(d.log, r, { skip: d.skip || {} });
+  if (sg) h += '<div class="vcsug"><span>' + esc(t(sg.edge === 'hi' ? 'pr.sugHi' : 'pr.sugLo', { n: noteName(sg.m) })) + '</span><div class="vcbtns"><button class="btn" data-x="expno">' + esc(t('pr.later')) + '</button><button class="btn fill" data-x="expyes" data-edge2="' + sg.edge + '" data-m="' + sg.m + '">' + esc(t('pr.expand')) + '</button></div></div>';
+  return h + '</div>';
+}
+
 function voiceHTML() {
   const { t, ui } = ctx, d = D();
   if (T && T.on) {
@@ -719,7 +788,7 @@ function voiceHTML() {
       '<div class="l2">' + esc(t('need.manual')) + '</div><div class="vctypes">' + TYPES.map(([id]) => '<button data-type="' + id + '">' + esc(typeName(id)) + '</button>').join('') + '</div></div></div>';
   }
   const r = myRange(), vt = voiceType(r.lo, r.hi).id;
-  return '<div class="vcv"><div class="card"><h3>' + esc(t('v.title')) + '</h3><div class="big typ">' + esc(t('v.type', { type: typeName(vt) })) + '</div>' + rangeText(r) +
+  return '<div class="vcv">' + progressHTML() + '<div class="card"><h3>' + esc(t('v.title')) + '</h3><div class="big typ">' + esc(t('v.type', { type: typeName(vt) })) + '</div>' + rangeText(r) +
     rangeBarHTML(r, true) + edgesHTML(r) + '<div class="l2">' + esc(t('v.explain')) + '</div><div class="l2">' + esc(t('v.disclaimer')) + '</div>' +
     '<div class="vcbtns"><button class="btn fill" data-x="test">' + ui.icons.mic.replace('<svg', '<svg width="20" height="20"') + esc(t('v.recheck')) + '</button></div></div>' +
     (d.hist.length ? '<div class="card"><h3>' + esc(t('v.hist')) + '</h3><div class="vchist">' + d.hist.slice(-8).reverse().map((h) => '<div><span>' + esc(new Date(h.at).toLocaleDateString()) + '</span><span class="num">' + noteName(h.lo) + '–' + noteName(h.hi) + ' <i>(' + noteName(h.plo ?? h.xlo ?? h.lo) + '–' + noteName(h.phi ?? h.xhi ?? h.hi) + ')</i></span><span class="typ">' + esc(typeName(voiceType(h.lo, h.hi).id)) + '</span></div>').join('') + '</div></div>' : '') + '</div>';
@@ -757,13 +826,14 @@ function listSheet() {
   const { t, ui } = ctx;
   const body = () => {
     const s = S();
-    return ui.snav(t('list')) + '<div class="hdr">' + esc(t('prog.title')) + '</div><div class="vcpr">' + PROGRAM_IDS.map((id) => '<button data-prog="' + id + '"' + (id === 'base' ? ' class="rec"' : '') + '><b>' + esc(t('prog.' + id)) + '</b><span>' + esc(t('progMin', { min: minOf(progSec(id)), n: PROGRAMS[id].length })) + '</span></button>').join('') + '</div>' +
+    return ui.snav(t('list')) + (ctx.hasTool && ctx.hasTool('audio') ? '<div class="group"><button class="cell" data-x="sing"><span class="grow">' + esc(t('sing.open')) + '<span class="vcexh">' + esc(t('sing.openHint')) + '</span></span>' + ui.icons.chev + '</button></div>' : '') + '<div class="hdr">' + esc(t('prog.title')) + '</div><div class="vcpr">' + PROGRAM_IDS.map((id) => '<button data-prog="' + id + '"' + (id === 'base' ? ' class="rec"' : '') + '><b>' + esc(t('prog.' + id)) + '</b><span>' + esc(t('progMin', { min: minOf(progSec(id)), n: PROGRAMS[id].length })) + '</span></button>').join('') + '</div>' +
       LEVELS.map((lv) => '<div class="hdr">' + DOTS(lv) + esc(t('lv.' + lv)) + '</div><div class="group">' + EXERCISES.filter((x) => (x.lv || 1) === lv).map((x) => '<button class="cell" data-ex="' + x.id + '" aria-pressed="' + (s.ex === x.id) + '"><span class="grow">' + esc(exName(x)) + ' <span class="vcgr">' + esc(t('g.' + x.g)) + '</span><span class="vcexh">' + esc(t('how.' + x.id)) + '</span></span>' + (s.ex === x.id ? ui.icons.check : '') + '</button>').join('') + '</div>').join('');
   };
   ui.sheet(body, (el, sh) => el.addEventListener('click', (e) => {
     const g = (q) => e.target.closest(q);
     let b;
     if (g('[data-close]')) { sh.close(); return; }
+    if (g('[data-x="sing"]')) { sh.close(); if (ctx.openIn) ctx.openIn('audio', { pview: 'sing' }); return; }
     if ((b = g('[data-ex]'))) { stopPlay(true); S().ex = b.dataset.ex; ctx.store.save(); sh.close(); render(); }
     else if ((b = g('[data-prog]'))) { const id = b.dataset.prog, ex = exById(PROGRAMS[id][0]); S().ex = ex.id; ctx.store.save(); sh.close(); startEx(ex, { id, i: 0 }); }
   }));
@@ -854,6 +924,9 @@ function onClick(e) {
   else if (x === 'test' || x === 'tagain') testStart();
   else if (x === 'tnext') testNext();
   else if (x === 'tcancel') { micOff(); T = null; render(); }
+  else if (x === 'expyes') { setEdge(b.dataset.edge2, +b.dataset.m); render(); ctx.ui.toast(ctx.t('pr.expanded')); }
+  else if (x === 'expno') { const sg = suggestExpand(D().log, myRange(), { skip: D().skip || {} }); if (sg) { D().skip = { ...(D().skip || {}), [sg.edge]: sg.m }; ctx.saveData(); } render(); }
+  else if (x === 'sing') { if (ctx.openIn) ctx.openIn('audio', { pview: 'sing' }); }
   else if (x === 'tsave') { saveRange(T.res); T = null; S().sec = 'warm'; ctx.store.save(); render(); ctx.ui.toast(ctx.t('v.saved')); }
 }
 

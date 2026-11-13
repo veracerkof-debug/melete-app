@@ -31,7 +31,7 @@ export async function reportPNG(R, { name = '', songs = true, notes = true } = {
   // высота: шапка + столбики + песни + заметки
   F(30);
   const noteLines = notes ? R.notes.map((n) => wrap(g, (n.title ? n.title + ': ' : '') + n.text, W - PAD * 2)) : [];
-  const H = 430 + 300 + (songs && R.songs.length ? 90 + R.songs.length * 64 : 0) + (noteLines.length ? 90 + noteLines.reduce((a, l) => a + l.length * 40 + 18, 0) : 0) + 80;
+  const H = 430 + 300 + (R.vocal ? 44 : 0) + (songs && R.songs.length ? 90 + R.songs.length * 64 : 0) + (noteLines.length ? 90 + noteLines.reduce((a, l) => a + l.length * 40 + 18, 0) : 0) + 80;
   cv.width = W; cv.height = H;
   g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
   let y = PAD + 30;
@@ -43,6 +43,11 @@ export async function reportPNG(R, { name = '', songs = true, notes = true } = {
   if (R.goal > 0) { F(34); g.fillStyle = C.l2; g.fillText(t('tr.of', { goal: fmtDur(R.goal) }), PAD + tw + 24, y); }
   y += 40;
   if (R.plans.length) { F(28); g.fillStyle = C.l2; g.fillText(R.plans.map((p) => p.title + ' ×' + p.n).join(' · '), PAD, y); }
+  if (R.vocal) { // строка вокала: минуты пения, чистота, выше всего
+    const v = R.vocal, nm = (m) => ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'][m % 12] + (Math.floor(m / 12) - 1);
+    y += 44; F(28); g.fillStyle = C.ink;
+    g.fillText(t('tr.vocal', { min: v.min, p: v.purity == null ? '–' : Math.round(v.purity * 100), hi: v.hi ? nm(v.hi) : '–' }), PAD, y);
+  }
   // по дням
   y += 50;
   const WD = weekdays(), max = Math.max(...R.per, 1), bw = (W - PAD * 2) / 7, bh = 170;

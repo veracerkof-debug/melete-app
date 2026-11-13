@@ -85,3 +85,17 @@ test('вокал: четверть и полоска — распевка пом
   await melete.free('SS', ['metro', 'vocal']);
   await expect(page.locator('.vc .bigplay').first()).toBeVisible();
 });
+
+test('вокал: прогресс — неделя; три дня чисто выше рабочего → «Расширить до …?», согласие расширяет', async ({ page, melete, errors }) => {
+  const day = (k) => { const d = new Date(Date.now() - k * 86400000); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const log = [2, 1, 0].map((k, i) => ({ d: day(k), sec: 300, n: 20, ok: 15, near: 3, cs: -60, cn: 18, hi: 66 + (i % 2), lo: 48, up: 66 + (i % 2), dn: 0, takes: [] }));
+  await melete.open({ settings: { vocal: { range: { lo: 48, hi: 64, plo: 45, phi: 69 }, log } } });
+  await melete.tools({ vocal: { sec: 'voice' } });
+  await melete.free('F', ['vocal']);
+  await expect(page.locator('.vcweek')).toBeVisible();
+  await expect(page.locator('.vcsug')).toContainText('F♯4'); // самый осторожный из трёх: 66
+  await page.locator('[data-x="expyes"]').click(); await page.waitForTimeout(300);
+  const r = await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).settings.vocal.range);
+  expect(r.hi).toBe(66);
+  await expect(page.locator('.vcsug')).toHaveCount(0);
+});

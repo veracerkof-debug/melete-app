@@ -29,6 +29,7 @@ import { fmtDur } from '../../core/format.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
 import meta, { ICON } from './meta.js';
+import { createSing } from './sing.js';
 const I = {
   share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
@@ -51,6 +52,7 @@ const I = {
   trash: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 12.5h9l1-12.5"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2l2-5 3 10 3-7 2 4 2-2h4"/></svg>',
   text: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h12M4 16h16M4 21h8"/></svg>',
+  sing: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
   chords: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14M15 5v14M3 12h18"/></svg>',
   click: '<svg viewBox="0 0 24 24"><path d="M9 3h6l3 16H6z"/><path d="M12 14 17 6M5 19h14"/><circle cx="12" cy="14" r="1.6" fill="currentColor"/></svg>',
 };
@@ -210,7 +212,7 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
 /* ---------- панель плеера: волна, дорожки, текст, аккорды ---------- */
-const PVIEWS = ['wave', 'stems', 'text', 'chords'];
+const PVIEWS = ['wave', 'stems', 'text', 'chords', 'sing']; // «Петь» — караоке с оценкой (sing.js)
 const pview = () => (PVIEWS.includes(st().pview) ? st().pview : 'wave');
 const PV = { cells: [], bars: [] }; // сетка аккордов: времена ячеек и номер такта каждой
 // Такты и доли записи: по сильным долям (rec.ana.downbeats), доли между ними — ячейки; без разбора — пусто
@@ -280,13 +282,14 @@ function stemsViewHTML(t) {
 }
 // переключатель видов — одной полосой над транспортом
 function pswHTML() {
-  const tr = ctx.t, v = pview(), ic = { wave: I.wave, stems: I.stems, text: I.text, chords: I.chords };
+  const tr = ctx.t, v = pview(), ic = { wave: I.wave, stems: I.stems, text: I.text, chords: I.chords, sing: I.sing };
   return '<div class="pvsw" role="tablist">' + PVIEWS.map((k) => '<button class="pvb' + (k === v ? ' on' : '') + '" role="tab" aria-selected="' + (k === v) + '" data-x="apv" data-v="' + k + '" aria-label="' + ctx.ui.esc(tr('pv.' + k)) + '">' + ic[k] + '<span>' + ctx.ui.esc(tr('pv.' + k)) + '</span></button>').join('') + '</div>';
 }
 // тело панели по виду (full и half); волна — как раньше
 function pviewHTML(c, d, half) {
   const t = AU.cur, v = pview();
   if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
+  if (v === 'sing') return SING.html(t) + atimes({ ...c, chord: '' }, d, anaTxt(t));
   if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
   if (v === 'chords') return chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)); // «сейчас» — в самом виде, строка под ним не нужна
   return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
@@ -1096,6 +1099,7 @@ function place() {
 
 function uiTick() {
   if (!host || !AU.cur) return;
+  SING.tick();
   const q = (s) => host.querySelector(s), d = pl().duration;
   const mp = q('#mlprog');
   if (mp && d) mp.style.width = (pl().currentTime / d) * 100 + '%';
@@ -1576,6 +1580,7 @@ function act(a, el) {
   const { t, ui } = ctx;
   switch (a) {
     case 'aplay': if (pl().paused) playEl(); else pl().pause(); break;
+    case 'sggo': case 'sgmin': SING.click(a, AU.cur); break;
     case 'aback': pl().currentTime = Math.max(0, pl().currentTime - 5); break;
     case 'afwd': pl().currentTime = Math.min(pl().duration || 0, pl().currentTime + 5); break;
     case 'aab': // A — B — сброс
@@ -1756,6 +1761,10 @@ function bind() {
   on(window, 'pointercancel', vinUp, true);
 }
 
+// Вид «Петь» (sing.js): связь с плеером — время, тональность, громкость дорожки вокала («минус»)
+const SING = createSing({ ctx: () => ctx, cur: () => AU.cur, pl, host: () => host, render: () => render(), play: () => playEl(),
+  semi: () => { const [p, c] = pitchOf(AU.cur); return p + c / 100; }, mixVal, mixSet, mixApply });
+
 export default {
   ...meta,
   status(c) {
@@ -1790,6 +1799,7 @@ export default {
   unmount() {
     if (ctx && ctx.net) ctx.net(null);
     clearInterval(uiTimer);
+    SING.stop();
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
     if (AU.el && !ctx.session) pl().pause();

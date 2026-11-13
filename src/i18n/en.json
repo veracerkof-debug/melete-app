@@ -1005,6 +1005,7 @@
   "tr.of": "of {goal}",
   "tr.songs": "Songs and tempos",
   "tr.notes": "Reviews and notes",
+  "tr.vocal": "Vocal: {min} min sung · accuracy {p} % · highest {hi}",
   "tr.recs": "This week’s recordings",
   "tr.recsN": ["{n} recording", "{n} recordings"],
   "tr.send": "Send",

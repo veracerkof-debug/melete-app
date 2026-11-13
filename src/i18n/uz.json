@@ -989,6 +989,7 @@
   "tr.of": "{goal} dan",
   "tr.songs": "Qoʻshiqlar va templar",
   "tr.notes": "Tahlillar va qaydlar",
+  "tr.vocal": "Vokal: {min} daq kuylash · aniqlik {p} % · eng baland {hi}",
   "tr.recs": "Hafta yozuvlari",
   "tr.recsN": ["{n} ta yozuv"],
   "tr.send": "Yuborish",
