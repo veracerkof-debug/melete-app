@@ -4,17 +4,19 @@
 .vchd{flex:none;display:flex;justify-content:center;padding:0 4px}
 .vchd .seg{max-width:420px;width:100%}
 .vcstaff{flex:none;display:flex;justify-content:center;align-items:center;min-height:0;overflow:hidden;padding:0 8px;pointer-events:none}
-.vcstaff .bkscore{flex:1 1 auto;min-width:0;width:100%;max-width:none!important;height:clamp(56px,16cqh,104px);max-height:none;margin:0;overflow:visible}
+.vcstaff .bkscore{flex:1 1 auto;min-width:0;width:100%;max-width:none!important;height:clamp(72px,19cqh,128px);max-height:none;margin:0;overflow:visible}
 .vcstaff .bkscore .smf{font-family:"Melete Bravura","Bravura";font-size:40px;fill:var(--ink)}
 .vcstaff .bkscore .lines line,.vcstaff .bkscore .ldg{stroke:var(--l2);stroke-width:1}
 .vcstaff .bkscore .stem{stroke:var(--ink);stroke-width:1.3}
 .vcstaff .bkscore .beam{stroke:var(--ink);stroke-width:5}
-.vcstaff .bkscore .st{font:600 13px var(--font);fill:var(--l2);text-anchor:middle}
+.vcstaff .bkscore .st{font:700 15px var(--font);fill:var(--l2);text-anchor:middle}
+.vcstaff .bkscore .smf.nh.cur{fill:var(--tint)}
+.vcstaff{background:var(--cell);border-radius:16px;padding:4px 10px}
 .vcstaff .bkscore .st.up{fill:var(--tint-text,var(--tint))}
 .vcstaff .bkscore .tie{fill:none;stroke:var(--ink);stroke-width:1.3}
-.vcsurf{position:relative;flex:1;min-height:0;border-radius:16px;background:var(--cell);overflow:hidden;touch-action:pan-y}
+.vcsurf{position:relative;flex:1;min-height:0;border-radius:16px;background:var(--cell);overflow:hidden;touch-action:pan-y;box-shadow:inset 0 0 0 1px var(--sep)}
 .vcsurf canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.vcov{position:absolute;left:0;right:0;top:0;padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;pointer-events:none;background:linear-gradient(var(--cell) 75%,transparent)}
+.vcov{position:absolute;left:0;right:0;top:0;padding:8px 10px 10px 38px;display:flex;flex-direction:column;gap:2px;pointer-events:none;background:linear-gradient(var(--cell) 75%,transparent)}
 .vcov b{font-size:clamp(15px,4.4cqmin,20px);font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vcov span{font-size:13px;color:var(--l2)}
 .vcov .how{font-size:13px;color:var(--l2);max-width:560px;line-height:1.35}
@@ -98,9 +100,53 @@
   .vc.test .vctest{position:absolute;right:0;top:0;bottom:0;width:228px;justify-content:center;padding:0}
   .vcov .how{display:none}
   .vcstaff .bkscore{height:48px}
+  .vcov{flex-direction:row;align-items:baseline;gap:10px;padding-top:5px;padding-bottom:6px}
+  .vcov b{font-size:15px}
 }
 @container (max-height: 320px) { .vcfree span{display:none} }
 /* четверть экрана: только назад, начать, вперёд */
 .vc.quarter .vcbar [data-x="list"],.vc.quarter .vcbar [data-x="set"]{display:none}
 /* совсем низкое окно: без нот и разделов — место полосе высоты */
 @container (max-height: 240px) { .vc .vchd,.vc .vcstaff{display:none} .vcov{padding-top:4px} }
+
+/* 14.11.2026: уровни, первый вход, два диапазона, шаги проверки, импровизация */
+.vclv{display:inline-flex;gap:3px;margin-right:8px;vertical-align:middle}
+.vclv i{width:7px;height:7px;border-radius:50%;background:var(--fill2)}
+.vclv i.on{background:var(--tint)}
+.vcgr{font-size:12px;color:var(--l2);font-weight:500}
+.vcpr button.rec{box-shadow:inset 0 0 0 2px var(--tint)}
+.vcneed{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:8px}
+.vcneed b{font-size:15px}.vcneed span{font-size:13px;color:var(--l2)}
+.vcv .card.first{gap:14px}
+.vcbtns.col{flex-direction:column;align-items:stretch}
+.vcrt{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+.vcrt .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.vcrt .dot.w{background:var(--tint)}
+.vcrt .dot.p{background:color-mix(in srgb,var(--tint) 32%,var(--fill))}
+.vcrl .hd.sel::after{background:var(--tint);box-shadow:0 0 0 3px color-mix(in srgb,var(--tint) 30%,transparent)}
+.vcrl .hd.plo::after,.vcrl .hd.phi::after{height:22px;width:5px;opacity:.7}
+.vcedges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vcedge{min-height:48px;border-radius:12px;background:var(--fill);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 2px}
+.vcedge span{font-size:11px;color:var(--l2)}
+.vcedge b{font-size:15px;font-variant-numeric:tabular-nums}
+.vcedge[aria-pressed="true"]{background:var(--tint);color:var(--on-tint)}
+.vcedge[aria-pressed="true"] span{color:inherit;opacity:.85}
+.vcadj{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vcadj .l2{flex:1;text-align:center}
+.vcsteps{display:flex;gap:6px;justify-content:center}
+.vcsteps i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--fill);color:var(--l2)}
+.vcsteps i.on{background:var(--tint);color:var(--on-tint)}
+.vcsteps i.done{background:color-mix(in srgb,var(--tint) 30%,var(--fill));color:var(--ink)}
+.vctest .ttl{font-size:17px}
+.vctest .l2{max-width:420px}
+.vcim{position:absolute;left:38px;right:10px;top:8px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;pointer-events:none;font-size:13px;font-weight:700}
+.vcim b{font-size:15px;color:var(--ink)}
+.vcim b i{font-style:normal;font-size:11px;font-weight:700;color:var(--on-tint);background:var(--tint);border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:2px}
+.vcim .ok{color:#3E9A5E}.vcim .sc{color:#B8862A}
+.vcnowim{position:absolute;right:12px;bottom:10px;font-size:clamp(16px,5cqmin,24px);font-weight:700;pointer-events:none;font-variant-numeric:tabular-nums}
+.vcfree.bottom{justify-content:flex-end;padding-bottom:44px}
+.vcdeg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:440px}
+.vcdeg span{font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--fill)}
+.vcdeg .ok{color:#3E9A5E}.vcdeg .mid{color:#B8862A}.vcdeg .bad{color:#CC5546}
+.vcdeg .l2{background:none;font-weight:500;color:var(--l2)}
+.vchist i{font-style:normal;color:var(--l2);font-size:12px}

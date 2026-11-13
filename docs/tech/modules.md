@@ -102,8 +102,10 @@ src/modules/<id>/
 (+ «сверх»), в программе — не дольше 90 с (дальше по тону). Звук шага планируется на точное время звуковых часов
 (`synth.on(…, { at })`, `off(key, false, at)`), шина `vocal`, тембр — пресет на выбор. Ноты шага — `book/score.js:
 scoreSVG` (буквы — `warmup.js: spellNote`), полоса высоты — холст: целевые ноты, линия голоса (YIN, `audio/pitch.js`),
-попадание по нотам. Голос: `music/voicetype.js` — спетые ноты (`createNoteTracker`), диапазон (`rangeOf`), тип
-(`voiceType`), оценка в ладу (`scoreNote`). Данные человека — `ctx.data()` (`settings.vocal`: range, type, hist).
+попадание по нотам. Голос: `music/voicetype.js` — спетые ноты (`createNoteTracker`), физический (`rangeOf`) и рабочий (`workingOf`)
+диапазон, тип (`voiceType`), оценка в ладу (`scoreNote`), лад по спетому (`detectMode`). Зона роста — `warmup.js:
+trainRange`. Без диапазона распевки не открываются. Импровизация — свой дрон (держащиеся голоса синтезатора на шине
+`vocal`), не общий «Пэдов». Данные человека — `ctx.data()` (`settings.vocal`: range { lo, hi, plo, phi }, type, hist).
 
 **Табы, ноты и текст** (`modules/notes/`). Табулатуры и ноты — alphaTab (Guitar Pro, MusicXML, alphaTex), PDF — pdf.js
 (`pdf.js`), определение формата файла — `sniff.js`. `live.js` — партия «с игры»: сыгранное, сетка, правка, MusicXML

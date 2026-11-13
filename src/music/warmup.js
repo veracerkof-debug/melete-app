@@ -56,10 +56,22 @@ export function tonics(mot, { lo, hi }, { extra = 0, step = 1, dir = 'updown' } 
   return up.concat(up.slice(0, -1).reverse());
 }
 
-// Аккорд под тоникой: бас и трезвучие в удобной для пианино октаве (корень — от C3 до B3), мажор или минор
+// Аккорд под тоникой — рядом с голосом, а не в басу (слово автора 14.11.2026: «играла очень низко»): трезвучие от тоники
+// в октаве голоса, но не выше E4 и не ниже C3; бас — октавой ниже корня, мажор или минор
 export function chordFor(tonic, minor = false) {
-  const root = 48 + (((tonic % 12) + 12) % 12);
+  let root = Math.round(tonic);
+  while (root > 64) root -= 12;
+  while (root < 48) root += 12;
   return [root - 12, root, root + (minor ? 3 : 4), root + 7];
+}
+
+// Диапазон распевки: рабочий { lo, hi } и физический { plo, phi } (DECISIONS «Вокал», 14.11.2026). grow — на сколько
+// полутонов выйти из рабочего в «зону роста», но не дальше физического; 'all' — до физического целиком
+export function trainRange(r, grow = 0) {
+  const plo = r.plo ?? r.lo, phi = r.phi ?? r.hi;
+  if (grow === 'all') return { lo: Math.min(r.lo, plo), hi: Math.max(r.hi, phi) };
+  const g = Math.max(0, +grow || 0);
+  return { lo: Math.max(Math.min(r.lo, plo), r.lo - g), hi: Math.min(Math.max(r.hi, phi), r.hi + g) };
 }
 
 // Прогон распевки: ex — упражнение (exercises.js), range — { lo, hi } в MIDI; opts: { extra, step, dir, maxBeats —

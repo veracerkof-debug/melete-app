@@ -59,6 +59,17 @@ export function rangeOf(notes, { comfort = 1, edge = 0.25 } = {}) {
   return { lo, hi: Math.max(lo, hi), xlo: Math.min(xlo, lo), xhi: Math.max(xhi, hi) };
 }
 
+// Рабочий диапазон по свободному пению (третий шаг проверки: «спеть удобно, как обычно»): ноты, удержанные хотя бы
+// minDur, взвешенные по длительности; края — от 5-го до 95-го процентиля (случайная сорвавшаяся нота не растягивает).
+// → { lo, hi } или null
+export function workingOf(notes, { minDur = 0.3, cut = 0.05 } = {}) {
+  const xs = notes.filter((n) => n.dur >= minDur).map((n) => ({ m: Math.round(n.m), w: n.dur })).sort((a, b) => a.m - b.m);
+  const tot = xs.reduce((a, x) => a + x.w, 0);
+  if (!xs.length || tot < 1) return null;
+  const at = (q) => { let acc = 0; for (const x of xs) { acc += x.w; if (acc >= q * tot) return x.m; } return xs[xs.length - 1].m; };
+  return { lo: at(cut), hi: at(1 - cut) };
+}
+
 // Спетая нота против лада: tonic — высота тоники (MIDI), pcs — ступени лада (полутоны от тоники), tolC — точность в центах.
 // → { n — ближайшая нота, deg — ступень от тоники (0…11), cents, inScale, exact }
 export function scoreNote(m, tonic, pcs, tolC = 25) {
@@ -67,11 +78,27 @@ export function scoreNote(m, tonic, pcs, tolC = 25) {
   return { n, deg, cents, inScale, exact: inScale && Math.abs(cents) <= tolC };
 }
 
-// Итог импровизации по нотам (с длительностью): доли времени в ладу и точно, время на каждой ступени
+// Итог импровизации по нотам (с длительностью): доли времени в ладу и точно, время на каждой ступени и средний уход
+// по ступени в центах (где «не дотягивает»: третья ступень ниже на 20 центов — видно и понятно)
 export function improvSummary(notes) {
   const tot = notes.reduce((a, x) => a + x.dur, 0);
   const sum = (f) => notes.filter(f).reduce((a, x) => a + x.dur, 0);
-  const degs = Array(12).fill(0);
-  notes.forEach((x) => { degs[x.deg] += x.dur; });
-  return { n: notes.length, sec: tot, inScale: tot ? sum((x) => x.inScale) / tot : 0, exact: tot ? sum((x) => x.exact) / tot : 0, degs };
+  const degs = Array(12).fill(0), cw = Array(12).fill(0);
+  notes.forEach((x) => { degs[x.deg] += x.dur; cw[x.deg] += x.cents * x.dur; });
+  const cents = degs.map((d, i) => (d ? Math.round(cw[i] / d) : 0));
+  return { n: notes.length, sec: tot, inScale: tot ? sum((x) => x.inScale) / tot : 0, exact: tot ? sum((x) => x.exact) / tot : 0, degs, cents };
+}
+
+// Какой лад поётся (тоника — у дрона): degs — время на ступенях 0…11, cands — { id: ступени }. Для лада: P — доля
+// времени на его ступенях, R — доля его ступеней, которые пели хоть заметно (≥ 4 % времени); оценка — F-мера с
+// весом на P (лишняя нота — важнее, чем неспетая ступень). → [{ id, score, p, r }] по убыванию; пения мало — []
+export function detectMode(degs, cands, { minSec = 4, used = 0.04, beta = 0.6 } = {}) {
+  const tot = degs.reduce((a, x) => a + x, 0);
+  if (tot < minSec) return [];
+  const b2 = beta * beta;
+  return Object.entries(cands).map(([id, pcs]) => {
+    const p = pcs.reduce((a, d) => a + degs[d], 0) / tot, r = pcs.filter((d) => degs[d] / tot >= used).length / pcs.length;
+    const score = p + r ? ((1 + b2) * p * r) / (b2 * p + r) : 0;
+    return { id, score: Math.round(score * 1000) / 1000, p, r };
+  }).sort((x, y) => y.score - x.score || x.id.localeCompare(y.id));
 }

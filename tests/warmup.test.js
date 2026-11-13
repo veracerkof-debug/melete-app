@@ -1,8 +1,9 @@
 // Распевки по диапазону (src/music/warmup.js), голос и тип голоса (src/music/voicetype.js), библиотека
 // (src/modules/vocal/exercises.js) — DECISIONS 2026-11-13 «Вокал».
 import { describe, it, expect } from 'vitest';
-import { degOff, parseMotif, tonics, buildRun, chordFor, syllable, spellNote } from '../src/music/warmup.js';
-import { voiceType, createNoteTracker, rangeOf, scoreNote, improvSummary, typeComfort } from '../src/music/voicetype.js';
+import { degOff, parseMotif, tonics, buildRun, chordFor, syllable, spellNote, trainRange } from '../src/music/warmup.js';
+import { voiceType, createNoteTracker, rangeOf, scoreNote, improvSummary, typeComfort, workingOf, detectMode } from '../src/music/voicetype.js';
+import { SCALES } from '../src/music/theory.js';
 import { EXERCISES, PROGRAMS, GROUPS, exById } from '../src/modules/vocal/exercises.js';
 
 describe('мотив', () => {
@@ -34,16 +35,25 @@ describe('шаги по диапазону', () => {
   it('прогон: аккорд перед шагом, ноты по времени, длинный прогон — по тону', () => {
     const ex = { p: '1 3 5 3 1:2', lead: 1, rest: 1 };
     const run = buildRun(ex, { lo: 48, hi: 60 }, { dir: 'up' });
-    expect(run.steps[0].lead).toEqual({ t: 0, d: 1, ms: [36, 48, 52, 55] });
+    expect(run.steps[0].lead).toEqual({ t: 0, d: 1, ms: [36, 48, 52, 55] }); // C3: бас C2 и трезвучие от C3
     expect(run.steps[0].sing.map((n) => [n.t, n.m])).toEqual([[1, 48], [2, 52], [3, 55], [4, 52], [5, 48]]);
     expect(run.steps[1].t0).toBe(8);
     expect(run.steps.at(-1).tonic).toBe(53);
     const long = buildRun(ex, { lo: 48, hi: 72 }, { maxBeats: 60 });
     expect(long.step).toBe(2);
   });
-  it('аккорд в удобной октаве пианино, минор', () => {
-    expect(chordFor(74)).toEqual([38, 50, 54, 57]);
-    expect(chordFor(45, true)).toEqual([45, 57, 60, 64]);
+  it('аккорд рядом с голосом: от C3 до E4, бас октавой ниже; минор', () => {
+    expect(chordFor(74)).toEqual([50, 62, 66, 69]); // D5 → трезвучие от D4
+    expect(chordFor(45, true)).toEqual([45, 57, 60, 64]); // A2 → от A3
+    expect(chordFor(60)).toEqual([48, 60, 64, 67]);
+  });
+  it('зона роста: из рабочего к физическому, не дальше физического', () => {
+    const r = { lo: 50, hi: 62, plo: 45, phi: 67 };
+    expect(trainRange(r, 0)).toEqual({ lo: 50, hi: 62 });
+    expect(trainRange(r, 2)).toEqual({ lo: 48, hi: 64 });
+    expect(trainRange(r, 8)).toEqual({ lo: 45, hi: 67 });
+    expect(trainRange(r, 'all')).toEqual({ lo: 45, hi: 67 });
+    expect(trainRange({ lo: 50, hi: 62 }, 2)).toEqual({ lo: 50, hi: 62 }); // без физического — только рабочий
   });
   it('запись нотами: буквы от тоники, знаки по высоте', () => {
     expect(spellNote(61, 2, 65)).toEqual({ l: 3, a: 0 }); // D♭: третья ступень — F
@@ -110,6 +120,25 @@ describe('голос', () => {
     const r = rangeOf([{ m: 45, dur: 1.2 }, { m: 43, dur: 0.3 }, { m: 64, dur: 1.5 }, { m: 67.2, dur: 0.4 }, { m: 70, dur: 0.1 }]);
     expect(r).toEqual({ lo: 45, hi: 64, xlo: 43, xhi: 67 });
     expect(rangeOf([])).toBe(null);
+  });
+  it('рабочий диапазон по свободному пению: края без случайных нот', () => {
+    const notes = [{ m: 48, dur: 2 }, { m: 50, dur: 2 }, { m: 55, dur: 3 }, { m: 60, dur: 2 }, { m: 62, dur: 1.5 }, { m: 70, dur: 0.35 }, { m: 40, dur: 0.1 }];
+    expect(workingOf(notes)).toEqual({ lo: 48, hi: 62 });
+    expect(workingOf([])).toBe(null);
+  });
+  it('лад по спетому: дорийский, мажор, пентатоника; мало пения — ничего', () => {
+    const cands = Object.fromEntries(['major', 'minor', 'dorian', 'mixo', 'pmaj', 'pmin', 'harm'].map((k) => [k, SCALES[k][0]]));
+    const sung = (degs) => { const d = Array(12).fill(0); degs.forEach((x) => { d[x] += 1; }); return d; };
+    expect(detectMode(sung([0, 2, 3, 5, 7, 9, 10, 0, 3, 9]), cands)[0].id).toBe('dorian');
+    expect(detectMode(sung([0, 2, 4, 5, 7, 9, 11, 0, 4, 7]), cands)[0].id).toBe('major');
+    expect(detectMode(sung([0, 2, 4, 7, 9, 0, 4, 7, 9, 2]), cands)[0].id).toBe('pmaj');
+    expect(detectMode(sung([0, 2, 3, 5, 7, 8, 11, 0, 11, 3]), cands)[0].id).toBe('harm');
+    expect(detectMode(sung([0, 2]), cands)).toEqual([]);
+  });
+  it('уход по ступеням в центах', () => {
+    const maj = [0, 2, 4, 5, 7, 9, 11];
+    const s = improvSummary([{ ...scoreNote(63.8, 60, maj), dur: 2 }, { ...scoreNote(64, 60, maj), dur: 2 }]);
+    expect(s.cents[4]).toBe(-10);
   });
   it('нота против лада: в ладу, точно, мимо', () => {
     const maj = [0, 2, 4, 5, 7, 9, 11];
