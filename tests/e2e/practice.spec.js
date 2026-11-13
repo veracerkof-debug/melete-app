@@ -81,3 +81,13 @@ test('план занятия: пример в «Песнях», выбор пр
   await expect(page.locator('#splan')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('повторение репертуара: выученная песня, давно не игранная, — «Повторить» на главной и пометка в списке', async ({ page, melete, errors }) => {
+  const old = Date.now() - 20 * 86400000;
+  await melete.open({ songs: [{ id: 'a', title: 'Выученная', masteryPct: 100, createdAt: old }, { id: 'b', title: 'Учу', masteryPct: 40, createdAt: old }] });
+  await expect(page.locator('[data-hb="review"]')).toContainText('Выученная');
+  await expect(page.locator('[data-hb="review"]')).not.toContainText('Учу');
+  await melete.tab('library');
+  await expect(page.locator('.rvmark')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});

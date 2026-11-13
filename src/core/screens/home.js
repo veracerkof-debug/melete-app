@@ -14,6 +14,7 @@ import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { studyCard } from './study.js';
+import { dueSongs } from '../review.js';
 
 // Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
 function pomoBtn(app) {
@@ -55,7 +56,7 @@ export function streakPill(app, extra = '') {
 
 /* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
 // Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
-export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'study', 'start', 'quick', 'events', 'songs'];
+export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'study', 'start', 'review', 'quick', 'events', 'songs'];
 export const HOME_SIZES = ['s', 'm', 'l'];
 export function homeLayout(st) {
   const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));
@@ -179,6 +180,7 @@ function homeMonoHTML(app) {
     const page = isPage(id), m = page ? null : moduleById(id), name = page ? pageName(id) : moduleName(m);
     return '<button data-open-tool="' + id + '" aria-label="' + esc(name) + '" title="' + esc(name) + '"><span class="mcirc">' + (page ? TAB_ICONS[id] : m.icon) + '</span></button>';
   }).join('') + '</div>';
+  P.review = plain ? '' : reviewHTML(app, true);
   P.events = nextEventsHTML(app);
   const songs = app.store.songs();
   const sm = songStatsMap(app.store.sessions()), rec = songs.map((s) => ({ s, st: sm.of(s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 6);
@@ -194,6 +196,17 @@ function homeMonoHTML(app) {
 function offText(o) {
   const [y, m, d] = o.to.split('-').map(Number), loc = getLang() === 'uz' ? 'uz-Latn' : getLang();
   return t('home.offTill', { title: o.title || t('plan.break'), d: new Date(y, m - 1, d).toLocaleDateString(loc, { day: 'numeric', month: 'short' }) });
+}
+
+// «Повторить»: выученные песни, которые давно не играли (review.js) — до трёх, без упрёков и счётчиков
+function reviewHTML(app, mono) {
+  const due = dueSongs(app.store.songs(), app.store.sessions()).slice(0, 3);
+  if (!due.length) return '';
+  const sub = (x) => t('rv.ago', { d: tn('rv.days', x.days) });
+  if (mono) return mhead(t('rv.title')) + '<div class="mlist">' + due.map((x) => '<div class="mrow"><button data-song="' + x.s.id + '"><span class="mt">' + esc(x.s.title) + '</span><span class="mm">' + esc(sub(x)) + '</span></button>' +
+    '<button class="mplay" data-play="' + x.s.id + '" aria-label="' + esc(t('home.playSong', { title: x.s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>';
+  return '<div class="hhdr"><span>' + t('rv.title') + '</span></div><div class="slist">' + due.map((x) => '<div class="stile3 hsong" style="--g:var(--tint)"><button class="grow" data-song="' + x.s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(x.s.title) +
+    '</div><div class="st">' + esc(sub(x)) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: x.s.title })) + '" data-play="' + x.s.id + '">' + PLAY + '</button></div>').join('') + '</div>';
 }
 
 // До цели — коротко, чтобы влезло в кольцо: «5 ч», «40 мин», «4:30»
@@ -228,6 +241,7 @@ export function homeHTML(app) {
     '<div class="qgrid">' + (q.length
     ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
+  P.review = plain ? '' : reviewHTML(app, false);
   P.events = nextEventsHTML(app);
   const songs = app.store.songs(), L = ensureLib(app.store.state, t);
   const sm = songStatsMap(app.store.sessions()), rec = songs.map((s) => ({ s, st: sm.of(s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);

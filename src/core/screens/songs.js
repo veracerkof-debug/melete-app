@@ -1,6 +1,7 @@
 // «Песни»: список с категориями, поиском, фильтрами и сортировкой; карточка песни; форма песни; метки.
 // Перенесено из legacy/practice.html (libraryHTML, songHTML, tempoChart, songForm, libManager, itemEditor, pickHTML).
 import { routinesHTML } from './routine.js';
+import { dueSongs } from '../review.js';
 import { t, tn, getLang } from '../../i18n/index.js';
 import { esc, icb, seg, sheet, snav, toast, icons } from '../../ui/index.js';
 import { isDemo } from '../demo.js';
@@ -58,11 +59,12 @@ export function libraryHTML(app, view) {
     (view.genre || view.tag ? ' · <button class="link" data-fclear style="font-size:13px;min-height:0">' + t('songs.clearFilter') + '</button>' : '') +
     '</span><select class="sortsel sortr" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
   if (!list.length) return h + '<div class="empty">' + t('songs.notFound') + '</div>';
+  const due = new Set(st.toolsOnly ? [] : dueSongs(songs, app.store.sessions()).map((x) => x.s.id)); // к повторению (review.js)
   return h + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
     return '<button class="stile3" data-song="' + s.id + '" style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' +
       (c && !view.cat ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
-      esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</div>' +
+      esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + (due.has(s.id) ? '<span class="rvmark">' + t('rv.mark') + '</span>' : '') + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
       '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
   }).join('') + '</div>';

@@ -670,3 +670,4 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rtopts{flex-wrap:wrap}
 .rtopts .sortsel{flex:1 1 40%;min-width:0;min-height:40px}
 .rtact .ic{min-width:40px;min-height:40px}
+.rvmark{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:var(--tint-text,var(--tint));background:color-mix(in srgb,var(--tint) 14%,transparent)}
