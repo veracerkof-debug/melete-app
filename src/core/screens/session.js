@@ -222,11 +222,14 @@ export function createSessionScreen(app) {
     if (!tm) coreHelp(app, 'session'); // сессия с окнами (у инструмента вне сессии — своя инструкция)
     const ses = layer.querySelector('.session');
     ses.addEventListener('pointerdown', (e) => {
+      calmWake();
       if (app.active) { touch(app.active); saveActive(app.active); }
       const p = e.target.closest('.ws .pane');
       if (p) setFocus(+p.dataset.pane);
     });
     ses.addEventListener('click', onClick);
+    ses.addEventListener('keydown', calmWake);
+    calmAt = Date.now();
     if (!tm && isOn(st(), 'timer')) onHold(ses, '#stime', () => pomoSheet());
     // два пальца (слово автора 06.11.2026): развести — окно во весь экран, свести — окна звучащих инструментов
     // (во весь экран — обратно); в пианино и глайдере не действует — там играют несколькими пальцами
@@ -425,6 +428,7 @@ export function createSessionScreen(app) {
   /* ---------- нажатия ---------- */
   function onClick(e) {
     if (dragSup) { dragSup = false; return; }
+    if (Date.now() - calmWoke < 450 && e.target.closest('[data-s]')) return; // касание лишь вернуло тихий вид — время не ставит паузу
     const pill = e.target.closest('[data-pill]');
     if (pill) { openTool(pill.dataset.pill); return; }
     const cs = e.target.closest('.csw [data-csub]');
@@ -634,7 +638,20 @@ export function createSessionScreen(app) {
     });
     sin.appendChild(b);
   }
+  // Тихий вид (слово автора 13.11.2026, «как Forest»): 30 с без касаний — шапка, панель инструментов и ручки окон
+  // уходят, остаются крупное время и сам инструмент (ноты, метроном). Касание возвращает всё и проходит дальше —
+  // по инструменту играть можно сразу. Раскладка не двигается (только прозрачность). Выключить — «Неделя» (calmView)
+  const CALM_MS = 30000;
+  let calmAt = 0, calmWoke = 0;
+  function calmWake() { calmAt = Date.now(); const ses = layer && layer.querySelector('.session'); if (ses && ses.classList.contains('calm')) { ses.classList.remove('calm'); calmWoke = calmAt; } }
+  function calmTick() {
+    const ses = layer && layer.querySelector('.session');
+    if (!ses || ses.classList.contains('calm') || st().calmView === false || !app.active || app.active.pausedAt) return;
+    if (Date.now() - calmAt < CALM_MS || document.querySelector('#sheetLayer .scrim:not(.leaving), .ask, .tour') || layer.querySelector('.sbrk')) return;
+    ses.classList.add('calm');
+  }
   function tickNow() {
+    calmTick();
     updClock();
     studyTick();
     breakTick();

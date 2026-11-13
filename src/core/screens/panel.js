@@ -201,6 +201,7 @@ function weekHTML(app) {
     '<p class="ftr">' + t('week.autoHint') + '</p>' +
     '<div class="hdr">' + t('brk.title') + '</div><div class="group"><div class="cellcol">' + seg('brk', [['0', t('brk.off')], ['45', '45'], ['50', '50'], ['60', '60'], ['90', '90']], String(st.breakMin === 0 ? 0 : +st.breakMin || 50), t('brk.title')) +
     '<div class="segcap">' + t('brk.hint') + '</div></div></div>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('calm.title') + '</span>' + psw('calmView', st.calmView !== false, t('calm.title')) + '</div></div><p class="ftr">' + t('calm.hint') + '</p>' +
     '<div class="hdr">' + t('track.title') + '</div><div class="group"><div class="cellcol">' + seg('track', [['normal', t('track.mode.normal')], ['strict', t('track.mode.strict')]], trackMode(st), t('track.title')) +
     '<div class="segcap">' + t('track.hint.' + trackMode(st)) + '</div></div></div><p class="ftr">' + t('track.hint') + '</p>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +

@@ -218,3 +218,9 @@ body:has(.tview.pure,.session.pure) .mxh{display:none!important} /* полный
 .splan.due{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}
 .splan.due .spl{color:var(--tint-text,var(--tint));font-weight:600}
 .splan.due .spnext{background:var(--tint);color:var(--on-tint)}
+/* тихий вид: лишнее уходит прозрачностью (раскладка не двигается), время крупнее; касание возвращает */
+.session .shd>*,.session .sdock,.session .grip,.session .pfbtn,.session .splan{transition:opacity .6s ease}
+.session .stime{transition:transform .6s ease}
+.session.calm .shd>:not(#stime),.session.calm .sdock,.session.calm .grip,.session.calm .pfbtn,.session.calm .splan{opacity:0;pointer-events:none}
+.session.calm .shd>#stime{transform:scale(1.35);transform-origin:left center}
+@media (prefers-reduced-motion: reduce){.session .shd>*,.session .sdock,.session .grip,.session .pfbtn,.session .splan,.session .stime{transition:none}}

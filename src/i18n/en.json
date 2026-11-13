@@ -997,6 +997,8 @@
   "cmp.pos": "Position",
   "cmp.take": "Take",
   "cmp.hint": "Tap A or B to switch at the same spot. Loudness is matched so a quiet take doesn’t sound worse.",
+  "calm.title": "Quiet session view",
+  "calm.hint": "After 30 seconds without touches only the time and the instrument stay. A tap brings everything back.",
   "fin.note": "Note",
   "fin.notePh": "What worked, what didn’t",
   "fin.saved": "Saved: {d}",

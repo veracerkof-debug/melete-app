@@ -981,6 +981,8 @@
   "cmp.pos": "Joy",
   "cmp.take": "Yozuv",
   "cmp.hint": "A yoki B ga bosish — oʻsha joyda almashtirish. Ovoz balandligi tenglangan: past yozuv yomonroq tuyulmaydi.",
+  "calm.title": "Mashgʻulotning sokin koʻrinishi",
+  "calm.hint": "30 soniya tegmasangiz — faqat vaqt va asbob qoladi. Teginish hammasini qaytaradi.",
   "fin.note": "Eslatma",
   "fin.notePh": "Nima chiqdi, nima chiqmadi",
   "fin.saved": "Saqlandi: {d}",
