@@ -9,7 +9,9 @@ test('расписание: из прежних дней; новое касан�
   await melete.click('#panelLayer [data-pp="week"]'); await page.waitForTimeout(700);
   // прежние дни — точки в полосе дней (пн–пт), выбран сегодняшний день
   await expect(page.locator('.pstrip .pday i.dot')).toHaveCount(5);
-  // перейти на понедельник этой недели: там занятие 19:00–20:00 (цель 5 ч на 5 дней)
+  // перейти на понедельник следующей недели: там занятие 19:00–20:00 (цель 5 ч на 5 дней). Не этой: правки
+  // «только этот день» старше двух дней расписание само убирает (schedule.js: prune) — в конце недели проверка падала
+  await page.click('[data-pl="next"]'); await page.waitForTimeout(400);
   await page.locator('.pstrip .pday').first().click(); await page.waitForTimeout(400);
   await expect(page.locator('.pgrid .pblk')).toHaveCount(1);
   await expect(page.locator('.pgrid .pblk .num')).toHaveText('19:00–20:00');
