@@ -1,19 +1,18 @@
 // Инструкции (решение автора): к каждому инструменту и к каждому механизму приложения (песни, сессия, календарь,
 // папка Melete, команда, Мелета, свои данные) — карточка на языке интерфейса (ru, uz, en).
-// При открытии инструмента или раздела карточка показывается, пока в ней не отмечено «Больше не показывать»
-// (не чаще раза за запуск приложения); в самый первый раз кнопка «Понятно» оживает через секунду — чтобы карточку
-// прочитали, а не смахнули не глядя. Все инструкции — в «Профиль → Инструкции», у инструмента — значок «?».
+// По умолчанию инструкция показывается у каждого инструмента — при каждом его открытии, пока в ней не отмечена
+// яркая галочка «Больше не показывать» (слово автора 13.11.2026); у разделов приложения — раз за запуск (их экраны
+// перерисовываются часто). Касание по тёмной области мимо окна листает инструкцию дальше, до конца.
+// Все инструкции — в «Профиль → Инструкции», у инструмента — значок «?».
 // Тексты: у модуля — в его i18n (help.what, help.1…help.6, help.tip); у механизмов — в i18n ядра (hc.<id>.*).
 import { t, getLang, isBare, hasMascot } from '../i18n/index.js';
 import { mascotSVG } from '../ui/mascot.js';
 import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
 
-const WAIT_MS = 1000;
-const AUTO = true; // в первый раз — сама (слово автора 06.11.2026, пункт 20); выключить все — «Инструкции» в профиле (settings.helpOff)
-const SKIP_MAX = 2; // пропущенную инструкцию сами показываем ещё раз, не больше двух раз
+const AUTO = true; // сама, пока не отмечено «Больше не показывать»; выключить все — «Инструкции» в профиле (settings.helpOff)
 const queue = [];
-const thisRun = new Set(); // показанные за этот запуск
+const thisRun = new Set(); // разделы, показанные за этот запуск
 let showing = false;
 
 // Механизмы приложения: id → значок и цвет
@@ -49,7 +48,6 @@ export function tourOf(tp) {
   const steps = tp.tour.map(([sel, k]) => ({ sel, text: txt(k) })).filter((x) => x.text);
   return steps.length ? steps : null;
 }
-const skips = (st) => st.helpSkip || (st.helpSkip = {});
 
 // Текст инструкции на текущем языке (чего нет — по-русски)
 export function helpOf(x) {
@@ -66,17 +64,16 @@ export function helpOf(x) {
 }
 
 const never = (st) => st.helpSeen || (st.helpSeen = {}); // отмечено «больше не показывать» (и прежние «уже видел»)
-const once = (st) => st.helpOnce || (st.helpOnce = {}); // хоть раз показывалась (первый раз — «Понятно» через секунду)
+const once = (st) => st.helpOnce || (st.helpOnce = {}); // хоть раз показывалась
 
-// Инструмент или механизм открыт: карточка, если её не просили больше не показывать (раз за запуск)
+// Инструмент или механизм открыт: инструкция, если её не просили больше не показывать
+// (инструмент — при каждом открытии, раздел — раз за запуск); с подсветкой, если у темы есть шаги, иначе карточка
 export function firstHelp(app, x, root = null) {
-  // в первый раз — сама, с подсветкой, если у темы есть шаги; выключаются все разом в «Профиль → Инструкции»
   if (!app || !AUTO) return;
   const st = app.store.state.settings, tp = x.core ? x : modTopic(x);
   if (isBare() || st.helpOff) return; // «Минимал» без текста: инструкции — только по «?» и из профиля
-  if (!st.configured || never(st)[tp.id] || (skips(st)[tp.id] || 0) >= SKIP_MAX || thisRun.has(tp.id) || !(helpOf(tp) || tourOf(tp)) || queue.some((q) => q.tp.id === tp.id)) return;
-  if (!tourOf(tp)) return; // сами — только с подсветкой; карточка с текстом — по «?» и из профиля (меньше текста, 2026-10)
-  thisRun.add(tp.id);
+  if (!st.configured || never(st)[tp.id] || !(helpOf(tp) || tourOf(tp)) || queue.some((q) => q.tp.id === tp.id)) return;
+  if (tp.core) { if (thisRun.has(tp.id)) return; thisRun.add(tp.id); }
   queue.push({ app, tp, auto: true, root });
   setTimeout(next, 600); // сначала — сам экран (и окна, которые появляются вместе с ним: соглашение и т. п.)
 }
@@ -114,7 +111,6 @@ function next() {
       if (r.empty && h) { showing = false; queue.unshift({ app, tp, auto, root: null, card: true }); next(); return; } // шагов на экране нет — карточка
       once(st)[tp.id] = true;
       if (r.never) never(st)[tp.id] = true;
-      else if (!r.done && auto) skips(st)[tp.id] = (skips(st)[tp.id] || 0) + 1;
       app.store.settingsChanged();
       showing = false;
       setTimeout(next, 200);
@@ -122,7 +118,7 @@ function next() {
     return;
   }
   if (!h) { showing = false; setTimeout(next, 0); return; }
-  const wait = auto && !once(st)[tp.id], off = !!never(st)[tp.id];
+  const off = !!never(st)[tp.id];
   const d = document.createElement('div');
   d.className = 'ask helpask';
   d.innerHTML = '<div class="alert helpcard" role="alertdialog" aria-label="' + esc(tp.name) + '"><div class="ab">' +
@@ -131,10 +127,10 @@ function next() {
     // совет — от лица маскота (лицо и имя); без маскота — просто «Совет»
     (h.tip ? '<p class="hctip">' + (hasMascot() ? '<span class="hcm">' + mascotSVG('wink', { size: 28 }) + '<b>' + esc(t('mascot.says')) + '</b></span>' : '<b>' + t('help.tip') + '</b> ') + esc(h.tip) + '</p>' : '') +
     '<label class="hcnever"><input type="checkbox" data-k="never"' + (off ? ' checked' : '') + '><span>' + t('help.never') + '</span></label></div>' +
-    '<div class="abtns"><button data-k="ok"' + (wait ? ' disabled' : '') + '>' + t('help.ok') + '</button></div></div>';
+    '<div class="abtns"><button data-k="ok">' + t('help.ok') + '</button></div></div>';
   document.body.appendChild(d);
   const ok = d.querySelector('[data-k="ok"]');
-  if (wait) setTimeout(() => { ok.disabled = false; ok.focus(); }, WAIT_MS);
+  ok.focus({ preventScroll: true });
   const close = () => {
     const nv = d.querySelector('[data-k="never"]').checked;
     if (nv) never(st)[tp.id] = true; else delete never(st)[tp.id];
@@ -145,8 +141,8 @@ function next() {
     setTimeout(next, 200);
   };
   d.addEventListener('click', (e) => {
-    if (e.target.closest('[data-k="ok"]') && !ok.disabled) close();
-    else if (!wait && e.target === d) close(); // можно закрыть касанием мимо (кроме самого первого раза)
+    if (e.target.closest('[data-k="ok"]')) close();
+    else if (e.target === d) close(); // касание по тёмной области — дальше; карточка — одна страница, значит конец
   });
-  d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wait) close(); });
+  d.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
