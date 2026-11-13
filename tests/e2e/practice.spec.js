@@ -127,3 +127,18 @@ test('тихий вид: 30 с без касаний — лишнее уходи
   expect(await page.evaluate(() => !!window.__melete.active.pausedAt)).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('отчёт для педагога: из статистики — картинка недели и галочки', async ({ page, melete, errors }) => {
+  await melete.open({ songs: [{ id: 's1', title: 'Этюд', createdAt: 1 }] });
+  await page.evaluate(() => { const S = window.__melete.store; S.addSession({ id: 'x1', type: 'song', songId: 's1', start: Date.now() - 3600000, end: Date.now() - 1800000, dur: 1800, bpm: 90, note: 'Ровнее', mode: 'normal' }); });
+  await melete.tab('home');
+  await melete.click('.hlink[data-pp="stats"]');
+  await page.waitForSelector('[data-teacher]', { timeout: 5000 });
+  await melete.click('[data-teacher]');
+  await expect(page.locator('.trimg')).toHaveAttribute('src', /blob:/, { timeout: 5000 });
+  const h = await page.evaluate(() => new Promise((r) => { const i = document.querySelector('.trimg'); if (i.complete && i.naturalHeight) r(i.naturalHeight); else i.onload = () => r(i.naturalHeight); }));
+  await melete.click('[data-tro="notes"]'); await page.waitForTimeout(500);
+  const h2 = await page.evaluate(() => new Promise((r) => { const i = document.querySelector('.trimg'); setTimeout(() => r(i.naturalHeight), 300); }));
+  expect(h2).toBeLessThan(h); // без заметок картинка короче
+  expect(errors).toEqual([]);
+});

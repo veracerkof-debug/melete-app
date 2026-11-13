@@ -116,7 +116,8 @@ function statsHTML(app) {
   h += card(t('stats.thisWeek'), t('streak.goal', { goal: fmtDur(goal) }), '<div class="wkhead">' + goalRing(pw, true, t('home.ringAria', { p: Math.round(pw * 100) })) + '<div><div class="cv num" style="margin:0">' + fmtDur(w.total) +
     '</div><div class="l2" style="font-size:14px">' + (pw > 1 ? t('stats.over', { p: Math.round((pw - 1) * 100) }) : pw >= 1 ? t('stats.met') : t('stats.left', { d: fmtDur(goal - w.total) })) + '</div>' +
     (isOn(st, 'streak') ? '<button class="spill" data-act="streak" style="margin-top:6px">' + FLAME + '<b class="num">' + sk.weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', sk.weeks) })) + '</span></button>' : '') +
-    '</div></div>' + barsSVG(w.per, weekdays(), goal / Math.max(1, wp.days.filter(Boolean).length), weekday(now), t('stats.byDayAria')));
+    '</div></div>' + barsSVG(w.per, weekdays(), goal / Math.max(1, wp.days.filter(Boolean).length), weekday(now), t('stats.byDayAria')) +
+    '<button class="cell act trbtn" data-teacher>' + t('tr.open') + '</button>');
   // Строгие часы — только при включённом экране; всегда золотые
   const sAll = strictTime(all), sWeek = strictTime(all, weekStart(now)), tot = totalTime(all);
   if (sAll || trackMode(st) === 'strict') {
@@ -713,6 +714,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
       if ((b = g('[data-tabmk]'))) { if (makeTab(app.store, b.dataset.tabmk, tabIds(app.store.state.settings)) === 'max') toast(t('tabs.max', { max: TABS_MAX })); render(); onChange(); return; }
       if ((b = g('[data-tabun]'))) { if (unmakeTab(app.store, b.dataset.tabun)) { render(); onChange(); } return; }
+      if (g('[data-teacher]')) { import('./teacher.js').then((m) => m.teacherSheet(app)); return; }
       if ((b = g('[data-help]'))) { const m = moduleById(b.dataset.help); if (m) showHelp(app, m); return; }
       if (g('[data-helpreset]')) { resetHelp(app); toast(t('help.againDone')); render(); return; }
       if ((b = g('[data-hshow]'))) { const k = b.dataset.hshow, m = k.startsWith('core:') ? coreTopic(k.slice(5)) : moduleById(k); if (m) showHelp(app, m); return; }

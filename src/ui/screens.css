@@ -682,3 +682,8 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .cmpseek{flex:1;min-width:0;accent-color:var(--tint)}
 .cmpt{min-width:44px;text-align:right;color:var(--l2)}
 .cmpl{min-width:24px;font-weight:600}
+/* отчёт для педагога (screens/teacher.js) */
+.trbtn{margin-top:10px;border-radius:12px;justify-content:center}
+.trprev{margin:4px 0 14px;border-radius:14px;overflow:hidden;background:var(--fill);min-height:120px}
+.trimg{display:block;width:100%;height:auto;max-height:50vh;object-fit:contain;object-position:top}
+.trchk{width:24px;height:24px;accent-color:var(--tint)}
