@@ -11,3 +11,26 @@ test('перерыв расписания: на главной «Отпуск д
   await expect(page.locator('.hdays .day.off.today')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+test('разбор после занятия: три поля, «Дальше» — в начале следующего занятия', async ({ page, melete, errors }) => {
+  await melete.open();
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await page.waitForSelector('.session', { timeout: 10_000 });
+  await expect(page.locator('.slast')).toHaveCount(0); // прошлого разбора нет
+  // занятие длиной две минуты
+  await page.evaluate(() => { const a = window.__melete.active; a.startedAt -= 120000; a.last = Date.now(); });
+  await melete.click('[data-s="finish"]');
+  await page.waitForSelector('[data-rv="next"]');
+  await page.fill('[data-rv="good"]', 'Гамма ровно');
+  await page.fill('[data-rv="next"]', 'Баррэ медленно');
+  await melete.click('[data-k="save"]');
+  await page.waitForTimeout(500);
+  const rec = await page.evaluate(() => window.__melete.store.sessions().slice(-1)[0]);
+  expect(rec.review).toEqual({ good: 'Гамма ровно', next: 'Баррэ медленно' });
+  expect(rec.note).toContain('Баррэ медленно');
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await expect(page.locator('.slast')).toContainText('Баррэ медленно', { timeout: 5000 });
+  await page.click('.slast'); await page.waitForTimeout(400);
+  await expect(page.locator('.slast')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

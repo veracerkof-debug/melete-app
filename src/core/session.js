@@ -167,7 +167,26 @@ export function summarize(a, { endAt = null, now = Date.now(), mic = false } = {
   return { dur, best: bestBpm(a.bpmTime), short: dur < MIN_SESSION_S, quiet: Math.min(dur, Math.round(quiet / 1000)) };
 }
 
-export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', note = '' }, now = Date.now()) {
+// Разбор после занятия (слово автора 13.11.2026): «Получилось», «Не вышло», «Дальше». В note — те же строки одним
+// текстом (как прежняя заметка: календарь, синхронизация, старые версии); «Дальше» показывается при следующем занятии.
+export function reviewOf(r) {
+  const x = {}; ['good', 'bad', 'next'].forEach((k) => { const v = String((r && r[k]) || '').trim().slice(0, 500); if (v) x[k] = v; });
+  return Object.keys(x).length ? x : null;
+}
+// «Дальше» из прошлого занятия того же рода (та же песня или свободная практика) → { next, at } | null
+export function lastNext(sessions, a) {
+  if (!a || a.type === 'tool') return null;
+  let best = null;
+  for (const x of sessions) {
+    if (!x.review || !x.review.next || x.type !== a.type || (a.songId || null) !== (x.songId || null)) continue;
+    if (!best || x.start > best.start) best = x;
+  }
+  return best ? { next: best.review.next, at: best.start } : null;
+}
+
+export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', note = '', review = null }, now = Date.now()) {
+  const rv = reviewOf(review);
+  if (rv && !String(note || '').trim()) note = [rv.good, rv.bad, rv.next].map((v, i) => (v ? ['+ ', '− ', '→ '][i] + v : '')).filter(Boolean).join('\n');
   const rec = {
     id: a.id, type: a.type, songId: a.songId, tool: a.tool || null,
     start: a.startedAt, end: endAt || now, dur: Math.round(dur),
@@ -175,6 +194,7 @@ export function buildRecord(a, { dur, best, quiet = 0, endAt = null, tag = '', n
     updatedAt: now,
   };
   if (quiet > 0) rec.quiet = Math.round(quiet);
+  if (rv) rec.review = rv;
   // учёба в окнах занятия (учебник, слух, ритм): секунды на экране — для блока «Учёба» (study.js); печать не касается
   if (a.study && typeof a.study === 'object') { const s = {}; Object.entries(a.study).forEach(([k, v]) => { const n = Math.min(Math.round(v / 1000), rec.dur); if (n > 0) s[k] = n; }); if (Object.keys(s).length) rec.study = s; }
   if (a.clk) rec.clk = a.clk; // во время сессии часы переводили — запись не подтверждается

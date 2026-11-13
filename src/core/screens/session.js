@@ -12,7 +12,7 @@ import { fmtDur, fmtClock } from '../format.js';
 import { getPct, ensureLib } from '../library.js';
 import { isOn } from '../settings.js';
 import {
-  createActive, isSameActive, elapsed, togglePause, touch, summarize, buildRecord,
+  createActive, isSameActive, elapsed, togglePause, touch, summarize, buildRecord, lastNext,
   metroForSession, commitSession, saveActive, FREE_TAGS, trackMode,
 } from '../session.js';
 import {
@@ -114,6 +114,20 @@ export function createSessionScreen(app) {
     audio.metro.cfg = metroForSession(s, st().metro);
     lockWake();
     open();
+    lastBanner();
+  }
+  // «В прошлый раз: …» — что человек сам себе оставил на это занятие; поверх края окна, касание или 15 с — прячется
+  function lastBanner() {
+    const L = lastNext(store.sessions(), app.active), sin = layer && layer.querySelector('.sin');
+    if (!L || !sin) return;
+    const b = document.createElement('button');
+    b.className = 'slast';
+    b.innerHTML = '<b>' + esc(t('ses.lastTime')) + '</b> ' + esc(L.next);
+    b.setAttribute('aria-label', t('ses.lastTime') + ' ' + L.next);
+    const off = () => { b.classList.add('out'); setTimeout(() => b.remove(), 250); };
+    b.addEventListener('click', (e) => { e.stopPropagation(); off(); });
+    sin.appendChild(b);
+    setTimeout(off, 15000);
   }
 
   // После перезагрузки страницы: метроном песни и открытый экран сессии
@@ -577,7 +591,8 @@ export function createSessionScreen(app) {
         '</span><input class="inp num" id="cb" type="number" inputmode="numeric" min="20" max="300" placeholder="bpm" aria-label="' + t('fin.confident') + '" value="' + (sum.best || s.currentBpm || '') + '"></label></div>'
         : a.type === 'tool' ? '' : '<div class="hdr">' + t('fin.what') + '</div><div class="group"><div class="cellcol"><div class="hscroll" style="padding:0;flex-wrap:wrap" id="tg">' +
           FREE_TAGS.map((x) => '<button type="button" class="pill" aria-pressed="false" data-t="' + x + '">' + esc(freeTagName(x)) + '</button>').join('') + '</div></div></div>') +
-      '<div class="hdr">' + t('fin.note') + '</div><div class="group"><textarea class="ta" id="nt" style="min-height:80px;font-family:var(--font);font-size:16px" aria-label="' + t('fin.note') + '" placeholder="' + t('fin.notePh') + '"></textarea></div>' +
+      // разбор (слово автора 13.11.2026): три коротких поля, все необязательные; «Дальше» — в начале следующего занятия
+      '<div class="hdr">' + t('fin.review') + '</div><div class="group frev">' + ['good', 'bad', 'next'].map((k) => '<label class="cellcol"><span class="frl">' + t('fin.' + k) + '</span><textarea class="ta" data-rv="' + k + '" rows="1" maxlength="500" aria-label="' + esc(t('fin.' + k)) + '" placeholder="' + esc(t('fin.' + k + 'Ph')) + '"></textarea></label>').join('') + '</div>' +
       '<div class="sheetfoot"><button class="btn fill block" data-k="save">' + t('fin.save') + '</button></div>',
     (el, sh) => {
       if (s) readM = bindM(el, st());
@@ -589,7 +604,7 @@ export function createSessionScreen(app) {
         if (k.dataset.k === 'back') { sh.close(); return; }
         // сессию уже завершило бездействие, пока окно было открыто
         if (app.active !== a) { sh.close(); return; }
-        const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt, tag, note: el.querySelector('#nt').value });
+        const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt, tag, review: Object.fromEntries([...el.querySelectorAll('[data-rv]')].map((x) => [x.dataset.rv, x.value])) });
         commitSession(store, rec, s ? { masteryPct: readM(), confidentBpm: parseInt((el.querySelector('#cb') || {}).value, 10), metro: audio.metro.cfg } : null);
         app.pomodoro.reset();
         sh.close();

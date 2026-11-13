@@ -36,3 +36,24 @@ describe('weekPlan', () => {
     expect(s0.weeks).toBe(1);
   });
 });
+
+import { buildRecord, lastNext, createActive } from '../src/core/session.js';
+describe('разбор после занятия', () => {
+  it('пустые поля — без review, заметка как раньше', () => {
+    const a = createActive({ type: 'free' }, 1000);
+    const r = buildRecord(a, { dur: 120, best: null, review: { good: ' ', bad: '', next: '' } }, 200000);
+    expect(r.review).toBeUndefined();
+    expect(r.note).toBeNull();
+  });
+  it('«Дальше» — из последнего занятия того же рода', () => {
+    const ses = [
+      { type: 'free', songId: null, start: 1, review: { next: 'старое' } },
+      { type: 'free', songId: null, start: 5, review: { next: 'новое' } },
+      { type: 'song', songId: 's1', start: 9, review: { next: 'песня' } },
+    ];
+    expect(lastNext(ses, { type: 'free', songId: null }).next).toBe('новое');
+    expect(lastNext(ses, { type: 'song', songId: 's1' }).next).toBe('песня');
+    expect(lastNext(ses, { type: 'song', songId: 's2' })).toBeNull();
+    expect(lastNext(ses, { type: 'tool', tool: 'metro' })).toBeNull();
+  });
+});
