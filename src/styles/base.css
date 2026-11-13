@@ -108,3 +108,7 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 /* всплывающее окно («картинка в картинке», src/core/player.js): только рабочая поверхность — без вкладок, шапок и кнопок края */
 html.pip .tabbar, html.pip .tvhd, html.pip .tvback, html.pip .tvrecf, html.pip .mxh, html.pip .toast, html.pip .tama { display: none !important; }
 html.pip .tview, html.pip .session { inset: 0 !important; border-radius: 0 !important; }
+/* шторка «Задержка» (src/ui/latencysheet.js) */
+.latsub{display:block;font-size:12.5px;color:var(--l2);margin-top:2px;line-height:1.35}
+.latrun{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px 16px;text-align:center}
+.latrun i{font-style:normal;font-size:56px;font-weight:600;line-height:1}

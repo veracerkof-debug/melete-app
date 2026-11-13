@@ -6,6 +6,8 @@
 // (src/music/vocalprog.js через ctx.ctxOf('vocal')). Рейтингов, сравнения с другими и серий нет — только этот дубль
 // против прошлого (четвёртый принцип).
 // Связь с плеером — api: { ctx, cur(), pl(), semi(), play(), mixVal(t, k), mixSet(t, k, v), mixApply(t), host() }.
+import { latencyNow, latencySec } from '../../audio/latency.js';
+import { latencySheet } from '../../ui/latencysheet.js';
 import { extractMelody } from '../../audio/melody.js';
 import { listenPitch } from '../../audio/voicepitch.js';
 import { melodyNotes, phrasesOf, scoreTake, unpackLine, packLine } from '../../music/melody.js';
@@ -14,7 +16,6 @@ import { vocalsOf } from '../../core/jobs.js';
 import { lineAt } from '../../audio/lyrics.js';
 import { MAJ_NAMES } from '../../music/notes.js';
 
-const LAT = 0.1; // голос отстаёт от звука на выходе и входе — так проба ложится на ноту
 const nm = (m) => MAJ_NAMES[((Math.round(m) % 12) + 12) % 12] + (Math.floor(Math.round(m) / 12) - 1);
 
 export function createSing(api) {
@@ -50,6 +51,7 @@ export function createSing(api) {
       '<div class="sgsurf"><canvas id="sgcv" aria-hidden="true"></canvas><span class="sgnow num" id="sgnow"></span></div>' +
       (S.res && !on ? resHTML() : '') +
       '<div class="row sgbtns"><button class="btn sm' + (minus ? ' on' : '') + '" data-x="sgmin" aria-pressed="' + minus + '">' + esc(t('sing.minus')) + '</button>' +
+      '<button class="btn sm" data-x="sglat" aria-label="' + esc(t('lat.title')) + '"><span class="num">' + latencyNow().ms + '</span> ' + esc(t('lat.ms')) + '</button>' +
       '<button class="btn sm fill" data-x="sggo">' + esc(t(on ? 'sing.stop' : 'sing.go')) + '</button></div></div>';
   }
   function resHTML() {
@@ -65,12 +67,12 @@ export function createSing(api) {
     if (S.take && S.take.lis) { finish(rec); return; }
     ctx.audio.unlock();
     S.res = null;
-    const take = { samples: [], from: api.pl().currentTime, to: api.pl().currentTime, lis: null, t0: Date.now() };
+    const lat = latencySec(), take = { samples: [], from: api.pl().currentTime, to: api.pl().currentTime, lis: null, t0: Date.now() };
     S.take = take;
     try {
       take.lis = await listenPitch(ctx.mic.request, () => ctx.audio.now(), (_, m) => {
         if (S.take !== take || api.pl().paused) return;
-        const pos = api.pl().currentTime - LAT;
+        const pos = api.pl().currentTime - lat; // голос отстаёт на задержку выхода и входа (src/audio/latency.js)
         take.to = Math.max(take.to, api.pl().currentTime);
         take.samples.push({ t: pos, m });
         if (take.samples.length > 20000) take.samples.shift();
@@ -169,6 +171,7 @@ export function createSing(api) {
     },
     click(x, rec) {
       if (x === 'sggo') go(rec);
+      else if (x === 'sglat') { if (!(S.take && S.take.lis)) latencySheet(api.ctx(), () => api.render()); }
       else if (x === 'sgmin') { const v = api.mixVal(rec, 'vocals') === 0 ? 1 : 0; api.mixSet(rec, 'vocals', v); api.mixApply(rec); api.render(); }
     },
     stop() { if (S.take && S.take.lis) S.take.lis.stop(); S.take = null; cancelAnimationFrame(S.raf); S.raf = 0; },

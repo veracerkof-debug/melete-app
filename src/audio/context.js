@@ -27,6 +27,7 @@ export const outReady = () => Promise.race([outKnown, new Promise((r) => setTime
 export const outUnknown = () => outDone(); // веб: выход не узнать — не ждать
 export const setOutKind = (k) => { outKind = k; try { localStorage.setItem(OUT_KEY, k); } catch { /* */ } outDone(); };
 export const ctxOutKind = () => ctxKind; // каким был выход, когда создавался контекст (null — ещё не создан)
+export const currentOutKind = () => outKind || 'phone'; // выход сейчас: 'bt' | 'wired' | 'phone' (задержка — latency.js)
 
 export function getContext(mode = 'bal') {
   if (!ctx) {

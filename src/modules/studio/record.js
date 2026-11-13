@@ -11,24 +11,12 @@ import { encodeWav, peaks as wavPeaks } from '../../audio/voicefx.js';
 import { engine as audioEngine } from '../../audio/voiceengine.js';
 import { clickVoice, clickNoise } from '../../audio/metronome.js';
 import { after } from '../../audio/clock.js';
+import { latencyOf } from '../../audio/latency.js';
 import { holdMenu } from '../../ui/hold.js';
 import { I } from './icons.js';
 
-// Задержка по щелчкам: место первого громкого отсчёта после каждого щелчка → медиана, с (или null — не услышали)
-export function latencyOf(ch, sr, rel, { win = 0.6, floor = 0.02 } = {}) {
-  const out = [];
-  rel.forEach((t) => {
-    const i0 = Math.max(0, Math.round(t * sr)), i1 = Math.min(ch.length, i0 + Math.round(win * sr));
-    let mx = 0;
-    for (let i = i0; i < i1; i++) { const v = Math.abs(ch[i]); if (v > mx) mx = v; }
-    if (mx < floor) return;
-    const th = mx * 0.35;
-    for (let i = i0; i < i1; i++) if (Math.abs(ch[i]) >= th) { out.push((i - i0) / sr); break; }
-  });
-  if (out.length < Math.ceil(rel.length / 2)) return null;
-  out.sort((a, b) => a - b);
-  return out[Math.floor(out.length / 2)];
-}
+// Задержка по щелчкам — общая (src/audio/latency.js): «Вокал», «Петь» и студия меряют одинаково
+export { latencyOf };
 
 // S — общее студии: { ctx, seq, pl, host, V, proj(), save(), render(), trName(tr), st(), countIn(), recLat() }
 export function createRecording(S) {

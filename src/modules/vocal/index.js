@@ -13,6 +13,8 @@
 // Данные человека — ctx.data() (settings.vocal: range { lo, hi, plo, phi, at }, type, hist); устройство — ctx.store.
 // Звук — по docs/tech/audio.md: ноты на точное время звуковых часов, отпускание — таймером часов (как секвенсор
 // студии), всё снимается при остановке; «играть» снимает паузу из шторки. Микрофон — только анализ на устройстве.
+import { latencyNow, latencySec } from '../../audio/latency.js';
+import { latencySheet } from '../../ui/latencysheet.js';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
@@ -230,7 +232,7 @@ function noteRes(key) {
 }
 function warmSample(t, m) {
   if (!playing() || !P.run) return;
-  const b = (t - 0.08 - P.t0) / P.spb;
+  const b = (t - latencySec() - P.t0) / P.spb; // голос отстаёт на задержку выхода и входа
   for (const st of P.run.steps) {
     if (b < st.t0 || b > st.end) continue;
     const n = st.sing.find((x) => b >= x.t + 0.12 / P.spb && b <= x.t + x.d - 0.05 / P.spb);
@@ -403,7 +405,8 @@ function drawWarm() {
   if (live) {
     g.globalAlpha = 0.35; g.fillStyle = colors.cell; g.fillRect(gutter, top, xh - gutter, H - top); g.globalAlpha = 1; // спетое — приглушено
     g.strokeStyle = colors.ink; g.globalAlpha = 0.25; g.lineWidth = 2; g.beginPath(); g.moveTo(xh, top - 2); g.lineTo(xh, H - bot); g.stroke(); g.globalAlpha = 1;
-    voiceLine(g, (t) => x(t - P.t0), y, P.t0 + tc - (xh - gutter) / pps, P.t0 + tc + 0.2);
+    const lat = latencySec();
+    voiceLine(g, (t) => x(t - lat - P.t0), y, P.t0 + tc - (xh - gutter) / pps, P.t0 + tc + 0.2);
   }
   g.restore();
 }
@@ -850,7 +853,8 @@ function setSheet() {
       '<div class="group"><div class="cell"><span class="grow">' + esc(t('set.tempo')) + ' · <b class="num">' + Math.round(s.tempo * 100) + ' %</b></span>' + ui.stepper('vctempo', t('set.tempo')) + '</div>' +
       '<div class="cellcol"><span>' + esc(t('set.step')) + '</span><div style="margin-top:8px">' + ui.seg('vcstep', [[1, t('step.1')], [2, t('step.2')]], s.step, t('set.step')) + '</div></div>' +
       '<div class="cellcol"><span>' + esc(t('set.dir')) + '</span><div style="margin-top:8px">' + ui.seg('vcdir', [['updown', t('dir.updown')], ['up', t('dir.up')]], s.dir, t('set.dir')) + '</div></div></div>' +
-      '<div class="group"><div class="cell"><span class="grow">' + esc(t('set.listen')) + '</span>' + ui.sw('vclisten', s.listen, t('set.listen')) + '</div></div><p class="ftr">' + esc(t('tipPhones') + '. ' + t('ftr.listen')) + '</p>';
+      '<div class="group"><div class="cell"><span class="grow">' + esc(t('set.listen')) + '</span>' + ui.sw('vclisten', s.listen, t('set.listen')) + '</div>' +
+      '<button class="cell" data-lat><span class="grow">' + esc(t('lat.title')) + '<span class="vcexh">' + esc(t('lat.out.' + latencyNow().kind)) + '</span></span><b class="num">' + latencyNow().ms + ' ' + esc(t('lat.ms')) + '</b>' + ui.icons.chev + '</button></div><p class="ftr">' + esc(t('tipPhones') + '. ' + t('ftr.listen')) + '</p>';
   };
   ui.sheet(body, (el, sh) => {
     const ch = () => { ctx.store.save(); sh.update(); if (!playing()) render(); };
@@ -859,6 +863,7 @@ function setSheet() {
       let b;
       if (g('[data-close]')) { sh.close(); return; }
       if (g('[data-sched]')) { sh.close(); ctx.schedule(); return; }
+      if (g('[data-lat]')) { latencySheet(ctx, () => sh.update()); return; }
       if ((b = g('[data-snd]'))) {
         s.sound = b.dataset.snd; ch();
         const sy = syn();

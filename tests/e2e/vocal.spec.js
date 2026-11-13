@@ -99,3 +99,20 @@ test('вокал: прогресс — неделя; три дня чисто в
   expect(r.hi).toBe(66);
   await expect(page.locator('.vcsug')).toHaveCount(0);
 });
+
+test('вокал: задержка наушников — шторка из настроек, правка ±10 мс, своя на выход', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['vocal']);
+  await page.locator('.vctypes [data-type="alto"]').click(); await page.waitForTimeout(200);
+  await page.locator('.vcbar [data-x="set"]').click(); await page.waitForTimeout(400);
+  await page.locator('.sheet [data-lat]').click(); await page.waitForTimeout(400);
+  await expect(page.locator('.sheet').last()).toContainText('Динамик телефона');
+  await expect(page.locator('.sheet').last()).toContainText('80 мс');
+  await expect(page.locator('.sheet').last().locator('[data-lat="voice"]')).toContainText('Спеть «та» на щелчки');
+  await page.locator('.sheet').last().locator('[data-step="lat"][data-d="1"]').click();
+  await page.locator('.sheet').last().locator('[data-step="lat"][data-d="1"]').click(); await page.waitForTimeout(200);
+  await expect(page.locator('.sheet').last()).toContainText('100 мс');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.latency')))).toMatchObject({ phone: 100 });
+  await page.locator('.sheet').last().locator('[data-lat="reset"]').click(); await page.waitForTimeout(200);
+  await expect(page.locator('.sheet').last()).toContainText('80 мс');
+});

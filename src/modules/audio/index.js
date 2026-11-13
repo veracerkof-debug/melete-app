@@ -1580,7 +1580,7 @@ function act(a, el) {
   const { t, ui } = ctx;
   switch (a) {
     case 'aplay': if (pl().paused) playEl(); else pl().pause(); break;
-    case 'sggo': case 'sgmin': SING.click(a, AU.cur); break;
+    case 'sggo': case 'sgmin': case 'sglat': SING.click(a, AU.cur); break;
     case 'aback': pl().currentTime = Math.max(0, pl().currentTime - 5); break;
     case 'afwd': pl().currentTime = Math.min(pl().duration || 0, pl().currentTime + 5); break;
     case 'aab': // A — B — сброс

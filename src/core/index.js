@@ -204,8 +204,8 @@ export function boot(root) {
       const check = async () => {
         let outs = [];
         try { outs = (await eng.devices()).outputs || []; } catch { return; }
-        const bt = outs.some((o) => V.devKind(o) === 'bt');
-        C.setOutKind(bt ? 'bt' : 'phone');
+        const bt = outs.some((o) => V.devKind(o) === 'bt'), wired = outs.some((o) => V.devKind(o) === 'wired');
+        C.setOutKind(bt ? 'bt' : wired ? 'wired' : 'phone'); // wired — своя задержка пения (audio/latency.js); буфер — как у телефона
         const made = C.ctxOutKind();
         if (bt && made && made !== 'bt' && !told) { told = true; log('audio', 'Bluetooth подключён после запуска звука: буфер малый — нужен перезапуск', 'w'); toast(t('snd.btRestart')); }
         else if (made === null) log('audio', 'выход: ' + (bt ? 'Bluetooth — буфер 100 мс' : 'телефон'));
