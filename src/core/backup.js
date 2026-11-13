@@ -66,6 +66,7 @@ export async function backupData(app, parts = PARTS, { files = false, limit = fi
     p.files = [];
     const { take, skip } = pickFiles(songFiles(app).filter((x) => !isDemoFile(x, CORE_DICTS)), limit);
     report.skipped = skip.length;
+    if (skip.length) p.filesSkipped = skip.length; // в самой копии: при загрузке видно, что файлов в ней не все
     if (skip.length) log('backup', 'в копию не вошло файлов: ' + skip.length + ' (потолок ' + Math.round(limit / 1048576) + ' МБ)', 'w');
     for (const r of take) {
       const meta = { ...r };
@@ -87,14 +88,13 @@ export async function restoreParts(app, p, parts) {
     for (const f of p.files) {
       if (!f || !f.id || !f.data || app.files.get(f.id) || isDemoFile(f, CORE_DICTS)) continue;
       const { data, ...meta } = f;
-      await app.files.add({ ...meta, blob: new Blob([fromB64(data)], { type: f.type || '' }) });
-      files++;
+      if ((await app.files.add({ ...meta, blob: new Blob([fromB64(data)], { type: f.type || '' }) })) !== false) files++; // не сохранился — не считать
     }
   }
   if (use.includes('settings') && p.tools) {
     try { lockDevice(); localStorage.setItem(LS_T, JSON.stringify(mergeTools(readTools(), p.tools))); tools = true; } catch (e) { log('backup', 'настройки инструментов из копии не восстановлены (нет места?): ' + (e && e.name), 'w'); }
   }
-  return { sessions: app.store.allSessions().length - before, files, tools };
+  return { sessions: app.store.allSessions().length - before, files, tools, ...(p.filesSkipped ? { filesSkipped: p.filesSkipped } : {}) };
 }
 
 // Сохранить копию. opts: { parts, files } — по частям; без них — всё (как раньше).

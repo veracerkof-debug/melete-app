@@ -675,6 +675,13 @@ function onHands(list, t) {
 // заработает от первого касания экрана
 async function camOn(auto = false) {
   if (S.state === 'on' || S.state === 'loading') return;
+  // веб-версия: модель рук (~20 МБ) скачивается при первом включении — сначала спросить (мобильный интернет);
+  // само включение без касания её не скачивает. В приложении модель уже на устройстве
+  if (typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__ && !cfg().modelOk) {
+    if (auto || !(await ctx.ui.confirm(ctx.t('model.title'), ctx.t('model.text'), ctx.t('model.yes')))) return;
+    if (!ctx) return;
+    cfg().modelOk = true; save();
+  }
   if (!ctx.audio.unlock()) {
     if (!auto) { ctx.ui.toast(ctx.t('noAudio')); return; }
     addEventListener('pointerdown', () => ctx && ctx.audio.unlock(), { once: true, capture: true });

@@ -53,7 +53,7 @@ export function createGate() {
 
 // app.audio.tap() — отвод звука, app.files — медиатека, app.store.state.settings.rec — настройки. Одна запись за раз.
 // spool — хранилище кусков записи (recspool.js; по умолчанию IndexedDB)
-export function createRecorder(app, { spool = idbBackend() } = {}) {
+export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } = {}) {
   let cur = null, chain = null;
   const subs = new Set();
   const emit = () => subs.forEach((fn) => fn(cur));
@@ -242,7 +242,10 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
       }
       const t0 = Date.now(), rtype = mr.mimeType || type || (video ? 'video/webm' : 'audio/webm'), id = 'r' + t0.toString(36);
       // куски — сразу на диск (recspool.js): сбой или выгрузка посреди записи не уносят её целиком
-      const take = spoolTake(spool, id, { name: recName(tool, t0), type: rtype, tool, songs, t0, video: !!video, slice: SLICE });
+      const take = spoolTake(spool, id, { name: recName(tool, t0), type: rtype, tool, songs, t0, video: !!video, slice: SLICE }, (e) => {
+        log('rec', 'запись ' + id + ': диск не принимает куски (' + (e && (e.name || e.message) || e) + ') — запись идёт в память', 'e');
+        if (onDiskFail) onDiskFail(e);
+      });
       mr.ondataavailable = (e) => { if (e.data && e.data.size) { take.add(e.data); } };
       cur = { mr, take, id, video, tool, songs, t0, type: rtype };
       mr.start(SLICE);

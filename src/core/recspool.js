@@ -11,9 +11,12 @@ export function idbBackend(name = 'melete-rec') {
   const db = () => dbp || (dbp = new Promise((res) => {
     try {
       const r = indexedDB.open(name, 1);
+      // база не открылась за 5 с (занята, заблокирована) — куски в памяти, как без базы: иначе «Стоп» ждал бы вечно
+      const late = setTimeout(() => res(null), 5000);
       r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('meta'); d.createObjectStore('chunks'); };
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => res(null);
+      r.onsuccess = () => { clearTimeout(late); res(r.result); };
+      r.onerror = () => { clearTimeout(late); res(null); };
+      r.onblocked = () => { clearTimeout(late); res(null); };
     } catch { res(null); }
   }));
   const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -59,17 +62,20 @@ export function memBackend() {
 
 // Одна запись: begin → add (на каждый кусок) → blob (дождаться записи кусков, склеить) → drop после сохранения.
 // Куски, которые не удалось положить на диск, держатся в памяти и входят в склейку на своём месте.
-export function spoolTake(be, id, meta) {
+export function spoolTake(be, id, meta, onDiskFail = null) {
   const mem = new Map(), pending = new Set();
   let seq = 0, disk = true;
   const track = (p) => { pending.add(p); p.finally(() => pending.delete(p)); return p; };
-  track(Promise.resolve().then(() => be.putMeta(id, meta)).catch(() => { disk = false; }));
+  // диск отказал (кончилось место) — запись идёт дальше в памяти, но человек и журнал об этом узнают (один раз)
+  let told = false;
+  const fail = (e) => { if (told) return; told = true; if (onDiskFail) try { onDiskFail(e); } catch { /* */ } };
+  track(Promise.resolve().then(() => be.putMeta(id, meta)).catch((e) => { disk = false; fail(e); }));
   return {
     id,
     add(blob) {
       const n = seq++;
       if (!disk) { mem.set(n, blob); return; }
-      track(Promise.resolve().then(() => be.put(id, n, blob)).catch(() => { mem.set(n, blob); }));
+      track(Promise.resolve().then(() => be.put(id, n, blob)).catch((e) => { mem.set(n, blob); fail(e); }));
     },
     async blob(type) {
       while (pending.size) await Promise.all([...pending]);

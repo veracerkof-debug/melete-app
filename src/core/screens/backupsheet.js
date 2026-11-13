@@ -71,7 +71,7 @@ export function importSheet(app, p, done = () => {}) {
       restoreParts(app, p, list.filter((k) => sel.has(k)))
         .then((r) => {
           sh.close();
-          toast(tn('data.imported', r.sessions) + (r.files ? ' · ' + tn('bkp.filesN', r.files) : '') + (r.tools ? ' · ' + t('bkp.reload') : ''));
+          toast(tn('data.imported', r.sessions) + (r.files ? ' · ' + tn('bkp.filesN', r.files) : '') + (r.filesSkipped ? ' · ' + t('bk.filesSkipped', { n: r.filesSkipped }) : '') + (r.tools ? ' · ' + t('bkp.reload') : ''));
           done(r);
           if (r.tools) setTimeout(() => location.reload(), 1600); // настройки инструментов читаются при запуске
         })

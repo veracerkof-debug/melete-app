@@ -232,7 +232,7 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
-  app.rec = createRecorder(app);
+  app.rec = createRecorder(app, { onDiskFail: () => toast(t('rec.diskFail')) });
   // запись, оборванная сбоем или выгрузкой приложения, — склеить из кусков на диске и вернуть в медиатеку
   setTimeout(() => app.rec.recover().then((l) => l.forEach((r) => toast(t('rec.recoveredToast', { name: r.name })))).catch(() => {}), 2500);
   app.jobs = createJobs(files); // долгие обработки записей: дорожки, ноты (jobs.js)
@@ -342,6 +342,14 @@ export function boot(root) {
   app.folder = initFolder(app);
   // компьютер (Tauri): файлы, открытые двойным щелчком, F11
   initDesktop(app);
+  // Клавиатура: элемент-«кнопка» (role="button" с tabindex) нажимается Enter и пробелом, как настоящая кнопка
+  document.addEventListener('keydown', (e) => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.repeat || e.defaultPrevented) return;
+    const el = e.target;
+    if (!el || !el.matches || !el.matches('[role="button"][tabindex]') || /^(BUTTON|INPUT|TEXTAREA|SELECT|A)$/.test(el.tagName)) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
   // приём файлов с телефона по протоколу LocalSend (Windows, по переключателю в настройках)
   app.localSend = initLocalSend(app);
   // связь с телефоном (sync.js): на компьютере — сервер в своей сети по переключателю; был включён — включается снова

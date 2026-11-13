@@ -718,6 +718,7 @@
   "rec.saved": "Mediatekaga saqlandi: {name}",
   "rec.recovered": "tiklandi",
   "rec.recoveredToast": "Uzilib qolgan yozuv tiklandi: {name}",
+  "rec.diskFail": "Yozuv xotirada davom etmoqda: qurilma uni diskka qabul qilmayapti (joy yoʻq boʻlishi mumkin). Uzun yozuvni toʻxtatgan maʼqul.",
   "rec.noVideo": "Kamera oʻchiq — faqat ovoz yoziladi",
   "rec.unsupported": "Bu qurilmada yozish mavjud emas",
   "rec.micDenied": "Mikrofonga ruxsat yoʻq — faqat ilova ovozi yoziladi",

@@ -78,7 +78,9 @@ function demoSessions(songs, from, to, seed = 7) {
         rec = { type: 'song', songId: s.id, tool: null, bpm };
       } else if (kind < 0.8) rec = { type: 'tool', songId: null, tool: pick(r, TOOLS), bpm: null };
       else rec = { type: 'free', songId: null, tool: null, bpm: null, tag: null };
-      out.push(seal({ id: DEMO_PREFIX + uid(), ...rec, start, end, dur: rec.type === 'tool' ? Math.min(dur, 40 * 60) : dur, mode: r() < 0.15 ? 'strict' : 'normal', updatedAt: end }));
+      // занятие инструментом — до 40 минут; конец сдвигается вместе с длительностью, чтобы история и статистика сходились
+      const d = rec.type === 'tool' ? Math.min(dur, 40 * 60) : dur, e2 = end - (dur - d) * 1000;
+      out.push(seal({ id: DEMO_PREFIX + uid(), ...rec, start, end: e2, dur: d, mode: r() < 0.15 ? 'strict' : 'normal', updatedAt: e2 }));
     }
   }
   return out;

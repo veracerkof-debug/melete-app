@@ -22,6 +22,7 @@ export function createFiles({ indexedDB = globalThis.indexedDB, onWriteFail = ()
       r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: 'id' });
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('база файлов занята другой вкладкой')); // иначе обещание висело бы без конца
     } catch (e) { rej(e); }
   }));
 

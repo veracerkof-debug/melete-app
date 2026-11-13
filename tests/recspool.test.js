@@ -21,6 +21,15 @@ describe('запись кусками на диск (recspool)', () => {
     expect(await txt(await tk.blob('audio/webm'))).toBe('123');
   });
 
+  it('диск отказал — сигнал один раз, запись цела (аудит 13.11.2026)', async () => {
+    const be = memBackend(), put = be.put, fails = [];
+    be.put = (id, seq, b) => (seq >= 1 ? Promise.reject(new Error('quota')) : put(id, seq, b));
+    const tk = spoolTake(be, 'r4', { type: 'audio/webm' }, (e) => fails.push(e.message));
+    ['1', '2', '3'].forEach((x) => tk.add(new Blob([x])));
+    expect(await txt(await tk.blob('audio/webm'))).toBe('123');
+    expect(fails).toEqual(['quota']);
+  });
+
   it('нет базы совсем — запись живёт в памяти, как раньше', async () => {
     const no = () => Promise.reject(new Error('no idb'));
     const be = { putMeta: no, put: no, parts: no, drop: no, metas: no };

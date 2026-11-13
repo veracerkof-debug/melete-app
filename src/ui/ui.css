@@ -156,3 +156,5 @@ button.cell:active{background:var(--fill)}
 .fxv{width:56px;text-align:right;font-size:13px;color:var(--l2);flex:none}
 .toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 18px;text-align:left}
 .toastbtn{flex:none;min-height:40px;padding:0 14px;border-radius:999px;background:var(--tint);color:var(--on-tint);font-weight:600}
+/* Клавиатура: у элементов-«кнопок» и колёс, где обводка снята, фокус виден (касанием не показывается) */
+[role="button"][tabindex]:focus-visible,.mwheel:focus-visible,.whwrap:focus-visible,.pdfv:focus-visible{outline:2px solid var(--tint);outline-offset:2px}

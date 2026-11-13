@@ -730,6 +730,7 @@
   "rec.saved": "Saved to the media library: {name}",
   "rec.recovered": "recovered",
   "rec.recoveredToast": "Interrupted recording recovered: {name}",
+  "rec.diskFail": "Recording continues in memory: the device does not accept it on disk (possibly out of space). A long recording is best stopped.",
   "rec.noVideo": "The camera is off — recording sound only",
   "rec.unsupported": "Recording is not available on this device",
   "rec.micDenied": "No microphone access — recording the app sound only",

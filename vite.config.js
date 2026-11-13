@@ -28,6 +28,16 @@ function pdfjsAssets() {
   };
 }
 
+// Политика страницы в собранной версии: соединения ws:// нужны только серверу разработки (живая перезагрузка Vite);
+// в выпуске их нет — иначе страница пускала бы WebSocket к любому хосту на порту 5173 (аудит 13.11.2026)
+const prodCsp = () => ({
+  name: 'prod-csp',
+  apply: 'build',
+  transformIndexHtml(html) {
+    return html.replace(/(connect-src[^;"]*)/, (m) => m.replace(/ wss?:\/\/[^ ;"]+/g, ''));
+  },
+});
+
 // Демонстрация (vite build --mode showcase): своя точка входа — выдуманный музыкант без регистрации (src/showcase/),
 // и её файлы (видео и звук к демо-песне) из showcase/media/ — только в этой сборке, не в APK и не в обычной веб-версии
 function showcase(mode) {
@@ -108,7 +118,7 @@ export default defineConfig(({ mode }) => ({
     // пакеты, которых нет в этой сборке (скачиваются по кнопке)
     __PACKED__: JSON.stringify(PACKED.map((p) => p.id)) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), showcase(mode), lightWeb(mode), ortAssets(mode), packsOut()],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), prodCsp(), showcase(mode), lightWeb(mode), ortAssets(mode), packsOut()],
   // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web', '@ffmpeg/ffmpeg', '@ffmpeg/util'] }, // FFmpeg: рабочий поток обёртки — своим файлом
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
