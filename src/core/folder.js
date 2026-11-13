@@ -128,15 +128,21 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
   const recs = api.files().filter((r) => r.blob && dirOfRec(r) && !no('skipFile', r));
   const ids = new Set(api.files().map((r) => r.id));
   const goneApp = Object.keys(mem.files).filter((id) => !ids.has(id));
-  const goneDir = recs.filter((r) => mem.files[r.id] && !at(mem.files[r.id]));
+  let goneDir = recs.filter((r) => mem.files[r.id] && !at(mem.files[r.id]));
   // пустая сторона целиком (в подпапках нет ни одного файла; в приложении нет ни одной записи) — это «недоступно»
   // (вынута карта, отозван доступ, база не прочиталась), а не «человек удалил»: при 1–3 файлах иначе не отличить
   const mapped0 = Object.keys(mem.files).length, risky = (n, empty) => n > 0 && (empty || (n > 3 && n > mapped0 / 2));
   const dirsOf = new Set(Object.values(mem.files).map((x) => x.slice(0, Math.max(0, x.lastIndexOf('/')))));
   const dirEmpty = [...dirsOf].every((d) => !(ls[d] || []).length), appEmpty = ids.size === 0;
+  // подпапка, где были наши файлы, а теперь пусто целиком (отозван доступ к ней, сбой чтения) — тоже «недоступно»:
+  // её файлы не удаляются из медиатеки (аудит 13.11.2026: при 1–3 файлах порог ниже не срабатывал)
+  const dirOfPath = (x) => x.slice(0, Math.max(0, x.lastIndexOf('/'))), emptyD = new Set([...dirsOf].filter((d) => !(ls[d] || []).length));
+  const heldDir = goneDir.filter((r) => emptyD.has(dirOfPath(mem.files[r.id])));
+  if (!dirEmpty && heldDir.length) goneDir = goneDir.filter((r) => !heldDir.includes(r));
   out.removedDir = 0; out.removedApp = 0;
   if (api.removeFile && risky(goneApp.length, appEmpty)) out.held = 'app:' + goneApp.length;
   else if (api.removeFile) for (const id of goneApp) { const path = mem.files[id]; try { if (at(path)) { await drv.remove(path); out.removedDir++; const i = path.lastIndexOf('/'), d = path.slice(0, i); ls[d] = (ls[d] || []).filter((x) => x.name !== path.slice(i + 1)); } } catch { /* уже нет */ } delete mem.files[id]; delete mem.seen[path]; }
+  if (api.removeFile && !dirEmpty && heldDir.length) out.held = (out.held ? out.held + ', ' : '') + 'folder-dir:' + heldDir.length;
   if (api.removeFile && risky(goneDir.length, dirEmpty)) out.held = (out.held ? out.held + ', ' : '') + 'folder:' + goneDir.length;
   else if (api.removeFile) for (const r of goneDir) { delete mem.seen[mem.files[r.id]]; delete mem.files[r.id]; await api.removeFile(r.id); r.gone = true; out.removedApp++; }
   const known = new Set(recs.filter((r) => !r.gone).flatMap((r) => [r.name + '|' + (r.size || r.blob.size), fileNameOf(r) + '|' + (r.size || r.blob.size)]));

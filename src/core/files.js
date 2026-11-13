@@ -46,7 +46,10 @@ export function createFiles({ indexedDB = globalThis.indexedDB, onWriteFail = ()
     get: (id) => all.find((r) => r.id === id),
 
     async add(rec) {
-      all.push(rec);
+      // тот же id уже есть (повтор после сбоя, восстановленная запись) — заменить, а не дублировать: иначе get(id)
+      // отдаёт старую, а remove(id) убирает одну из двух
+      const i = all.findIndex((r) => r.id === rec.id);
+      if (i >= 0) all[i] = rec; else all.push(rec);
       emit();
       try { await tx('readwrite', (st) => st.put(clean(rec))); return true; }
       catch (e) { const full = isQuota(e); if (full) { rec.unsaved = true; onWriteFail(e, rec); } else { files.noDb = true; onError('add', e, rec); } return false; }

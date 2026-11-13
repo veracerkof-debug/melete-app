@@ -16,7 +16,7 @@
 // луч зрителя входит в кристалл через переднюю грань и выходит через заднюю — толщина на просвет даёт глубину цвета,
 // задние грани — рисунок отражений внутри, у рёбер — мягкий блик кромки; на гранях — штриховка и шероховатость,
 // внутри — облачка, фантом, «сад»; порода под щётками — та же фактура, что у камня. frac 0…1 — блеск сильнее.
-import { qmul, qaxis, stoneView } from './stone.js';
+import { qmul, qaxis, stoneView, onVisibility } from './stone.js';
 
 const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -555,7 +555,7 @@ export function gemView(canvas, { gem, seed = 1, frac = 0, spin = true } = {}) {
   canvas.addEventListener('pointercancel', up);
   // покрутили — это не нажатие: кнопка вокруг (шторка лиги) не открывается
   canvas.addEventListener('click', (e) => { if (moved >= 8) { e.stopPropagation(); e.preventDefault(); } moved = 0; });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); });
+  onVisibility(canvas, (vis) => { if (vis) kick(); });
   kick();
   return { redraw: draw };
 }

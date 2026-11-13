@@ -210,6 +210,20 @@ describe('копии в папке: раз в неделю, архив по ме
     expect(app.files.length).toBe(6);
     expect(Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).length).toBe(6);
   });
+  it('зеркало: подпапка с записями вдруг пуста, а в другой файлы есть — записи не удаляются (аудит 13.11.2026)', async () => {
+    const drv = memDrive(), app = memApp(), mem = {};
+    const removed = [];
+    app.api.removeFile = async (id) => { removed.push(id); };
+    app.files.push({ id: 'r1', name: 'a.wav', size: 4, blob: new Blob(['RIFF']), kind: 'audio' });
+    app.files.push({ id: 'r2', name: 'b.wav', size: 4, blob: new Blob(['RIFF']), kind: 'audio' });
+    app.files.push({ id: 't1', name: 'c.gp', size: 4, blob: new Blob(['GPRO']), kind: 'tab' });
+    await syncFolder(drv, mem, app.api);
+    Object.keys(drv.fs).filter((p) => p.startsWith('Media/')).forEach((p) => delete drv.fs[p]);
+    const r = await syncFolder(drv, mem, app.api);
+    expect(removed).toEqual([]);
+    expect(r.held).toContain('folder-dir:2');
+    expect(app.files.length).toBe(3);
+  });
   it('зеркало при одном файле: папка недоступна или база пуста — ничего не удаляется', async () => {
     const drv = memDrive(), app = memApp(), mem = {};
     const removed = [];

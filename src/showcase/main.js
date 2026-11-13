@@ -132,5 +132,6 @@ preseed();
 const app = boot(document.getElementById('app'));
 if (!localStorage.getItem(DONE)) {
   // первый заход: песни, файлы и история — один раз, затем перезапуск с готовыми данными
-  seed(app).finally(() => { localStorage.setItem(DONE, '1'); location.reload(); });
+  // флаг — только после удачного посева: иначе сбой посреди оставлял демо полупустым навсегда (аудит 13.11.2026)
+  seed(app).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
 } else setTimeout(() => toast(t('show.hello')), 1200);

@@ -63,7 +63,18 @@ export function pickParts(state, parts, { tools = null } = {}) {
 
 // Загрузить выбранные части копии p в состояние → новое состояние. Ничего не удаляется: песни, занятия и события
 // объединяются (по id побеждает более свежая запись), метки и свои планы добавляются; настройки и профиль — из копии
-export function applyParts(state, p, parts) {
+// Профиль при синхронизации (fresh): пустой не затирает заполненный; у обоих есть время правки — побеждает свежий;
+// время правки только у одного — он и свежее (правлен после обновления); иначе — как раньше, из пришедших данных
+const blankProfile = (x) => !x || (!x.name && !(x.instruments || []).length && !(x.priorHours > 0));
+function takeProfile(mine, theirs) {
+  if (blankProfile(theirs) && !blankProfile(mine)) return false;
+  if (mine && mine.at && theirs.at) return theirs.at > mine.at;
+  if (mine && mine.at) return false;
+  return true;
+}
+
+// opts.fresh — синхронизация двух живых устройств: профиль берётся только более свежий (копию человек выбирает сам)
+export function applyParts(state, p, parts, { fresh = false } = {}) {
   const on = new Set(parts.filter((k) => partsOf(p).includes(k))), out = clone(state), S = out.settings, P = p.settings || {};
   if (on.has('settings')) Object.keys(P).forEach((k) => { if (!OWNED.has(k) && !LOCAL.has(k)) S[k] = clone(P[k]); });
   if (on.has('songs')) {
@@ -76,7 +87,7 @@ export function applyParts(state, p, parts) {
   }
   if (on.has('profile')) {
     out.sessions = byId(out.sessions, p.sessions);
-    if (P.profile) S.profile = clone(P.profile);
+    if (P.profile && (!fresh || takeProfile(S.profile, P.profile))) S.profile = clone(P.profile);
     if (P.leagueSeen != null) S.leagueSeen = Math.max(+S.leagueSeen || 0, +P.leagueSeen || 0) || P.leagueSeen;
   }
   if (on.has('reading') && P.bible) {

@@ -61,6 +61,7 @@ export function saveProfile(store, p, { done = false } = {}) {
     level: LEVELS.includes(p.level) ? p.level : 'amateur',
     priorHours: want,
     createdAt: (old && old.createdAt) || store.now(),
+    at: store.now(), // время правки: при синхронизации побеждает более свежий профиль (backupparts.js)
   };
   st.profile.sig = profileSeal(st.profile);
   if (done) st.configured = true;

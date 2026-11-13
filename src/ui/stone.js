@@ -267,6 +267,21 @@ function saveQ(key, q) {
   try { localStorage.setItem('practice.v1.stone.' + key, JSON.stringify(q.map((x) => +x.toFixed(5)))); } catch { /* нет хранилища */ }
 }
 
+// Один общий слушатель видимости на все камни: главный экран перерисовывается часто, а слушатель на каждый камень
+// оставался навсегда (+2 за перерисовку, аудит 13.11.2026). Камень, снятый со страницы, при следующем событии забывается
+const watchers = new Map();
+let watching = false;
+export function onVisibility(canvas, fn) {
+  watchers.set(canvas, fn);
+  for (const c of watchers.keys()) if (c !== canvas && !c.isConnected) watchers.delete(c);
+  if (watching || typeof document === 'undefined') return;
+  watching = true;
+  document.addEventListener('visibilitychange', () => {
+    const vis = document.visibilityState === 'visible';
+    for (const [c, f] of watchers) { if (!c.isConnected) watchers.delete(c); else f(vis); }
+  });
+}
+
 // Живой камень на холсте: сам медленно поворачивается, тянется пальцем; onTap — касание без поворота
 export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true, onTap = null, key = null } = {}) {
   let mesh = stoneMesh(seed, hours, detail), polish = wear(hours).edges, vx = 0, vy = 0, drag = null, raf = 0, lastT = 0;
@@ -330,7 +345,7 @@ export function stoneView(canvas, { seed = 1, hours = 0, detail = 3, spin = true
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('click', (e) => { if (!tapped || !onTap) return; tapped = false; e.stopPropagation(); onTap(); });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(); else saveQ(key, q); });
+  onVisibility(canvas, (vis) => { if (vis) kick(); else saveQ(key, q); });
 
   kick();
   return {

@@ -169,7 +169,9 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
     const blob = new Blob([writeMidi(ev, { name: r.tool })], { type: 'audio/midi' });
     const rec = { id: 'm' + Date.now().toString(36), name: recName(r.tool, r.t0) + '.mid', size: blob.size, type: 'audio/midi', songs: r.songs,
       created: Date.now(), blob, kind: 'midi', tool: r.mod, take: { v: 1, ev }, dur: takeDur(ev) };
-    try { await app.files.add(rec); return rec; } catch { return null; }
+    // add() при нехватке места не бросает, а отдаёт false — иначе «сохранено», а после перезапуска записи нет
+    try { if ((await app.files.add(rec)) === false) throw new Error(rec.unsaved ? 'нет места' : 'база недоступна'); return rec; }
+    catch (e) { log('rec', 'MIDI-запись не сохранилась: ' + (e && e.message || e), 'e'); return null; }
   }
 
   return {
@@ -256,7 +258,12 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
       emit();
       if (r.midi) return saveMidi(r);
       return new Promise((done) => {
-        r.mr.onstop = async () => {
+        // запись сохраняется одним путём при любом исходе: обычная остановка; рекордер уже остановился сам (вынули
+        // микрофон — второго onstop не будет, «Стоп» висел бы); stop() бросил — микрофон иначе оставался открытым
+        let fin = false;
+        const finish = async () => {
+          if (fin) return;
+          fin = true;
           teardown();
           if (r.video) r.video.stop();
           const dur = (Date.now() - r.t0) / 1000;
@@ -265,7 +272,9 @@ export function createRecorder(app, { spool = idbBackend() } = {}) {
           const rec = await saveTake(r.id, blob, { name: recName(r.tool, r.t0), type: r.type, songs: r.songs, video: !!r.video }, dur);
           done(rec);
         };
-        try { r.mr.stop(); } catch { done(null); }
+        r.mr.onstop = () => { finish().catch((e) => { log('rec', 'остановка записи: ' + (e && e.message || e), 'e'); done(null); }); };
+        if (r.mr.state === 'inactive') { r.mr.onstop(); return; }
+        try { r.mr.stop(); } catch (e) { log('rec', 'рекордер не остановился: ' + (e && e.message || e) + ' — сохраняется то, что уже на диске', 'w'); r.mr.onstop(); }
       });
     },
   };

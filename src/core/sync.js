@@ -65,11 +65,14 @@ export function metaOf(r) { const m = { ...r }; delete m.blob; delete m._busy; r
 // Нет у них, но было у обоих — там удалили: удалить у себя. Нет у меня, но было у обоих — я удалил: удалить у них.
 // Производный файл (дорожка, ноты), у которого на другой стороне есть свой с тем же ключом, не переносится; ключи
 // считаются по тому, что останется после удалений (пересчитанные дорожки заменяют старые). meta — файлы на обоих с разными сведениями
-export function planFiles(mine, theirs, last = []) {
+// Защита от потери: список стороны, у которой база не читается (ok: false), или пустой список при непустом прошлом
+// (база не открылась, не дочиталась) — это «недоступно», а не «удалено всё»: удалений по нему нет ни в одну сторону
+export function planFiles(mine, theirs, last = [], { mineOk = true, theirsOk = true } = {}) {
   const A = new Set(mine.map((x) => x.id)), B = new Set(theirs.map((x) => x.id)), L = new Set(last);
   const out = { upload: [], download: [], delMine: [], delTheirs: [], meta: [] };
-  mine.forEach((x) => { if (!B.has(x.id) && L.has(x.id)) out.delMine.push(x.id); });
-  theirs.forEach((x) => { if (!A.has(x.id) && L.has(x.id)) out.delTheirs.push(x.id); });
+  const okA = mineOk && !(L.size && !mine.length), okB = theirsOk && !(L.size && !theirs.length), del = okA && okB;
+  if (del) mine.forEach((x) => { if (!B.has(x.id) && L.has(x.id)) out.delMine.push(x.id); });
+  if (del) theirs.forEach((x) => { if (!A.has(x.id) && L.has(x.id)) out.delTheirs.push(x.id); });
   const dm = new Set(out.delMine), dt = new Set(out.delTheirs);
   const kA = new Set(mine.filter((x) => x.k && !dm.has(x.id)).map((x) => x.k)), kB = new Set(theirs.filter((x) => x.k && !dt.has(x.id)).map((x) => x.k));
   mine.forEach((x) => { if (!B.has(x.id) && !L.has(x.id) && !(x.k && kB.has(x.k))) out.upload.push(x.id); });
@@ -143,9 +146,10 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
-    if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), SYNC_PARTS));
+    if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), SYNC_PARTS, { fresh: true }));
     peer.at = Date.now();
-    return { status: 200, json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), files: manifestOf(allFiles(F)), work: ctx.work ? ctx.work() : null } };
+    if (F && F.ready) await F.ready.catch(() => {}); // список файлов — только дочитанный
+    return { status: 200, json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), files: manifestOf(allFiles(F)), ...(F && F.noDb ? { noDb: true } : {}), work: ctx.work ? ctx.work() : null } };
   }
   if (req.path === '/melete/v1/setmeta') {
     const m = (req.json && req.json.meta) || {}, r = F && F.get(m.id);
@@ -438,9 +442,11 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
     onStep({ stage: 'data' });
     r = await first();
   }
-  app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS));
+  app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS, { fresh: true }));
   if (!opts.dev) { pc.work = r.work || null; put({ ...pc }); } // что компьютер считает сам — для «Считать на компьютере»
-  const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || []);
+  if (F && F.ready) await F.ready.catch(() => {}); // список файлов — только дочитанный
+  const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || [], { mineOk: !!F && !F.noDb, theirsOk: !r.noDb });
+  if ((F && F.noDb) || r.noDb) log('sync', 'база файлов ' + (r.noDb ? 'на другом устройстве' : 'здесь') + ' недоступна — удалений нет', 'w');
   const out = { songs: app.store.songs().length - before.songs, sessions: app.store.allSessions().length - before.sessions, up: 0, down: 0, removed: 0, meta: 0 };
   // удаления в обе стороны
   for (const id of plan.delMine) { if (F.get(id)) { await F.remove(id); out.removed++; } }
