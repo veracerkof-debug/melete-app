@@ -199,3 +199,25 @@ describe('время по дням', async () => {
     expect(remindOf(st).dayTimes).toEqual({});
   });
 });
+
+// Занятие инструмента (DECISIONS 2026-11-13 «Вокал»): напоминание несёт инструмент и название, снимается только им
+import { remindText } from '../src/core/remindtexts.js';
+describe('занятие инструмента в расписании', () => {
+  const plan2 = { slots: [{ id: 'a', days: [0, 1, 2, 3, 4], from: '10:00', to: '11:00', title: '' }, { id: 'v', days: [0, 1, 2, 3, 4, 5, 6], from: '19:00', to: '19:30', title: 'Вокал', tool: 'vocal' }] };
+  const stt = { days: [1, 1, 1, 1, 1, 1, 1], plan: plan2, remind: { ...DEFAULT_REMIND, mode: 'classic', leads: [60] } };
+  it('напоминание занятия инструмента несёт инструмент и название', () => {
+    const xs = remindTimes(remindOf(stt), new Date(2026, 9, 12).getTime());
+    expect(xs.map((x) => [new Date(x.ts).getHours(), x.tool || null, x.title || null])).toEqual([[9, null, null], [18, 'vocal', 'Вокал']]);
+  });
+  it('сегодня занимались другим — напоминание вокала остаётся; вокалом — снимается', () => {
+    const today = (p) => plan(stt, p, mon).filter((x) => new Date(x.ts).getDate() === 12).map((x) => x.tool || '-');
+    expect(today(false)).toEqual(['vocal']); // 9:00 уже прошло (сейчас 9:00 + минута — граница)
+    expect(today({ any: true, tools: new Set(['metro']) })).toEqual(['vocal']);
+    expect(today({ any: true, tools: new Set(['vocal']) })).toEqual([]);
+    expect(today(true)).toEqual([]); // прежний вызов — как раньше
+  });
+  it('текст называет занятие', () => {
+    const r = remindText({ slot: 'lead:60', title: 'Вокал' }, { lang: 'ru', sets: false });
+    expect(r.title.startsWith('Вокал · ')).toBe(true);
+  });
+});

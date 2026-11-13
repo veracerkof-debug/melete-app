@@ -1,0 +1,106 @@
+/* Вокал (src/modules/vocal): рабочая поверхность — полоса высоты на всё окно; разделы — узкой строкой сверху,
+   управление — одной полосой снизу; показания поверх поверхности касаний не перехватывают. */
+.vc{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;gap:6px} /* размеры — от окна (.pane — контейнер): свой контейнер сужала бы правая колонка кнопок */
+.vchd{flex:none;display:flex;justify-content:center;padding:0 4px}
+.vchd .seg{max-width:420px;width:100%}
+.vcstaff{flex:none;display:flex;justify-content:center;align-items:center;min-height:0;overflow:hidden;padding:0 8px;pointer-events:none}
+.vcstaff .bkscore{flex:1 1 auto;min-width:0;width:100%;max-width:none!important;height:clamp(56px,16cqh,104px);max-height:none;margin:0;overflow:visible}
+.vcstaff .bkscore .smf{font-family:"Melete Bravura","Bravura";font-size:40px;fill:var(--ink)}
+.vcstaff .bkscore .lines line,.vcstaff .bkscore .ldg{stroke:var(--l2);stroke-width:1}
+.vcstaff .bkscore .stem{stroke:var(--ink);stroke-width:1.3}
+.vcstaff .bkscore .beam{stroke:var(--ink);stroke-width:5}
+.vcstaff .bkscore .st{font:600 13px var(--font);fill:var(--l2);text-anchor:middle}
+.vcstaff .bkscore .st.up{fill:var(--tint-text,var(--tint))}
+.vcstaff .bkscore .tie{fill:none;stroke:var(--ink);stroke-width:1.3}
+.vcsurf{position:relative;flex:1;min-height:0;border-radius:16px;background:var(--cell);overflow:hidden;touch-action:pan-y}
+.vcsurf canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.vcov{position:absolute;left:0;right:0;top:0;padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;pointer-events:none;background:linear-gradient(var(--cell) 75%,transparent)}
+.vcov b{font-size:clamp(15px,4.4cqmin,20px);font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vcov span{font-size:13px;color:var(--l2)}
+.vcov .how{font-size:13px;color:var(--l2);max-width:560px;line-height:1.35}
+.vchit{position:absolute;right:10px;bottom:8px;font-size:13px;font-weight:600;color:var(--l2);pointer-events:none}
+.vcbar{flex:none;display:flex;align-items:center;justify-content:center;gap:clamp(8px,3cqw,18px);padding:2px 0 4px}
+.vc .vcbar .bigplay{width:60px!important;height:60px!important;flex:none}
+.vcbar .ic.txt{font-size:14px}
+.vcfree{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none;text-align:center;padding:12px}
+.vcfree b{font-size:clamp(24px,9cqmin,52px);font-weight:700;color:var(--ink)}
+.vcfree i{font-style:normal;font-size:clamp(40px,18cqmin,110px);font-weight:300;color:var(--tint-text,var(--tint));font-variant-numeric:tabular-nums}
+.vcfree span{font-size:13px;color:var(--l2)}
+/* полоска: одна строка */
+.vc.strip{flex-direction:row;align-items:center;gap:8px;padding:0 6px}
+.vc.strip .vcmid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.vc.strip .vcmid b{font-size:15px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc.strip .vcmid span{font-size:12px;color:var(--l2)}
+.vc.quarter .vcbar .bigplay{width:46px!important;height:46px!important}
+.vc.strip .bigplay{width:44px!important;height:44px!important;flex:none}
+.vc.quarter .vcov .how{display:none}
+/* Голос: диапазон */
+.vcv{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px 6px 12px}
+.vcv .card{background:var(--cell);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.vcv h3{margin:0;font-size:17px}
+.vcv .big{font-size:clamp(26px,8cqmin,40px);font-weight:700;letter-spacing:-.01em}
+.vcv .l2{color:var(--l2);font-size:13px;line-height:1.4}
+.vcv .typ::first-letter{text-transform:uppercase}
+.vcrl{position:relative;height:64px;touch-action:none;user-select:none;-webkit-user-select:none}
+.vcrl .trk{position:absolute;left:0;right:0;top:22px;height:20px;border-radius:10px;background:var(--fill)}
+.vcrl .ext{position:absolute;top:22px;height:20px;border-radius:10px;background:color-mix(in srgb,var(--tint) 28%,var(--fill))}
+.vcrl .cmf{position:absolute;top:22px;height:20px;border-radius:10px;background:var(--tint)}
+.vcrl .hd{position:absolute;top:14px;width:40px;height:36px;margin-left:-20px;display:flex;align-items:center;justify-content:center;cursor:ew-resize}
+.vcrl .hd::after{content:"";width:6px;height:30px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 2px var(--cell)}
+.vcrl .tk{position:absolute;top:46px;font-size:11px;color:var(--l2);transform:translateX(-50%)}
+.vcrl .tk::before{content:"";position:absolute;left:50%;top:-6px;width:1px;height:5px;background:var(--l3,var(--l2))}
+.vcrl .lab{position:absolute;top:0;font-size:12px;font-weight:700;transform:translateX(-50%);white-space:nowrap}
+.vcrefs{display:flex;flex-direction:column;gap:5px}
+.vcref{position:relative;height:18px}
+.vcref i{position:absolute;top:5px;height:8px;border-radius:4px;background:var(--fill2)}
+.vcref.on i{background:color-mix(in srgb,var(--tint) 55%,var(--fill2))}
+.vcref span{position:absolute;top:0;font-size:11px;color:var(--l2);white-space:nowrap}
+.vcadj{display:flex;justify-content:space-between;gap:8px}
+.vcadj .grp{display:flex;align-items:center;gap:6px}
+.vchist{display:flex;flex-direction:column}
+.vchist div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--sep);font-size:14px}
+.vchist div:first-child{border-top:0}
+.vctypes{display:flex;flex-wrap:wrap;gap:6px}
+.vctypes button{min-height:40px;padding:0 14px;border-radius:999px;background:var(--fill);color:var(--ink);font:600 14px var(--font)}
+.vctypes button::first-letter{text-transform:uppercase}
+.vctypes button[aria-pressed="true"]{background:var(--tint);color:var(--on-tint)}
+.vctest{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:10px 0}
+.vctest .now{font-size:clamp(44px,20cqmin,96px);font-weight:300;font-variant-numeric:tabular-nums;line-height:1}
+.vctest .ext2{display:flex;gap:16px;font-size:14px;color:var(--l2)}
+.vcbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.vcbtns .btn{min-height:44px}
+/* Импровизация */
+.vcim{position:absolute;left:10px;top:8px;display:flex;gap:12px;pointer-events:none;font-size:14px;font-weight:700}
+.vcim .ok{color:#3E8E5A}.vcim .sc{color:#B8892A}
+/* Список распевок */
+.vcpr{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:4px 0 14px}
+.vcpr button{min-height:64px;border-radius:14px;background:var(--fill);color:var(--ink);text-align:left;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.vcpr button b{font-size:15px}
+.vcpr button span{font-size:12px;color:var(--l2)}
+.vcpr button[aria-pressed="true"]{background:var(--tint);color:var(--on-tint)}
+.vcpr button[aria-pressed="true"] span{color:inherit;opacity:.85}
+.cell .vcexh{display:block;font-size:12.5px;color:var(--l2);margin-top:2px;line-height:1.35}
+.cell[aria-pressed="true"]{color:var(--tint-text,var(--tint))}
+/* Низкое широкое окно (телефон лёжа, окно в полэкрана): ноты и полоса — слева на всю высоту, кнопки — компактной
+   сеткой справа в три колонки («начать» посередине); «как петь» прячется */
+@container (max-height: 540px) and (min-aspect-ratio: 4/3) {
+  .vc:not(.strip):not(.quarter){position:relative;padding-right:178px}
+  .vc:not(.strip):not(.quarter) .vcbar{position:absolute;right:0;top:0;bottom:0;width:172px;display:grid;grid-template-columns:auto auto auto;grid-template-areas:"l p s" "a p n";align-content:center;justify-content:center;align-items:center;gap:6px 8px;padding:0}
+  .vc.s-improv:not(.strip):not(.quarter) .vcbar{grid-template-areas:"c c c" "a p n" ". d ."}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="list"]{grid-area:l}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="set"]{grid-area:s}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="prev"],.vc:not(.strip):not(.quarter) .vcbar [data-x="pcdn"]{grid-area:a}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="next"],.vc:not(.strip):not(.quarter) .vcbar [data-x="pcup"]{grid-area:n}
+  .vc:not(.strip):not(.quarter) .vcbar .bigplay{grid-area:p}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="scale"]{grid-area:c;justify-self:center;max-width:168px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vc:not(.strip):not(.quarter) .vcbar [data-x="drone"]{grid-area:d;justify-self:center}
+  .vc.test:not(.strip):not(.quarter){padding-right:236px}
+  .vc.test .vctest{position:absolute;right:0;top:0;bottom:0;width:228px;justify-content:center;padding:0}
+  .vcov .how{display:none}
+  .vcstaff .bkscore{height:48px}
+}
+@container (max-height: 320px) { .vcfree span{display:none} }
+/* четверть экрана: только назад, начать, вперёд */
+.vc.quarter .vcbar [data-x="list"],.vc.quarter .vcbar [data-x="set"]{display:none}
+/* совсем низкое окно: без нот и разделов — место полосе высоты */
+@container (max-height: 240px) { .vc .vchd,.vc .vcstaff{display:none} .vcov{padding-top:4px} }

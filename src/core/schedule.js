@@ -2,7 +2,8 @@
 // Занятие — блок от–до (окно: напоминание — к началу), повтор по дням недели, несколько в день. Перерывы по датам
 // (отпуск, гастроли — без занятий), правка «только этот день» (свой набор блоков на дату). Логика без DOM; экран —
 // screens/plan.js на странице «Неделя». settings.plan = { slots: [{ id, days: [0..6], from, to, title }],
-// off: [{ id, from: 'YYYY-MM-DD', to, title }], once: { 'YYYY-MM-DD': [{ id, from, to, title }] } }.
+// off: [{ id, from: 'YYYY-MM-DD', to, title }], once: { 'YYYY-MM-DD': [{ id, from, to, title }] } }. У занятия могут быть
+// routine — план занятия и tool — инструмент (вокал, ритм…: свои занятия и напоминания, хоть каждый день).
 // Прежние поля — settings.days (дни практики), remind.time и remind.dayTimes (время), goalMin (цель недели) — расписание
 // заполняет само (legacyOf): напоминания, главная, статистика и маскот читают их, как раньше.
 import { weekday } from './time.js';
@@ -22,6 +23,7 @@ const cleanSlot = (s, withDays) => {
   if (!s || !okHM(s.from) || !okHM(s.to) || minOf(s.to) <= minOf(s.from)) return null;
   const x = { id: String(s.id || newId()), from: s.from, to: s.to, title: String(s.title || '').slice(0, 60) };
   if (s.routine) x.routine = String(s.routine); // план занятия (routine.js)
+  if (s.tool && /^[a-z][a-z0-9-]*$/.test(s.tool)) x.tool = String(s.tool); // занятие инструмента (вокал, ритм…) — напоминание называет его (DECISIONS «Вокал»)
   if (withDays) { x.days = [...new Set((s.days || []).map(Number).filter((d) => d >= 0 && d <= 6))].sort(); if (!x.days.length) return null; }
   return x;
 };

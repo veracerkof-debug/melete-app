@@ -67,6 +67,7 @@ src/modules/<id>/
 | `convert` | Конвертер | `inner`, часть медиатеки; движок `audio/convert/` |
 | `notes` | Табы, ноты и текст | alphaTab, pdf.js, текст с аккордами, «С игры» |
 | `voice` | Диктофон | движок `audio/voiceengine.js`, обработка `audio/vocal.js` |
+| `vocal` | Вокал | распевки по диапазону (`music/warmup.js`, библиотека `exercises.js`), голос и тип (`music/voicetype.js`), импровизация над дроном; шина `vocal`; тема — `docs/vocal.md` |
 | `looper` | Лупер | `audio/looper.js`; партии студии в шторке |
 | `studio` | Студия | базовая: дорожки, клипы, редакторы партий; сверка — `docs/studio-parity.md` |
 | `spectrum` | Спектр и шум | `inner` |
@@ -95,6 +96,14 @@ src/modules/<id>/
 **Лупер** (`modules/looper/`). Петля — `audio/looper.js` (слои с микрофона, умножение, замена, отмена, такты, часы).
 `parts.js` — вид «Партии»: редакторы партий студии открываются в шторке лупера (`embedPart`), партии играет секвенсор
 по часам петли; «В лупер» из других модулей — `ctx.openIn('looper', { inbox })`.
+
+**Вокал** (`modules/vocal/`, тема и исследование — `docs/vocal.md`). Распевка — данные (`exercises.js`: мотив
+ступенями, слоги ru/en, темп), шаги по тональностям строит `music/warmup.js: buildRun` от нижней удобной ноты до верхней
+(+ «сверх»), в программе — не дольше 90 с (дальше по тону). Звук шага планируется на точное время звуковых часов
+(`synth.on(…, { at })`, `off(key, false, at)`), шина `vocal`, тембр — пресет на выбор. Ноты шага — `book/score.js:
+scoreSVG` (буквы — `warmup.js: spellNote`), полоса высоты — холст: целевые ноты, линия голоса (YIN, `audio/pitch.js`),
+попадание по нотам. Голос: `music/voicetype.js` — спетые ноты (`createNoteTracker`), диапазон (`rangeOf`), тип
+(`voiceType`), оценка в ладу (`scoreNote`). Данные человека — `ctx.data()` (`settings.vocal`: range, type, hist).
 
 **Табы, ноты и текст** (`modules/notes/`). Табулатуры и ноты — alphaTab (Guitar Pro, MusicXML, alphaTex), PDF — pdf.js
 (`pdf.js`), определение формата файла — `sniff.js`. `live.js` — партия «с игры»: сыгранное, сетка, правка, MusicXML

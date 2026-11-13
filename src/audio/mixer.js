@@ -6,8 +6,8 @@ import { setPerf, resolvePerf, setEngine, ENGINES, VERBS, setVerb, defaultVerb, 
 
 // Шины по контракту модуля. 'media' хранится в mix под ключом 'audio' (совместимость с прототипом)
 // looper — лупер (слои и монитор), notes — табы и ноты (alphaTab играет своим звуком: шина зеркалит громкость и выключение в masterVolume)
-export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'looper', 'notes', 'theory'];
-const KEY = { metro: 'metro', piano: 'piano', glider: 'glider', drone: 'drone', media: 'audio', looper: 'looper', notes: 'notes', theory: 'theory' };
+export const BUSES = ['metro', 'piano', 'glider', 'drone', 'media', 'looper', 'notes', 'theory', 'vocal'];
+const KEY = { metro: 'metro', piano: 'piano', glider: 'glider', drone: 'drone', media: 'audio', looper: 'looper', notes: 'notes', theory: 'theory', vocal: 'vocal' };
 export const mixKey = (bus) => KEY[bus] || bus;
 
 export const MIX_MAX = 1.5;
@@ -76,11 +76,11 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       // клик — через свою панораму (создаётся раз): лупер может увести его в левое ухо, чтобы не мешал петле
       if (name === 'metro') { const pn = c.createStereoPanner ? c.createStereoPanner() : null; if (pn) { fx.output.connect(pn); directOut(pn); metroPan = pn; } else directOut(fx.output); }
       else fx.output.connect(masterNode());
-      if (name === 'theory' || name === 'piano' || name === 'glider') {
+      if (name === 'theory' || name === 'piano' || name === 'glider' || name === 'vocal') {
         const rv = reverbNode();
         if (rv) {
           const s = c.createGain();
-          s.gain.value = name === 'theory' ? 0.3 : 0;
+          s.gain.value = name === 'theory' || name === 'vocal' ? 0.3 : 0; // распевки (vocal) — аккомпанемент с залом, как у «Теории»
           g.connect(s).connect(rv);
           sends[name] = s;
         }

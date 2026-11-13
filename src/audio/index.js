@@ -25,6 +25,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
   setFxTempo(() => (metro.cfg && metro.cfg.bpm) || 0); // тремоло «в такт» — по темпу метронома
   mixer.probe('piano', () => synth.active('piano'));
   mixer.probe('theory', () => synth.active('theory'));
+  mixer.probe('vocal', () => synth.active('vocal'));
   mixer.probe('drone', () => drone.sounding);
   // Дрон на ноте (из теории): сменить тонику и зазвучать
   drone.tonic = (pc) => {

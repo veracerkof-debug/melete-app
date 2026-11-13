@@ -64,3 +64,10 @@ describe('расписание занятий', () => {
     expect(pl.some((x) => x.ts >= day(7) && x.ts < day(8))).toBe(false);
   });
 });
+
+describe('инструмент у занятия', () => {
+  it('сохраняется и чистится', () => {
+    const p = planOf({ plan: { slots: [{ id: 'a', days: [1], from: '19:00', to: '19:30', tool: 'vocal' }, { id: 'b', days: [1], from: '20:00', to: '20:30', tool: 'Bad Id!' }] } });
+    expect(p.slots.map((s) => s.tool || null)).toEqual(['vocal', null]);
+  });
+});

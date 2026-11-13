@@ -7,6 +7,8 @@
 import { t, getLang } from '../../i18n/index.js';
 import { routinesOf } from '../routine.js';
 import { routineOptions } from './routine.js';
+import { modules } from '../../modules/index.js';
+import { moduleName } from '../modules.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { weekday } from '../time.js';
 import { weekdays } from './common.js';
@@ -63,6 +65,11 @@ function askScope(d, cb) {
 }
 
 // Подробности занятия: новое (slot без id) или существующее
+// Инструмент занятия (вокал, ритм…): напоминание называет его, сделанное другое занятие его не снимает
+const toolList = () => modules.filter((m) => !m.tab && !m.inner && m.id !== 'timer');
+const toolTitle = (id) => { const m = modules.find((x) => x.id === id); return m ? moduleName(m) : ''; };
+const toolOptions = (cur) => '<option value=""' + (cur ? '' : ' selected') + '>' + esc(t('rt.noTool')) + '</option>' + toolList().map((m) => '<option value="' + m.id + '"' + (cur === m.id ? ' selected' : '') + '>' + esc(moduleName(m)) + '</option>').join('');
+
 function slotSheet(app, slot, done) {
   const p = planOf(app.store.state.settings), isNew = !slot.id, WD = weekdays(), d = sel;
   const regular = isNew ? true : !slot.once;
@@ -73,6 +80,7 @@ function slotSheet(app, slot, done) {
     '<div class="cell ptimes"><input type="time" class="inp num" data-pfrom value="' + esc(slot.from) + '" step="900" aria-label="' + esc(t('plan.from')) + '"><span class="l2">—</span><input type="time" class="inp num" data-pto value="' + esc(slot.to) + '" step="900" aria-label="' + esc(t('plan.to')) + '"></div>' +
     '<div class="cellcol"><span class="l2" style="font-size:13px">' + t('plan.repeat') + '</span><div class="gfdays" style="margin-top:8px">' + WD.map((n, i) => '<button type="button" class="gfday' + (days.has(i) && !onlyDay ? ' on' : '') + '" data-pdw="' + i + '" aria-pressed="' + (days.has(i) && !onlyDay) + '">' + esc(String(n).slice(0, 2)) + '</button>').join('') + '</div>' +
     '<label class="pchk"><input type="checkbox" data-ponly' + (onlyDay ? ' checked' : '') + '> ' + esc(t('plan.onlyThis', { d: dShort(d) })) + '</label></div>' +
+    '<label class="cell"><span class="grow">' + t('rt.tool') + '</span><select class="sortsel" data-ptool aria-label="' + esc(t('rt.tool')) + '">' + toolOptions(slot.tool) + '</select></label>' +
     (routinesOf(app.store.state.settings).length ? '<label class="cell"><span class="grow">' + t('rt.title1') + '</span><select class="sortsel" data-proutine aria-label="' + esc(t('rt.title1')) + '">' + routineOptions(app.store.state.settings, slot.routine) + '</select></label>' : '') + '</div>' +
     (isNew ? '' : '<div class="group" style="margin-top:16px"><button class="cell danger center" data-pdel>' + t('plan.delete') + '</button></div>'),
   (el) => {
@@ -80,12 +88,14 @@ function slotSheet(app, slot, done) {
       const w = e.target.closest('[data-pdw]');
       if (w) { const i = +w.dataset.pdw; if (days.has(i)) days.delete(i); else days.add(i); w.classList.toggle('on', days.has(i)); w.setAttribute('aria-pressed', days.has(i)); el.querySelector('[data-ponly]').checked = false; onlyDay = false; return; }
       if (e.target.closest('[data-psave]')) {
-        const from = el.querySelector('[data-pfrom]').value, to = el.querySelector('[data-pto]').value, title = el.querySelector('[data-pt]').value.trim();
+        const from = el.querySelector('[data-pfrom]').value, to = el.querySelector('[data-pto]').value, title0 = el.querySelector('[data-pt]').value.trim();
         const routine = (el.querySelector('[data-proutine]') || {}).value || undefined;
+        const tool = (el.querySelector('[data-ptool]') || {}).value || undefined;
+        const title = title0 || (tool ? toolTitle(tool) : '');
         if (!from || !to || minOf(to) <= minOf(from)) { toast(t('plan.badTime')); return; }
         const q = planOf(app.store.state.settings);
-        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title, routine }, { d, once: true }); else addSlot(q, { from, to, title, routine, days: [...days] }); api.close(); commit(app, q, done); return; }
-        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, routine, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
+        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title, routine, tool }, { d, once: true }); else addSlot(q, { from, to, title, routine, tool, days: [...days] }); api.close(); commit(app, q, done); return; }
+        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, routine, tool, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
         if (onlyDay && !slot.once) apply('day'); else if (slot.once) apply('day'); else apply('all');
         return;
       }
@@ -97,6 +107,14 @@ function slotSheet(app, slot, done) {
     });
     el.addEventListener('change', (e) => { if (e.target.matches('[data-ponly]')) onlyDay = e.target.checked; });
   });
+}
+
+// Занятие инструмента из самого инструмента (ctx.schedule — «Вокал → Расписание»): есть — правка, нет — новое,
+// 19:00–19:30 сегодня, дни — на выбор (хоть все семь)
+export function toolSlotSheet(app, tool) {
+  const p = planOf(app.store.state.settings), s = p.slots.find((x) => x.tool === tool);
+  sel = mid(Date.now());
+  slotSheet(app, s || { from: '19:00', to: '19:30', title: toolTitle(tool), tool }, () => app.store.settingsChanged());
 }
 
 function offSheet(app, done) {

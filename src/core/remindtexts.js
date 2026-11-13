@@ -124,7 +124,7 @@ const pushyOf = (L, lang) => (mascotGender() === 'm' ? { ...L.pushy, ...(PUSHY_M
 const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 
 // Текст напоминания (без подписи источника цитаты — в уведомлении она лишняя): { i, ts, n, slot, mode } + язык, наборы слов, свои сборники, имя (если обращение по имени)
-export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'classic', tone }, { lang = 'ru', sets = true, books = [], name = '' } = {}) {
+export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'classic', tone, title: what = '' }, { lang = 'ru', sets = true, books = [], name = '' } = {}) {
   const L = T[lang] || T.ru, d = dayIndex(ts);
   let title, body;
   // «Своё»: пункт списка → повод из классики или навязчивой
@@ -151,6 +151,7 @@ export function remindText({ i = 0, ts = Date.now(), slot = 'lead:60', mode = 'c
     const m = +String(slot).split(':')[1] || 60, q = quoteAt(d * 3 + i, lang, sets, books);
     title = L.lead(m); body = q.text;
   }
+  if (what) title = what + ' · ' + lowerFirst(title); // занятие инструмента: «Вокал · через час — практика»
   if (name) title = name + ', ' + lowerFirst(title);
   return { title, body, icon: iconOf(slot, mode, mascotGender()) };
 }

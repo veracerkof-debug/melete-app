@@ -52,7 +52,7 @@ export function remindOf(settings) {
   r.dayTimes = Object.fromEntries(Object.entries(r.dayTimes && typeof r.dayTimes === 'object' ? r.dayTimes : {}).filter(([k, v]) => /^[0-6]$/.test(k) && /^\d\d:\d\d$/.test(v) && v !== r.time));
   r.custom = (Array.isArray(r.custom) ? r.custom : DEFAULT_REMIND.custom).map(cleanItem).filter(Boolean).slice(0, CUSTOM_MAX);
   // расписание (schedule.js, 11.11.2026): начала занятий дня — несколько в день, перерывы, правки одного дня
-  if (settings.plan) { const p = planOf(settings); r.startsOn = (d) => slotsOn(p, d).map((s) => s.from); }
+  if (settings.plan) { const p = planOf(settings); r.startsOn = (d) => slotsOn(p, d).map((s) => s.from); r.slotsOn = (d) => slotsOn(p, d); }
   return r;
 }
 // Сохранить выбор (settings.remind): только поля нового вида
@@ -75,15 +75,17 @@ export function remindTimes(r, d) {
   const quiet = (ts) => { const hr = new Date(ts).getHours(); return r.quietFrom > r.quietTo ? hr >= r.quietFrom || hr < r.quietTo : hr >= r.quietFrom && hr < r.quietTo; };
   const starts = (r.startsOn ? r.startsOn(d) : [timeOn(r, d)]).map((hm) => at(d, hm));
   if (!starts.length) return []; // перерыв или день без занятий
+  // занятие инструмента (slot.tool) — напоминание несёт его: { tool, title } (текст называет занятие, сделанное другое не снимает)
+  const meta = r.slotsOn ? r.slotsOn(d) : null, tag = (i) => (meta && meta[i] && meta[i].tool ? { tool: meta[i].tool, title: meta[i].title || '' } : {});
   const t0 = starts[0];
   if (r.mode === 'custom') {
     const seen = new Set();
-    return r.custom.flatMap((x) => (x.at ? [{ ts: at(d, x.at), slot: 'abs', tone: x.tone }] : starts.map((s) => ({ ts: s + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone }))))
+    return r.custom.flatMap((x) => (x.at ? [{ ts: at(d, x.at), slot: 'abs', tone: x.tone }] : starts.map((s, i) => ({ ts: s + x.min * MIN, slot: 'rel:' + x.min, tone: x.tone, ...tag(i) }))))
       .filter((x) => x.ts >= d && x.ts < d + DAY && !quiet(x.ts) && !seen.has(x.ts) && seen.add(x.ts)).sort((a, b) => a.ts - b.ts);
   }
   // перед каждым занятием дня; два занятия рядом — одно напоминание не дублируется
   const seen = new Set();
-  let list = starts.flatMap((s, i) => (r.mode === 'pushy' && i > 0 ? [5] : r.mode === 'pushy' ? [60, 5] : r.leads).map((m) => ({ ts: s - m * MIN, slot: 'lead:' + m }))).filter((x) => !seen.has(x.ts) && seen.add(x.ts));
+  let list = starts.flatMap((s, i) => (r.mode === 'pushy' && i > 0 ? [5] : r.mode === 'pushy' ? [60, 5] : r.leads).map((m) => ({ ts: s - m * MIN, slot: 'lead:' + m, ...tag(i) }))).filter((x) => !seen.has(x.ts) && seen.add(x.ts));
   if (r.mode === 'pushy') {
     list.push({ ts: t0 + 60 * MIN, slot: 'after' });
     // точки дня — если не слишком близко (20 мин) к напоминаниям у занятия
@@ -94,16 +96,17 @@ export function remindTimes(r, d) {
 }
 
 // Расписание на 7 дней: только дни практики; сегодня — только если ещё не занимались и время не прошло → [{ ts, slot, n }]
-// n — номер напоминания в этот день
+// n — номер напоминания в этот день. practicedToday — true/false или { any, tools: Set }: напоминание занятия
+// инструмента (tool) снимается, только если сегодня занимались этим инструментом
 export function plan(settings, practicedToday, now = Date.now()) {
+  const done = (x) => !!practicedToday && (typeof practicedToday === 'object' ? (x.tool ? !!(practicedToday.tools && practicedToday.tools.has(x.tool)) : !!practicedToday.any) : true);
   const r = remindOf(settings);
   if (!r.on) return [];
   const out = [], d0 = new Date(now); d0.setHours(0, 0, 0, 0);
   for (let i = 0; i < 7; i++) {
     const d = new Date(d0.getTime() + i * DAY + 3600000); d.setHours(0, 0, 0, 0); // переход на летнее время
     if (r.startsOn ? !r.startsOn(d.getTime()).length : !settings.days[weekday(d.getTime())]) continue;
-    if (i === 0 && practicedToday) continue;
-    remindTimes(r, d.getTime()).forEach((x, n) => { if (x.ts > now + MIN) out.push({ ...x, n }); });
+    remindTimes(r, d.getTime()).forEach((x, n) => { if (x.ts > now + MIN && !(i === 0 && done(x))) out.push({ ...x, n }); });
   }
   return out.slice(0, ID_N);
 }
@@ -163,14 +166,15 @@ export async function reschedule(state, texts, now = Date.now()) {
   try {
     await P.cancel({ notifications: Array.from({ length: ID_N }, (_, i) => ({ id: ID0 + i })) });
     const st = state.settings, today = dayKey(now);
-    const practiced = (state.sessions || []).some((x) => !x.deleted && dayKey(x.start) === today);
+    const todays = (state.sessions || []).filter((x) => !x.deleted && dayKey(x.start) === today);
+    const practiced = { any: todays.length > 0, tools: new Set(todays.map((x) => x.tool).filter(Boolean)) };
     const list = plan(st, practiced, now);
     if (!list.length) { log('remind', 'расписание пустое (режим ' + remindOf(st).mode + ')'); return 0; }
     if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'уведомления не разрешены', 'w'); return 0; }
     await channels(P);
     const mode = remindOf(st).mode, exact = await exactAllowed();
     await P.schedule({
-      notifications: list.map((x, i) => ({ id: ID0 + i, ...note(texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone })), schedule: { at: new Date(x.ts), allowWhileIdle: true },
+      notifications: list.map((x, i) => ({ id: ID0 + i, ...note(texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone, title: x.title, tool: x.tool })), schedule: { at: new Date(x.ts), allowWhileIdle: true },
         channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: exact })),
     });
     log('remind', 'запланировано ' + list.length + (exact ? ', точно' : ', приблизительно') + ', первое — ' + new Date(list[0].ts).toLocaleString());
