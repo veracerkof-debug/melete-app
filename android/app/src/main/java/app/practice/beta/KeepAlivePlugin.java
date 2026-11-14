@@ -30,12 +30,14 @@ public class KeepAlivePlugin extends Plugin {
         i.putExtra("channel", call.getString("channel", "Melete"));
         i.putExtra("icon", call.getString("icon", ""));
         i.putExtra("mic", Boolean.TRUE.equals(call.getBoolean("mic", false)));
+        KeepAliveService.stopAfterProj = false;
         try { ContextCompat.startForegroundService(getContext(), i); call.resolve(); }
         catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
     }
 
     @PluginMethod
     public void stop(PluginCall call) {
+        if (KeepAliveService.proj) { KeepAliveService.stopAfterProj = true; call.resolve(); return; } // идёт запись звука телефона
         getContext().stopService(svc());
         call.resolve();
     }

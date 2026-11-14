@@ -65,7 +65,8 @@
 ## Запись
 
 - `voiceengine.js` — один движок записи для диктофона и записи в инструментах: входы и выходы (USB, Bluetooth,
-  гарнитура), Android — плагин `Voice` (файл пишется на диск, заголовок WAV раз в секунду), браузер и компьютер —
+  гарнитура; на Android 10+ — «Звук телефона» и «… и микрофон»: `VoicePlugin` с `capture`, AudioPlaybackCapture через
+  MediaProjection, служба `KeepAliveService` с типом mediaProjection, микрофон подмешивается в оба канала), Android — плагин `Voice` (файл пишется на диск, заголовок WAV раз в секунду), браузер и компьютер —
   захват `wl/rec.worklet.js` с кусками в IndexedDB `melete-voice`.
 - `core/recorder.js` — запись в инструментах (звук приложения + микрофон, видео модуля, MIDI); куски MediaRecorder —
   сразу на диск (`core/recspool.js`), оборванная сбоем запись восстанавливается при запуске.

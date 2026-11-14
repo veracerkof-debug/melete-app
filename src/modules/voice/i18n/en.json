@@ -246,5 +246,9 @@
   "more": "More",
   "lost.switched": "Recording from the built-in mic: the external one disconnected",
   "lost.sleep": "The system paused audio — recording may have gaps",
-  "lamp.noneHint": "No signal from the input: check the cable, phantom power (48 V), gain knob and input channel"
+  "lamp.noneHint": "No signal from the input: check the cable, phantom power (48 V), gain knob and input channel",
+  "dev.phoneAudio": "Phone audio",
+  "dev.phoneAudioMic": "Phone audio and microphone",
+  "err.capture": "Android did not allow recording the phone audio",
+  "capture.hint": "Records the sound of other apps (a lesson, a backing track). Android asks for permission every time; calls and apps that forbid capture are not recorded."
 }

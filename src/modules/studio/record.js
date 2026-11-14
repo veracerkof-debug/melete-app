@@ -103,7 +103,7 @@ export function createRecording(S) {
   function sheet() {
     const { ctx } = S, { t, ui } = ctx, p = S.proj(), auds = p.tracks.filter((tr) => tr.kind === 'audio'), st = S.st(), o = st.rec || (st.rec = { src: 'in', mon: false });
     let trId = auds.length ? auds[auds.length - 1].id : 'new', inputs = null;
-    audioEngine().devices().then((d) => { inputs = d.inputs || []; if (!inputs.some((x) => x.id === o.in)) o.in = null; const sh = document.querySelector('.sheet'); if (sh && sh.__update) sh.__update(); }).catch(() => { inputs = []; });
+    audioEngine().devices().then((d) => { inputs = (d.inputs || []).filter((x) => x.type !== 'display'); if (!inputs.some((x) => x.id === o.in)) o.in = null; const sh = document.querySelector('.sheet'); if (sh && sh.__update) sh.__update(); }).catch(() => { inputs = []; });
     ui.sheet(() => ui.snav(t('rec.title')) +
       '<div class="hdr">' + ui.esc(t('rec.to')) + '</div><div class="group">' + auds.map((tr) => '<button class="cell" data-rt="' + tr.id + '"><span class="grow">' + ui.esc(S.trName(tr)) + '</span>' + (trId === tr.id ? ui.icons.check : '') + '</button>').join('') +
       '<button class="cell" data-rt="new"><span class="grow">' + ui.esc(t('rec.newTrack')) + '</span>' + (trId === 'new' ? ui.icons.check : '') + '</button></div>' +

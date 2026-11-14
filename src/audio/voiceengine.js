@@ -29,8 +29,17 @@ function nativeEngine() {
   return {
     native: true,
     on: (k, fn) => { subs[k].add(fn); return () => subs[k].delete(fn); },
-    devices: async () => { const r = await V.devices(); return { inputs: r.inputs || [], outputs: r.outputs || [] }; },
-    start: (o) => V.start(o).then((r) => { REC.voice = !o.monitor; return r; }),
+    // «Звук телефона» (Android 10+, слово автора 14.11.2026): то, что играют другие приложения, — и вместе с микрофоном
+    devices: async () => {
+      const r = await V.devices(), inputs = r.inputs || [];
+      if (r.sdk >= 29) inputs.push({ id: 'display', type: 'display', name: '', channels: 2 }, { id: 'display+mic', type: 'display', mic: true, name: '', channels: 2 });
+      return { inputs, outputs: r.outputs || [] };
+    },
+    start: (o) => {
+      const cap = o.deviceId === 'display' || o.deviceId === 'display+mic';
+      const opts = cap ? { ...o, deviceId: -1, capture: true, withMic: o.deviceId === 'display+mic' } : o;
+      return V.start(opts).then((r) => { REC.voice = !o.monitor; return r; });
+    },
     pause: (on) => V.pause({ on }),
     stop: () => V.stop().finally(() => { REC.voice = false; }),
     async read(path) {

@@ -99,6 +99,10 @@ public class KeepAliveService extends Service {
     }
 
     // Состояние сменилось (пауза, источники) — уведомление перерисовывается, если служба идёт
+    // Запись звука телефона идёт (VoicePlugin): служба держит тип mediaProjection; просьба остановить службу —
+    // после конца записи (иначе Android оборвал бы запись)
+    static volatile boolean proj = false, stopAfterProj = false;
+
     static void refresh(Context c) {
         if (!running) return;
         NotificationManager nm = c.getSystemService(NotificationManager.class);
@@ -131,7 +135,8 @@ public class KeepAliveService extends Service {
         boolean mic = intent != null && intent.getBooleanExtra("mic", false) && Build.VERSION.SDK_INT >= 30
             && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
         if (Build.VERSION.SDK_INT >= 29) {
-            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK;
+            // идёт запись звука телефона (VoicePlugin: MediaProjection) — служба и для неё, иначе Android 14 её не даст
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK | (proj ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION : 0);
             try { startForeground(NOTE_ID, note, mic ? type | ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE : type); }
             catch (Exception e) { startForeground(NOTE_ID, note, type); } // Android не дал микрофон (из фона) — хотя бы звук
         } else startForeground(NOTE_ID, note);

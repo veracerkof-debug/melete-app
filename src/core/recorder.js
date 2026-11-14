@@ -211,7 +211,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     apply,
     // Входы и выходы для выбора (как в диктофоне); { inputs, outputs, native }
-    async devices() { try { const d = await engine().devices(); return { ...d, native: engine().native }; } catch { return { inputs: [], outputs: [], native: engine().native }; } },
+    async devices() { try { const d = await engine().devices(); return { ...d, inputs: (d.inputs || []).filter((x) => x.type !== 'display'), native: engine().native }; } catch { return { inputs: [], outputs: [], native: engine().native }; } },
     // Вход поменяли — микрофон открывается заново; выход — сразу
     async reopen() { if (chain && chain.mic) { closeMic(); return openMic(); } return 'ok'; },
     setOut(id) { if (chain) setOutput(chain.c, id || ''); },

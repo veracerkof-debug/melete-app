@@ -246,5 +246,9 @@
   "more": "Yana",
   "lost.switched": "Ichki mikrofon yozmoqda: tashqisi uzildi",
   "lost.sleep": "Tizim ovozni toʻxtatdi — yozuvda uzilish boʻlishi mumkin",
-  "lamp.noneHint": "Kirishdan signal yoʻq: kabel, fantom quvvat (48 V), kuchaytirish va kirish kanalini tekshirish"
+  "lamp.noneHint": "Kirishdan signal yoʻq: kabel, fantom quvvat (48 V), kuchaytirish va kirish kanalini tekshirish",
+  "dev.phoneAudio": "Telefon ovozi",
+  "dev.phoneAudioMic": "Telefon ovozi va mikrofon",
+  "err.capture": "Android telefon ovozini yozishga ruxsat bermadi",
+  "capture.hint": "Boshqa ilovalar ovozi yoziladi (dars, minus). Android har safar ruxsat so‘raydi; qo‘ng‘iroqlar va yozishni taqiqlagan ilovalar yozilmaydi."
 }

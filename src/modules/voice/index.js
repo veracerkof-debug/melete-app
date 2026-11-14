@@ -106,7 +106,7 @@ function micPlace(d) {
   return t('mic.n', { n: all.indexOf(d) + 1 });
 }
 function devName(d) {
-  if (d.type === 'display') return t('dev.display');
+  if (d.type === 'display') return t(!engine().native ? 'dev.display' : d.mic ? 'dev.phoneAudioMic' : 'dev.phoneAudio'); // Android: звук других приложений
   const nm = d.name && d.name !== 'null' ? d.name : '';
   if (d.tech) return t('dev.t.' + d.type) !== 'dev.t.' + d.type ? t('dev.t.' + d.type) + (nm ? ': ' + nm : '') : t('dev.tech', { type: d.type }) + (nm ? ': ' + nm : '');
   if (d.type === 'builtin_mic') { const p = micPlace(d); return t('dev.phone') + (p ? ' · ' + p : ''); }
@@ -525,7 +525,7 @@ function inSheet() {
     return ui.snav(t('in')) + '<div class="vcsh">' + (rec ? '<p class="ftr">' + t('in.recLock') + '</p>' : '') +
       '<div class="group">' + row('', 'other', t('auto'), !s.in, '') + S.devs.inputs.filter((d) => !d.tech).map(irow).join('') + '</div>' +
       (S.devs.inputs.some((d) => d.tech) ? '<div class="hdr">' + t('dev.techHdr') + '</div><div class="group">' + S.devs.inputs.filter((d) => d.tech).map(irow).join('') + '</div><p class="ftr">' + t('dev.techHint') + '</p>' : '') +
-      (lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p>') +
+      (curIn() && curIn().type === 'display' && engine().native ? '<p class="ftr">' + t('capture.hint') + '</p>' : lav ? '<p class="ftr">' + t('lavHint') + '</p>' : curIn() && KIND[curIn().type] === 'bt' ? '<p class="ftr">' + t('btHint') + '</p>' : '<p class="ftr">' + t(engine().native ? 'devHint' : 'devHintWeb') + '</p>') +
       '<div class="hdr">' + t('in.how') + '</div><div class="group">' +
       '<div class="cell"><span class="grow">' + t('stereo') + '</span>' + sw('stereo', s.stereo) + '</div>' +
       (!s.stereo ? '<div class="cellcol"><span class="vc-lbl">' + t('pick') + '</span>' + ui.seg('vpick', [['mix', t('pick.mix')], ['l', t('pick.l')], ['r', t('pick.r')]], s.pick, t('pick')) + '</div>' : '') +
@@ -742,7 +742,7 @@ function stageHTML() {
     '<div class="vc-bar vcled" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div></div>';
 }
 function html() {
-  const err = S.err ? '<p class="ftr vc-err">' + t({ denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
+  const err = S.err ? '<p class="ftr vc-err">' + t(S.err === 'denied' && curIn() && curIn().type === 'display' && engine().native ? 'err.capture' : { denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div><div class="vc-bar vcled mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
       '<div class="vc-btns">' + markBtn(S.marks.length) + '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div></div>';

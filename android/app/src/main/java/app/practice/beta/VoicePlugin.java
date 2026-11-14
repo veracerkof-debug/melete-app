@@ -1,15 +1,20 @@
 package app.practice.beta;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
+import android.media.AudioPlaybackCaptureConfiguration;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.util.Base64;
 import com.getcapacitor.JSArray;
@@ -18,6 +23,9 @@ import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import androidx.activity.result.ActivityResult;
+import androidx.core.content.ContextCompat;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
@@ -42,6 +50,11 @@ public class VoicePlugin extends Plugin {
     private long recFrames = 0;
     private AudioDeviceCallback cb;
     private boolean commSet = false, scoOn = false;
+    // Звук телефона (слово автора 14.11.2026): запись того, что играют другие приложения (урок, минус) — системный
+    // захват Android 10+ (AudioPlaybackCapture). Разрешение Android спрашивает при каждой записи; приложения, запретившие
+    // захват, и звонки не пишутся. withMic — вместе с микрофоном (играть вместе с уроком)
+    private MediaProjection proj;
+    private AudioRecord capRec, capMic;
 
     @Override
     public void load() {
@@ -215,13 +228,82 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void start(PluginCall call) {
         if (getPermissionState("mic") != PermissionState.GRANTED) { requestPermissionForAlias("mic", call, "micGranted"); return; }
-        doStart(call);
+        begin(call);
     }
 
     @PermissionCallback
     private void micGranted(PluginCall call) {
-        if (getPermissionState("mic") == PermissionState.GRANTED) doStart(call);
+        if (getPermissionState("mic") == PermissionState.GRANTED) begin(call);
         else call.reject("denied");
+    }
+
+    private void begin(PluginCall call) {
+        if (!Boolean.TRUE.equals(call.getBoolean("capture", false))) { doStart(call); return; }
+        if (Build.VERSION.SDK_INT < 29) { call.reject("unsupported"); return; }
+        if (recording) { call.reject("busy"); return; }
+        MediaProjectionManager mpm = (MediaProjectionManager) getContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        if (mpm == null) { call.reject("unsupported"); return; }
+        startActivityForResult(call, mpm.createScreenCaptureIntent(), "capGranted");
+    }
+
+    // Человек ответил на системный вопрос «Начать запись?»: служба с типом mediaProjection — потом сам захват
+    @ActivityCallback
+    private void capGranted(PluginCall call, ActivityResult res) {
+        if (call == null) return;
+        if (res == null || res.getResultCode() != Activity.RESULT_OK || res.getData() == null) { call.reject("denied"); return; }
+        final Intent data = res.getData();
+        final int code = res.getResultCode();
+        KeepAliveService.proj = true;
+        Intent i = new Intent(getContext(), KeepAliveService.class);
+        i.putExtra("title", call.getString("title", "Melete"));
+        i.putExtra("text", call.getString("text", ""));
+        i.putExtra("mic", true);
+        try { ContextCompat.startForegroundService(getContext(), i); } catch (Exception e) { KeepAliveService.proj = false; call.reject("service"); return; }
+        new Thread(() -> {
+            // служба должна успеть стать «передней» с нужным типом — иначе getMediaProjection бросит исключение
+            for (int k = 0; k < 40 && !KeepAliveService.running; k++) { try { Thread.sleep(25); } catch (InterruptedException e) { break; } }
+            try { Thread.sleep(80); } catch (InterruptedException e) { /* дальше */ }
+            getActivity().runOnUiThread(() -> {
+                try {
+                    MediaProjectionManager mpm = (MediaProjectionManager) getContext().getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+                    proj = mpm.getMediaProjection(code, data);
+                    if (proj == null) throw new IllegalStateException("projection");
+                    proj.registerCallback(new MediaProjection.Callback() {
+                        @Override public void onStop() { if (recording && capRec != null) { endReason = "projection"; recording = false; } }
+                    }, null);
+                    capRec = openCapture(proj);
+                    if (capRec == null) throw new IllegalStateException("capture");
+                    recRate = 48000;
+                    if (Boolean.TRUE.equals(call.getBoolean("withMic", false))) capMic = open(MediaRecorder.AudioSource.MIC, null, AudioFormat.CHANNEL_IN_MONO);
+                    doStart(call);
+                    if (!recording) endCapture(); // запись не началась (нет места, занято) — захват отпустить
+                } catch (Exception e) { endCapture(); call.reject("unavailable"); }
+            });
+        }).start();
+    }
+
+    private AudioRecord openCapture(MediaProjection mp) {
+        if (Build.VERSION.SDK_INT < 29) return null;
+        try {
+            AudioPlaybackCaptureConfiguration cfg = new AudioPlaybackCaptureConfiguration.Builder(mp)
+                .addMatchingUsage(AudioAttributes.USAGE_MEDIA).addMatchingUsage(AudioAttributes.USAGE_GAME).addMatchingUsage(AudioAttributes.USAGE_UNKNOWN).build();
+            AudioFormat f = new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(48000).setChannelMask(AudioFormat.CHANNEL_IN_STEREO).build();
+            int min = AudioRecord.getMinBufferSize(48000, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+            AudioRecord ar = new AudioRecord.Builder().setAudioFormat(f).setBufferSizeInBytes(Math.max(min * 4, 48000 * 4)).setAudioPlaybackCaptureConfig(cfg).build();
+            if (ar.getState() != AudioRecord.STATE_INITIALIZED) { ar.release(); return null; }
+            ar.startRecording();
+            return ar;
+        } catch (Exception e) { return null; }
+    }
+
+    // Конец записи звука телефона: захват и микрофон отпущены, служба — как просила страница
+    private void endCapture() {
+        if (capMic != null) { try { capMic.stop(); } catch (Exception e) { /* уже */ } capMic.release(); capMic = null; }
+        if (proj != null) { try { proj.stop(); } catch (Exception e) { /* уже */ } proj = null; }
+        capRec = null;
+        KeepAliveService.proj = false;
+        if (KeepAliveService.stopAfterProj) { KeepAliveService.stopAfterProj = false; getContext().stopService(new Intent(getContext(), KeepAliveService.class)); }
+        else KeepAliveService.refresh(getContext());
     }
 
     // Папка записей: постоянная (filesDir) — кэш система может очистить сама, и запись пропала бы молча.
@@ -255,17 +337,19 @@ public class VoicePlugin extends Plugin {
         monitor = Boolean.TRUE.equals(call.getBoolean("monitor", false));
         File d = dir();
         if (!monitor && d.getUsableSpace() < MIN_FREE) { call.reject("space"); return; }
-        AudioDeviceInfo dev = id >= 0 ? find(AudioManager.GET_DEVICES_INPUTS, id) : null;
+        final boolean cap = capRec != null;
+        AudioDeviceInfo dev = !cap && id >= 0 ? find(AudioManager.GET_DEVICES_INPUTS, id) : null;
         boolean bt = isBtVoice(dev);
         if (bt) useComm(dev);
         recRate = bt ? 16000 : 48000;
-        recCh = stereo && !bt && dev != null && dev.getChannelCounts().length > 0 && max(dev.getChannelCounts()) >= 2 ? 2 : 1;
+        recCh = cap ? 2 : stereo && !bt && dev != null && dev.getChannelCounts().length > 0 && max(dev.getChannelCounts()) >= 2 ? 2 : 1;
         final int chMask = recCh == 2 ? AudioFormat.CHANNEL_IN_STEREO : AudioFormat.CHANNEL_IN_MONO;
         if (AudioRecord.getMinBufferSize(recRate, chMask, AudioFormat.ENCODING_PCM_16BIT) <= 0) recRate = 44100;
         // UNPROCESSED — без системной обработки (если устройство умеет); голосовой канал — для Bluetooth
         final int src = bt ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC;
-        final AudioRecord first = open(src, dev, chMask);
+        final AudioRecord first = cap ? capRec : open(src, dev, chMask);
         if (first == null) { releaseComm(); call.reject("unavailable"); return; }
+        final AudioRecord mic = cap ? capMic : null;
         recFile = new File(d, "rec-" + System.currentTimeMillis() + ".wav");
         recFrames = 0; recording = true; paused = false; ended = false; endReason = null;
         final boolean btIn = bt;
@@ -278,6 +362,8 @@ public class VoicePlugin extends Plugin {
             int fails = 0;
             long lastHdr = 0, lastSync = 0, lastSpace = 0, lastRoute = 0;
             int routedId = rec.getRoutedDevice() == null ? -1 : rec.getRoutedDevice().getId();
+            short[] mbuf = mic != null ? new short[recRate] : null; // микрофон к звуку телефона: очередь отсчётов (1 с)
+            int mlen = 0;
             try (RandomAccessFile out = new RandomAccessFile(recFile, "rw")) {
                 out.write(header(0, recRate, recCh)); // размер — каждую секунду: оборвётся — файл всё равно целый
                 while (recording) {
@@ -288,7 +374,7 @@ public class VoicePlugin extends Plugin {
                         if (++fails < 6 && n != AudioRecord.ERROR_DEAD_OBJECT) { try { Thread.sleep(20); } catch (InterruptedException e) { break; } continue; }
                         try { rec.stop(); } catch (Exception e) { /* уже */ }
                         rec.release();
-                        AudioRecord again = btIn ? null : open(raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC, null, chMask);
+                        AudioRecord again = btIn || cap ? null : open(raw && Build.VERSION.SDK_INT >= 24 ? MediaRecorder.AudioSource.UNPROCESSED : MediaRecorder.AudioSource.MIC, null, chMask);
                         if (again == null) { rec = null; ended = true; endReason = "device"; JSObject e = new JSObject(); e.put("reason", "device"); notifyListeners("lost", e); break; }
                         rec = again; fails = 0;
                         JSObject e = new JSObject(); e.put("reason", "device"); e.put("switched", true);
@@ -297,6 +383,14 @@ public class VoicePlugin extends Plugin {
                         continue;
                     }
                     fails = 0;
+                    if (mic != null) { // микрофон — без ожидания: сколько накопилось, столько и подмешать в оба канала
+                        int got = mic.read(mbuf, mlen, mbuf.length - mlen, AudioRecord.READ_NON_BLOCKING);
+                        if (got > 0) mlen += got;
+                        int fr = Math.min(mlen, n / 2);
+                        for (int f = 0; f < fr; f++) { for (int c = 0; c < 2; c++) { int v = buf[2 * f + c] + mbuf[f]; buf[2 * f + c] = (short) Math.max(-32768, Math.min(32767, v)); } }
+                        System.arraycopy(mbuf, fr, mbuf, 0, mlen - fr); mlen -= fr;
+                        if (mlen > recRate / 4) mlen = 0; // отстал — догнать, не копить задержку
+                    }
                     int peak = 0; double sum = 0;
                     for (int i = 0; i < n; i++) { int v = Math.abs(buf[i]); if (v > peak) peak = v; sum += (double) buf[i] * buf[i]; bytes[2 * i] = (byte) (buf[i] & 0xff); bytes[2 * i + 1] = (byte) ((buf[i] >> 8) & 0xff); }
                     if (!paused && !monitor) { out.write(bytes, 0, n * 2); recFrames += n / recCh; }
@@ -338,6 +432,7 @@ public class VoicePlugin extends Plugin {
             } catch (Exception e) { ended = true; if (endReason == null) endReason = "write"; }
             if (rec != null) { try { rec.stop(); } catch (Exception e) { /* уже */ } rec.release(); }
             releaseComm();
+            if (cap) { if (getActivity() != null) getActivity().runOnUiThread(this::endCapture); else endCapture(); }
         });
         recThread.start();
         JSObject r = new JSObject();
@@ -346,7 +441,8 @@ public class VoicePlugin extends Plugin {
         r.put("bt", bt);
         r.put("routed", dev == null || first.getRoutedDevice() == null ? -1 : first.getRoutedDevice().getId());
         if (first.getRoutedDevice() != null) r.put("dev", devJson(first.getRoutedDevice()));
-        r.put("raw", src == MediaRecorder.AudioSource.UNPROCESSED);
+        r.put("raw", !cap && src == MediaRecorder.AudioSource.UNPROCESSED);
+        r.put("capture", cap);
         call.resolve(r);
     }
 
