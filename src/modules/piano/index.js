@@ -92,10 +92,11 @@ function layout() {
   // полный экран: клавиши — на всю высоту (две клавиатуры — пополам), без панели и полей
   if (host.closest('.tview.pure, .pfull')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
   const cvl = host.querySelector('.pvl');
-  const used = (bar ? bar.offsetHeight + 8 : 0) + (hl ? hl.offsetHeight + 6 : 0) + 24, avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
+  const side = size === 'strip'; // полоса: октава ‹ › — сбоку от клавиш, не над ними
+  const used = (bar && !side ? bar.offsetHeight + 8 : 0) + (hl && !side ? hl.offsetHeight + 6 : 0) + (side ? 4 : 24), avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
   // в малых окнах сессии клавиши выше (до 7 ширин, как настоящие ≈ 6,4): иначе узкое окно оставляет пустую половину
-  let kh = Math.round(Math.max(96, Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340)));
+  let kh = Math.round(Math.max(Math.min(96, avail), Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340))); // низкая полоса — клавиши по её высоте, не выше (иначе уезжали за верх)
   // с панелью эффектов — клавиши ровно в нижней половине, панель занимает всё, что выше
   if (ps) kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used) * 0.5)));
   // режим линий — как с панелью: клавиши в нижней части, всё, что выше, — линии (не меньше 60 px)

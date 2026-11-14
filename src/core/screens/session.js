@@ -17,6 +17,7 @@ import {
 } from '../session.js';
 import {
   getWS, fixWS, lsizes, lpos, halves, setLayout, closePane, swapHalves, assign, swapPanes, dropTool, addPane, sizeOf, clampFrac, visible,
+  fitOf,
 } from '../workspace.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
@@ -357,6 +358,8 @@ export function createSessionScreen(app) {
     if (!wsEl || pureI >= 0) return; // окно во весь экран — размеры остальных не пересчитываются
     panes.forEach((p, i) => {
       if (!p) return;
+      const fit = String(w.layout === 'F' ? 9 : fitOf(p.frame.offsetWidth, p.frame.offsetHeight));
+      if (p.frame.dataset.fit !== fit) p.frame.dataset.fit = fit;
       const s = measure(p.frame);
       if (!s || s === p.size) return;
       const want = pickModule(st(), w, w.panes[i], s);

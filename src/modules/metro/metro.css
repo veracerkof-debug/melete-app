@@ -194,3 +194,9 @@
 .mslstep{gap:6px}
 /* Полный экран: поля по краям (16 px и вырез экрана) — колесо и кнопки не упираются в край */
 .pane.pfull .mv{padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));box-sizing:border-box}
+/* Маленькое окно (data-fit — сколько кнопок помещается, src/core/workspace.js: fitOf; слово автора 14.11.2026):
+   четверть — только колесо (пуск и темп в середине), полоса — темп и пуск; размер и деление — в окне побольше */
+.pane[data-fit="1"] .mv .mside,.pane[data-fit="2"] .mv .mside{display:none}
+.pane[data-fit="1"] .mv,.pane[data-fit="2"] .mv{justify-content:center}
+.pane.pane[data-fit="1"] .mv.mv .mwheel.mwheel,.pane.pane[data-fit="2"] .mv.mv .mwheel.mwheel{width:min(100cqw - 8px,100cqh - 8px)!important;height:min(100cqw - 8px,100cqh - 8px)!important;max-width:none;max-height:none;flex:none}
+.pane[data-fit="1"] .vs .mtile,.pane[data-fit="1"] .vs [data-hold],.pane[data-fit="2"] .vs .mtile,.pane[data-fit="2"] .vs [data-hold]{display:none}

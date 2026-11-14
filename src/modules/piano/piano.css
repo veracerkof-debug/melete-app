@@ -151,3 +151,12 @@
 .retro.inl .lcd{border-radius:12px}
 .psyn .pspick{margin-top:6px}
 .psyn .pspick .slots{margin-bottom:6px}
+/* Маленькое окно (data-fit, слово автора 14.11.2026): клавиши и октава ‹ ›; число клавиш, звук и линии — в окне побольше */
+.pane[data-fit="1"] .pbar [data-step="pkeys"],.pane[data-fit="1"] .pbar [data-x="psound"],.pane[data-fit="1"] .pbar [data-x="plines"],
+.pane[data-fit="2"] .pbar [data-step="pkeys"],.pane[data-fit="2"] .pbar [data-x="psound"],.pane[data-fit="2"] .pbar [data-x="plines"]{display:none}
+/* Полоса: клавиши на всю высоту, октава ‹ › — сбоку; остальные кнопки — в окне побольше */
+.pane.strip .pwrap{display:flex;flex-direction:row;align-items:center;gap:6px}
+.pane.strip .pwrap .kbs{flex:1 1 0!important;min-width:0}
+.pane.strip .pwrap .lastnote{display:none!important}
+.pane.strip .pbar{flex:none;margin:0;flex-wrap:nowrap}
+.pane.strip .pbar .pgrp+.pgrp{display:none}
