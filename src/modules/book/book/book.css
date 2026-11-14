@@ -430,3 +430,11 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 .pu-bar small{position:absolute;top:100%;transform:translateX(-50%);font-size:10px;letter-spacing:0;text-transform:none;white-space:nowrap}
 .pu-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--tint);box-shadow:0 0 0 4px color-mix(in srgb,var(--tint) 25%,transparent);transform:translate(-50%,-50%);transition:left .08s linear}
 .pu-range{width:100%;min-height:40px;accent-color:var(--tint);margin-top:8px}
+/* Маленькое окно (data-fit, слово автора 14.11.2026): шапка — значок и название в одну строку, без пояснения и уровня;
+   в самом малом (1/8) — ещё и без поиска, остальное прокручивается */
+.pane[data-fit="1"] .bhero,.pane[data-fit="2"] .bhero{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;border-radius:14px}
+.pane[data-fit="1"] .bhero>:not(.bhicon):not(h2):not(.bsearch),.pane[data-fit="2"] .bhero>:not(.bhicon):not(h2):not(.bsearch){display:none}
+.pane[data-fit="1"] .bhero>.bsearch{display:none}
+.pane[data-fit="1"] .bhero h2,.pane[data-fit="2"] .bhero h2{margin:0;font-size:20px}
+.pane[data-fit="1"] .bhicon svg,.pane[data-fit="2"] .bhicon svg{width:26px;height:26px}
+.pane[data-fit="2"] .bhero>.bsearch{flex:1;min-width:120px}
