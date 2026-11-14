@@ -227,8 +227,8 @@ body:has(.tview.pure,.session.pure) #mixd:not(.open){transform:translateX(100%);
 .session.calm .shd>#stime{transform:scale(1.35);transform-origin:left center}
 @media (prefers-reduced-motion: reduce){.session .shd>*,.session .sdock,.session .grip,.session .pfbtn,.session .splan,.session .stime{transition:none}}
 /* Телефон на боку (и пианино, повёрнутое приложением): окно — во всю ширину, без карточки посередине (слово автора 14.11.2026) */
-@media (orientation:landscape) and (max-height:600px){ .sin,.tbar{max-width:none} }
-.session.rot .sin,.session.rot .tbar{max-width:none}
+@media (orientation:landscape) and (max-height:600px){ .sin,.sdock .tbar{max-width:none} }
+.session.rot .sin,.session.rot .sdock .tbar{max-width:none}
 /* Телефон на боку (и повёрнутое пианино): панель инструментов — узкой колонкой справа, заголовок ниже — окну вся высота */
 @media (orientation:landscape) and (max-height:600px){
 html:not(.desk) .session:not(.toolmode){display:grid;grid-template-columns:minmax(0,1fr) 64px;grid-template-rows:minmax(0,1fr)}
@@ -236,10 +236,10 @@ html:not(.desk) .session:not(.toolmode) .sin{grid-column:1;grid-row:1;padding:4p
 html:not(.desk) .session:not(.toolmode) .shd{min-height:40px}
 html:not(.desk) .session:not(.toolmode) .shd .stitle2{font-size:15px}
 html:not(.desk) .session:not(.toolmode) .sdock{grid-column:2;grid-row:1;border-top:0;border-left:.5px solid var(--sep);padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden}
-html:not(.desk) .session:not(.toolmode) .tbar{flex-direction:column;align-items:center;justify-content:flex-start;padding:0 6px;gap:4px;overflow:visible}
-html:not(.desk) .session:not(.toolmode) .tb{width:48px;height:44px}
-html:not(.desk) .session:not(.toolmode) .tb .tl{display:none}
-html:not(.desk) .session:not(.toolmode) .tb.used::after{bottom:auto;top:4px;left:auto;right:4px;margin:0}
+html:not(.desk) .session:not(.toolmode) .sdock .tbar{flex-direction:column;align-items:center;justify-content:flex-start;padding:0 6px;gap:4px;overflow:visible}
+html:not(.desk) .session:not(.toolmode) .sdock .tb{width:48px;height:44px}
+html:not(.desk) .session:not(.toolmode) .sdock .tb .tl{display:none}
+html:not(.desk) .session:not(.toolmode) .sdock .tb.used::after{bottom:auto;top:4px;left:auto;right:4px;margin:0}
 html:not(.desk) .session:not(.toolmode) .ws{margin-top:4px}
 }
 .session.rot:not(.toolmode){display:grid;grid-template-columns:minmax(0,1fr) 64px;grid-template-rows:minmax(0,1fr)}
@@ -247,8 +247,8 @@ html:not(.desk) .session:not(.toolmode) .ws{margin-top:4px}
 .session.rot:not(.toolmode) .shd{min-height:40px}
 .session.rot:not(.toolmode) .shd .stitle2{font-size:15px}
 .session.rot:not(.toolmode) .sdock{grid-column:2;grid-row:1;border-top:0;border-left:.5px solid var(--sep);padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden}
-.session.rot:not(.toolmode) .tbar{flex-direction:column;align-items:center;justify-content:flex-start;padding:0 6px;gap:4px;overflow:visible}
-.session.rot:not(.toolmode) .tb{width:48px;height:44px}
-.session.rot:not(.toolmode) .tb .tl{display:none}
-.session.rot:not(.toolmode) .tb.used::after{bottom:auto;top:4px;left:auto;right:4px;margin:0}
+.session.rot:not(.toolmode) .sdock .tbar{flex-direction:column;align-items:center;justify-content:flex-start;padding:0 6px;gap:4px;overflow:visible}
+.session.rot:not(.toolmode) .sdock .tb{width:48px;height:44px}
+.session.rot:not(.toolmode) .sdock .tb .tl{display:none}
+.session.rot:not(.toolmode) .sdock .tb.used::after{bottom:auto;top:4px;left:auto;right:4px;margin:0}
 .session.rot:not(.toolmode) .ws{margin-top:4px}
