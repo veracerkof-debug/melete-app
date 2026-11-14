@@ -134,7 +134,13 @@ function keysHTML() {
 
 function circleHTML() {
   const th = TH(), k = keyInfo(th.pc, th.minor, th.sev), { t } = ctx;
-  if (size === 'quarter') return '<div class="cwrap q">' + circleSVG(k) + '</div>';
+  // четверть (слово автора 14.11.2026): круг там мелкий — тональность ‹ › и крупные аккорды; нажатие играет аккорд
+  // низкая половина (телефон на боку, окно в полосу) — так же: круг в 180 px не читается
+  if (size === 'quarter' || (size === 'half' && host && host.clientHeight && host.clientHeight < 260)) {
+    return '<div class="cwrap qc"><div class="srow2" style="flex:none">' + icb('data-x="kprev"', '‹', t('ccw'), 'sm txt') + '<button class="ktitle" data-x="kmodet" aria-label="' + t('modeToggle') + '">' + keyTitle(k) +
+      '<span class="l2">' + sigText(k) + '</span></button>' + icb('data-x="knext"', '›', t('cw'), 'sm txt') + '</div><div class="cgrid qg">' +
+      k.chords.map((c, i) => '<button class="cbtn" data-x="chord" data-i="' + i + '"><span class="fnb f' + c.f + '">' + c.rn + '</span><b>' + c.name + '</b></button>').join('') + '</div></div>';
+  }
   const modes = '<div class="seg" style="width:auto" data-seg="kmode" role="group" aria-label="' + t('modeToggle') + '"><button data-v="0" aria-pressed="' + !th.minor +
     '" style="min-width:66px;flex:none;padding:0 12px">' + t('major') + '</button><button data-v="1" aria-pressed="' + th.minor + '" style="min-width:66px;flex:none;padding:0 12px">' + t('minor') + '</button></div>' +
     '<button class="ic txt sm' + (th.sev ? ' act' : '') + '" data-x="sevt" aria-pressed="' + th.sev + '" aria-label="' + t('sevenths') + '">7</button>';

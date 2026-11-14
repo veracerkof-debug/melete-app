@@ -79,7 +79,8 @@ function migrateVoice(fx = {}) {
   if (fx.gate > -90) Object.assign(p, { expThr: fx.gate, expRatio: 4, expRange: 40 });
   return { mode: 'own', base: 'music', p, level: fx.normalize === false ? 'off' : 'peak' };
 }
-const big = () => size === 'full' || size === 'half';
+// большой вид — в полном окне и в половине, где помещается больше двух кнопок (низкая половина на боку — компактный)
+const big = () => (size === 'full' || size === 'half') && !(host && +(host.closest('.pane')?.dataset.fit || 9) <= 2);
 const esc = (s) => ctx.ui.esc(s);
 const t = (k, v) => ctx.t(k, v);
 const fmt = (sec) => { sec = Math.max(0, sec || 0); const m = Math.floor(sec / 60), s = sec - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };

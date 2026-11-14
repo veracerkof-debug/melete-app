@@ -359,9 +359,10 @@ export function createSessionScreen(app) {
     panes.forEach((p, i) => {
       if (!p) return;
       const fit = String(w.layout === 'F' ? 9 : fitOf(p.frame.offsetWidth, p.frame.offsetHeight));
+      const fitChanged = p.frame.dataset.fit !== undefined && p.frame.dataset.fit !== fit;
       if (p.frame.dataset.fit !== fit) p.frame.dataset.fit = fit;
       const s = measure(p.frame);
-      if (!s || s === p.size) return;
+      if (!s || s === p.size) { if (fitChanged && p.inst) p.inst.resize(p.size); return; } // тот же размер, другое число кнопок — инструмент выбирает вид заново
       const want = pickModule(st(), w, w.panes[i], s);
       if (want !== p.mod || (members(st(), w.panes[i]).length > 1)) fillPane(p.frame, i, s);
       else { p.size = s; p.inst && p.inst.resize(s); }

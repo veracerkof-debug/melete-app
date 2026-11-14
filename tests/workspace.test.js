@@ -97,3 +97,14 @@ describe('раскладка на компьютере', () => {
     expect(getWS2(d, null, { desk: true }).layout).toBe('F');
   });
 });
+
+// Сколько кнопок помещается в окне (слово автора 14.11.2026): 1/8 — одна, четверть — две, низкая полоса — по высоте
+import { fitOf } from '../src/core/workspace.js';
+import { it as it2, expect as expect2 } from 'vitest';
+it2('fitOf: по площади и по короткой стороне', () => {
+  expect2(fitOf(436, 92)).toBe(1); // 1/8 на боку
+  expect2(fitOf(206, 406)).toBe(2); // четверть стоя
+  expect2(fitOf(884, 184)).toBe(2); // половина на боку — один ряд
+  expect2(fitOf(423, 406)).toBe(4); // половина стоя
+  expect2(fitOf(423, 823)).toBe(9);
+});

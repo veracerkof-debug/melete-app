@@ -168,9 +168,10 @@
 .vcsh .st{display:block;font-size:12.5px;color:var(--l2)}
 .vcsh .vc-irow .grow{display:flex;flex-direction:column}
 @container (max-height: 420px){.voice .vc-bot{padding-top:6px;padding-bottom:6px}.voice .vc-bot .vc-btn{width:46px;height:46px}.voice .vc-bot .vc-btn.main{width:64px;height:64px;box-shadow:0 0 0 4px color-mix(in srgb,#D2463F 18%,transparent)}.voice .vc-pre{padding-bottom:4px}}
-/* Маленькое окно (data-fit, слово автора 14.11.2026): 1/8 — только запись и время в ряд, по высоте окна */
-.pane[data-fit="1"] .voice{padding:0;overflow:hidden}
-.pane[data-fit="1"] .voice .vc-rec{flex-direction:row;padding:0!important;min-height:100%;gap:14px}
-.pane[data-fit="1"] .voice .vc-btns>:not(.main){display:none}
-.pane[data-fit="1"] .voice .vc-btn.main{width:min(56px,calc(100cqh - 10px));height:min(56px,calc(100cqh - 10px))}
-.pane[data-fit="1"] .voice .vc-state,.pane[data-fit="1"] .voice .vc-meter{display:none}
+/* Маленькое окно (data-fit, слово автора 14.11.2026): 1/8 и низкое — только запись и время в ряд, по высоте окна */
+.pane[data-fit="1"] .voice,.pane[data-fit="2"] .voice{padding:0;overflow:hidden}
+.pane[data-fit="1"] .voice .vc-rec,.pane[data-fit="2"] .voice .vc-rec{flex-direction:row;padding:0!important;min-height:100%;gap:14px}
+.pane[data-fit="1"] .voice .vc-btns>:not(.main),.pane[data-fit="2"] .voice .vc-btns>:not(.main){display:none}
+.pane[data-fit="1"] .voice .vc-btn.main,.pane[data-fit="2"] .voice .vc-btn.main{width:min(56px,calc(100cqh - 10px));height:min(56px,calc(100cqh - 10px))}
+.pane[data-fit="1"] .voice .vc-state,.pane[data-fit="1"] .voice .vc-meter,.pane[data-fit="2"] .voice .vc-state,.pane[data-fit="2"] .voice .vc-meter{display:none}
+.pane[data-fit="1"] .voice .vc-rec,.pane[data-fit="2"] .voice .vc-rec{width:100%;justify-content:center;box-sizing:border-box}

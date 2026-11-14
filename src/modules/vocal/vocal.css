@@ -169,3 +169,6 @@
 .vclegend i.wk{background:color-mix(in srgb,var(--tint) 45%,var(--fill))}.vclegend i.ph{background:color-mix(in srgb,var(--tint) 18%,var(--fill))}
 .vclegend i.rg{background:var(--ink);width:4px}.vclegend i.pu{background:#3E9A5E}
 .vcsug{background:color-mix(in srgb,var(--tint) 12%,var(--cell));border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+/* Низкое и маленькое окно (data-fit): «Сначала — диапазон» — заголовок и кнопка, без пояснения */
+.pane[data-fit="1"] .vcv .card.first>.l2,.pane[data-fit="2"] .vcv .card.first>.l2{display:none}
+.pane[data-fit="1"] .vcv .card.first,.pane[data-fit="2"] .vcv .card.first{gap:8px;padding:10px}
