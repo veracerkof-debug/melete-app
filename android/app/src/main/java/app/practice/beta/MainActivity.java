@@ -41,6 +41,11 @@ public class MainActivity extends BridgeActivity {
             // не отключаются целиком: в полях ввода (текст и аккорды песни, заметки) их дают выделить, вырезать,
             // вставить; в остальных местах их убирают стили (user-select: none) и guard.js (contextmenu)
             getBridge().getWebView().setHapticFeedbackEnabled(false);
+            // Только свои жесты (слово автора 14.11.2026): на Honor всплывало системное «AI-воспоминания» над текстом.
+            // Окно не отдаётся службам захвата содержимого и автозаполнения (Android 10+/8+) — системные помощники
+            // производителей (воспоминания, «умные» подсказки по тексту на экране) не читают то, что в приложении
+            if (Build.VERSION.SDK_INT >= 30) getBridge().getWebView().setImportantForContentCapture(android.view.View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS);
+            if (Build.VERSION.SDK_INT >= 26) getBridge().getWebView().setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
             // Звук в фоне без заиканий: когда приложение свёрнуто, Android по умолчанию снимает с отрисовщика WebView
             // приоритет (waivedWhenNotVisible) — звуковой поток в нём начинает голодать. Приоритет остаётся важным всегда
             if (Build.VERSION.SDK_INT >= 26) getBridge().getWebView().setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);

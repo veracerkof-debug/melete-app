@@ -224,7 +224,9 @@ export function homeHTML(app) {
   P.voice = quoteHTML(app, false);
   // лига — вторым кольцом в той же плитке (решение автора 28.10.2026): путь до следующего самоцвета, камень внутри;
   // в правке главной — отдельным блоком, чтобы его можно было убрать или переставить
-  const gemIn = !plain && !EDIT && isOn(st, 'mastery') && !homeLayout(st).off.has('league');
+  // и в правке главной камень остаётся там, где он живёт, — кольцом в плитке недели (слово автора 14.11.2026); убрать его —
+  // крестик на самом кольце; убранный камень лежит в «Убрано» и возвращается касанием
+  const gemIn = !plain && isOn(st, 'mastery') && !homeLayout(st).off.has('league');
   if (!plain) P.week = '<div class="hcard' + (gemIn ? ' hwgem' : '') + '"><div class="hrow">' + goalRing(p, true, t('home.ringAria', { p: Math.round(p * 100) }), { cap: t('home.left'), v: shortDur(goal - w.total) }) + '<div class="htxt"><div class="l2" style="font-size:14px">' + t('home.week') +
     '</div><div class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</div><div class="l2" style="font-size:14px">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</div>' +
     streakPill(app) + '</div>' + (gemIn ? gemRing(app) : '') + '</div>' +
@@ -424,7 +426,8 @@ const leftShort = (h) => (h >= 1 ? t('time.h', { n: Math.round(h) }) : t('time.m
 function gemRing(app) {
   const sec = leagueHours(app) * 3600;
   return '<div class="hgring hgstone"><canvas data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title') + ', ' + fmtDur(sec)) + '"></canvas>' +
-    '<span class="hgname">' + esc(t('stone.title')) + '</span>' + (sec >= 60 ? '<span class="hgleft num">' + esc(fmtDur(sec)) + '</span>' : '') + '</div>';
+    '<span class="hgname">' + esc(t('stone.title')) + '</span>' + (sec >= 60 ? '<span class="hgleft num">' + esc(fmtDur(sec)) + '</span>' : '') +
+    (EDIT ? '<button class="hbgx" data-hbe="hide:league" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.league')) + '">×</button>' : '') + '</div>';
 }
 
 export function gemSheet(app) {

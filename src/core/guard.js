@@ -21,6 +21,8 @@ export function initGuard(a) {
   app = a;
   // долгое касание не открывает меню (кроме полей ввода)
   document.addEventListener('contextmenu', (e) => { if (!e.target.closest('input, textarea, [contenteditable="true"]')) e.preventDefault(); });
+  // выделение текста — только в полях ввода (и в журнале сбоев, где его просят копировать): остальное — свои жесты
+  document.addEventListener('selectstart', (e) => { const n = e.target.nodeType === 1 ? e.target : e.target.parentElement; if (n && !n.closest('input, textarea, [contenteditable="true"], .aidoc, .rptpre, .l-diag, [data-selectable]')) e.preventDefault(); });
   // несколько пальцев на инструменте — не масштабирование и не прокрутка страницы
   document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.target.closest('.pane')) e.preventDefault(); }, { passive: false });
   app.store.subscribe(sync); // переключатель в «Функциях»
