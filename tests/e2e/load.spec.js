@@ -18,3 +18,13 @@ test('четыре инструмента сразу: без ошибок', asyn
   await expect(page.locator('.session .pane')).toHaveCount(4);
   expect(errors).toEqual([]);
 });
+
+test('нижняя панель: инструмент, которому мало места в окне в фокусе, притушен', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('QQ', ['metro', 'drone', 'tuner', 'looper']);
+  await expect(page.locator('#tpills .tb[data-pill="piano"]')).toHaveClass(/small/);
+  await expect(page.locator('#tpills .tb[data-pill="drone"]')).not.toHaveClass(/small/);
+  await melete.free('F', ['metro']);
+  await expect(page.locator('#tpills .tb[data-pill="piano"]')).not.toHaveClass(/small/);
+  expect(errors).toEqual([]);
+});

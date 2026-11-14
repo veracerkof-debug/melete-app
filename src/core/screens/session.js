@@ -379,9 +379,11 @@ export function createSessionScreen(app) {
 
   function dockSel() {
     if (!layer) return;
-    const vis = visible(w);
+    const vis = visible(w), slot = lsizes(w.layout)[w.focus];
     layer.querySelectorAll('#tpills .tb').forEach((b) => {
       const id = b.dataset.pill;
+      // инструменту мало места в окне в фокусе (meta.minSize): значок притушен, касание объяснит
+      b.classList.toggle('small', !vis.includes(id) && !fits(minOf(id), slot));
       b.setAttribute('aria-selected', w.panes[w.focus] === id);
       b.classList.toggle('used', vis.includes(id) && w.panes[w.focus] !== id);
     });

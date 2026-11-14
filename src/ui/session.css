@@ -164,6 +164,7 @@
 .sdock .tb{color:var(--l3);position:relative}
 .sdock .tb.used{color:var(--tint);background:color-mix(in srgb,var(--tint) 9%,transparent)}
 .sdock .tb[aria-selected="true"]{color:var(--tint);background:color-mix(in srgb,var(--tint) 20%,transparent)}
+.sdock .tb.small{opacity:.38}
 .sdock .tb[aria-selected="true"] svg,.sdock .tb.used svg{stroke-width:2.1}
 .sdock .tb[aria-selected="true"]::after{content:"";position:absolute;bottom:4px;left:50%;width:16px;height:3px;margin-left:-8px;border-radius:2px;background:var(--tint)}
 /* Окно во весь экран (меню окна → «Полный экран»): поверх заголовка, панели и других окон */
