@@ -131,6 +131,10 @@ export const arpStat = { notes: 0, glide: 0 };
 export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 = () => 440 }) {
   let timer = 0, next = 0, step = 0, bar = null, prevName = null, keyN = 0, glide = null, gNext = 0, gNote = 0;
   let sig = '', lad = null, root = 0, keyPc = null, scale = null; // звучащий аккорд и его лесенка, тональность
+  let psig = '', gsig = '', gBusyAt = 0, gFirst = true; // подпись настроек рисунка и спутника: правка слышна сразу, не со следующего такта
+  let lastC = null;
+  const trace = []; // что играется: { k: 'a' | 'g', t, m, d, v } — для окна сигнала в настройках (чтение, на звук не влияет)
+  const note = (e) => { trace.push(e); if (trace.length > 160) trace.splice(0, trace.length - 160); };
   let outG = null; // своя громкость арпеджиатора → шина пэдов (узел создаётся раз на контекст, правится параметром)
   const out = (c, a) => {
     if (!outG || outG.context !== c) { outG = c.createGain(); outG.gain.value = lvlGain(a.lvl); outG.connect(mixer.bus('drone')); }
@@ -144,6 +148,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
 
   function tick() {
     const c = getContext(mixer.state.mode), a = normalizeArp(getArp());
+    lastC = c;
     if (!c || !a.on || !drone.on) { stop(); return; }
     const d = getDrone(), per = RATES[a.rate], st = beatLen() / per, steps = per * 4;
     const anc = anchor();
@@ -161,6 +166,9 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
       keyPc = keyFor(d.pc, drone.chord, d.view === 'circle' && d.ckey != null ? (d.ckey * 7) % 12 : null, keyPc);
       scale = keyPc == null ? scaleOf(d.pc, drone.chord) : MAJ.map((x) => (keyPc + x) % 12);
     }
+    // Рисунок, ритм, жизнь, плотность, длина, свинг, диапазон сменились — новый такт строится сразу, с того же шага
+    const ps = [a.style, a.rate, a.life, a.density, a.gate, a.swing, a.range].join();
+    if (ps !== psig) { psig = ps; bar = null; }
     while (next < c.currentTime + lookahead) {
       if (!bar || step % steps === 0) { bar = barNotes(a, lad, steps, prevName, Math.random, scale); prevName = bar.name; }
       const n = bar.notes[step % steps], sw = a.swing && per === 2 && step % 2 === 1 ? a.swing * st * 0.33 : 0;
@@ -168,7 +176,9 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
         const t = next + sw + n.dt * st, key = 'arp' + (keyN = (keyN + 1) % 48), patch = arpPatch(a);
         synth.on(noteAt(lad, n.i, n.pass ? scale : null), key, { bus: 'drone', out: out(c, a), patch, vel: n.vel * 0.7, at: t });
         arpStat.notes++;
-        synth.off(key, false, t + Math.max(0.05, st * (0.25 + a.gate * 1.5)));
+        const dur = Math.max(0.05, st * (0.25 + a.gate * 1.5));
+        synth.off(key, false, t + dur);
+        note({ k: 'a', t, m: noteAt(lad, n.i, n.pass ? scale : null), d: dur, v: n.vel });
       }
       next += st; step++;
     }
@@ -190,39 +200,54 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
     vib.frequency.value = 4.8; vg.gain.value = 9; vib.connect(vg); vg.connect(o1.detune); vg.connect(o2.detune);
     const m2 = c.createGain(); m2.gain.value = 0.35;
     o1.connect(lp); o2.connect(m2).connect(lp);
+    // lv — громкость спутника: правится на ходу, не трогая рисунок нот (g)
+    const lv = c.createGain(); lv.gain.value = 0.5 * lvlGain(a.glide.lvl);
     lp.connect(g); g.gain.value = 0;
-    g.connect(out);
+    g.connect(lv); lv.connect(out);
     dl.delayTime.value = Math.min(1.9, beatLen() * 0.75); fb.gain.value = 0.45 + a.glide.echo * 0.3; wet.gain.value = 0.35 + a.glide.echo * 0.45;
-    g.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(out);
-    const hall = mixer.wet ? mixer.wet('drone', 'cathedral') : null; if (hall) { const s = c.createGain(); s.gain.value = 0.5; g.connect(s).connect(hall); }
+    lv.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(out);
+    const hall = mixer.wet ? mixer.wet('drone', 'cathedral') : null; if (hall) { const s = c.createGain(); s.gain.value = 0.5; lv.connect(s).connect(hall); }
     const t = c.currentTime;
     [o1, o2, vib].forEach((o) => o.start(t));
-    glide = { g, o1, o2, vib, dl, fb, wet, lp };
-    gNext = t + 0.3; gNote = 0;
+    glide = { g, lv, o1, o2, vib, dl, fb, wet, lp };
+    gNext = t + 0.05; gNote = 0; gFirst = true; gsig = ''; gBusyAt = 0;
   }
   function glideTick(c, a, d) {
     if (!glide) glideOn(c, a);
-    glide.fb.gain.setTargetAtTime(0.45 + a.glide.echo * 0.3, c.currentTime, 0.2);
-    glide.wet.gain.setTargetAtTime(0.35 + a.glide.echo * 0.45, c.currentTime, 0.2);
+    const now = c.currentTime;
+    // громкость и эхо — на ходу, с любой нотой; подвижность — со следующей, поэтому после паузы в движении ползунка
+    // текущая нота обрывается и начинается новая (иначе нота тянулась бы до 8 долей)
+    glide.lv.gain.setTargetAtTime(0.5 * lvlGain(a.glide.lvl), now, 0.05);
+    glide.fb.gain.setTargetAtTime(0.45 + a.glide.echo * 0.3, now, 0.08);
+    glide.wet.gain.setTargetAtTime(0.35 + a.glide.echo * 0.45, now, 0.08);
+    glide.dl.delayTime.setTargetAtTime(Math.min(1.9, beatLen() * 0.75), now, 0.3);
+    const gs = String(a.glide.busy);
+    if (gs !== gsig) { if (gsig) gBusyAt = now; gsig = gs; }
+    if (gBusyAt && now - gBusyAt > 0.3) { gBusyAt = 0; holdAt(glide.g.gain, now); gNext = now + 0.05; }
     while (gNext < c.currentTime + lookahead) {
       const bl = beatLen(), len = bl * (a.glide.busy > 0.66 ? 1 : a.glide.busy > 0.33 ? 2 : 4) * (Math.random() < 0.3 ? 2 : 1);
-      if (Math.random() < 0.18 * (1 - a.glide.busy)) { glide.g.gain.setTargetAtTime(0, gNext, bl * 0.6); gNext += len; continue; } // дыхание
+      // дыхание — но не первой нотой: включённый глайдер сразу звучит
+      if (!gFirst && Math.random() < 0.18 * (1 - a.glide.busy)) { glide.g.gain.setTargetAtTime(0, gNext, bl * 0.6); gNext += len; continue; }
+      gFirst = false;
       gNote = glideNext(gNote, d.pc, drone.chord, Math.random, 64, 79, scale);
       arpStat.glide++;
       const f = midiFreq(gNote, getA4());
       [glide.o1, glide.o2].forEach((o) => o.frequency.setTargetAtTime(f, gNext, 0.09)); // скольжение
       glide.lp.frequency.setTargetAtTime(Math.min(6000, f * 5), gNext, 0.3);
-      const gv = 0.5 * lvlGain(a.glide.lvl); // громкость спутника: по умолчанию — прежний фон (0,5), до +12 дБ
-      glide.g.gain.setTargetAtTime(0.09 * gv, gNext, bl * 0.35); // долгое нарастание
-      glide.g.gain.setTargetAtTime(0.05 * gv, gNext + len * 0.6, len * 0.3);
+      // громкость спутника (по умолчанию — прежний фон, до +12 дБ) стоит на узле lv и меняется на ходу
+      glide.g.gain.setTargetAtTime(0.09, gNext, Math.min(bl * 0.35, 0.25)); // нарастание — не дольше четверти секунды
+      glide.g.gain.setTargetAtTime(0.05, gNext + len * 0.6, len * 0.3);
+      note({ k: 'g', t: gNext, m: gNote, d: len, v: 1 });
       gNext += len;
     }
   }
   function glideOff() {
     if (!glide) return;
     const x = glide, c = x.g.context, t = c.currentTime;
-    holdAt(x.g.gain, t); x.g.gain.setTargetAtTime(0, t, 0.5); x.wet.gain.setTargetAtTime(0, t + 2, 0.8);
-    [x.o1, x.o2, x.vib].forEach((o) => { try { o.stop(t + 6); } catch { /* уже */ } });
+    // выключили — звук уходит сразу (за четверть секунды), эхо — за полторы, а не тянется несколько секунд
+    holdAt(x.g.gain, t); x.g.gain.setTargetAtTime(0, t, 0.08); x.fb.gain.setTargetAtTime(0.1, t, 0.15); x.wet.gain.setTargetAtTime(0, t, 0.35);
+    [x.o1, x.o2, x.vib].forEach((o) => { try { o.stop(t + 3); } catch { /* уже */ } });
+    setTimeout(() => { try { x.lv.disconnect(); } catch { /* уже */ } }, 3200);
     glide = null;
   }
 
@@ -241,5 +266,6 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
   // пэд зазвучал или смолк, настройку включили — арпеджиатор сам идёт или стоит
   const sync = () => { const a = normalizeArp(getArp()); if (a.on && drone.on) start(); else stop(); };
   drone.subscribe(sync);
-  return { sync, start, stop, get running() { return !!timer; } };
+  // trace и time — для окна сигнала в настройках (только чтение)
+  return { sync, start, stop, trace, time: () => (lastC ? lastC.currentTime : 0), get running() { return !!timer; } };
 }

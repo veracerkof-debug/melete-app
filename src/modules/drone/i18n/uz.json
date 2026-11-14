@@ -148,8 +148,8 @@
   "arp.bpm": "Oʻz tempi",
   "arp.tempoHint": "Metronom jim — arpedjiator oʻz tempida yuradi.",
   "arp.tempoMetro": "Metronom yurmoqda — arpedjiator uning tempi va hissalarida chaladi.",
-  "arp.glide": "Yonida glayder",
-  "arp.glideOn": "Yonida glayder",
+  "arp.glide": "Glayder",
+  "arp.glideOn": "Glayder",
   "arp.glideHint": "Shu tonallik pogʻonalari boʻyicha havodor choʻziluvchi kuy, aks-sado bilan",
   "arp.gvol": "Ovoz balandligi",
   "arp.gecho": "Aks-sado",
@@ -158,5 +158,14 @@
   "arp.glvl": "Ovoz balandligi",
   "arp.lvl0": "fon",
   "arp.db": "dB",
-  "arp.lvlHint": "Odatda — pad ostida fon sifatida; o‘ngga — balandroq, +12 dB gacha."
+  "arp.lvlHint": "Odatda — pad ostida fon sifatida; o‘ngga — balandroq, +12 dB gacha.",
+  "tab.sound": "Tovush",
+  "tab.chord": "Akkord",
+  "tab.space": "Makon",
+  "tab.wave": "To‘lqin",
+  "tab.arp": "Arpedjio",
+  "tab.glide": "Glayder",
+  "scope.label": "Signal: arpedjiator va glayder notalari",
+  "scope.idle": "Padga tegining — signal shu yerda ko‘rinadi",
+  "arp.glideFtr": "Balandlik va aks-sado darhol eshitiladi; harakatchanlik qancha yuqori bo‘lsa, notalar shuncha qisqa va tez."
 }

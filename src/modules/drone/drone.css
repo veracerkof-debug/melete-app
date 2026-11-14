@@ -110,3 +110,15 @@
 .dch.on{background:var(--tint);color:var(--on-tint)}
 .dwrap.held .dtile.on,.dwrap.held .dkey.on{animation:none;filter:saturate(.35) brightness(.92)}
 .darp svg circle{fill:currentColor;stroke:none}
+
+/* вкладки настроек пэдов (те же, что у глайдера) и окно сигнала */
+.dstick{position:sticky;top:52px;z-index:2;background:var(--bg);margin:0 -16px 10px;padding:0 12px 8px}
+.dstick .gltabs{position:static;display:flex;gap:4px;margin:0;padding:0;background:none}
+.gltab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:14px;font-size:12px;font-weight:600;color:var(--l2);padding:4px 2px;transition:background .15s,color .15s}
+.gltab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gltab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.gltab[aria-selected="true"]{background:var(--fill);color:var(--tint)}
+.dtabbody{min-height:56vh}
+.dscope{display:block;width:100%;height:84px;border-radius:14px;background:var(--fill);margin:0 0 8px;touch-action:none}
+.dstick .gltab{font-size:11px;padding:4px 0}
+.sslider.cell .ssl{gap:8px;flex:none}

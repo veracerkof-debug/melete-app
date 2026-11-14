@@ -1,5 +1,5 @@
 // Арпеджиатор пэдов (автор 06.11.2026, вместо тампуры): касание кнопки на полосе — вкл, играет, пока звучит пэд;
-// удержание — настройки; «Глайдер рядом» — мелодия поверх.
+// удержание — настройки (вкладки, окно сигнала); «Глайдер» — мелодия поверх.
 import { test, expect } from './melete.js';
 
 const stat = (page) => page.evaluate(async () => ({ ...(await import('/src/audio/arp.js')).arpStat }));
@@ -22,13 +22,24 @@ test('арпеджиатор: играет с пэдом, стоит без не
   // удержание — шторка; «Глайдер рядом»
   await melete.hold(T + '[data-x="darp"]', 700);
   await expect(page.locator('.sheet [data-asty]').first()).toBeVisible();
-  await page.click('.sheet [data-sw="aglide"] + i, .sheet label:has([data-sw="aglide"])');
+  await expect(page.locator('.sheet .gltab')).toHaveCount(6);
+  await expect(page.locator('.sheet canvas.dscope')).toBeVisible();
   await page.click('.sheet [data-asty="pedal"]');
+  await page.click('.sheet [data-tab="glide"]');
+  await page.click('.sheet [data-sw="aglide"] + i, .sheet label:has([data-sw="aglide"])');
+  await expect(page.locator('.sheet [data-ag="glvl"]')).toHaveCount(1);
+  await page.click('.sheet [data-tab="arp"]');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await melete.swipe(T + '.dtile[data-v="7"]', 0, 0, { steps: 1 });
   await page.waitForTimeout(2500);
   const s3 = await stat(page);
   expect(s3.glide).toBeGreaterThan(0);
+  // правка слышна сразу: рисунок перестраивается не со следующего такта
+  await melete.hold(T + '[data-x="darp"]', 700);
+  const n0 = (await stat(page)).notes; await page.click('.sheet [data-asty="up"]'); await page.waitForTimeout(700);
+  expect((await stat(page)).notes).toBeGreaterThan(n0);
+  await page.click('.sheet [data-asty="pedal"]');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   const d = (await melete.toolsNow()).drone;
   expect(d.arp).toMatchObject({ on: true, style: 'pedal', glide: { on: true } });
   await page.click(T + '[data-x="dstop"]');

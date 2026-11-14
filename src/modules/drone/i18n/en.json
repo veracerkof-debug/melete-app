@@ -148,8 +148,8 @@
   "arp.bpm": "Own tempo",
   "arp.tempoHint": "The metronome is silent — the arpeggiator runs at its own tempo.",
   "arp.tempoMetro": "The metronome is running — the arpeggiator plays in its tempo and beats.",
-  "arp.glide": "Glider alongside",
-  "arp.glideOn": "Glider alongside",
+  "arp.glide": "Glider",
+  "arp.glideOn": "Glider",
   "arp.glideHint": "An airy, sustained melody on the degrees of the same key, with echo",
   "arp.gvol": "Volume",
   "arp.gecho": "Echo",
@@ -158,5 +158,14 @@
   "arp.glvl": "Volume",
   "arp.lvl0": "background",
   "arp.db": "dB",
-  "arp.lvlHint": "By default — in the background under the pad; to the right — louder, up to +12 dB."
+  "arp.lvlHint": "By default — in the background under the pad; to the right — louder, up to +12 dB.",
+  "tab.sound": "Sound",
+  "tab.chord": "Chord",
+  "tab.space": "Space",
+  "tab.wave": "Wave",
+  "tab.arp": "Arpeggio",
+  "tab.glide": "Glider",
+  "scope.label": "Signal: arpeggiator and glider notes",
+  "scope.idle": "Touch a pad — the signal shows here",
+  "arp.glideFtr": "Level and echo change instantly; activity — higher means shorter, more frequent notes."
 }

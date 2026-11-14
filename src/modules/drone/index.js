@@ -13,7 +13,9 @@ import { SOUNDS, CHORD_SET, LAYERS, DIRS, SENS, normalizeDrone } from '../../aud
 import { TREM_DIV_ORDER } from '../../audio/fx.js';
 import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 
-import { arpSheet } from './arpsheet.js';
+import { arpPages, arpBind } from './arpsheet.js';
+import { scopeHTML, scopeLoop } from './scope.js';
+import { tabsHTML } from '../glider/settabs.js';
 import meta, { ICON } from './meta.js';
 const GRID_ICON = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>';
 const CIRCLE_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.5v4.3M12 16.2v4.3M3.5 12h4.3M16.2 12h4.3"/></svg>';
@@ -151,26 +153,40 @@ function render() {
 
 /* ---------- настройки пэдов ---------- */
 
-function droneSheet() {
+// Вкладки настроек: каждая — одна тема; открытая запоминается до конца запуска
+const SHEET_TABS = ['sound', 'chord', 'space', 'wave', 'arp', 'glide'];
+let tabNow = 'sound';
+function droneSheet(tab) {
+  if (SHEET_TABS.includes(tab)) tabNow = tab;
   const { t, ui } = ctx, d = D(), api = ctx.presets('drone');
   const P = (v) => Math.round(v * 100) + '%', SF = (v) => t('u.s', { n: ctx.num(+v, 1) });
   const sl = (k, min, max, step, f) => '<div class="sslider"><div class="ssl"><span>' + t('k.' + k) + '</span><b class="num" id="dv-' + k + '">' + f(d[k]) +
     '</b></div><input type="range" class="range" data-dk="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + d[k] + '" aria-label="' + t('k.' + k) + '"></div>';
-  const body = () => ui.snav(t('set.title')) + presetRow(api, d.preset, []) +
-    '<div class="hdr" style="margin-top:4px">' + t('timbre') + '</div><div class="dsnd" role="group" aria-label="' + t('timbre') + '">' + Object.keys(SOUNDS).map((k) => '<button class="dsb' +
-      (d.sound === k ? ' on' : '') + '" data-ds="' + k + '" aria-pressed="' + (d.sound === k) + '"><b>' + t('snd.' + k) + '</b><span>' + t('snd.' + k + '.d') + '</span></button>').join('') + '</div>' +
-    '<div class="hdr">' + t('chord') + '</div><div class="dchs" role="group" aria-label="' + t('chord') + '">' + CHORD_SET.map((k) => '<button class="dch' + (d.chord === k ? ' on' : '') +
-      '" data-dch="' + k + '" aria-pressed="' + (d.chord === k) + '">' + t('ch.' + k) + '</button>').join('') + '</div>' +
-    '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('gest') + '</span>' + ui.sw('dgest', d.gest, t('gest')) + '</div>' +
-      (d.gest ? '<div class="cellcol"><span>' + t('sens') + '</span><div style="margin-top:8px">' + ui.seg('dsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), d.sens, t('sens')) + '</div></div>' : '') +
-    '</div><p class="ftr">' + t(d.gest ? 'chord.ftr' : 'chord.ftrOff') + '</p>' +
-    waveHTML() +
-    '<div class="hdr">' + t('character') + '</div><div class="group sgroup">' + sl('bright', 0, 1, 0.01, P) + sl('move', 0, 1, 0.01, P) + sl('width', 0, 1, 0.01, P) + '</div>' +
-    '<div class="hdr">' + t('space') + '</div><div class="group sgroup">' + sl('fade', 0.2, 6, 0.1, SF) + sl('rev', 0, 1, 0.01, P) + sl('vol', 0, 1, 0.01, P) + '</div>' +
-    // поклонение: длинный зал (отдельная реверберация ~7 с) и «Air» — тихий шум, настроенный по нотам созвучия
-    '<div class="hdr">' + t('worship') + '</div><div class="group sgroup">' + sl('hall', 0, 1, 0.01, P) + sl('air', 0, 1, 0.01, P) + '</div><p class="ftr">' + t('worship.ftr') + '</p>' +
-    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>' +
-    '<div class="group" style="margin-top:12px"><button class="cell" data-darpset><span class="grow">' + t('arp.title') + '<span class="st l2" style="display:block;font-size:13px">' + t('arp.onHint') + '</span></span>' + (d.arp && d.arp.on ? '<span class="val">' + t('arp.isOn') + '</span>' : '') + '</button></div>';
+  const arpP = arpPages(ctx);
+  const pages = {
+    sound: () => presetRow(api, d.preset, []) +
+      '<div class="hdr" style="margin-top:4px">' + t('timbre') + '</div><div class="dsnd" role="group" aria-label="' + t('timbre') + '">' + Object.keys(SOUNDS).map((k) => '<button class="dsb' +
+        (d.sound === k ? ' on' : '') + '" data-ds="' + k + '" aria-pressed="' + (d.sound === k) + '"><b>' + t('snd.' + k) + '</b><span>' + t('snd.' + k + '.d') + '</span></button>').join('') + '</div>' +
+      '<div class="hdr">' + t('character') + '</div><div class="group sgroup">' + sl('bright', 0, 1, 0.01, P) + sl('move', 0, 1, 0.01, P) + sl('width', 0, 1, 0.01, P) + '</div>',
+    chord: () => '<div class="hdr" style="margin-top:4px">' + t('chord') + '</div><div class="dchs" role="group" aria-label="' + t('chord') + '">' + CHORD_SET.map((k) => '<button class="dch' + (d.chord === k ? ' on' : '') +
+        '" data-dch="' + k + '" aria-pressed="' + (d.chord === k) + '">' + t('ch.' + k) + '</button>').join('') + '</div>' +
+      '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('gest') + '</span>' + ui.sw('dgest', d.gest, t('gest')) + '</div>' +
+        (d.gest ? '<div class="cellcol"><span>' + t('sens') + '</span><div style="margin-top:8px">' + ui.seg('dsens', Object.keys(SENS).map((k) => [k, t('sens.' + k)]), d.sens, t('sens')) + '</div></div>' : '') +
+      '</div><p class="ftr">' + t(d.gest ? 'chord.ftr' : 'chord.ftrOff') + '</p>' +
+      '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + t('xfade') + '</span>' + ui.sw('dxf', d.xfade, t('xfade')) + '</div></div>',
+    space: () => '<div class="hdr" style="margin-top:4px">' + t('space') + '</div><div class="group sgroup">' + sl('fade', 0.2, 6, 0.1, SF) + sl('rev', 0, 1, 0.01, P) + sl('vol', 0, 1, 0.01, P) + '</div>' +
+      // поклонение: длинный зал (отдельная реверберация ~7 с) и «Air» — тихий шум, настроенный по нотам созвучия
+      '<div class="hdr">' + t('worship') + '</div><div class="group sgroup">' + sl('hall', 0, 1, 0.01, P) + sl('air', 0, 1, 0.01, P) + '</div><p class="ftr">' + t('worship.ftr') + '</p>',
+    wave: () => waveHTML(),
+    arp: arpP.arp,
+    glide: arpP.glide,
+  };
+  // у арпеджиатора и глайдера над вкладками — окно сигнала: что играется, видно, пока тянется ползунок
+  const body = () => {
+    const cur = pages[tabNow] ? tabNow : 'sound', live = cur === 'arp' || cur === 'glide';
+    return ui.snav(t('set.title')) + '<div class="dstick">' + (live ? scopeHTML(ui, t('scope.label'), t('scope.idle')) : '') +
+      tabsHTML(ui, SHEET_TABS.map((k) => [k, t('tab.' + k)]), cur, t('set.title')) + '</div><div class="dtabbody">' + pages[cur]() + '</div>';
+  };
   // Волна громкости («мягкий выключатель»): вкл, сила, форма (волна / пульс), мягкость краёв пульса, частота — свободно или
   // в такт метронома. Звук — тремоло шины пэдов (fx.js), то же видно в эффектах микшера
   function waveHTML() {
@@ -187,6 +203,8 @@ function droneSheet() {
   }
   ui.sheet(body, (el, sh) => {
     let rt = 0;
+    arpBind(ctx, el, sh, render);
+    scopeLoop(ctx, el);
     const later = () => { clearTimeout(rt); rt = setTimeout(() => DR().retune(), 350); };
     const changed = () => { ctx.store.save(); sh.update(); render(); };
     el.addEventListener('click', (e) => {
@@ -203,7 +221,7 @@ function droneSheet() {
         return;
       }
       if (g('[data-pman]')) { presetManager(api, () => sh.update()); return; }
-      if (g('[data-darpset]')) { arpSheet(ctx, render); return; }
+      if ((b = g('[data-tab]'))) { tabNow = b.dataset.tab; sh.update(); el.scrollTop = 0; return; }
       if ((b = g('[data-upre]'))) {
         const p = api.get(b.dataset.upre);
         if (p) { Object.assign(d, JSON.parse(JSON.stringify(p.data)), { preset: p.id, pname: p.name }); changed(); DR().retune(); }
@@ -452,7 +470,7 @@ function bind() {
   host.addEventListener('click', onClick);
   // удержание кнопки арпеджиатора — его настройки
   let arpT = 0;
-  host.addEventListener('pointerdown', (e) => { if (!e.target.closest('[data-x="darp"]')) return; clearTimeout(arpT); arpT = setTimeout(() => { arpHeld = performance.now(); arpSheet(ctx, render); }, 480); });
+  host.addEventListener('pointerdown', (e) => { if (!e.target.closest('[data-x="darp"]')) return; clearTimeout(arpT); arpT = setTimeout(() => { arpHeld = performance.now(); droneSheet('arp'); }, 480); });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((k) => host.addEventListener(k, () => clearTimeout(arpT)));
 }
 let arpHeld = 0;

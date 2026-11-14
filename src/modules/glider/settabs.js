@@ -9,6 +9,10 @@ export const TAB_IC = {
   solo: '<path d="M3 15c3 0 4-7 9-7s6 4 9 4"/>',
   chord: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M5 9h14M5 14h14M10 4v16M14 4v16"/>',
   guitar: '<path d="M14 10l6-6M18 4l2 2"/><path d="M13.5 10.5a4 4 0 0 0-5.5.5l-3 3a3.5 3.5 0 0 0 5 5l3-3a4 4 0 0 0 .5-5.5z"/><circle cx="9.5" cy="14.5" r="1.2"/>',
+  space: '<circle cx="12" cy="12" r="2"/><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 7.5a6.4 6.4 0 0 1 0 9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 4.5a10.6 10.6 0 0 1 0 15"/>',
+  wave: '<path d="M2 12c2-7 4-7 6 0s4 7 6 0 4-7 6 0"/>',
+  arp: '<path d="M4 18l4-4 4 4 4-8 4 4"/><circle cx="4" cy="18" r="1.3"/><circle cx="8" cy="14" r="1.3"/><circle cx="12" cy="18" r="1.3"/><circle cx="16" cy="10" r="1.3"/><circle cx="20" cy="14" r="1.3"/>',
+  glide: '<path d="M3 17c4 0 4-9 9-9s5 7 9 7"/><circle cx="21" cy="15" r="1.3"/>',
   screen: '<rect x="3" y="6" width="18" height="13" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/>',
 };
 
