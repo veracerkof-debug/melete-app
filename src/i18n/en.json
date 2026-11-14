@@ -2380,8 +2380,6 @@
   "group.train": "Ear & rhythm",
   "lic.jsqr.sub": "QR code recognition with the camera · version 1.4.0",
   "lic.jsqr.text": "Distributed under the Apache License 2.0 (apache.org/licenses/LICENSE-2.0). Used without changes.",
-  "hb.study": "Study",
-  "study.title": "Study this week",
   "study.of": "{done} of {goal}",
   "study.ask": "Add to the home screen? The program is hours per week: the row shows how much is done. No streaks, no race.",
   "study.perWeek": "{h} a week",
@@ -2412,5 +2410,18 @@
   "lat.fail": "The clicks were not heard — louder or closer to the microphone",
   "lat.denied": "No microphone access",
   "lat.noMic": "No microphone found",
-  "lat.noSound": "Sound is not ready yet — tap the screen and try again"
+  "lat.noSound": "Sound is not ready yet — tap the screen and try again",
+  "study.title": "My practice",
+  "hb.study": "Ear, rhythm, voice, textbook",
+  "study.doneToday": "Done today ✓",
+  "study.todayAt": "Today at {t}",
+  "study.nextAt": "{d} at {t}",
+  "study.todayPast": "Today was at {t}",
+  "study.todayMin": "Today {m}",
+  "study.add": "Build your own block",
+  "study.addSub": "Ear, rhythm, voice, textbook — whatever you choose appears here",
+  "study.week": "{done} this week",
+  "study.noGoal": "No goal — just the week and the schedule",
+  "study.noGoalShort": "no goal",
+  "study.addedNoGoal": "“{name}” is on the home screen"
 }

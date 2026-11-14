@@ -2344,8 +2344,6 @@
   "group.train": "Eshitish va ritm",
   "lic.jsqr.sub": "Kamera bilan QR-kodni aniqlash · versiya 1.4.0",
   "lic.jsqr.text": "Apache License 2.0 litsenziyasi boʻyicha tarqatiladi (apache.org/licenses/LICENSE-2.0). Oʻzgartirishsiz ishlatiladi.",
-  "hb.study": "Oʻqish",
-  "study.title": "Haftalik oʻqish",
   "study.of": "{done} / {goal}",
   "study.ask": "Bosh sahifaga qoʻshilsinmi? Dastur — haftada soatlar: qator qanchasi bajarilganini koʻrsatadi. Seriyalar va poygasiz.",
   "study.perWeek": "haftada {h}",
@@ -2376,5 +2374,18 @@
   "lat.fail": "Chertishlar eshitilmadi — balandroq yoki mikrofonga yaqinroq",
   "lat.denied": "Mikrofonga ruxsat yo‘q",
   "lat.noMic": "Mikrofon topilmadi",
-  "lat.noSound": "Ovoz hali tayyor emas — ekranga tegib, qayta urinib ko‘ring"
+  "lat.noSound": "Ovoz hali tayyor emas — ekranga tegib, qayta urinib ko‘ring",
+  "study.title": "Mashg‘ulotlarim",
+  "hb.study": "Eshitish, ritm, vokal, darslik",
+  "study.doneToday": "Bugun bajarildi ✓",
+  "study.todayAt": "Bugun soat {t}",
+  "study.nextAt": "{d}, soat {t}",
+  "study.todayPast": "Bugun soat {t} edi",
+  "study.todayMin": "Bugun {m}",
+  "study.add": "O‘z blokingizni tuzing",
+  "study.addSub": "Eshitish, ritm, vokal, darslik — nimani tanlasangiz, shu shu yerda bo‘ladi",
+  "study.week": "Hafta: {done}",
+  "study.noGoal": "Maqsadsiz — faqat hafta va jadval",
+  "study.noGoalShort": "maqsadsiz",
+  "study.addedNoGoal": "«{name}» bosh ekranda"
 }
