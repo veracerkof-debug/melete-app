@@ -80,7 +80,7 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
         const rv = reverbNode();
         if (rv) {
           const s = c.createGain();
-          s.gain.value = name === 'theory' || name === 'vocal' ? 0.3 : 0; // распевки (vocal) — аккомпанемент с залом, как у «Теории»
+          s.gain.value = name === 'theory' ? 0.3 : 0; // распевки (vocal) — сухое пианино, без зала (слово автора 14.11.2026)
           g.connect(s).connect(rv);
           sends[name] = s;
         }

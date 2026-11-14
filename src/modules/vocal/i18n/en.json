@@ -42,7 +42,6 @@
   "ph.pulseF": "Pulses on “f-f-f”",
   "phRep": "Round {n} of {m}",
   "set.sound": "Accompaniment sound",
-  "snd.cur": "Same as the piano",
   "pre.piano": "Grand piano",
   "pre.wfelt": "Soft piano",
   "pre.wkpad": "Keys with pad",
@@ -267,5 +266,6 @@
   "pr.later": "Not now",
   "pr.expanded": "Working range extended",
   "sing.open": "Sing a song",
-  "sing.openHint": "Media library → “Sing”: backing track, melody, voice line and a score for each take"
+  "sing.openHint": "Media library → “Sing”: backing track, melody, voice line and a score for each take",
+  "set.bass": "Bass and tonic under the singing"
 }

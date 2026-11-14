@@ -219,7 +219,7 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
     const SU = opts.hold ? Math.max(s.sus, 0.45) : s.sus;
     const t = opts.at > c.currentTime ? opts.at : c.currentTime + 0.004, f = midiFreq(m, getA4()); // at — точное время (студия)
     let kind = s.kind || 'soft';
-    if (slot !== 'layer') mixer.setReverb('piano', s.rev * 0.9);
+    if (slot !== 'layer' && busName === 'piano') mixer.setReverb('piano', s.rev * 0.9); // зал пианино — только от пианино, не от распевок и студии
     const bus = mixer.bus(busName);
     last[busName] = Date.now();
     // голосов не хватает — замолкает самый старый, но удержанные (Hold) не трогаем, пока есть другие

@@ -42,7 +42,6 @@
   "ph.pulseF": "«f-f-f» turtkilar",
   "phRep": "Takror {n} / {m}",
   "set.sound": "Jo‘rnavozlik ovozi",
-  "snd.cur": "Pianino kabi",
   "pre.piano": "Grand piano",
   "pre.wfelt": "Soft piano",
   "pre.wkpad": "Keys with pad",
@@ -267,5 +266,6 @@
   "pr.later": "Hozir emas",
   "pr.expanded": "Ishchi diapazon kengaytirildi",
   "sing.open": "Qo‘shiq kuylash",
-  "sing.openHint": "Mediateka → «Kuylash»: minus, kuy, ovoz chizig‘i va har dubl uchun hisob"
+  "sing.openHint": "Mediateka → «Kuylash»: minus, kuy, ovoz chizig‘i va har dubl uchun hisob",
+  "set.bass": "Kuylash ostida bas va tonika"
 }

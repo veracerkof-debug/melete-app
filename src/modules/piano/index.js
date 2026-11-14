@@ -38,7 +38,12 @@ const rotated = () => false; // поворачивается весь экран
 // линии голосов над клавишами (src/ui/voicelines.js) — отдельный режим, включается кнопкой (слово автора 04.11: графика
 // и ручки на телефоне вместе не помещаются): вместо панели звука — линии, ручки — шторкой по кнопке «Звук»
 const linesOn = () => !!P().vl && size !== 'strip';
-const panelOn = () => size === 'full' && !P().dual && !linesOn(); // панель эффектов — кроме двух рядов и режима линий
+// панель эффектов — кроме двух рядов и режима линий; на низком окне (телефон на боку) — нет: крутилки сжимали клавиши
+// в полоску (слово автора 14.11.2026), звук тогда — кнопкой «Звук» в шторке
+const TALL = 400;
+const tall = () => !host || !host.clientHeight || host.clientHeight >= TALL;
+const panelOn = () => size === 'full' && !P().dual && !linesOn() && tall();
+let lastTall = true;
 let vl = null;
 
 /* ---------- разметка ---------- */
@@ -55,7 +60,7 @@ function view() {
   // узкое окно (четверть, полоса): клавиш столько, сколько помещается целиком (≥ 30 px на белую) — иначе часть уезжала
   // за край под прокрутку, которую на клавиатуре пальцем не сделать
   const fit = wpx > 0 && !rot ? Math.max(5, Math.floor((wpx - 28) / 30)) : 99;
-  lastFit = fit;
+  lastFit = fit; lastTall = tall();
   const nw = ctx.desk && ctx.desk() && wpx > 900 ? Math.max(p.size, Math.min(29, Math.floor(wpx / 58))) : Math.min(p.size, fit);
   const bar = '<div class="pbar"><div class="pgrp">' + pk('data-step="poct" data-d="-1"', '‹', t('octDown')) + '<span class="num pval">' + mName(m0) + '–' +
     mName(lastWhite(m0, nw)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
@@ -285,7 +290,7 @@ export default {
     render();
     bind();
     // ширина сильно изменилась (окно компьютера растянули) — клавиш стало больше или меньше: перерисовать
-    ro = new ResizeObserver(() => { const w = host ? host.clientWidth : 0, fit = w > 0 ? Math.max(5, Math.floor((w - 28) / 30)) : 99; if (host && ((ctx.desk && ctx.desk() && Math.abs(w - lastW) > 58) || (Math.min(P().size, fit) !== Math.min(P().size, lastFit) && !rotated()))) render(); else layout(); });
+    ro = new ResizeObserver(() => { const w = host ? host.clientWidth : 0, fit = w > 0 ? Math.max(5, Math.floor((w - 28) / 30)) : 99; if (host && ((ctx.desk && ctx.desk() && Math.abs(w - lastW) > 58) || (Math.min(P().size, fit) !== Math.min(P().size, lastFit) && !rotated()) || tall() !== lastTall)) render(); else layout(); });
     ro.observe(host);
     unsubShared = ctx.shared.subscribe((k) => { if (k === 'highlight') render(); });
     // подписи клавиш компьютера: сменилась октава (↑ ↓) или режим компьютера — перерисовать клавиши

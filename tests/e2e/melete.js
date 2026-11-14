@@ -24,7 +24,7 @@ export const test = base.extend({
 
 export const sleep = (page, ms) => page.waitForTimeout(ms);
 
-function helpers(page) {
+export function helpers(page) {
   const h = {
     // Открыть приложение с настроенным профилем. opts: { mono, songs, settings (в settings), tools (в practice.v1.tools), fresh }
     async open({ mono = false, songs = [], settings = {}, tools = null, fresh = false } = {}) {

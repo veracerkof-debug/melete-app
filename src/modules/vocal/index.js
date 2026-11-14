@@ -41,7 +41,7 @@ function loadFont() {
   new FontFace('Melete Bravura', 'url(' + BRAVURA + ')').load().then((f) => document.fonts.add(f)).catch(() => { fontOn = false; });
 }
 
-const SOUNDS = ['', 'piano', 'wfelt', 'wkpad', 'organ', 'fmep', 'sine', 'bell', 'wair'];
+const SOUNDS = ['piano', 'wfelt', 'wkpad', 'organ', 'fmep', 'sine', 'bell', 'wair'];
 const DRONE_SOUNDS = ['wair', 'wwarm', 'wchoir', 'organ', 'sine'];
 // Лады импровизации: «Авто» и все основные; для автоопределения — без «Авто»
 const IM_SCALES = ['auto', 'major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixo', 'locrian', 'harm', 'mel', 'phrygdom', 'hungmin', 'pmaj', 'pmin', 'blues'];
@@ -67,7 +67,8 @@ const S = () => {
   const s = ctx.store.all();
   if (!['warm', 'improv', 'voice'].includes(s.sec)) s.sec = 'warm';
   if (!exById(s.ex)) s.ex = 'hum'; // начинают с лёгкого
-  if (!SOUNDS.includes(s.sound)) s.sound = '';
+  if (!SOUNDS.includes(s.sound)) s.sound = 'piano'; // по умолчанию — обычный рояль, сухо (слово автора 14.11.2026); прежнее «как у пианино» брало звук синта с эффектами
+  if (typeof s.bass !== 'boolean') s.bass = false;
   if (!GUIDE_VEL[s.guide] && s.guide !== 'off') s.guide = 'soft';
   if (!(s.tempo >= 0.6 && s.tempo <= 1.4)) s.tempo = 1;
   if (![1, 2].includes(s.step)) s.step = 1;
@@ -115,7 +116,7 @@ function runOf(ex, inProg) {
 const freeSec = (ex) => ex.free.reduce((a, x) => a + x[1], 0) * (ex.rep || 1);
 const exSec = (ex, inProg) => (ex.free ? freeSec(ex) : runSeconds(runOf(ex, inProg) || { beats: 0 }, bpmOf(ex)));
 const progSec = (id) => PROGRAMS[id].reduce((a, x) => a + exSec(exById(x), true) + 2, 0);
-const patch = () => (S().sound ? presetOf(S().sound) : null);
+const patch = () => presetOf(S().sound) || presetOf('piano');
 
 // Звук шага — на точное время звуковых часов; отпускание — таймером часов за 60 мс до конца, с точным временем конца
 // (как секвенсор студии: off с будущим временем сразу забирает голос — длинная тоника оборвалась бы)
@@ -131,7 +132,7 @@ function schedStep(st) {
   const lead = st.lead;
   lead.ms.forEach((m, j) => on(m, at(lead.t) + j * 0.012, at(lead.t + lead.d) - 0.03, 0.5));
   const first = st.sing[0], last = st.sing[st.sing.length - 1];
-  if (first) lead.ms.slice(0, 2).forEach((m) => on(m, at(first.t), at(last.t + last.d), 0.22)); // бас и тоника под пением
+  if (first && s.bass) lead.ms.slice(0, 2).forEach((m) => on(m, at(first.t), at(last.t + last.d), 0.22)); // бас и тоника под пением — по выбору (по умолчанию нет: «без подложки»)
   const gv = GUIDE_VEL[s.guide] || 0;
   if (gv) st.sing.forEach((n) => on(n.m, at(n.t), at(n.t + n.d * (ex.stacc ? 0.45 : n.m2 != null ? 0.3 : 0.92)), gv));
 }
@@ -848,7 +849,8 @@ function setSheet() {
     const s = S();
     return ui.snav(t('settings')) + (ctx.schedule ? '<div class="group"><button class="cell" data-sched><span class="grow">' + esc(t('set.sched')) + '<span class="vcexh">' + esc(t('ftr.sched')) + '</span></span>' + ui.icons.chev + '</button></div>' : '') +
       '<div class="group"><div class="cellcol"><span>' + esc(t('set.grow')) + '</span><div style="margin-top:8px">' + ui.seg('vcgrow', GROW.map((g) => [g, t('grow.' + g)]), s.grow, t('set.grow')) + '</div></div></div><p class="ftr">' + esc(t('ftr.grow')) + '</p>' +
-      '<div class="hdr">' + esc(t('set.sound')) + '</div><div class="group">' + SOUNDS.map((k) => '<button class="cell" data-snd="' + k + '"><span class="grow">' + esc(k ? t('pre.' + k) : t('snd.cur')) + '</span>' + (s.sound === k ? ui.icons.check : '') + '</button>').join('') + '</div>' +
+      '<div class="hdr">' + esc(t('set.sound')) + '</div><div class="group">' + SOUNDS.map((k) => '<button class="cell" data-snd="' + k + '"><span class="grow">' + esc(t('pre.' + k)) + '</span>' + (s.sound === k ? ui.icons.check : '') + '</button>').join('') + '</div>' +
+      '<div class="group"><div class="cell"><span class="grow">' + esc(t('set.bass')) + '</span>' + ui.sw('vcbass', s.bass, t('set.bass')) + '</div></div>' +
       '<div class="group"><div class="cellcol"><span>' + esc(t('set.guide')) + '</span><div style="margin-top:8px">' + ui.seg('vcguide', [['off', t('guide.off')], ['soft', t('guide.soft')], ['full', t('guide.full')]], s.guide, t('set.guide')) + '</div></div></div><p class="ftr">' + esc(t('ftr.guide')) + '</p>' +
       '<div class="group"><div class="cell"><span class="grow">' + esc(t('set.tempo')) + ' · <b class="num">' + Math.round(s.tempo * 100) + ' %</b></span>' + ui.stepper('vctempo', t('set.tempo')) + '</div>' +
       '<div class="cellcol"><span>' + esc(t('set.step')) + '</span><div style="margin-top:8px">' + ui.seg('vcstep', [[1, t('step.1')], [2, t('step.2')]], s.step, t('set.step')) + '</div></div>' +
@@ -879,7 +881,7 @@ function setSheet() {
       else if ((b = g('[data-seg="vcdir"] [data-v]'))) { s.dir = b.dataset.v; ch(); }
       else if ((b = g('[data-step="vctempo"]'))) { s.tempo = Math.max(0.6, Math.min(1.4, Math.round((s.tempo + 0.05 * +b.dataset.d) * 100) / 100)); ch(); }
     });
-    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'vclisten') { S().listen = e.target.checked; ctx.store.save(); if (!e.target.checked) micOff(); } });
+    el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'vcbass') { S().bass = e.target.checked; ctx.store.save(); return; } if (e.target.dataset.sw === 'vclisten') { S().listen = e.target.checked; ctx.store.save(); if (!e.target.checked) micOff(); } });
   });
 }
 

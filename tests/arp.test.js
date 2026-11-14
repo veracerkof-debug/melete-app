@@ -1,6 +1,6 @@
 // Арпеджиатор пэдов (06.11.2026): лесенка аккорда, рисунки из устойчивых ходов, жизнь и плотность, спутник по ладу
 import { describe, it, expect } from 'vitest';
-import { ladder, barNotes, normalizeArp, glideNext, scaleOf, MOTIFS } from '../src/audio/arp.js';
+import { ladder, barNotes, normalizeArp, glideNext, scaleOf, MOTIFS, keyFor, keyScale, nearRoot, lvlDb, LVL0, noteAt } from '../src/audio/arp.js';
 import { normalizeDrone } from '../src/audio/drone.js';
 
 const seq = (xs) => { let i = 0; return () => xs[i++ % xs.length]; };
@@ -44,5 +44,28 @@ describe('арпеджиатор', () => {
     expect(d.sound).toBe('soft');
     expect(d.arp.on).toBe(true);
     expect(Object.keys(MOTIFS).length).toBeGreaterThanOrEqual(8);
+  });
+  it('тональность: ii в до мажоре — лад до мажора (си, не си-бемоль); прежняя держится; круг квинт задаёт явно', () => {
+    expect(keyFor(2, 'min')).toBe(5); // ре минор сам по себе: ни I, ни IV, ни V — vi в фа мажоре
+    expect(keyFor(2, 'min', 0)).toBe(0); // круг квинт: до мажор
+    expect(keyFor(2, 'min', null, 0)).toBe(0); // прежняя тональность — до мажор, ре минор в ней свой
+    expect(keyScale(2, 'min', 0)).toContain(11);
+    expect(keyScale(2, 'min', 0)).not.toContain(10);
+    expect(keyFor(7, 'maj', null, 0)).toBe(0); // соль мажор после до — V в до мажоре
+  });
+  it('голосоведение: новый аккорд — ближайшая нижняя нота, без скачка на септиму', () => {
+    expect(nearRoot(11, 60, 60)).toBe(59); // до → си: на полутон вниз
+    expect(nearRoot(5, 60, 60)).toBe(65); // до → фа: вверх на кварту (ближе, чем вниз на квинту)
+    expect(nearRoot(7, 60, 60)).toBe(55); // до → соль: вниз на кварту
+  });
+  it('проходящая нота — по ладу тональности', () => {
+    const lad = ladder(2, 'min', 3, 2), sc = keyScale(2, 'min', 0);
+    expect(noteAt(lad, 2, sc) % 12).toBe(11); // над ля — си (до мажор), а не си-бемоль
+  });
+  it('громкость: по умолчанию — прежний фон, вправо до +12 дБ; прежняя тихая — остаётся тише', () => {
+    const a = normalizeArp({});
+    expect(a.lvl).toBe(LVL0); expect(lvlDb(a.lvl)).toBe(0); expect(lvlDb(1)).toBe(12);
+    expect(lvlDb(normalizeArp({ vol: 0.35 }).lvl)).toBeCloseTo(-6, 0);
+    expect(a.glide.lvl).toBe(LVL0);
   });
 });

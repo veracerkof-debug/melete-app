@@ -153,5 +153,10 @@
   "arp.glideHint": "An airy, sustained melody on the degrees of the same key, with echo",
   "arp.gvol": "Volume",
   "arp.gecho": "Echo",
-  "arp.gbusy": "Movement"
+  "arp.gbusy": "Movement",
+  "arp.lvl": "Volume",
+  "arp.glvl": "Volume",
+  "arp.lvl0": "background",
+  "arp.db": "dB",
+  "arp.lvlHint": "By default — in the background under the pad; to the right — louder, up to +12 dB."
 }

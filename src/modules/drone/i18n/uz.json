@@ -153,5 +153,10 @@
   "arp.glideHint": "Shu tonallik pogʻonalari boʻyicha havodor choʻziluvchi kuy, aks-sado bilan",
   "arp.gvol": "Ovoz balandligi",
   "arp.gecho": "Aks-sado",
-  "arp.gbusy": "Harakatchanlik"
+  "arp.gbusy": "Harakatchanlik",
+  "arp.lvl": "Ovoz balandligi",
+  "arp.glvl": "Ovoz balandligi",
+  "arp.lvl0": "fon",
+  "arp.db": "dB",
+  "arp.lvlHint": "Odatda — pad ostida fon sifatida; o‘ngga — balandroq, +12 dB gacha."
 }
