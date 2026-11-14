@@ -131,3 +131,11 @@
 @keyframes lpblink{to{opacity:.25}}
 .lpthint{margin:0 0 8px}
 .lptool{position:relative;height:min(52vh,460px);min-height:260px;container-type:size;display:flex;flex-direction:column}
+/* Маленькое окно (data-fit, слово автора 14.11.2026): одна большая кнопка «запись / петля / слой»; петли, панель и
+   подсказка — в окне побольше */
+.pane[data-fit="1"] .lpwrap .lphint,.pane[data-fit="2"] .lpwrap .lphint,
+.pane[data-fit="1"] .lpwrap .lpslots,.pane[data-fit="2"] .lpwrap .lpslots,
+.pane[data-fit="1"] .lpwrap .lptool,.pane[data-fit="2"] .lpwrap .lptool{display:none!important}
+.pane[data-fit="1"] .lpwrap:not(.tracks):not(.parts):not(.reels),.pane[data-fit="2"] .lpwrap:not(.tracks):not(.parts):not(.reels){justify-content:center}
+.pane[data-fit="2"] .lpwrap .lpbtn{width:min(70cqw,70cqh,160px)!important}
+.pane[data-fit="1"] .lpstrip{justify-content:center}

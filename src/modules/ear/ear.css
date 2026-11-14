@@ -115,3 +115,10 @@
   .edgrid{grid-auto-rows:minmax(64px,1fr)}
   .edn{margin-top:0;font-size:15px}.eds,.edic{display:none}
 }
+/* Маленькое окно (data-fit, слово автора 14.11.2026): только упражнения — крупными строками в одну колонку, прокруткой;
+   «Тренажёр / Уроки» и неделя — в окне побольше */
+.pane[data-fit="1"] .ehome .ehtop,.pane[data-fit="2"] .ehome .ehtop,.pane[data-fit="1"] .ehome .edash,.pane[data-fit="2"] .ehome .edash{display:none}
+.pane[data-fit="1"] .ehome .edgrid,.pane[data-fit="2"] .ehome .edgrid{grid-template-columns:1fr;grid-auto-rows:minmax(52px,auto);flex:none}
+.pane[data-fit="1"] .ehome .ecard,.pane[data-fit="2"] .ehome .ecard{padding:8px 12px;flex-direction:row;gap:10px;min-height:52px}
+.pane[data-fit="1"] .ehome .eds,.pane[data-fit="1"] .ehome .edic,.pane[data-fit="2"] .ehome .eds,.pane[data-fit="2"] .ehome .edic{display:none}
+.pane[data-fit="1"] .ehome .edgrid>*,.pane[data-fit="2"] .ehome .edgrid>*{grid-column:auto!important}

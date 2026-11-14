@@ -98,3 +98,8 @@
 .tclean.half .thz{display:none}
 .tclean.half.beg .tvis{max-height:none}
 .tclean.half .tmode{display:none}
+/* Полоса: нота слева, шкала — во всю оставшуюся ширину (раньше шкала сжималась в точку) */
+.ts{flex:1;display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:0 8px;box-sizing:border-box}
+.ts .tnoteW{font-size:clamp(32px,60cqh,56px);flex:none}
+.ts .tsmid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:2px}
+.ts .tcent{min-height:0;font-size:13px}

@@ -97,7 +97,10 @@ for (const [ori, W, H] of PHONES) {
         m.forEach((p) => { p.max = maxTargets(p.w, p.h); if (layout !== 'F' && p.targets > p.max) p.issues.push(['many', p.targets + ' > ' + p.max]); });
         rows.push({ ori, layout: label, main: ids[i], file, panes: m });
       }
-      fs.writeFileSync(path.join(OUT, 'r-' + ori + '-' + label + '.json'), JSON.stringify(rows, null, 1));
+      // SCREENS_ONLY — дописать к прежним замерам (остальные инструменты остаются)
+      const fj = path.join(OUT, 'r-' + ori + '-' + label + '.json');
+      const old = ONLY.length && fs.existsSync(fj) ? JSON.parse(fs.readFileSync(fj, 'utf8')).filter((r) => !ids.includes(r.main)) : [];
+      fs.writeFileSync(fj, JSON.stringify(old.concat(rows), null, 1));
       await ctxB.close();
       expect(rows.length).toBe(ids.length);
     });
