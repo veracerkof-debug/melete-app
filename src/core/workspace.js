@@ -55,14 +55,46 @@ export function getWS(device, a, { desk = false } = {}) {
   return w;
 }
 
+// Минимальный размер окна инструмента (слово автора 14.11.2026: в слишком малое окно инструмент не пускаем).
+// Порядок: полоса < четверть < половина < весь экран; minOf(id) — meta.minSize инструмента, нет — любой размер
+const RANK = { strip: 0, quarter: 1, half: 2, full: 3 };
+export const fits = (min, slot) => (RANK[min] ?? 0) <= RANK[slot];
+// Окна, где инструмент меньше допустимого
+export function tooSmall(w, minOf) {
+  return lsizes(w.layout).map((s, i) => (fits(minOf(w.panes[i]), s) ? -1 : i)).filter((i) => i >= 0);
+}
+// Расставить инструменты по окнам так, чтобы каждому хватало места: слишком большой меняется местами с тем, кому
+// это окно подходит (сначала с видимым — на ближайшее достаточное окно, потом со скрытым). false — не вышло, раскладка не меняется
+export function settle(w, minOf) {
+  const sz = lsizes(w.layout), n = sz.length, snap = w.panes.slice(), f0 = w.focus;
+  for (let g = 0; g < 8; g++) {
+    const bad = tooSmall(w, minOf);
+    if (!bad.length) return true;
+    const i = bad[0], mi = minOf(w.panes[i]);
+    let j = -1;
+    for (let k = 0; k < n; k++) if (k !== i && fits(minOf(w.panes[k]), sz[i]) && fits(mi, sz[k]) && (j < 0 || RANK[sz[k]] < RANK[sz[j]])) j = k;
+    if (j < 0) for (let k = n; k < w.panes.length; k++) if (fits(minOf(w.panes[k]), sz[i])) { j = k; break; }
+    if (j < 0) { w.panes = snap; w.focus = f0; return false; }
+    swapPanes(w, i, j);
+    if (w.focus === i && j < n) w.focus = j;
+  }
+  w.panes = snap; w.focus = f0;
+  return false;
+}
+
 // Окна — только включённые инструменты (all), без повторов; не хватает — добавить
-export function fixWS(w, all, a) {
+export function fixWS(w, all, a, minOf = null) {
   if (a && a.type === 'tool') { w.layout = 'F'; w.panes = [a.tool]; w.focus = 0; return w; }
   w.panes = w.panes.map((x) => (SPLIT[x] ? (w.sub && w.sub[x]) || SPLIT[x] : LEGACY[x] || x)).filter((x, i, arr) => all.includes(x) && arr.indexOf(x) === i);
   all.forEach((x) => { if (!w.panes.includes(x)) w.panes.push(x); });
   const n = lsizes(w.layout).length;
   while (w.panes.length < n) w.panes.push(all[0]);
   if (w.focus >= n) w.focus = 0;
+  // сохранённая раскладка со слишком малым окном (старая версия, другой инструмент): переставить, иначе — весь экран
+  if (minOf && !settle(w, minOf)) {
+    const sz = lsizes(w.layout), big = w.panes.slice(0, n).sort((x, y) => (RANK[minOf(y)] ?? 0) - (RANK[minOf(x)] ?? 0))[0];
+    if (sz.length > 1) setLayout(w, 'F', [big]);
+  }
   return w;
 }
 

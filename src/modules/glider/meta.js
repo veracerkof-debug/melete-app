@@ -15,7 +15,8 @@ export default {
   icon: ICON,
   color: '#866B9D',
   multitouch: true, // играют несколькими пальцами — защита от снимка экрана тремя пальцами
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  sizes: ['full', 'half', 'quarter'],
+  minSize: 'quarter', // меньше этого окна инструмент не пускаем (слово автора 14.11.2026)
   immersive: true, // в отдельном окне — на весь экран, без шапки
   pure: true, // и полный экран: только поверхность, без кнопок (src/core/pure.js)
 };

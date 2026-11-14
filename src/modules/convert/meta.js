@@ -13,7 +13,8 @@ export default {
   i18n: { ru, uz, en },
   icon: ICON,
   color: '#6F7F8F',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  sizes: ['full', 'half'],
+  minSize: 'half', // меньше этого окна инструмент не пускаем (слово автора 14.11.2026)
   // с 06.11.2026 — часть медиатеки (слово автора): своей вкладки и карточки нет, открывается шторкой из медиатеки
   inner: true,
   partOf: 'audio',

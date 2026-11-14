@@ -71,7 +71,7 @@ test('вокал: импровизация — свой дрон, пэды не 
   expect(slots.some((s) => s.tool === 'vocal' && s.from === '19:00')).toBe(true);
 });
 
-test('вокал: четверть и полоска — распевка помещается; без диапазона — подсказка', async ({ page, melete, errors }) => {
+test('вокал: четверть — распевка помещается, в полосу не пускаем; без диапазона — подсказка', async ({ page, melete, errors }) => {
   await melete.open();
   await melete.free('QQ', ['vocal', 'metro']);
   await expect(page.locator('.vc.quarter .vcneed')).toBeVisible();
@@ -82,8 +82,9 @@ test('вокал: четверть и полоска — распевка пом
   await expect(q.locator('.vcbar [data-x="list"]')).toBeHidden();
   const pane = await q.boundingBox(), bar = await q.locator('.vcbar').boundingBox();
   expect(bar.x + bar.width).toBeLessThanOrEqual(pane.x + pane.width + 1);
+  // в полосу вокал не пускаем (minSize «четверть»): окно уходит к тому, кому полоса подходит
   await melete.free('SS', ['metro', 'vocal']);
-  await expect(page.locator('.vc .bigplay').first()).toBeVisible();
+  await expect(page.locator('.session .pane[data-tool="vocal"]')).toHaveCount(0);
 });
 
 test('вокал: прогресс — неделя; три дня чисто выше рабочего → «Расширить до …?», согласие расширяет', async ({ page, melete, errors }) => {

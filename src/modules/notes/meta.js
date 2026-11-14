@@ -14,7 +14,8 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#A2845E',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  sizes: ['full', 'half'],
+  minSize: 'half', // меньше этого окна инструмент не пускаем (слово автора 14.11.2026)
   pure: true, // полный экран: только табы, ноты или текст (src/core/pure.js)
   // Перетаскивание файлов в окно (веб-версия на компьютере): какие файлы модуль берёт; что с ними делать — drop в index.js
   accepts: (f) => f.type === 'application/pdf' || /\.(gp[3-8x]?|xml|musicxml|mxl|capx?|txt|tab|pdf|midi?|als|rpp|flp)$/i.test(f.name),

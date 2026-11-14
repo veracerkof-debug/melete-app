@@ -15,6 +15,7 @@ export default {
   i18n: { ru, uz, en, el },
   icon: ICON,
   color: '#5988A7',
-  sizes: ['full', 'half', 'quarter', 'strip'],
+  sizes: ['full', 'half', 'quarter'],
+  minSize: 'quarter', // меньше этого окна инструмент не пускаем (слово автора 14.11.2026)
   stats: false, // рабочий инструмент: время в нём не идёт в статистику
 };

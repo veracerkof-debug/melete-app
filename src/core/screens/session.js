@@ -16,7 +16,7 @@ import {
   metroForSession, commitSession, saveActive, FREE_TAGS, trackMode,
 } from '../session.js';
 import {
-  getWS, fixWS, lsizes, lpos, halves, setLayout, closePane, swapHalves, assign, swapPanes, dropTool, addPane, sizeOf, clampFrac, visible,
+  getWS, fixWS, settle, tooSmall, fits, lsizes, lpos, halves, setLayout, closePane, swapHalves, assign, swapPanes, dropTool, addPane, sizeOf, clampFrac, visible,
   fitOf,
 } from '../workspace.js';
 import { modules, moduleById } from '../../modules/index.js';
@@ -198,7 +198,7 @@ export function createSessionScreen(app) {
     if (!app.active) return;
     if (layer) return;
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
-    w = fixWS(getWS(device, a, { desk: isDesk() }), sessionGroups(st(), song()), a);
+    w = fixWS(getWS(device, a, { desk: isDesk() }), sessionGroups(st(), song()), a, minOf);
     layer = document.createElement('div');
     layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
@@ -331,7 +331,7 @@ export function createSessionScreen(app) {
   function renderWSNow(animIdx) {
     if (!wsEl) return;
     setPanePure(-1);
-    fixWS(w, sessionGroups(st(), song()), app.active);
+    fixWS(w, sessionGroups(st(), song()), app.active, minOf);
     unmountAll();
     if (w.layout === 'F') wsEl.innerHTML = paneHTML(0);
     else {
@@ -398,8 +398,22 @@ export function createSessionScreen(app) {
     s.style.height = dir ? innerWidth + 'px' : '';
   }
 
+  // Минимальный размер окна инструмента (meta.minSize): в слишком малое окно инструмент не пускаем
+  const minOf = (id) => (moduleById(id) || {}).minSize;
+  // Применить правку раскладки; если после неё какому-то инструменту мало места — переставить, не вышло — отменить
+  function guarded(apply) {
+    const snap = JSON.stringify(w);
+    const idx = apply();
+    if (settle(w, minOf)) return idx;
+    const bad = w.panes[tooSmall(w, minOf)[0]];
+    Object.keys(w).forEach((k) => delete w[k]);
+    Object.assign(w, JSON.parse(snap));
+    toast(t('ses.tooSmall', { name: bad && moduleById(bad) ? moduleName(moduleById(bad)) : '' }));
+    return null;
+  }
   function relayout(fn, ...args) {
-    const idx = fn(w, ...args);
+    const idx = guarded(() => fn(w, ...args));
+    if (idx === null) return;
     saveWS();
     renderWS(typeof idx === 'number' ? idx : undefined);
   }
@@ -529,9 +543,10 @@ export function createSessionScreen(app) {
       if (k === 'pure') setPanePure(i);
       else if (k === 'full') relayout(setLayout, 'F', [id]);
       else if (k === 'addb' || k === 'addr') {
-        const r = addPane(w, i, k === 'addb' ? 'bottom' : 'right');
-        if (r === null) toast(t('pm.allShown'));
-        else { saveWS(); renderWS(r); }
+        let all = false;
+        const r = guarded(() => { const q = addPane(w, i, k === 'addb' ? 'bottom' : 'right'); if (q === null) all = true; return q; });
+        if (all) toast(t('pm.allShown'));
+        else if (r !== null) { saveWS(); renderWS(r); }
       } else if (k === 'close') relayout(closePane, i);
       else if (k === 'swap') relayout(swapHalves);
       else if (k === 'schemes') layoutSheet();
@@ -762,8 +777,21 @@ export function createSessionScreen(app) {
     const hf = d.el.parentNode, r = hf.getBoundingClientRect();
     return hf.classList.contains('row') ? (x - r.left) / r.width : (y - r.top) / r.height;
   };
+  // Граница не уменьшает окно инструмента до бесполезного: от «четверти» нужно не меньше 180 px по высоте и 140 по ширине
+  // (ниже окно становится полосой, а инструмент туда не пускаем)
+  const limitFrac = (d, f) => {
+    const H = halves(w);
+    if (!H) return clampFrac(f);
+    const main = d.d === 'main', hf = main ? wsEl : d.el.parentNode, r = hf.getBoundingClientRect(), row = !main && hf.classList.contains('row');
+    const first = main ? H.top : d.d === 't' ? H.top : H.bot, ids = main ? [H.top, H.bot] : [first.slice(0, 1), first.slice(1)];
+    const need = (g) => g.some((id) => fits('quarter', minOf(id) || 'strip'));
+    const total = row ? r.width : r.height, px = row ? 140 : 180;
+    let lo = need(ids[0]) ? px / total : 0, hi = need(ids[1]) ? 1 - px / total : 1;
+    lo = Math.max(0.14, lo); hi = Math.min(0.86, hi);
+    return lo > hi ? 0.5 : Math.max(lo, Math.min(hi, f));
+  };
   const applyFrac = (d, f) => {
-    const c = clampFrac(f), set = (els) => { if (els[0]) els[0].style.flex = c + ' 1 0px'; if (els[1]) els[1].style.flex = 1 - c + ' 1 0px'; };
+    const c = limitFrac(d, f), set = (els) => { if (els[0]) els[0].style.flex = c + ' 1 0px'; if (els[1]) els[1].style.flex = 1 - c + ' 1 0px'; };
     if (d.d === 'main') set(wsEl.querySelectorAll(':scope>.half'));
     else set(d.el.parentNode.querySelectorAll(':scope>.pane'));
   };
@@ -833,7 +861,7 @@ export function createSessionScreen(app) {
       if (d.d === 'main') {
         if (f < 0.1) relayout(setLayout, H.bot.length === 1 ? 'F' : 'HH', H.bot);
         else if (f > 0.9) relayout(setLayout, H.top.length === 1 ? 'F' : 'HH', H.top);
-        else { w.ratio = clampFrac(f); saveWS(); classify(); }
+        else { w.ratio = limitFrac(d, f); saveWS(); classify(); }
         return;
       }
       const isT = d.d === 't', arr = isT ? H.top : H.bot;
@@ -842,7 +870,7 @@ export function createSessionScreen(app) {
         relayout(setLayout, isT ? 'H' + H.b : H.t + 'H', isT ? keep.concat(H.bot) : H.top.concat(keep));
         return;
       }
-      w[isT ? 'rt' : 'rb'] = clampFrac(f);
+      w[isT ? 'rt' : 'rb'] = limitFrac(d, f);
       saveWS();
       classify();
       return;
@@ -854,7 +882,7 @@ export function createSessionScreen(app) {
     clearDrop();
     if (!d.target) return;
     if (d.kind === 'tool') relayout(dropTool, d.id, d.target.i, d.target.z);
-    else { swapPanes(w, d.src, d.target.i); w.focus = d.target.i; saveWS(); renderWS(d.target.i); }
+    else if (guarded(() => { swapPanes(w, d.src, d.target.i); w.focus = d.target.i; return 0; }) !== null) { saveWS(); renderWS(d.target.i); }
   }
   document.addEventListener('pointerup', endDrag, true);
   document.addEventListener('pointercancel', endDrag, true);

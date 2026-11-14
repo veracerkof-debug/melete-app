@@ -16,6 +16,7 @@ export default {
   icon: ICON,
   color: '#D2693C',
   sizes: ['full', 'half', 'quarter'],
+  minSize: 'quarter', // меньше этого окна инструмент не пускаем (слово автора 14.11.2026)
   multitouch: true, // удары двумя пальцами по площадке
   record: false,
 };
