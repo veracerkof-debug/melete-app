@@ -152,3 +152,12 @@
 .rpres{display:inline-flex;gap:4px;margin:0 4px}
 .rpre{min-width:38px;height:30px;padding:0 6px;border-radius:9px;background:var(--fill);color:var(--l2);font-size:13px;font-weight:600}
 .rpre.act{background:var(--tint);color:var(--on-tint)}
+/* Цели касания не меньше 40 px (поиск и сортировка медиатеки) */
+.mlsearch{height:40px}
+.mlsearch input{align-self:stretch;height:100%}
+.mlbar .sortsel{min-height:40px}
+.mlfil button{min-height:36px}
+.mlfil button{min-height:40px}
+.mlhead .ic.sm{min-width:40px;min-height:40px}
+/* Низкое и маленькое окно (data-fit, слово автора 14.11.2026): поиск и список; фильтр и сортировка — в окне побольше */
+.pane[data-fit="1"] .mlbar,.pane[data-fit="2"] .mlbar{display:none}
