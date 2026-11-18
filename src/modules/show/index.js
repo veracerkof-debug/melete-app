@@ -5,6 +5,7 @@
 import './show.css';
 import meta from './meta.js';
 import { createShowPads } from '../../audio/showpads.js';
+import { createShowDeck } from '../../audio/showdeck.js';
 import { swipe } from '../../ui/gestures.js';
 import { sortable, buzz } from '../../ui/hold.js';
 import * as M from '../../music/show.js';
@@ -19,7 +20,8 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 
 let host = null, ctx = null, size = 'full', S = null, eng = null, unsubEng = null, edit = false;
-let offs = [], tickT = 0, raf = 0, wake = null;
+let deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
+const PAGES = ['prog', 'desk', 'pads'];
 const held = new Map(); // касание → пад «пока держат»
 
 const t = (k, v) => ctx.t(k, v), esc = (s) => ctx.ui.esc(s);
@@ -41,6 +43,12 @@ function ensureEng() {
   }
   if (!unsubEng) { unsubEng = eng.subscribe(kick); eng.setLevel(S.level); eng.setDuck(S.duckAmount, S.duckTime); }
   return eng;
+}
+function ensureDeck() {
+  const en = ensureEng(); if (!en) return null;
+  if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf }); }
+  if (!unsubDeck) { unsubDeck = deck.subscribe(() => deskPaint(true)); deck.setTrim(S.deckLevel); }
+  return deck;
 }
 // Раскрыть файлы заранее: касание должно играть сразу. Сначала видимый банк и закреплённый ряд, потом остальное
 function preload() {
@@ -102,6 +110,53 @@ function progHTML() {
     (e.numbers.length ? '<div class="shlist">' + e.numbers.map(numHTML).join('') + '</div>' : '<div class="shempty"><b>' + esc(t('prog.empty')) + '</b>' + esc(t('prog.emptyText')) + '</div>') +
     '<button class="shadd" data-x="numnew">+ ' + esc(t('num.add')) + '</button></div>';
 }
+const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(label) + '</span><b class="shfv" data-fv="' + k + '">' + v + '</b><div class="shtrack" data-fader="' + k + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" style="--v:' + v + '%">' +
+  '<i class="tk" style="bottom:25%"></i><i class="tk" style="bottom:50%"></i><i class="tk" style="bottom:75%"></i><div class="shfill"></div><div class="shcap"></div></div><span class="shfo" data-fo="' + k + '">' + M.dbText(v) + ' ' + esc(t('db')) + '</span></div>';
+function deskHTML() {
+  const e = cur(), n = M.currentNumber(S), nx = M.nextNumber(S), idx = e && n ? e.numbers.indexOf(n) + 1 : 0, f = n && fileOf(n.file), a = f && f.ana;
+  const sub = n ? [t('desk.of', { n: idx, m: e.numbers.length }), a && a.pc != null && n.kind === 'track' ? keyName(a.pc + n.shift, a.minor) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') : ''].filter(Boolean).join(' · ') : '';
+  return '<div class="shdesk"><div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' +
+    (n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>'
+      : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
+    '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
+    (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
+    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('pads', t('desk.sounds'), S.level) + '</div>' +
+    '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b></div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
+}
+// Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
+function deskPaint(force) {
+  if (!host || S.page !== 'desk') return;
+  const n = M.currentNumber(S);
+  if (deck) deck.tick();
+  const st = deck ? deck.state : null;
+  if (force && st && n && n.kind === 'track' && st.ended && !st.playing) { /* дошёл до конца: ничего не делаем, номер остаётся перед глазами */ }
+  const tm = host.querySelector('#shtime'), cn = host.querySelector('#shcueln'), pp = host.querySelector('#shpp');
+  const own = n && n.kind === 'track' && st && st.file === n.file;
+  const time = own ? st.time : 0, dur = own ? st.dur : (n && n.dur) || 0;
+  if (tm) tm.textContent = M.mmss(time) + ' / ' + M.mmss(dur || (fileOf(n.file) || {}).dur || 0);
+  if (pp) pp.textContent = t(own && st.playing ? 'desk.pause' : 'desk.play');
+  if (cn && n) {
+    const c = M.cueNow(n, time);
+    const live = c.prev && own && st.playing && time - c.prev.t < 5 ? c.prev : null;
+    cn.className = 'shcueln' + (live ? ' now' : c.next && c.in < 10 && own ? ' soon' : '');
+    cn.textContent = live ? t('desk.now') + ' · ' + live.text : c.next ? t('desk.in', { t: M.mmss(c.in) }) + ' · ' + c.next.text : '';
+  }
+  const cv = host.querySelector('#shwave'); if (cv && n) drawWave(cv, n, time, dur, own);
+}
+function drawWave(cv, n, time, dur, own) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const g = cv.getContext('2d'), cs = getComputedStyle(cv), ink = cs.getPropertyValue('--ink').trim() || '#111', tint = cs.getPropertyValue('--tint').trim() || '#a95e72', l3 = cs.getPropertyValue('--l3').trim() || '#aaa';
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const f = fileOf(n.file), pk = f && Array.isArray(f.peaks) && f.peaks.length ? f.peaks : null, d = dur || (f && f.dur) || 0, N = pk ? pk.length : Math.max(40, Math.floor(w / 4));
+  const bw = w / N;
+  for (let i = 0; i < N; i++) { const v = pk ? pk[i] : 0.15, hh = Math.max(2, v * (h * 0.9)), x = i * bw, played = d && own && (i / N) * d <= time; g.fillStyle = played ? tint : l3; g.globalAlpha = played ? 1 : 0.55; g.fillRect(x + 0.5, (h - hh) / 2, Math.max(1, bw - 1.5), hh); }
+  g.globalAlpha = 1;
+  if (d) { // метки
+    g.fillStyle = ink; n.cues.forEach((c) => { const x = (c.t / d) * w; g.fillRect(x - 0.75, 0, 1.5, h); g.beginPath(); g.moveTo(x - 5, 0); g.lineTo(x + 5, 0); g.lineTo(x, 7); g.closePath(); g.fill(); });
+    if (own) { const x = (time / d) * w; g.fillStyle = ink; g.fillRect(x - 1.5, 0, 3, h); }
+  }
+}
 function timerText() {
   const e = cur(); if (!e || !S.ui.timer) return { s: '', over: false };
   const r = M.eventTimer(e, Date.now());
@@ -113,18 +168,22 @@ function render() {
   if (!host) return;
   const tm = timerText();
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
-    ['prog', 'pads'].map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
+    PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
-    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : progHTML()) + '</div></div>';
+    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : progHTML()) + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   paint();
+  clearInterval(deskT); deskT = 0;
+  if (S.page === 'desk') { deskPaint(); deskT = setInterval(() => deskPaint(), 100); }
 }
 function go(page) { if (S.page === page) return; S.page = page; save(); render(); }
 
 /* ---------- разбор касаний ---------- */
 
 function onDown(e) {
+  if (e.target.closest && e.target.closest('[data-fader]')) { onFaderDown(e); return; }
+  if (e.target.closest && e.target.closest('#shwave')) { onWaveDown(e); return; }
   const el = e.target.closest && e.target.closest('.shpad[data-pad]');
   if (!el || edit) return;
   const p = M.padById(S, el.dataset.pad);
@@ -158,6 +217,10 @@ function onClick(e) {
     case 'evedit': eventSheet(cur()); break;
     case 'evnew': newEvent(); break;
     case 'numnew': newNumber(); break;
+    case 'go': goNext(); break;
+    case 'pp': playPause(); break;
+    case 'fadeout': if (deck) deck.stop(S.goFade); break;
+    case 'mark': addMark(); break;
     default: break;
   }
 }
@@ -171,6 +234,69 @@ function onInput(e) {
     if (eng) eng.setLevel(S.level); else if (ensureEng()) eng.setLevel(S.level);
     save();
   }
+}
+
+/* ---------- основной трек ---------- */
+
+async function startNumber(n, from = 0) {
+  S.cur = n.id; save();
+  if (n.kind === 'track' && n.file) {
+    const d = ensureDeck();
+    if (!d) { render(); return; }
+    try { await d.start({ file: n.file, level: n.level, fadeIn: n.fadeIn, fadeOut: n.fadeOut, shift: n.shift, from }); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('desk.trackErr')); }
+    const nx = M.nextNumber(S); if (nx && nx.kind === 'track' && nx.file) d.prepare(nx.file); // следующий — заранее, «ГО» не ждёт
+  }
+  render();
+}
+async function goNext() {
+  const cn = M.currentNumber(S), nx = M.nextNumber(S);
+  if (!nx) { ctx.ui.toast(t('desk.noNext')); return; }
+  if (cn && deck && deck.state.playing) deck.stop(cn.fadeOut > 0 ? cn.fadeOut : S.goFade);
+  if (cn) cn.done = true;
+  if (S.ui.buzz) buzz();
+  await startNumber(nx);
+}
+function playPause() {
+  const n = M.currentNumber(S); if (!n || n.kind !== 'track' || !n.file) return;
+  if (deck && deck.state.file === n.file && deck.state.playing) deck.pause();
+  else if (deck && deck.state.file === n.file) deck.resume();
+  else startNumber(n);
+}
+function addMark() {
+  const n = M.currentNumber(S), e = cur(); if (!n || !deck || deck.state.file !== n.file) return;
+  const at = deck.state.time; M.addCue(n, at, ''); if (e) e.updatedAt = Date.now(); save();
+  ctx.ui.toast(t('desk.markAdded', { t: M.mmss(at) })); render();
+}
+// фейдеры: перетаскивание по дорожке; двойное касание — на 0 и обратно
+const fdPrev = {}; let fdTap = { k: '', t: 0 };
+function fdSet(k, v) {
+  v = Math.max(0, Math.min(100, Math.round(v)));
+  if (k === 'deck') { S.deckLevel = v; if (deck) deck.setTrim(v); else if (eng || ensureDeck()) deck && deck.setTrim(v); }
+  else { S.level = v; if (eng) eng.setLevel(v); else if (ensureEng()) eng.setLevel(v); }
+  const tr = host && host.querySelector('[data-fader="' + k + '"]'); if (!tr) return;
+  tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v);
+  host.querySelector('[data-fv="' + k + '"]').textContent = v; host.querySelector('[data-fo="' + k + '"]').textContent = M.dbText(v) + ' ' + t('db');
+}
+function onFaderDown(e) {
+  const tr = e.target.closest && e.target.closest('[data-fader]'); if (!tr) return;
+  const k = tr.dataset.fader, r = () => tr.getBoundingClientRect();
+  const now = performance.now();
+  if (fdTap.k === k && now - fdTap.t < 320) { const cur0 = k === 'deck' ? S.deckLevel : S.level; if (cur0 > 0) { fdPrev[k] = cur0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
+  fdTap = { k, t: now };
+  try { tr.setPointerCapture(e.pointerId); } catch { /* */ }
+  const at = (y) => { const b = r(); fdSet(k, (1 - (y - b.top) / b.height) * 100); };
+  at(e.clientY);
+  const mv = (m) => at(m.clientY), up = () => { tr.removeEventListener('pointermove', mv); tr.removeEventListener('pointerup', up); tr.removeEventListener('pointercancel', up); save(); };
+  tr.addEventListener('pointermove', mv); tr.addEventListener('pointerup', up); tr.addEventListener('pointercancel', up);
+}
+function onWaveDown(e) {
+  const cv = e.target.closest && e.target.closest('#shwave'); if (!cv || !deck) return;
+  const n = M.currentNumber(S); if (!n || deck.state.file !== n.file) return;
+  const seek = (x) => { const b = cv.getBoundingClientRect(); deck.seek(Math.max(0, Math.min(1, (x - b.left) / b.width)) * deck.state.dur); deskPaint(); };
+  try { cv.setPointerCapture(e.pointerId); } catch { /* */ }
+  seek(e.clientX);
+  const mv = (m) => seek(m.clientX), up = () => { cv.removeEventListener('pointermove', mv); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up); };
+  cv.addEventListener('pointermove', mv); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 }
 
 /* ---------- создание ---------- */
@@ -287,6 +413,7 @@ function settingsSheet() {
     '<div class="group">' + ['info', 'timer', 'buzz', 'awake', 'confirmStop'].map(sw).join('') + '</div>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + esc(t('bank.dock')) + '</span>' + ctx.ui.sw('v-dock', S.ui.dock, t('bank.dock')) + '</div>' +
       (S.ui.dock && M.dockOf(S) ? '<button class="cell" data-x="dock"><span class="grow">' + esc(t('bank.title')) + '</span><span class="val">' + M.dockOf(S).cols + '</span></button>' : '') + '</div>' +
+    '<div class="group sgroup" style="margin-top:12px">' + slider('goFade', t('view.goFade'), S.goFade, 0, 10, 0.5, secTxt(S.goFade)) + '</div><p class="ftr">' + esc(t('view.goFadeHint')) + '</p>' +
     '<div class="hdr">' + esc(t('view.duck')) + '</div><div class="group sgroup">' + slider('duckAmount', t('view.duckAmount'), S.duckAmount, 0, 100, 5, S.duckAmount + '%') + slider('duckTime', t('view.duckTime'), S.duckTime, 0.05, 3, 0.05, secTxt(S.duckTime)) + '</div><p class="ftr">' + esc(t('view.hint')) + '</p>';
   ctx.ui.sheet(body, (el, sh) => {
     el.addEventListener('change', (e) => {
@@ -404,10 +531,11 @@ function numSheet(n) {
     '<div class="hdr">' + esc(t('num.cues')) + '</div><div class="group">' + n.cues.map((c) => '<div class="shcue" data-cue="' + c.id + '"><input class="tt" data-ct inputmode="decimal" value="' + M.mmss(c.t) + '" aria-label="' + esc(t('num.cueTime')) + '"><input data-cx maxlength="200" value="' + esc(c.text) + '" placeholder="' + esc(t('num.cueText')) + '" aria-label="' + esc(t('num.cueText')) + '"><button data-x="cuedel" aria-label="' + esc(t('num.del')) + '">' + I.trash + '</button></div>').join('') +
       '<button class="cell act" data-x="cueadd"><span class="grow">' + esc(t('num.cueAdd')) + '</span></button></div><p class="ftr">' + esc(t('num.cuesHint')) + '</p>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + esc(t('num.done')) + '</span>' + ctx.ui.sw('ndone', n.done, t('num.done')) + '</div></div>' +
-    '<div class="group" style="margin-top:16px"><button class="cell" data-x="del" style="color:var(--red)"><span class="grow">' + esc(t('num.del')) + '</span></button></div>';
+    '<div class="group" style="margin-top:16px"><button class="cell act" data-x="run"><span class="grow">' + esc(t('num.run')) + '</span></button><button class="cell" data-x="del" style="color:var(--red)"><span class="grow">' + esc(t('num.del')) + '</span></button></div>';
   ctx.ui.sheet(body, (el, sh) => {
     el.addEventListener('click', async (ev) => {
       const g = (s) => ev.target.closest(s); let b;
+      if (g('[data-x="run"]')) { sh.close(); S.page = 'desk'; save(); await startNumber(n); return; }
       if ((b = g('[data-seg="nkind"] [data-v]'))) { n.kind = b.dataset.v; Object.assign(n, M.normalizeNumber(n)); touch(); sh.update(); }
       else if (g('[data-x="pick"]')) pickFile({ cur: n.file }, (id) => { n.file = id; if (id && !n.title) n.title = (fileOf(id) || {}).name || ''; const r = fileOf(id); if (r && r.dur && !n.dur) n.dur = Math.round(r.dur); touch(); sh.update(); });
       else if (g('[data-x="cueadd"]')) { M.addCue(n, 0, ''); touch(); sh.update(); }
@@ -457,7 +585,7 @@ export default {
     host.addEventListener('pointerup', onUp);
     host.addEventListener('pointercancel', onUp);
     host.addEventListener('input', onInput);
-    offs.push(swipe(host, { left: () => go('pads'), right: () => go('prog') }));
+    offs.push(swipe(host, { left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
     const vis = () => { if (document.visibilityState === 'visible') awake(); };
     document.addEventListener('visibilitychange', vis);
     offs.push(() => document.removeEventListener('visibilitychange', vis));
@@ -468,10 +596,11 @@ export default {
   },
   resize(sz) { size = sz; render(); },
   unmount() {
-    clearInterval(tickT); cancelAnimationFrame(raf); raf = 0;
+    clearInterval(tickT); clearInterval(deskT); deskT = 0; cancelAnimationFrame(raf); raf = 0;
     offs.splice(0).forEach((f) => f());
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); }
     held.clear();
+    if (deck) { deck.stop(0.3); if (unsubDeck) { unsubDeck(); unsubDeck = null; } }
     if (eng) { eng.stopAll(0.3); if (unsubEng) { unsubEng(); unsubEng = null; } }
     try { if (wake) wake.release(); } catch { /* уже */ }
     wake = null; host = null; ctx = null; edit = false;

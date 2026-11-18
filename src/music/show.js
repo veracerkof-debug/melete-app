@@ -146,7 +146,10 @@ export function normalizeShow(s = {}) {
   o.v = 1;
   o.ui = { ...DEFAULT_UI, ...(o.ui || {}) };
   Object.keys(DEFAULT_UI).forEach((k) => { o.ui[k] = !!o.ui[k]; });
-  o.page = pick(o.page, ['prog', 'pads'], 'prog');
+  o.page = pick(o.page, ['prog', 'desk', 'pads'], 'prog');
+  o.deckLevel = clamp(o.deckLevel, 0, 100, 85);          // фейдер основного трека
+  o.goFade = clamp(o.goFade, 0, 10, 2);                  // с: плавный переход по «ГО», если у номера свой уход не задан
+  o.cur = typeof o.cur === 'string' ? o.cur : null;      // идущий номер
   o.level = clamp(o.level, 0, 100, 85);                  // общая громкость звуков
   o.duckAmount = clamp(o.duckAmount, 0, 100, 40);        // на сколько процентов приглушать основной трек
   o.duckTime = clamp(o.duckTime, 0.05, 3, 0.25);         // с: нарастание приглушения
@@ -155,6 +158,7 @@ export function normalizeShow(s = {}) {
   o.bank = o.banks.some((b) => b.id === o.bank && !b.pinned) ? o.bank : o.banks.find((b) => !b.pinned).id;
   o.events = (Array.isArray(o.events) ? o.events : []).map(normalizeEvent);
   o.event = o.events.some((e) => e.id === o.event && !e.deleted) ? o.event : (o.events.find((e) => !e.deleted) || {}).id || null;
+  if (!o.cur || !((o.events.find((e) => e.id === o.event) || { numbers: [] }).numbers.some((n) => n.id === o.cur))) o.cur = null;
   return o;
 }
 // Пустые банки: названия без звуков. Звуки человек добавляет сам (слово автора 15.11.2026: ничего не зашито)
@@ -170,4 +174,12 @@ export const eventOf = (s, id = s.event) => s.events.find((e) => e.id === id && 
 export function padById(s, id) {
   for (const b of s.banks) { const p = b.pads.find((x) => x && x.id === id); if (p) return p; }
   return null;
+}
+
+// Номер, что идёт, и следующий не отыгранный за ним (или первый не отыгранный, если ничего не идёт)
+export function currentNumber(s) { const e = eventOf(s); return e ? e.numbers.find((n) => n.id === s.cur) || null : null; }
+export function nextNumber(s) {
+  const e = eventOf(s); if (!e) return null;
+  const i = e.numbers.findIndex((n) => n.id === s.cur);
+  return e.numbers.slice(i + 1).find((n) => !n.done) || (i < 0 ? e.numbers.find((n) => !n.done) || null : null);
 }

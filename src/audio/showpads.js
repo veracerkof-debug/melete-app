@@ -11,7 +11,7 @@ const MAX_CACHE = 24, MAX_VOICES = 24, CLICK = 0.012; // CLICK — минима�
 export function createShowPads({ dest, getBlob, now = () => dest.context.currentTime }) {
   const c = dest.context;
   const out = c.createGain(); out.gain.value = 1; out.connect(dest);
-  const duckNode = c.createGain(); duckNode.gain.value = 1; // сюда подключается основной трек: пока звучит пад с «приглушать» — тише
+  const duckNode = c.createGain(); duckNode.gain.value = 1; duckNode.connect(dest); // сюда подключается основной трек (showdeck.js): пока звучит пад с «приглушать» — тише
   const cache = new Map(), pending = new Map();           // файл → буфер / обещание раскрытия
   const voices = new Set(), subs = new Set();
   let duckAmount = 0.4, duckTime = 0.25, errs = new Set();

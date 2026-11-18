@@ -2,8 +2,8 @@
 import { test, expect } from './melete.js';
 
 // WAV 0,6 с, 440 Гц, моно 8 кГц
-function wav() {
-  const n = 4800, b = Buffer.alloc(44 + n * 2);
+function wav(sec = 0.6) {
+  const n = Math.round(8000 * sec), b = Buffer.alloc(44 + n * 2);
   b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
   b.writeUInt32LE(8000, 24); b.writeUInt32LE(16000, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
   for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin(i / 8000 * 2 * Math.PI * 440) * 12000), 44 + i * 2);
@@ -71,5 +71,42 @@ test('медиатека: кнопка пульта выступления от�
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   await page.click('.session .pane[data-tool="audio"] [data-x="ashow"]');
   await expect(page.locator('.shw')).toBeVisible({ timeout: 10_000 });
+  expect(errors).toEqual([]);
+});
+
+test('пульт: ГО запускает номер с треком, метка с отсчётом, следующий номер — переход', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // номер 1: трек + метка на 2-й секунде
+  await page.click(T + '[data-x="numnew"]');
+  await page.fill('.sheet [data-f="title"]', 'Танец');
+  await page.click('.sheet [data-seg="nkind"] [data-v="track"]');
+  await page.click('.sheet [data-x="pick"]');
+  await page.setInputFiles('.sheet input[type="file"]', { name: 'dance.wav', mimeType: 'audio/wav', buffer: wav(8) });
+  await expect(page.locator('.sheet [data-x="pick"]')).toContainText('dance', { timeout: 8000 });
+  await page.click('.sheet [data-x="cueadd"]');
+  await page.fill('.sheet [data-ct]', '0:02'); await page.press('.sheet [data-ct]', 'Tab');
+  await page.fill('.sheet [data-cx]', 'Свет на сцену'); await page.press('.sheet [data-cx]', 'Tab');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // номер 2: без трека
+  await page.click(T + '[data-x="numnew"]');
+  await page.fill('.sheet [data-f="title"]', 'Ведущие');
+  await page.fill('.sheet [data-f="note"]', 'Выход справа');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // пульт: ГО
+  await page.click(T + '[data-page="desk"]');
+  await page.click(T + '[data-x="go"]');
+  await expect(page.locator(T + '.shnow b')).toHaveText('Танец', { timeout: 10_000 });
+  await expect(page.locator(T + '#shcueln')).toContainText('Свет на сцену', { timeout: 8000 });
+  await expect.poll(async () => (await page.locator(T + '#shtime').textContent()) || '', { timeout: 10_000 }).not.toMatch(/^0:00 /);
+  // следующий номер: ГО — трек уходит, на пульте заметка
+  await page.click(T + '[data-x="go"]');
+  await expect(page.locator(T + '.shnow b')).toHaveText('Ведущие', { timeout: 8000 });
+  await expect(page.locator(T + '#shnote')).toContainText('Выход справа');
+  const sh = (await melete.toolsNow()).show, ev = sh.events[0];
+  expect(ev.numbers[0].done).toBe(true); expect(sh.cur).toBe(ev.numbers[1].id);
   expect(errors).toEqual([]);
 });

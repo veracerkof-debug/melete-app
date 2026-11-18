@@ -1,6 +1,6 @@
 // Пульт выступления: данные, шкала громкости, метки и таймер (src/music/show.js)
 import { describe, it, expect } from 'vitest';
-import { faderDb, faderGain, gainFader, dbText, normalizePad, normalizeBank, resizeBank, normalizeNumber, normalizeEvent, normalizeShow, cueNow, addCue, newNumber, eventTimer, clock, parseTime, parseHhmm, hhmm, padById, bankOf, dockOf, newPad } from '../src/music/show.js';
+import { faderDb, faderGain, gainFader, dbText, normalizePad, normalizeBank, resizeBank, normalizeNumber, normalizeEvent, normalizeShow, cueNow, addCue, newNumber, eventTimer, clock, parseTime, parseHhmm, hhmm, padById, bankOf, dockOf, newPad, currentNumber, nextNumber, newEvent } from '../src/music/show.js';
 
 describe('шкала громкости 0…100', () => {
   it('100 — без ослабления, 50 — −12 дБ, ниже 1 — тишина', () => {
@@ -74,5 +74,20 @@ describe('номера, метки, таймер', () => {
     expect(clock(65)).toBe('1:05'); expect(clock(3725)).toBe('1:02:05');
     expect(parseTime('1:05')).toBe(65); expect(parseTime('65')).toBe(65); expect(parseTime('1:05.5')).toBe(65.5); expect(parseTime('abc')).toBeNull();
     expect(parseHhmm('19:30')).toBe(1170); expect(parseHhmm('25:00')).toBeNull(); expect(hhmm(1170)).toBe('19:30');
+  });
+});
+
+describe('идущий номер и следующий', () => {
+  it('следующий — не отыгранный за идущим; без идущего — первый не отыгранный', () => {
+    const e = newEvent({ numbers: [{ id: 'a', done: true }, { id: 'b' }, { id: 'c' }] });
+    const s = normalizeShow({ events: [e], event: e.id });
+    expect(nextNumber(s).id).toBe('b');
+    s.cur = 'b'; expect(currentNumber(s).id).toBe('b'); expect(nextNumber(s).id).toBe('c');
+    s.cur = 'c'; expect(nextNumber(s)).toBeNull();
+  });
+  it('идущий номер, которого нет, забывается', () => {
+    const e = newEvent({ numbers: [{ id: 'a' }] });
+    expect(normalizeShow({ events: [e], event: e.id, cur: 'zzz' }).cur).toBeNull();
+    expect(normalizeShow({ events: [e], event: e.id, cur: 'a' }).cur).toBe('a');
   });
 });
