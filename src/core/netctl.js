@@ -56,6 +56,7 @@ async function soundCmd(app, c) {
 
 // Запрос пульта на этом устройстве → { status, json }
 export async function rcHandle(app, path, json, peer, forget) {
+  if (path === '/melete/v1/rc/ping') return { status: 200, json: { t: Date.now() } }; // проверка связи (linkcheck.js): ничего не трогает, не пишет и не показывает «управляет»
   const N = app.net || {};
   if (path === '/melete/v1/rc/state') return { status: 200, json: { media: N.audio ? N.audio.state() : null, list: listOf(app), snd: soundState(app) } };
   if (path === '/melete/v1/rc/cmd') {

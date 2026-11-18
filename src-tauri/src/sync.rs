@@ -123,12 +123,19 @@ fn cert_fp(app: &AppHandle) -> String {
 // блокирующее чтение сокетов — без замка, замок — только на разбор и шифрование. Конец любой стороны закрывает обе
 fn bridge(cfg: Arc<rustls::ServerConfig>, tcp: TcpStream, inner_port: u16) {
     let conn = match rustls::ServerConnection::new(cfg) { Ok(c) => Arc::new(Mutex::new(c)), Err(_) => return };
-    let inner = match TcpStream::connect(("127.0.0.1", inner_port)) { Ok(s) => s, Err(_) => return };
     let idle = Some(Duration::from_secs(180)); // дольше, чем окно думает над запросом (120 с)
-    let _ = tcp.set_read_timeout(idle); let _ = inner.set_read_timeout(idle);
-    let _ = tcp.set_nodelay(true); let _ = inner.set_nodelay(true);
-    let (Ok(mut net_r), Ok(mut net_w2), Ok(mut in_r)) = (tcp.try_clone(), tcp.try_clone(), inner.try_clone()) else { return };
-    let mut net_w = tcp; let mut in_w = inner;
+    let _ = tcp.set_read_timeout(idle);
+    let _ = tcp.set_nodelay(true);
+    let (Ok(mut net_r), Ok(mut net_w2)) = (tcp.try_clone(), tcp.try_clone()) else { return };
+    let mut net_w = tcp;
+    // Рукопожатие TLS и первые байты: «MLNK» — канал событий (link.rs, Melete DEV), иначе — обычный HTTP к tiny_http
+    let Some(first) = crate::link::first_bytes(&conn, &mut net_r, &mut net_w) else { let _ = net_w.shutdown(Shutdown::Both); return };
+    if crate::link::is_link(&first) { crate::link::run(conn, net_r, net_w, first); return; }
+    let inner = match TcpStream::connect(("127.0.0.1", inner_port)) { Ok(s) => s, Err(_) => { let _ = net_w.shutdown(Shutdown::Both); return } };
+    let _ = inner.set_read_timeout(idle); let _ = inner.set_nodelay(true);
+    let Ok(mut in_r) = inner.try_clone() else { return };
+    let mut in_w = inner;
+    if in_w.write_all(&first).is_err() { let _ = net_w.shutdown(Shutdown::Both); return; }
     let c2 = conn.clone();
     // изнутри в сеть: ответ tiny_http шифруется и уходит телефону
     let out = std::thread::spawn(move || {

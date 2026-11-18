@@ -260,6 +260,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
         }
         const r = await invoke('sync_start');
         state = { on: !!r.on, ips: r.ips || [], name: r.name || '', code: newCode(), port: r.port || PORT, err: '', fp: r.fp || '' };
+        import('./linkhub.js').then((m) => m.acceptOn(mem, r.name || '')).catch(() => {}); // канал событий (только DEV, linkhub.js)
       }
       mem[onKey] = true; save();
       log('sync', (mesh ? 'приём подключений включён: ' : 'связь с телефоном включена: ') + state.ips.join(', '));
@@ -269,7 +270,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
     async stop() {
       if (!avail) return;
       if (mesh) await plugin().stop().catch(() => {});
-      else { const { invoke } = await core(); await invoke('sync_stop').catch(() => {}); }
+      else { const { invoke } = await core(); await invoke('sync_stop').catch(() => {}); import('./linkhub.js').then((m) => m.acceptOff()).catch(() => {}); }
       state = { ...state, on: false, code: '' };
       mem[onKey] = false; save();
       emit();
