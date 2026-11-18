@@ -185,13 +185,14 @@ export function createMetronome({ mixer, cfg, onTempo = () => {}, onBpmChange = 
       }
     },
 
-    start() {
+    // at — время первого удара по часам звука (вывод на другое устройство: общая сетка); без него — через 80 мс
+    start(at) {
       c = getContext(mixer.state.mode);
       if (!c) return false;
       if (!noise) noise = makeNoise(c);
       m.running = true;
       pos = newPosition();
-      next = c.currentTime + 0.08;
+      next = Number.isFinite(at) && at > c.currentTime ? at : c.currentTime + 0.08;
       m.queue = [];
       m.sched();
       timer = every(TICK_MS, m.sched);

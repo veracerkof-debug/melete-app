@@ -63,7 +63,8 @@ import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
 import { createUpdater } from './update.js';
 import { createSnapshots } from './snapshots.js';
-import { applyVariants } from './variants.js';
+import { applyVariants, DEV } from './variants.js';
+import { createOutput } from './output.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 
@@ -232,6 +233,8 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
+  // вывод на другое устройство (DEV; docs/link.md): цели по категориям, умолчание — всё у себя
+  app.output = createOutput({ device, audio, save: () => saveDevice(device), enabled: DEV });
   app.rec = createRecorder(app, { onDiskFail: () => toast(t('rec.diskFail')) });
   // запись, оборванная сбоем или выгрузкой приложения, — склеить из кусков на диске и вернуть в медиатеку
   setTimeout(() => app.rec.recover().then((l) => l.forEach((r) => toast(t('rec.recoveredToast', { name: r.name })))).catch(() => {}), 2500);
