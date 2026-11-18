@@ -44,6 +44,12 @@ jobs:
         env:
           CI: 1
 
+      # обычная веб-версия (vite --mode web): рабочая, без нерабочего — tests/e2e/web.spec.js
+      - name: Веб-версия
+        run: PW_MODE=web npx playwright test tests/e2e/web.spec.js --trace off
+        env:
+          CI: 1
+
       - name: Отчёт (при падении)
         if: failure()
         uses: actions/upload-artifact@v4

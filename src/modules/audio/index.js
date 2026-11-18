@@ -27,6 +27,7 @@ import { after, cancel } from '../../audio/clock.js';
 import { voice } from '../../audio/metronome.js';
 import { fmtDur } from '../../core/format.js';
 import { DEV } from '../../core/variants.js';
+import { WEB } from '../../core/platform.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
 import meta, { ICON } from './meta.js';
@@ -214,7 +215,7 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 const sgn = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
 /* ---------- панель плеера: волна, дорожки, текст, аккорды ---------- */
-const PVIEWS = ['wave', 'stems', 'text', 'chords', 'sing']; // «Петь» — караоке с оценкой (sing.js)
+const PVIEWS = WEB ? ['wave'] : ['wave', 'stems', 'text', 'chords', 'sing']; // в веб-версии дорожек, текста, аккордов и «Петь» нет (разбор записи там не работает) — один вид, переключателя нет // «Петь» — караоке с оценкой (sing.js)
 const pview = () => (PVIEWS.includes(st().pview) ? st().pview : 'wave');
 const PV = { cells: [], bars: [] }; // сетка аккордов: времена ячеек и номер такта каждой
 // Такты и доли записи: по сильным долям (rec.ana.downbeats), доли между ними — ячейки; без разбора — пусто
@@ -284,6 +285,7 @@ function stemsViewHTML(t) {
 }
 // переключатель видов — одной полосой над транспортом
 function pswHTML() {
+  if (PVIEWS.length < 2) return '';
   const tr = ctx.t, v = pview(), ic = { wave: I.wave, stems: I.stems, text: I.text, chords: I.chords, sing: I.sing };
   return '<div class="pvsw" role="tablist">' + PVIEWS.map((k) => '<button class="pvb' + (k === v ? ' on' : '') + '" role="tab" aria-selected="' + (k === v) + '" data-x="apv" data-v="' + k + '" aria-label="' + ctx.ui.esc(tr('pv.' + k)) + '">' + ic[k] + '<span>' + ctx.ui.esc(tr('pv.' + k)) + '</span></button>').join('') + '</div>';
 }

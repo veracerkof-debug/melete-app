@@ -9,6 +9,7 @@ import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
 import '../ui/pane.css';
 import { log, logErr } from './log.js';
+import { WEB } from './platform.js';
 import { count as dCount, time as dTime, gauge as dGauge, event as dEvent } from './diag.js';
 import { epigraphHTML } from './screens/verses.js';
 import { gemSec } from './profile.js';
@@ -102,10 +103,10 @@ export function makeCtx(app, mod) {
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
     // Долгие обработки записей (ядро, jobs.js): дорожки и ноты — ход, отмена, подписка; очередь в фоне — auto
-    jobs: app.jobs,
+    jobs: WEB ? null : app.jobs, // в веб-версии разделения на дорожки и текста песни нет: модули не показывают связанного с ними (platform.js)
     // пакеты моделей (src/core/screens/packs.js): строка пакета, скачать с вопросом, подписка на ход
-    packs: app.packs,
-    auto: app.auto,
+    packs: WEB ? null : app.packs,
+    auto: WEB ? null : app.auto,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
     midi: {
       ev: (e) => { if (app.rec) app.rec.midiEv(mod.id, e); if (app.playTaps) app.playTaps.forEach((fn) => { try { fn(mod.id, e); } catch (err) { logErr('mod', err); } }); },
@@ -236,7 +237,7 @@ const hasTargets = () => { try { const m = JSON.parse(localStorage.getItem('mele
 export const moduleName = (mod) => mod.name[getLang()] || mod.name.ru;
 
 // Тяжёлый модуль (heavy: true — модели, банки звуков) в веб-сборке не работает: его файлов там нет (DECISIONS: размер)
-const WEB_BUILD = typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__;
+const WEB_BUILD = WEB;
 export const heavyStub = (mod) => !!(mod && mod.heavy && WEB_BUILD);
 const RELEASE = 'https://github.com/veracerkof-debug/Practice-app/releases/tag/pre';
 function heavyHTML(ctx, mod) {

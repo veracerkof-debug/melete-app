@@ -613,7 +613,7 @@
   "panel.version": "version {v}",
   "panel.kindApk": "Android app",
   "panel.kindWeb": "web version: data stays in this browser only; a backup — under “Data”",
-  "web.hello": "Web version: data lives in this browser, no network needed. The full version is the Android and Windows app.",
+  "web.hello": "Web version: data lives in this browser, no network needed.",
   "panel.author": "Developed by Kim Alexander",
   "panel.madeWith": "Made with Claude by Anthropic",
   "page.feat": "Modules and features",

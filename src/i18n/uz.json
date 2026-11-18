@@ -601,7 +601,7 @@
   "panel.version": "versiya {v}",
   "panel.kindApk": "Android ilovasi",
   "panel.kindWeb": "veb-versiya: maʼlumotlar faqat shu brauzerda; nusxa — «Maʼlumotlar»da",
-  "web.hello": "Veb-versiya: maʼlumotlar shu brauzerda saqlanadi, tarmoq kerak emas. Toʻliq versiya — Android va Windows ilovasi.",
+  "web.hello": "Veb-versiya: maʼlumotlar shu brauzerda saqlanadi, tarmoq kerak emas.",
   "panel.author": "Ishlab chiquvchi: Kim Aleksandr",
   "panel.madeWith": "Anthropic kompaniyasining Claude yordamida yaratilgan",
   "page.feat": "Modullar va funksiyalar",

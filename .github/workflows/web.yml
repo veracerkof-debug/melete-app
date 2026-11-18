@@ -38,6 +38,8 @@ jobs:
         run: npm test
 
       - name: Сборка
+        env:
+          MELETE_CHANNEL: pre # обычная веб-версия — как у тестеров: функции только для dev (пульт выступления и др.) в ней не показываются
         run: npx vite build --mode web
 
       - name: Выложить в gh-pages (корень; витрина show/ остаётся)

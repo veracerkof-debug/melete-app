@@ -1,6 +1,7 @@
 // Метроном: колесо темпа, акценты по долям, дробления, тап, тренер ускорения, тихие такты.
 // Перенесено из legacy/practice.html (metroHTML, wheelHTML, drawBeats, meterSheet, moreSheet).
 import './metro.css';
+import { WEB } from '../../core/platform.js';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
@@ -316,7 +317,7 @@ async function moreSheet() {
     return '<div class="hdr">' + t('sig.title') + '</div><div class="group">' + sw('flash', s) +
       (s.flash ? colors('strong', s.strong) + colors('other', s.other) : '') +
       (caps.torch ? sw('torch', s) : '') + (caps.vibrate ? sw('vibe', s) : '') + '</div>' +
-      '<p class="ftr">' + t('sig.ftr') + (caps.torch && caps.vibrate ? '' : ' ' + t('sig.android')) + '</p>';
+      '<p class="ftr">' + t('sig.ftr') + (caps.torch && caps.vibrate || WEB ? '' : ' ' + t('sig.android')) + '</p>';
   };
   const val = (s) => '<span class="val num" style="color:var(--ink);margin-right:6px">' + s + '</span>';
   const body = () => ui.snav(t('more.title')) +

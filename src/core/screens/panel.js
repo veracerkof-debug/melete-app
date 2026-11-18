@@ -50,6 +50,7 @@ import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
 import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev, meshClient } from '../sync.js';
 import { setlistsOf } from '../guest.js';
+import { WEB } from '../platform.js';
 import { scanQR, parsePair, pairPayload } from './qrscan.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
@@ -216,10 +217,11 @@ function soundHTML(app) {
   const st = app.store.state.settings;
   return '<div class="large">' + t('page.sound') + '</div>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
+    (WEB ? '' : (
     '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + seg('autostems', (fullStems() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : fullStems() ? 'auto.stemsHintDev' : 'auto.stemsHintPhone') + '</div></div><div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : fullStems() ? 'auto.hqHintDev' : 'auto.hqHint') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
       '<div class="cellcol">' + seg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
     '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
-    (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' +
+    (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' )) +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + seg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
     '<div class="cellcol">' + seg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div>' +
@@ -359,6 +361,7 @@ function lookHTML(app) {
 // Папка Melete (Android): выбрать, синхронизировать, восстановить данные из папки
 function folderHTML(app) {
   const F = app.folder;
+  if (WEB) return ''; // папки Melete в браузере нет — раздела тоже
   if (!F || !F.available) return '<div class="hdr">' + t('fold.title') + '</div><p class="ftr" style="margin-top:0">' + t('fold.webOnly') + '</p>';
   const s = F.state;
   return '<div class="hdr">' + t('fold.title') + '</div><div class="group">' +
@@ -372,6 +375,7 @@ function folderHTML(app) {
 function localSendHTML(app) {
   const L = app.localSend;
   if (!L || !L.available) return '';
+  if (WEB) return '';
   if (!(app.folder && app.folder.state.ok)) return '<div class="hdr">' + t('ls.title') + '</div><p class="ftr" style="margin-top:0">' + t('ls.needFolder') + '</p>';
   const on = L.enabled() && L.state.on;
   return '<div class="hdr">' + t('ls.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('ls.sw') + (on ? '<span class="bksub">' + esc(L.state.alias) + ' · ' + esc(L.state.ips.join(', ')) + ':53317</span>' : '') + '</span>' + psw('localSend', L.enabled(), t('ls.sw')) + '</div></div><p class="ftr">' + t('ls.hint') + '</p>';
@@ -622,7 +626,7 @@ function rootHTML(app) {
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'bible' || !!app.store.state.settings.church));
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church));
       const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
       return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +

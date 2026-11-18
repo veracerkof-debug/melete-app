@@ -28,7 +28,8 @@ export default defineConfig({
     },
   },
   webServer: process.env.PW_URL ? undefined : {
-    command: 'npx vite --port 5173 --strictPort',
+    // PW_MODE=web — сервер в режиме обычной веб-версии (проверки, что нерабочего в браузере там нет: tests/e2e/web.spec.js)
+    command: 'npx vite' + (process.env.PW_MODE ? ' --mode ' + process.env.PW_MODE : '') + ' --port 5173 --strictPort',
     url,
     reuseExistingServer: true,
     timeout: 60_000,
