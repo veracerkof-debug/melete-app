@@ -1000,6 +1000,8 @@
   "cmp.hint": "Tap A or B to switch at the same spot. Loudness is matched so a quiet take doesn’t sound worse.",
   "calm.title": "Quiet session view",
   "calm.hint": "After 30 seconds without touches only the time and the instrument stay. A tap brings everything back.",
+  "solid.title": "Seamless view",
+  "solid.hint": "Session windows form one screen without frames; swiping left or right flips between tools (where fingers play: a wide swipe from edge to edge). Off: windows in cards, no flipping.",
   "tr.open": "Report for a teacher",
   "tr.title": "Report for a teacher",
   "tr.head": "Practice week",

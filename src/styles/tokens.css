@@ -8,6 +8,12 @@
   --tint: #946B3E; --tint-text: #765A38; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
   --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  /* Монолитная сессия (слово автора 18.11.2026): окна — один экран; граница — ритм, а не рамка */
+  --ws-tone: color-mix(in srgb, var(--cell) 45%, transparent); /* едва заметный тон окна в фокусе */
+  --ws-line: var(--sep);    /* тонкая линия на стыке окон */
+  --ws-hit: 12px;           /* толщина полосы-границы: цель для пальца, самой линии не видно */
+  --ws-pad: 12px;           /* отступ шапки и плана занятия от края */
+  --r-ctl: 14px;            /* единый радиус кнопок и плашек сессии */
   color-scheme: light;
 }
 
@@ -36,6 +42,7 @@
 }
 
 :root[data-theme="oled"] {
+  --ws-tone: color-mix(in srgb, var(--fill) 70%, transparent);
   --bg: #000; --cell: #0E0E10; --ink: #fff; --l2: #8D8D93; --l3: #3A3A3C;
   --sep: rgba(84,84,88,.45); --fill: rgba(118,118,128,.18); --fill2: rgba(118,118,128,.28);
   --tint: #BC9361; --tint-text: #BC9361; --on-tint: #1A0E00; --red: #B96E65; --bar: rgba(0,0,0,.85);

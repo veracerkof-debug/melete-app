@@ -140,8 +140,13 @@ export function pageStep(reg, d) {
 }
 // На касаниях, а не на pointer-событиях: браузер отменяет pointer, когда начинает свою прокрутку, а touchend приходит всегда.
 // other — смахивание вне области страниц (нижние вкладки приложения): { ok(target), step(d) }
+// other — одно значение или список; ещё обработчики добавляет addPageSwipe (сессия: листание между инструментами)
+const others = [];
+export function addPageSwipe(h) { others.push(h); return () => { const i = others.indexOf(h); if (i >= 0) others.splice(i, 1); }; }
 export function pageSwipe(root = document, { min = 70, other = null } = {}) {
   let s = null;
+  if (other) others.push(other);
+  const pick = (tg, p) => others.find((o) => { try { return !!o.ok(tg, p); } catch { return false; } }) || null;
   const start = (e) => {
     s = null;
     if (e.touches.length !== 1) return;
@@ -149,27 +154,67 @@ export function pageSwipe(root = document, { min = 70, other = null } = {}) {
     // полоса чипов (.hscroll) мешает, только если ей есть что прокручивать вбок (scrollsX): короткая полоса категорий
     // в «Песнях» раньше съедала смахивание между вкладками по всей своей ширине
     if (!tg.closest || tg.closest(PAGE_NOSWIPE) || tg.closest('[role="tablist"]')) return;
-    if (!reg && !(other && other.ok(tg))) return;
+    const oth = reg ? null : pick(tg, e.touches[0]);
+    if (!reg && !oth) return;
     // полоса с прокруткой: сначала она листается; уже у края — смахивание дальше переключает (как в телефонах)
     // гриф, ноты и прочие рабочие поверхности с прокруткой — без исключения у края: там случайное переключение мешает играть
     const sc = scrollsX(tg, reg), p = e.touches[0];
     if (sc && !sc.classList.contains('hscroll')) return;
-    s = { x: p.clientX, y: p.clientY, t: performance.now(), reg, sc, sl: sc ? sc.scrollLeft : 0 };
+    s = { x: p.clientX, y: p.clientY, t: performance.now(), reg, oth, sc, sl: sc ? sc.scrollLeft : 0 };
   };
   const end = (e) => {
     if (!s || e.touches.length) { if (e.touches.length) s = null; return; }
     const q = s, p = e.changedTouches[0];
     s = null;
     const dx = p.clientX - q.x, dy = p.clientY - q.y, now = performance.now();
-    if (now - q.t > 700 || Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 2) return;
+    if (now - q.t > 700 || Math.abs(dx) < (q.oth && q.oth.min || min) || Math.abs(dx) < Math.abs(dy) * 2) return;
     if (q.sc) { const d = dx < 0 ? 1 : -1, was = q.sc.scrollLeft; q.sc.scrollLeft = q.sl; const edge = atEdge(q.sc, d); q.sc.scrollLeft = was; if (!edge) return; }
     if (now - lastSwipe < 400) return; // взял ближний обработчик
     if (document.getSelection && String(document.getSelection()).length) return;
-    if (q.reg) pageStep(q.reg, dx < 0 ? 1 : -1); else other.step(dx < 0 ? 1 : -1);
+    if (q.reg) pageStep(q.reg, dx < 0 ? 1 : -1); else q.oth.step(dx < 0 ? 1 : -1);
   };
   const cancel = () => { s = null; };
   root.addEventListener('touchstart', start, { passive: true });
   root.addEventListener('touchend', end);
   root.addEventListener('touchcancel', cancel);
   return () => { root.removeEventListener('touchstart', start); root.removeEventListener('touchend', end); root.removeEventListener('touchcancel', cancel); };
+}
+
+// Широкое смахивание (meta.nav = 'edge'): быстро ОТ одного края окна ДО противоположного — листание между инструментами
+// там, где обычное смахивание можно принять за игру (пианино, ноты, ритм). Чистая логика — отдельно, для тестов.
+export const WIDE = { zone: 0.12, span: 0.85, ms: 450, slope: 0.25, safe: 20 };
+// p: { x0, y0, x1, y1, dt } — путь пальца; box: { left, width } — окно; screenW — ширина экрана (поле «Назад» Android: safe px от края)
+// → 1 (смахнули влево: дальше), -1 (вправо: назад) или 0
+export function wideDir(p, box, screenW = 0, o = WIDE) {
+  const W = box.width, dx = p.x1 - p.x0, dy = p.y1 - p.y0;
+  if (!(W > 0) || p.dt > o.ms || p.dt < 0) return 0;
+  if (Math.abs(dx) < W * o.span || Math.abs(dy) > Math.abs(dx) * o.slope) return 0;
+  const rel = p.x0 - box.left;
+  if (screenW && (p.x0 < o.safe || p.x0 > screenW - o.safe)) return 0; // край экрана — «Назад» системы
+  if (dx < 0) return rel >= W * (1 - o.zone) && rel <= W ? 1 : 0;
+  return rel >= 0 && rel <= W * o.zone ? -1 : 0;
+}
+// el — окно; step(d) — шаг; ok(target) — начинать ли здесь. Слушает касания; больше одного пальца — отмена.
+export function wideSwipe(el, { step, ok = () => true, opts = WIDE } = {}) {
+  let s = null;
+  const start = (e) => {
+    s = null;
+    if (e.touches.length !== 1 || !ok(e.target)) return;
+    const p = e.touches[0];
+    s = { x0: p.clientX, y0: p.clientY, t: performance.now() };
+  };
+  const end = (e) => {
+    if (!s) return;
+    if (e.touches.length) { s = null; return; }
+    const q = s, p = e.changedTouches[0];
+    s = null;
+    const r = el.getBoundingClientRect();
+    const d = wideDir({ x0: q.x0, y0: q.y0, x1: p.clientX, y1: p.clientY, dt: performance.now() - q.t }, { left: r.left, width: r.width }, window.innerWidth, opts);
+    if (d) { lastSwipe = performance.now(); step(d); }
+  };
+  const cancel = () => { s = null; };
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', cancel);
+  return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', cancel); };
 }

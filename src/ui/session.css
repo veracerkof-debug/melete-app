@@ -253,3 +253,46 @@ html:not(.desk) .session:not(.toolmode) .ws{margin-top:4px}
 .session.rot:not(.toolmode) .sdock .tb .tl{display:none}
 .session.rot:not(.toolmode) .sdock .tb.used::after{bottom:auto;top:4px;left:auto;right:4px;margin:0}
 .session.rot:not(.toolmode) .ws{margin-top:4px}
+
+/* Смахивание вправо в сессии не должно листать историю браузера (веб, Windows/Linux: жест тачпада и касания «назад») */
+html:has(.session),html:has(.session) body{overscroll-behavior-x:none}
+/* ===== Монолитный вид (слово автора 18.11.2026; settings.solidView, по умолчанию включён) =====
+   Один непрерывный экран, один фон: окна — без рамок, карточек и подложек; их различают ритм и положение —
+   едва заметный тон окна в фокусе, тонкая линия на стыке, зазор — только полоса-граница для пальца.
+   Шапка и нижняя панель — единым пластом с экраном. Раскладки F / HH / HQ / QQ и жесты границы не меняются. */
+.session.solid .sin,html .session.solid:not(.toolmode) .sin{padding:4px 0 0}
+.session.solid .shd{padding:2px var(--ws-pad) 0}
+.session.solid .splan{margin:2px var(--ws-pad) 6px}
+.session.solid .ws{margin:0;gap:0}
+.session.solid .ws .pane.toolhost{background:transparent;border-radius:0;box-shadow:none;transition:background var(--t-mid,.24s) var(--e-out,ease)}
+.session.solid .ws .pane.toolhost.focus{background:var(--ws-tone);box-shadow:none}
+.session.solid .ws .pane.toolhost.pfull{background:var(--bg)}
+.session.solid .pane .group{background:var(--cell)}
+.session.solid .grip::before{background:var(--l3);opacity:.7}
+.session.solid .pane.focus .grip::before{background:var(--tint);opacity:1}
+/* граница: линия на всю длину стыка и маленькая ручка посередине (за неё — жесты разделителя, docs/gestures.md) */
+.session.solid .wsdiv{position:relative}
+.session.solid .wsdiv.h{height:var(--ws-hit)}
+.session.solid .wsdiv.v{width:var(--ws-hit)}
+.session.solid .wsdiv span{position:relative;width:100%;height:1px;background:var(--ws-line);border-radius:0;transition:background var(--t-fast,.14s)}
+.session.solid .wsdiv.v span{width:1px;height:100%}
+.session.solid .wsdiv span::after{content:"";position:absolute;left:50%;top:50%;width:36px;height:3px;margin:-1.5px 0 0 -18px;border-radius:2px;background:var(--l3);opacity:.8;transition:width var(--t-fast,.14s),height var(--t-fast,.14s),background var(--t-fast,.14s)}
+.session.solid .wsdiv.v span::after{width:3px;height:36px;margin:-18px 0 0 -1.5px}
+.session.solid .wsdiv.active span,.session.solid .wsdiv:hover span{width:100%;height:1px;background:var(--tint)}
+.session.solid .wsdiv.v.active span,.session.solid .wsdiv.v:hover span{width:1px;height:100%}
+.session.solid .wsdiv.h.active span::after,.session.solid .wsdiv.h:hover span::after{width:64px;background:var(--tint);opacity:1}
+.session.solid .wsdiv.v.active span::after,.session.solid .wsdiv.v:hover span::after{height:64px;background:var(--tint);opacity:1}
+.session.solid .sdock,html .session.solid:not(.toolmode) .sdock{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border:0}
+.session.solid .tb{border-radius:var(--r-ctl)}
+/* движение: листание — сдвиг экрана в сторону жеста; смена раскладки — мягкое проявление */
+@keyframes ws-slide-l{from{opacity:0;transform:translateX(48px)}}
+@keyframes ws-slide-r{from{opacity:0;transform:translateX(-48px)}}
+@keyframes ws-morph{from{opacity:0;transform:scale(.985)}}
+@keyframes ws-fade{from{opacity:0}}
+.session.solid .ws[data-motion="slide-l"]>*{animation:ws-slide-l var(--t-slow,.34s) var(--e-out,ease)}
+.session.solid .ws[data-motion="slide-r"]>*{animation:ws-slide-r var(--t-slow,.34s) var(--e-out,ease)}
+.session.solid .ws[data-motion="morph"]>*{animation:ws-morph var(--t-mid,.24s) var(--e-out,ease)}
+@media (prefers-reduced-motion: reduce){
+  .session.solid .ws[data-motion]>*{animation:ws-fade .2s linear}
+  .session.solid .ws .pane.toolhost{transition:none}
+}
