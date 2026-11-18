@@ -10,6 +10,7 @@ import { sheet, snav } from '../ui/index.js';
 import { log } from './log.js';
 import { mascotOf } from './settings.js';
 import { REC } from '../audio/recstate.js';
+import { linkBusy } from './linkhub.js';
 
 const KA = Capacitor.isNativePlatform() ? registerPlugin('KeepAlive') : null;
 export const bgAvailable = () => !!KA;
@@ -33,6 +34,7 @@ export function busyText(app) {
   if (j && j.kind === 'stems') return t('bg.stems', { pct: Math.round((j.frac || 0) * 100) });
   if (app.audio.metro.running) return t('bg.metro');
   if (app.soundingAudio()) return t('bg.sound');
+  if (linkBusy()) return t('bg.link'); // канал событий с компьютером открыт (Melete DEV): без службы Android усыпит соединение
   if (app.pomodoro && app.pomodoro.running) return t('bg.pomo');
   if (app.stopwatch && app.stopwatch.running) return t('bg.watch');
   return null;

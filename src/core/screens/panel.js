@@ -474,6 +474,7 @@ function syncHTML(app) {
     modeSw('pc', '', pc) +
     (modeOf(pc).sync ? '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' : '') +
     (app.mesh && app.mesh.avail && modeOf(pc).rc ? '<button class="cell act" data-act="pcrc">' + t('rc.open') + '</button>' : '') + // пульт компьютера (Melete DEV)
+    (app.mesh && app.mesh.avail ? '<button class="cell act" data-act="pclink">' + t('lc.open') + '</button>' : '') + // замер связи и канал событий
     '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
     (modeOf(pc).sync ? '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' : '') +
@@ -506,7 +507,7 @@ function meshHTML(app) {
   const devs = devsOf();
   h += '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
     devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + modeHint(d) + ' · ' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
-      (modeOf(d).rc ? '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button>' : '') + (modeOf(d).sync ? '<button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button>' : '') + '<button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>' + modeSw('dev', d.addr, d)).join('') +
+      (modeOf(d).rc ? '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button>' : '') + '<button class="link" data-act="devlink" data-a="' + esc(d.addr) + '">' + t('lc.short') + '</button>' + (modeOf(d).sync ? '<button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button>' : '') + '<button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>' + modeSw('dev', d.addr, d)).join('') +
     // подключить: телефон — QR камерой; везде — адрес и код с экрана того устройства
     (srv ? '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button>' : '') +
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-mesh="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
@@ -809,6 +810,8 @@ export function createPanel(app, onChange) {
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }
       if (g('[data-act="devrc"]')) { const dv = devsOf().find((x) => x.addr === g('[data-act="devrc"]').dataset.a); if (dv) import('./remote.js').then((m) => m.remoteSheet(app, dv)); return; }
       if (g('[data-act="outsheet"]')) { import('./outputsheet.js').then((m) => m.outputSheet(app)); return; }
+      if (g('[data-act="devlink"]')) { const dv = devsOf().find((x) => x.addr === g('[data-act="devlink"]').dataset.a); if (dv) import('./linkcheck.js').then((m) => m.linkSheet(app, dv)); return; }
+      if (g('[data-act="pclink"]')) { const pc = pcOf(); if (pc) import('./linkcheck.js').then((m) => m.linkSheet(app, pc)); return; }
       if (g('[data-act="pcrc"]')) { const pc = pcOf(); if (pc) import('./remote.js').then((m) => m.remoteSheet(app, pc)); return; }
       if (g('[data-act="meshpair"]') && !syncBusy) {
         const addr = layer.querySelector('[data-mesh="addr"]').value, code = layer.querySelector('[data-mesh="code"]').value;

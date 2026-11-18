@@ -52,6 +52,7 @@
 | `Stems` (`Demucs`, `Mdx`, `RoFormer`, `Engine`) | разделение на дорожки ONNX Runtime | `audio/stems.js`, `mdx.js` |
 | `Packs` | скачивание и проверка пакетов моделей | `core/packs.js` |
 | `SyncHttp`, `Mesh` (`MeshServer`) | HTTPS с закреплённым отпечатком; сервер связи в DEV | `core/sync.js` |
+| `Link` (`LinkPlugin`) | канал событий (DEV): длинное TLS-соединение с кадрами, `WifiLock` малой задержки | `core/link.js`, `docs/link.md` |
 | `Update` | установка обновления | `core/update.js` |
 | `Icon` (+ activity-ярлыки `Icon*.java`) | иконка приложения на выбор | `core/appicon.js` |
 | `Bridge` (`BridgeReceiver`) | мост с главным экраном Ἐλάχιστον | `core/bridge.js` |
@@ -69,7 +70,7 @@
 | Файл Rust | Что |
 |---|---|
 | `lib.rs` | сборка приложения, команды, папки, файлы при запуске, микрофон в WebKitGTK |
-| `sync.rs`, `guest.rs`, `localsend.rs`, `netcli.rs` | серверы своей сети (синхронизация, гости, LocalSend), клиент |
+| `sync.rs`, `link.rs`, `guest.rs`, `localsend.rs`, `netcli.rs` | серверы своей сети (синхронизация, канал событий на том же TLS-шлюзе, гости, LocalSend), клиент |
 | `demucs.rs`, `roformer.rs` | дорожки нативным ONNX Runtime (крейт `ort`) |
 | `notes.rs`, `lyrics.rs`, `denoise.rs` | ноты (YourMT3+), текст (whisper.cpp), шумоподавление (DeepFilterNet3) |
 | `update.rs` | обновление, ставится при закрытии |

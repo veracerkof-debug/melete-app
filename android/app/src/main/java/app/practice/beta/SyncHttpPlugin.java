@@ -38,7 +38,7 @@ public class SyncHttpPlugin extends Plugin {
         return s.toString();
     }
 
-    private static final class Pinned implements X509TrustManager {
+    static final class Pinned implements X509TrustManager {
         final String pin;
         volatile String seen = "";
         Pinned(String pin) { this.pin = pin == null ? "" : pin.toLowerCase(); }
