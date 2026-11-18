@@ -76,3 +76,6 @@
 :is(.tview.pure,.pfull) .tm{border-radius:0}
 /* низкая полоска: заставка без камеры не выше окна */
 @media (max-height: 460px) { .tm.strip .tmstart{padding:2px 8px} .tm.strip .tmstart .btn{min-height:0;height:min(40px,100cqh)} }
+
+/* поверхность до краёв окна сессии (src/ui/bleed.js): верхние углы остаются круглыми под ручкой окна */
+.tm.bleed{width:auto;height:auto;border-radius:0 0 var(--pane-r,18px) var(--pane-r,18px)}

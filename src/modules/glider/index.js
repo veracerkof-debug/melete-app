@@ -24,6 +24,7 @@ import { melodyById, createFollower, fitRange } from '../../music/melodies.js';
 import { melStrip, melSheet } from './melody.js';
 import { tabsHTML, chipHTML } from './settabs.js';
 import { after, cancel } from '../../audio/clock.js';
+import { bleed } from '../../ui/bleed.js'; // доска до краёв окна
 
 import meta, { ICON } from './meta.js';
 const I = {
@@ -105,6 +106,7 @@ function render() {
   stopListen();
   releaseAll();
   host.innerHTML = view();
+  bleed(host.querySelector('.gl'));
   dense();
 }
 
@@ -486,7 +488,7 @@ export default {
     if (!probed) { c.audio.mixer.probe('glider', () => touches.size > 0); probed = true; }
     render();
     bind();
-    ro = new ResizeObserver(() => dense());
+    ro = new ResizeObserver(() => { bleed(host.querySelector('.gl')); dense(); });
     ro.observe(host);
   },
   resize(sz) { size = sz; render(); },

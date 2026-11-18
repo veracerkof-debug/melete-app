@@ -50,3 +50,4 @@ screens-out/
 
 # рабочие копии параллельных агентов Claude — не в репозиторий
 .claude/worktrees/
+surface-out/

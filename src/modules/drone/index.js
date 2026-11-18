@@ -16,6 +16,7 @@ import { presetRow, promptName, presetManager } from '../../ui/presets.js';
 import { arpPages, arpBind } from './arpsheet.js';
 import { scopeHTML, scopeLoop } from './scope.js';
 import { tabsHTML } from '../glider/settabs.js';
+import { bleed } from '../../ui/bleed.js'; // пэды до краёв окна
 import meta, { ICON } from './meta.js';
 const GRID_ICON = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>';
 const CIRCLE_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/><path d="M12 3.5v4.3M12 16.2v4.3M3.5 12h4.3M16.2 12h4.3"/></svg>';
@@ -148,7 +149,9 @@ function view() {
 }
 
 function render() {
-  if (host) host.innerHTML = view();
+  if (!host) return;
+  host.innerHTML = view();
+  bleed(host.querySelector('.dwrap'));
 }
 
 /* ---------- настройки пэдов ---------- */

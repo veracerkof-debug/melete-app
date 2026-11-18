@@ -10,6 +10,7 @@
 // Отдельный модуль: сборку можно выпустить и без него (распознаванию рук нужна готовая модель — см. DECISIONS.md).
 import '../glider/glider.css'; // общие с глайдером панель, нота и настройки
 import './theremin.css';
+import { bleed } from '../../ui/bleed.js'; // поверхность до краёв окна
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
@@ -173,6 +174,7 @@ function render() {
   // видео с потоком камеры переносится в новую разметку, чтобы картинка не мигала
   const oldV = host.querySelector('video.tmcam');
   host.innerHTML = view();
+  bleed(host.querySelector('.tm'));
   if (oldV && oldV.srcObject) { const v = host.querySelector('video.tmcam'); v.replaceWith(oldV); }
   if (cfg().mode === 'guitar') guitarLabels();
   draw();
@@ -939,7 +941,7 @@ export default {
     if (!probed) { c.audio.mixer.probe('glider', () => !!S.voice || !!S.cv); probed = true; }
     render();
     bind();
-    ro = new ResizeObserver(() => draw());
+    ro = new ResizeObserver(() => { bleed(host.querySelector('.tm')); draw(); });
     ro.observe(host);
     if (cfg().camAuto) camOn(true); // камеру уже разрешали и включали — сразу
   },
