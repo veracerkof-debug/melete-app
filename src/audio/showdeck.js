@@ -3,6 +3,7 @@
 // темпа; запасной bufferplayer — без тональности). Узлы создаются один раз: у каждого места своя огибающая (плавный вход и
 // выход, громкость номера), общий «фейдер трека» и выход в узел приглушения падов (showpads.js → шина медиатеки).
 // Правки — только параметрами и плавно.
+import { after } from './clock.js'; // таймеры на часах звука: в свёрнутом окне setTimeout замедляется
 import { holdAt } from './param.js';
 import { faderGain } from '../music/show.js';
 import { dbGain } from './loudness.js';
@@ -68,10 +69,10 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
       const t = now(), f = Math.max(CLICK, fade);
       holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(0, t + f);
       s.fading = true;
-      setTimeout(() => { if (s.fading && s.player) { try { s.player.pause(); } catch { /* уже */ } s.fading = false; emit(); } }, f * 1000 + 60);
+      after(f * 1000 + 60, () => { if (s.fading && s.player) { try { s.player.pause(); } catch { /* уже */ } s.fading = false; emit(); } });
       emit();
     },
-    pause() { const s = active; if (!s || !s.player || s.player.paused) return; const t = now(); holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(0, t + 0.04); setTimeout(() => { try { s.player.pause(); } catch { /* */ } emit(); }, 60); },
+    pause() { const s = active; if (!s || !s.player || s.player.paused) return; const t = now(); holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(0, t + 0.04); after(60, () => { try { s.player.pause(); } catch { /* */ } emit(); }); },
     resume() { const s = active; if (!s || !s.player || !s.opts) return Promise.resolve(); const t = now(); holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(s.opts.lvl, t + 0.04); s.fading = false; return s.player.play().then(emit); },
     seek(sec) { const s = active; if (s && s.player) s.player.currentTime = Math.max(0, sec); },
     // номер поменял громкость на ходу

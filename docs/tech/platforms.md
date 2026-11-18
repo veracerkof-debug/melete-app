@@ -73,7 +73,14 @@
 | `demucs.rs`, `roformer.rs` | дорожки нативным ONNX Runtime (крейт `ort`) |
 | `notes.rs`, `lyrics.rs`, `denoise.rs` | ноты (YourMT3+), текст (whisper.cpp), шумоподавление (DeepFilterNet3) |
 | `update.rs` | обновление, ставится при закрытии |
+| `bg.rs` | компьютер в фоне (DEV): значок в области уведомлений, закрытие крестиком — в значок; команды `bg_set`, `bg_tip` (см. `connect.md`, «Компьютер в фоне») |
 | `ipcbody.rs` | тело запроса окна в любом виде (байты или JSON) — см. ниже |
+
+**Окно в фоне.** Флаги WebView2 в `additionalBrowserArgs` (`tauri.conf.json` и `tauri.dev.conf.json` — держать одинаковыми) отключают
+замедление скрытого окна: `--disable-background-timer-throttling`, `--disable-renderer-backgrounding`,
+`--disable-backgrounding-occluded-windows`, `--disable-features=…CalculateNativeWinOcclusion,IntensiveWakeUpThrottling,UseEcoQoSForBackgroundProcess`.
+Крейт `tauri` — с функцией `tray-icon` (значок; на Linux нужна `libayatana-appindicator3-dev`, она есть в `linux.yml`). Окно выводится
+вперёд только в `bg.rs` и только по клику человека; тест `tests/linkmode.test.js` следит за этим по исходникам.
 
 **Канал окна.** Большие данные (куски файлов) окно отправляет в Rust сырыми байтами по каналу `ipc:`. Если политика
 страницы закрывает этот канал, Tauri молча переходит на JSON — и байты приходят массивом чисел. Поэтому `index.html`

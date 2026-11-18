@@ -19,6 +19,7 @@ import { stripDemo, isDemoFile } from './demo.js';
 import { CORE_DICTS, loadAllLangs, t as i18nT } from '../i18n/index.js';
 import { log } from './log.js';
 import { isDesktop } from './desktop.js';
+import { modeOf, applyMode, allows, activeCount } from './linkmode.js'; // режимы связи: «Пульт» и «Синхронизация базы»
 
 // Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
 export const PORT_PRE = 53319, PORT_DEV = 53329;
@@ -136,6 +137,12 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     if (!refused.has(k) || t - refused.get(k) > 60000) { refused.set(k, t); log('sync', 'отказ: незнакомый ключ ' + k + ' (' + req.path + '), знакомых устройств: ' + Object.keys(mem.peers || {}).length, 'w'); }
     return { status: 401, json: { error: 'key' } };
   }
+  // режим устройства (linkmode.js): в «только Пульт» данные и файлы не идут, команды — идут; и наоборот
+  if (!allows(peer, req.path, req.json)) {
+    const k = String(req.key).slice(0, 6) + req.path, t = (ctx.now || Date.now)();
+    if (!refused.has(k) || t - refused.get(k) > 60000) { refused.set(k, t); log('sync', 'отказ: режим устройства ' + String(req.key).slice(0, 6) + ' не допускает ' + req.path, 'w'); }
+    return { status: 403, json: { error: 'mode' } };
+  }
   if (req.path === '/melete/v1/sync') log('sync', 'синхронизация: ' + String(peer.name || '').slice(0, 30) + ', ключ ' + String(req.key).slice(0, 6) + (req.query.auto || (req.json && req.json.auto) ? ' (фон)' : ''));
   // фоновая синхронизация телефона ждёт, пока на компьютере звучит музыка или идёт занятие: приём файлов нагружает окно
   if ((req.query.auto || (req.json && req.json.auto)) && ctx.busy && ctx.busy()) return { status: 503, json: { error: 'busy' } };
@@ -207,13 +214,16 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
   const mesh = transport === 'mesh', avail = mesh ? meshAvail() : isDesktop(), onKey = mesh ? 'meshOn' : 'on';
   const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null, M = null;
-  const mem = readLS(), incoming = new Map();
+  const mem = readLS(), incoming = new Map(), seen = {}; // seen: ключ → время последнего запроса (для «N устройств» в значке)
   const save = () => writeLS({ ...readLS(), peers: mem.peers, [onKey]: mem[onKey] }); // у телефона там же его собственные подключения
+  let lastN = -1;
+  const emitSeen = () => { const n = activeCount(seen); if (n !== lastN) { lastN = n; emit(); } }; // число устройств изменилось
   const core = () => import('@tauri-apps/api/core');
   const plugin = () => (M ??= registerPlugin('Mesh'));
   // запрос → ответ; r: { rid, method, url, key, raw }
   async function handle(r) {
     let res;
+    if (mem.peers && mem.peers[r.key]) { seen[r.key] = Date.now(); emitSeen(); }
     try {
       const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
@@ -240,7 +250,11 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
     avail,
     mesh,
     get state() { return state; },
-    get peers() { return Object.entries(mem.peers || {}).map(([key, p]) => ({ key, ...p })); },
+    get peers() { return Object.entries(mem.peers || {}).map(([key, p]) => ({ key, ...p, mode: modeOf(p) })); },
+    // сколько устройств на связи сейчас (запрос не старше 20 с)
+    active() { lastN = activeCount(seen); return lastN; },
+    // режим устройства: { rc?, sync? } — «Пульт» и «Синхронизация базы» (linkmode.js)
+    setMode(key, patch) { const p = mem.peers && mem.peers[key]; if (!p) return null; p.mode = applyMode(p, patch); save(); log('sync', 'режим устройства ' + String(key).slice(0, 6) + ': ' + (p.mode.rc ? 'пульт ' : '') + (p.mode.sync ? 'синхронизация' : '')); emit(); return p.mode; },
     wasOn: () => !!mem[onKey],
     async start() {
       if (!avail) return state;
@@ -274,7 +288,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
       mem[onKey] = false; save();
       emit();
     },
-    forget(key) { if (mem.peers) { delete mem.peers[key]; save(); emit(); } },
+    forget(key) { if (mem.peers) { delete mem.peers[key]; delete seen[key]; save(); emit(); } },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };
 }
@@ -337,6 +351,13 @@ export const pcOf = () => {
 // Прежнее сопряжение без TLS (pcOf его снял): адрес для формы → «192.168.1.5» или ''
 export const oldPc = () => { const o = readLS().old; return o && o.addr ? String(o.addr).replace(/^https?:\/\//, '').replace(':' + PORT, '') : ''; };
 export const forgetPc = () => { const m = readLS(); delete m.pc; writeLS(m); };
+// Режим связи с компьютером (addr не задан) или устройством (addr из «Моих устройств»): { rc?, sync? } → новый режим
+export function setLinkMode(patch, addr) {
+  const m = readLS(), e = addr ? (m.devs || {})[addr] : m.pc;
+  if (!e) return null;
+  e.mode = applyMode(e, patch); writeLS(m);
+  return e.mode;
+}
 // Другие устройства (Melete DEV): { addr, key, name, fp, last, ids, phone }
 export const devsOf = () => Object.values(readLS().devs || {});
 export const forgetDev = (addr) => { const m = readLS(); if (m.devs) { delete m.devs[addr]; writeLS(m); } };
@@ -414,10 +435,11 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });
   const put = (o) => { const mm = readLS(); if (opts.dev) mm.devs = { ...(mm.devs || {}), [opts.dev]: o }; else mm.pc = o; writeLS(mm); };
   const cur = () => { const mm = readLS(); return opts.dev ? (mm.devs || {})[opts.dev] : mm.pc; };
+  if (!modeOf(pc).sync) throw Object.assign(new Error('mode'), { reason: 'mode' }); // «только Пульт»: база не синхронизируется
   let base = pc.addr;
   const key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
   const halt = () => { if (opts.stop && opts.stop()) throw Object.assign(new Error('stopped'), { reason: 'stopped' }); };
-  const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
+  const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 403 ? 'mode' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
   const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => {
     const x = e.reason ? e : fail(e);
     if (x.reason !== 'stopped' && x.reason !== 'busy') log('sync', 'синхронизация: отказ ' + path + ' — ' + x.reason + (e.status ? ' (' + e.status + ')' : '') + (e.message && !e.status ? ': ' + String(e.message).slice(0, 120) : '') + ', ключ ' + String(key || '').slice(0, 6), 'w');
@@ -443,7 +465,7 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
     r = await first();
   }
   app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS, { fresh: true }));
-  if (!opts.dev) { pc.work = r.work || null; put({ ...pc }); } // что компьютер считает сам — для «Считать на компьютере»
+  if (!opts.dev) { pc.work = r.work || null; put({ ...cur(), work: pc.work }); } // cur(): режим мог смениться, пока шла синхронизация // что компьютер считает сам — для «Считать на компьютере»
   if (F && F.ready) await F.ready.catch(() => {}); // список файлов — только дочитанный
   const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || [], { mineOk: !!F && !F.noDb, theirsOk: !r.noDb });
   if ((F && F.noDb) || r.noDb) log('sync', 'база файлов ' + (r.noDb ? 'на другом устройстве' : 'здесь') + ' недоступна — удалений нет', 'w');
@@ -533,7 +555,7 @@ export function createSyncClient(app, { H = http, now = () => Date.now() } = {})
   const near = () => { const pc = pcOf(); return !!pc && !!pc.last && now() - pc.last < 3 * DAY; };
   // Ждать ли компьютер для записи r: kind — 'stems' | 'ana'. Свежая запись (сутки) или уже на компьютере (трое суток)
   function waits(r, kind) {
-    if (!pcWork() || !near()) return false;
+    if (!pcWork() || !near() || !modeOf(pcOf()).sync) return false;
     const pc = pcOf(), w = pc.work || {};
     if (kind === 'stems' && (!w.stems || w.stems === 'off')) return false;
     if (kind === 'ana' && !w.ana) return false;
@@ -553,13 +575,13 @@ export function createSyncClient(app, { H = http, now = () => Date.now() } = {})
       if (app.auto && app.auto.kick) app.auto.kick();
       return r;
     } catch (e) {
-      if (e.reason !== 'stopped' && e.reason !== 'busy') fails++;
+      if (e.reason !== 'stopped' && e.reason !== 'busy' && e.reason !== 'mode') fails++;
       last = { at: now(), ok: false, reason: e.reason };
       throw e;
     } finally { busy = false; emit(); }
   }
   async function tick() {
-    if (busy || !pcOf() || !syncAuto() || !quiet()) return;
+    if (busy || !pcOf() || !modeOf(pcOf()).sync || !syncAuto() || !quiet()) return; // «только Пульт»: фоновой синхронизации нет
     if (now() - lastTry < interval()) return;
     // не вышло — повторится позже (реже); первая неудача подряд — в журнал, чтобы отчёт показал причину
     try { await run(() => {}, { auto: true, stop: () => !quiet() }); } catch (e) { if (fails === 1) log('sync', 'фоновая синхронизация не удалась: ' + (e.reason || e.message || e), 'w'); }

@@ -15,6 +15,7 @@ mod netcli; // компьютер подключается к телефону (
 mod sync; // связь с телефоном: посредник между телефоном в сети и окном (src/core/sync.js)
 mod notes; // ноты со слуха: YourMT3+ (src/audio/ymt.js, src/music/mt3.js)
 mod update; // обновление из GitHub (src/core/update.js)
+mod bg; // компьютер в фоне: значок в tray, закрытие крестиком (src/core/deskbg.js)
 mod guest; // раздача в своей сети: гости открывают песни в браузере (src/core/guest.js, docs/guest-web.md)
 
 use std::path::PathBuf;
@@ -242,8 +243,12 @@ pub fn run() {
         .manage(denoise::Denoise::default())
         .manage(notes::Notes::default())
         .manage(update::Upd::default())
+        .manage(bg::Bg::default())
         // «автоматически»: скачанное обновление ставится, когда окно закрыто (update.rs)
-        .on_window_event(|w, e| { if let tauri::WindowEvent::Destroyed = e { update::on_exit(&w.state::<update::Upd>()); } })
+        .on_window_event(|w, e| {
+            bg::on_window_event(w, e);
+            if let tauri::WindowEvent::Destroyed = e { update::on_exit(&w.state::<update::Upd>()); }
+        })
         .setup(|app| { linux_media(app); Ok(()) })
         .on_permission_request(|_, kind| match kind {
             PermissionKind::Microphone | PermissionKind::Camera => PermissionResponse::Allow,
@@ -255,7 +260,7 @@ pub fn run() {
             localsend::localsend_start, localsend::localsend_stop, localsend::localsend_status, localsend::localsend_answer,
             sync::sync_start, sync::sync_stop, sync::sync_status, sync::sync_body, sync::sync_reply, sync::net_http,
             guest::guest_start, guest::guest_stop, guest::guest_status, guest::guest_allow, guest::guest_live, guest::guest_drop_audio, guest::guest_reply,
-            update::update_download, update::update_pending, update::update_install, update::update_ok,
+            update::update_download, update::update_pending, update::update_install, update::update_ok, bg::bg_set, bg::bg_tip,
             denoise::denoise_begin, denoise::denoise_push, denoise::denoise_run, denoise::denoise_read, denoise::denoise_cancel, denoise::denoise_clean])
         .run(tauri::generate_context!())
         .expect("Melete: не удалось запустить окно");

@@ -13,7 +13,7 @@ const fmt = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 
 export function remoteSheet(app, dev, H = http) {
   let S = null, X = null, list = [], err = '', timer = 0, touching = false, q = '', view = 'snd';
   const call = (path, json) => H(json ? 'POST' : 'GET', dev.addr + path, { key: dev.key, json, timeout: 15000 });
-  const fail = (e) => { err = t(e && e.status === 401 ? 'rc.err.key' : e && e.status === 409 ? 'rc.err.off' : 'rc.err.net'); };
+  const fail = (e) => { err = t(e && e.status === 401 ? 'rc.err.key' : e && e.status === 403 ? 'rc.err.mode' : e && e.status === 409 ? 'rc.err.off' : 'rc.err.net'); };
   async function poll() {
     try { const r = await call('/melete/v1/rc/state'); S = r.media; X = r.snd || null; list = r.list || []; err = ''; } catch (e) { fail(e); }
     if (!touching) api.update();
