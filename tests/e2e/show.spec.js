@@ -173,3 +173,40 @@ test('громкость: крутилки внизу «Программы» и 
   expect(sh.master).toBe(v); expect(sh.level).toBe(84);
   expect(errors).toEqual([]);
 });
+
+test('нормализация и громкости номера: запись измеряется, поправка в шторке; крутилки трека и пэда на пульте', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click(T + '[data-x="numnew"]');
+  await page.fill('.sheet [data-f="title"]', 'Тихий трек');
+  await page.click('.sheet [data-seg="nkind"] [data-v="track"]');
+  await page.click('.sheet [data-x="pick"]');
+  await page.setInputFiles('.sheet input[type="file"]', { name: 'quiet.wav', mimeType: 'audio/wav', buffer: wav(8) });
+  await expect(page.locator('.sheet [data-x="pick"]')).toContainText('quiet', { timeout: 8000 });
+  // громкость измерена: LUFS и поправка (WAV с пиком 0,37 ≈ −8,6 дБ → записан тихо относительно −16: поправка есть)
+  await expect(page.locator('.sheet #shloud')).toContainText('LUFS', { timeout: 15_000 });
+  await expect(page.locator('.sheet #shloud')).toContainText('дБ');
+  await page.click('.sheet [data-seg="nbed"] [data-v="set"]');
+  await expect(page.locator('.sheet [data-s="padLevel"]')).toBeVisible();
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // пульт: ГО, крутилки номера
+  await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
+  await expect(page.locator(T + '[data-knob="nlevel"]')).toBeVisible({ timeout: 10_000 });
+  const kn = T + '[data-knob="nlevel"]', b = await page.locator(kn).boundingBox();
+  const v0 = +(await page.locator(kn).getAttribute('aria-valuenow'));
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - 28, { steps: 5 }); await page.mouse.up(); // вверх на 28 px ≈ +20
+  const v1 = +(await page.locator(kn).getAttribute('aria-valuenow'));
+  expect(v1).toBeGreaterThan(v0 + 10);
+  await page.locator(T + '[data-knob="npad"]').focus(); await page.keyboard.press('ArrowDown');
+  const sh = (await melete.toolsNow()).show, n = sh.events[0].numbers[0];
+  expect(n.level).toBe(v1); expect(n.bed.padLevel).toBe(59);
+  // настройки: цель нормализации
+  await page.click(T + '[data-x="set"]');
+  await page.click('.sheet [data-seg="ntarget"] [data-v="-19"]');
+  expect((await melete.toolsNow()).show.norm.target).toBe(-19);
+  expect(errors).toEqual([]);
+});

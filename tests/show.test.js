@@ -107,7 +107,10 @@ describe('фон: пэд на квинте и шумы', () => {
   it('шумы и фон: умолчания, лишнее отбрасывается', () => {
     const s = normalizeShow({ noises: [{ file: 'f' }, { name: 'без файла' }], bed: { noise: { cur: 'нет' }, pad: { sound: 'x', tonic: 14 } } });
     expect(s.noises.length).toBe(1); expect(s.bed.noise.cur).toBeNull(); expect(s.bed.pad.sound).toBe('warm'); expect(s.bed.pad.tonic).toBe(2);
-    expect(normalizeNumber({ bed: { pad: true, noise: 'a' } }).bed).toEqual({ pad: true, noise: 'a' });
+    expect(normalizeNumber({ bed: { pad: true, noise: 'a' } }).bed).toEqual({ pad: true, noise: 'a', padLevel: null, noiseLevel: null });
+    expect(normalizeNumber({ bed: { pad: true, padLevel: 40, noiseLevel: 999 } }).bed).toMatchObject({ padLevel: 40, noiseLevel: 100 });
+    expect(normalizeShow({}).norm).toEqual({ on: true, target: -16, pads: true });
+    expect(normalizeShow({ norm: { target: -5, on: false } }).norm).toMatchObject({ on: false, target: -16 });
     expect(normalizeNumber({}).bed).toBeNull();
   });
 });

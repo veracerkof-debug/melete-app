@@ -191,5 +191,20 @@
   "desk.bed": "Fon",
   "desk.master": "Umumiy",
   "desk.levels": "Balandlik",
-  "view.strip": "Har sahifada balandlik tugmalari"
+  "view.strip": "Har sahifada balandlik tugmalari",
+  "view.norm": "Balandlikni tenglashtirish",
+  "view.normTarget": "Maqsad",
+  "view.normPads": "Pad tovushlari ham",
+  "view.normHint": "Yozuvlar va tovushlar balandligi (LUFS) tenglashtiriladi: past va baland trek bir xil eshitiladi. Faqat kuchaytirish yoki susaytirish, siqishsiz; tuzatish cho‘qqini −1 dB dan oshirmaydi. Qolganini umumiy chiqishdagi limiter ta’minlaydi.",
+  "num.loud": "Yozuv balandligi",
+  "num.loudFix": "tuzatish {g} dB",
+  "num.loudOff": "tenglashtirish o‘chiq",
+  "num.loudWait": "o‘lchanmoqda…",
+  "num.loudNone": "o‘lchanmagan",
+  "num.bed.padLevel": "Pad balandligi",
+  "num.bed.noiseLevel": "Shovqin balandligi",
+  "desk.thisNum": "Shu raqam",
+  "desk.knobTrack": "Trek",
+  "desk.knobPad": "Pad",
+  "desk.knobNoise": "Shovqin"
 }

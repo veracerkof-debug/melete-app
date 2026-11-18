@@ -5,14 +5,16 @@
 // Файл раскрывается в память заранее (preload) — касание играет сразу; раскрытое хранится не больше MAX_CACHE штук.
 import { holdAt } from './param.js';
 import { faderGain } from '../music/show.js';
+import { measureLoudness, normGainDb, dbGain } from './loudness.js';
 
 const MAX_CACHE = 24, MAX_VOICES = 24, CLICK = 0.012; // CLICK — минимальный вход/выход, без щелчка
 
-export function createShowPads({ dest, getBlob, now = () => dest.context.currentTime }) {
+// getNorm() → { on, target, pads } — нормализация громкости; known(fileId) → { lufs, peak } уже измеренное; onMeasure(fileId, m) — новое измерение
+export function createShowPads({ dest, getBlob, now = () => dest.context.currentTime, getNorm = () => ({ on: false }), known = () => null, onMeasure = () => {} }) {
   const c = dest.context;
   const out = c.createGain(); out.gain.value = 1; out.connect(dest);
   const duckNode = c.createGain(); duckNode.gain.value = 1; duckNode.connect(dest); // сюда подключается основной трек (showdeck.js): пока звучит пад с «приглушать» — тише
-  const cache = new Map(), pending = new Map();           // файл → буфер / обещание раскрытия
+  const cache = new Map(), pending = new Map(), loud = new Map(); // loud — измеренная громкость файла           // файл → буфер / обещание раскрытия
   const voices = new Set(), subs = new Set();
   let duckAmount = 0.4, duckTime = 0.25, errs = new Set();
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
@@ -27,6 +29,12 @@ export function createShowPads({ dest, getBlob, now = () => dest.context.current
       if (!blob) throw new Error('нет файла');
       const buf = await c.decodeAudioData(await blob.arrayBuffer());
       cache.set(fileId, buf);
+      // громкость — для нормализации; уже измеренная берётся из записи медиатеки
+      try {
+        let m = known(fileId);
+        if (!m) { m = await measureLoudness(Array.from({ length: Math.min(2, buf.numberOfChannels) }, (_, i) => buf.getChannelData(i)), buf.sampleRate); onMeasure(fileId, m); }
+        loud.set(fileId, m);
+      } catch { /* без измерения — без поправки */ }
       while (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value);
       errs.delete(fileId);
       return buf;
@@ -59,7 +67,8 @@ export function createShowPads({ dest, getBlob, now = () => dest.context.current
 
   function start(pad, buf) {
     const t = now(), g = c.createGain(), src = c.createBufferSource();
-    const lvl = faderGain(pad.level), from = Math.min(pad.from || 0, Math.max(0, buf.duration - 0.05));
+    const nm = getNorm(), m = loud.get(pad.file), nd = nm && nm.on && nm.pads && m ? normGainDb(m.lufs, m.peak, nm.target) : 0;
+    const lvl = faderGain(pad.level) * dbGain(nd), from = Math.min(pad.from || 0, Math.max(0, buf.duration - 0.05));
     const end = pad.to && pad.to > from ? Math.min(pad.to, buf.duration) : buf.duration, len = end - from;
     src.buffer = buf;
     if (pad.mode === 'loop') { src.loop = true; src.loopStart = from; src.loopEnd = end; }
@@ -104,7 +113,8 @@ export function createShowPads({ dest, getBlob, now = () => dest.context.current
     now,
     setLevel(v) { out.gain.setTargetAtTime(faderGain(v), now(), 0.03); },
     setDuck(amountPct, time) { duckAmount = Math.max(0, Math.min(1, amountPct / 100)); if (time) duckTime = time; applyDuck(); },
-    forget(fileId) { cache.delete(fileId); errs.delete(fileId); },
+    forget(fileId) { cache.delete(fileId); loud.delete(fileId); errs.delete(fileId); },
+    normOf: (fileId) => { const nm = getNorm(), m = loud.get(fileId); return nm && nm.on && nm.pads && m ? normGainDb(m.lufs, m.peak, nm.target) : 0; },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     dispose() { api.stopAll(0.1); setTimeout(() => { try { out.disconnect(); duckNode.disconnect(); } catch { /* уже */ } cache.clear(); subs.clear(); }, 400); },
   };

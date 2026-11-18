@@ -1,23 +1,23 @@
 // Звуки пульта: игра падов на подложной звуковой системе (src/audio/showpads.js)
 import { describe, it, expect } from 'vitest';
 import { createShowPads } from '../src/audio/showpads.js';
-import { newPad } from '../src/music/show.js';
+import { newPad, faderGain } from '../src/music/show.js';
 
 function fakeCtx() {
   const c = { currentTime: 0, made: [] };
-  const param = () => ({ value: 0, setValueAtTime(v) { this.value = v; }, linearRampToValueAtTime(v) { this.last = v; }, setTargetAtTime(v) { this.target = v; }, cancelScheduledValues() {}, cancelAndHoldAtTime() {} });
+  const param = () => ({ value: 0, setValueAtTime(v) { this.value = v; }, linearRampToValueAtTime(v) { this.last = v; (this.ramps ??= []).push(v); }, setTargetAtTime(v) { this.target = v; }, cancelScheduledValues() {}, cancelAndHoldAtTime() {} });
   const node = () => ({ gain: param(), connect(x) { return x; }, disconnect() {} });
-  c.createGain = () => node();
+  c.gains = []; c.createGain = () => { const n = node(); c.gains.push(n); return n; };
   c.createBufferSource = () => { const s = { ...node(), started: null, stopped: null, loop: false, start(t, o, d) { s.started = { t, o, d }; }, stop(t) { s.stopped = t; setTimeout(() => s.onended && s.onended(), 0); } }; c.made.push(s); return s; };
-  c.decodeAudioData = async () => ({ duration: 4 });
+  c.decodeAudioData = async () => ({ duration: 4, numberOfChannels: 1, sampleRate: 8000, getChannelData: () => Float32Array.from({ length: 8000 }, (_, i) => 0.05 * Math.sin(i / 8000 * 2 * Math.PI * 997)) });
   return c;
 }
-const setup = () => {
+const setup = (extra = {}) => {
   const c = fakeCtx(), dest = { context: c, connect() {} };
   const files = { f1: { arrayBuffer: async () => new ArrayBuffer(8) }, f2: { arrayBuffer: async () => new ArrayBuffer(8) } };
-  return { c, eng: createShowPads({ dest, getBlob: (id) => files[id], now: () => c.currentTime }) };
+  return { c, eng: createShowPads({ dest, getBlob: (id) => files[id], now: () => c.currentTime, ...extra }) };
 };
-const tick = () => new Promise((r) => setTimeout(r, 5));
+const tick = () => new Promise((r) => setTimeout(r, 40));
 
 describe('звуки пульта', () => {
   it('пад без файла молчит и не падает', () => {
@@ -67,5 +67,23 @@ describe('звуки пульта', () => {
   });
   it('громкость падов: правится параметром', () => {
     const { eng } = setup(); eng.setLevel(50); expect(eng.out.gain.target).toBeCloseTo(0.25);
+  });
+  it('нормализация: тихий пад подтягивается до цели (не больше +12 дБ), выключена — без поправки', async () => {
+    const got = [];
+    const on = setup({ getNorm: () => ({ on: true, pads: true, target: -16 }), onMeasure: (id, m) => got.push([id, m]) }), p = newPad({ file: 'f1' });
+    await on.eng.preload([p]);
+    expect(got.length).toBe(1); expect(got[0][1].lufs).toBeLessThan(-25);
+    expect(on.eng.normOf('f1')).toBe(12);
+    on.eng.press(p);
+    const g = on.c.gains.at(-1).gain.ramps[0]; // первый уровень последнего голоса (вход)
+    expect(g).toBeCloseTo(faderGain(100) * Math.pow(10, 12 / 20), 3);
+    const off = setup({ getNorm: () => ({ on: false }) }); await off.eng.preload([p]);
+    expect(off.eng.normOf('f1')).toBe(0);
+  });
+  it('уже измеренная громкость берётся из записи, второй раз не считается', async () => {
+    let n = 0;
+    const s = setup({ getNorm: () => ({ on: true, pads: true, target: -16 }), known: () => ({ lufs: -26, peak: -10 }), onMeasure: () => { n++; } });
+    await s.eng.preload([newPad({ file: 'f1' })]);
+    expect(n).toBe(0); expect(s.eng.normOf('f1')).toBe(9); // −16 − (−26) = 10, но потолок по пику: −1 − (−10) = 9
   });
 });

@@ -5,7 +5,8 @@ import { createShowDeck } from '../src/audio/showdeck.js';
 function fakeCtx() {
   const param = () => ({ value: 0, v: [], setValueAtTime(x) { this.value = x; this.v.push(['set', x]); }, linearRampToValueAtTime(x, t) { this.v.push(['ramp', x, t]); }, setTargetAtTime(x) { this.target = x; }, cancelScheduledValues() {} });
   const node = () => ({ gain: param(), connect() {}, disconnect() {} });
-  return { currentTime: 10, createGain: () => node() };
+  const gains = [];
+  return { currentTime: 10, gains, createGain: () => { const n = node(); gains.push(n); return n; } };
 }
 function fakePlayer() {
   const p = new EventTarget();
@@ -56,5 +57,11 @@ describe('основной трек пульта', () => {
     const { deck } = setup();
     await deck.start({ file: 'a', level: 80 });
     deck.setTrim(50); expect(deck.trim.gain.target).toBeCloseTo(0.25);
+  });
+  it('нормализация: поправка в дБ ложится на узел места; на ходу меняется', async () => {
+    const { deck, c } = setup();
+    await deck.start({ file: 'a', normDb: -6 });
+    expect(c.gains.some((g) => Math.abs(g.gain.value - 0.501) < 0.002)).toBe(true);
+    deck.setNorm(3); expect(c.gains.some((g) => g.gain.target && Math.abs(g.gain.target - 1.413) < 0.002)).toBe(true);
   });
 });

@@ -7,6 +7,7 @@ import meta from './meta.js';
 import { createShowPads } from '../../audio/showpads.js';
 import { createShowDeck } from '../../audio/showdeck.js';
 import { createShowBed } from '../../audio/showbed.js';
+import { measureBlob, normGainDb } from '../../audio/loudness.js';
 import { swipe } from '../../ui/gestures.js';
 import { sortable, buzz } from '../../ui/hold.js';
 import * as M from '../../music/show.js';
@@ -36,7 +37,10 @@ const allPads = () => S.banks.flatMap((b) => b.pads.filter(Boolean));
 
 // Общая громкость пульта: узел между всем, что играет пульт (пады, трек, фон), и шиной медиатеки; шкала 0–100
 function destNode() {
-  if (!master) { const bus = ctx.audio.bus('media'); if (!bus) return null; master = bus.context.createGain(); master.gain.value = M.faderGain(S.master); master.connect(bus); }
+  if (!master) { const bus = ctx.audio.bus('media'); if (!bus) return null; master = bus.context.createGain(); master.gain.value = M.faderGain(S.master);
+    // страховка от перегруза: когда играют трек, пэд, шум и пады сразу, сумма не должна упираться в потолок (быстрый лимитер у потолка −2 дБ)
+    const lim = bus.context.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.12;
+    master.connect(lim); lim.connect(bus); }
   return master;
 }
 function ensureEng() {
@@ -45,7 +49,7 @@ function ensureEng() {
   if (!eng) {
     const bus = destNode();
     if (!bus) return null;
-    eng = createShowPads({ dest: bus, getBlob: blobOf });
+    eng = createShowPads({ dest: bus, getBlob: blobOf, getNorm: () => S.norm, known: (id) => { const f = fileOf(id); return f && Number.isFinite(f.lufs) ? { lufs: f.lufs, peak: f.pk } : null; }, onMeasure: (id, m) => saveLoud(id, m) });
   }
   if (!unsubEng) { unsubEng = eng.subscribe(kick); eng.setLevel(S.level); eng.setDuck(S.duckAmount, S.duckTime); }
   return eng;
@@ -63,15 +67,43 @@ function ensureBed() {
   if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (S.page === 'bed') render(); }); }
   return bed;
 }
+/* ---------- громкость записей (нормализация) ---------- */
+
+function saveLoud(id, m) { const f = fileOf(id); if (!f) return; f.lufs = Number.isFinite(m.lufs) ? Math.round(m.lufs * 10) / 10 : -200; f.pk = Number.isFinite(m.peak) ? Math.round(m.peak * 10) / 10 : -180; ctx.files.save(f); }
+const loudOf = (id) => { const f = fileOf(id); return f && Number.isFinite(f.lufs) ? { lufs: f.lufs, peak: f.pk } : null; };
+const loudJobs = new Map();
+// Измерить громкость записи один раз и запомнить в записи медиатеки; повторные запросы ждут то же измерение
+function ensureLoud(id) {
+  if (!id || loudOf(id) || !fileOf(id)) return Promise.resolve(loudOf(id));
+  if (!loudJobs.has(id)) loudJobs.set(id, measureBlob(blobOf(id)).then((m) => { saveLoud(id, m); return loudOf(id); }).catch((e) => { ctx.logErr(e); return null; }).finally(() => { loudJobs.delete(id); if (S && host && S.page === 'prog') render(); }));
+  return loudJobs.get(id);
+}
+// Фоном, по одному и не при идущем треке: у всех номеров программы с треком измерить громкость заранее
+let loudBusy = false;
+async function queueLoud() {
+  if (loudBusy || !S || !S.norm.on) return;
+  loudBusy = true;
+  try {
+    for (const e of S.events.filter((x) => !x.deleted)) for (const n of e.numbers) {
+      if (!host) return;
+      if (n.kind === 'track' && n.file && !loudOf(n.file) && !(deck && deck.state.playing)) await ensureLoud(n.file);
+    }
+  } finally { loudBusy = false; }
+}
+// Поправка нормализации номера (дБ): до общей цели; нет измерения или выключено — 0
+const normDb = (n) => { const m = n && n.kind === 'track' ? loudOf(n.file) : null; return S.norm.on && m ? normGainDb(m.lufs, m.peak, S.norm.target) : 0; };
+
 const anaOf = (n) => { const f = n && n.kind === 'track' ? fileOf(n.file) : null; return f && f.ana ? f.ana : null; };
 const bedTonic = (n) => M.tonicFor(S, n, anaOf(n), bed ? bed.state.tonic : 0);
 const noiseRec = (id) => S.noises.find((x) => x.id === id) || null;
-const noiseVol = (r) => Math.round((r ? r.level : 100) * S.bed.noise.level / 100);
-function padStart(n) { const b = ensureBed(); if (b) b.padOn({ pc: bedTonic(n), level: S.bed.pad.level, sound: S.bed.pad.sound }); }
-async function noiseTo(id) {
+const nPadLevel = (n) => (n && n.bed && n.bed.padLevel != null ? n.bed.padLevel : S.bed.pad.level);
+const nNoiseLevel = (n) => (n && n.bed && n.bed.noiseLevel != null ? n.bed.noiseLevel : S.bed.noise.level);
+const noiseVol = (r, n = M.currentNumber(S)) => Math.round((r ? r.level : 100) * nNoiseLevel(n) / 100);
+function padStart(n) { const b = ensureBed(); if (b) b.padOn({ pc: bedTonic(n), level: nPadLevel(n), sound: S.bed.pad.sound }); }
+async function noiseTo(id, n = M.currentNumber(S)) {
   const b = ensureBed(); if (!b) return;
   const r = noiseRec(id);
-  try { if (r) await b.setNoise(r.file, noiseVol(r), S.bed.noise.xfade); else b.stopNoise(S.bed.noise.xfade); S.bed.noise.cur = r ? r.id : null; save(); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('bed.noiseErr')); }
+  try { if (r) await b.setNoise(r.file, noiseVol(r, n), S.bed.noise.xfade); else b.stopNoise(S.bed.noise.xfade); S.bed.noise.cur = r ? r.id : null; save(); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('bed.noiseErr')); }
   if (S.page === 'bed') render();
 }
 // Фон номера при его запуске: заданное в номере; тональность пэда следует за номером, если не задана вручную
@@ -79,7 +111,8 @@ async function applyBed(n) {
   if (n.bed) {
     if (n.bed.pad) { S.bed.pad.on = true; padStart(n); } else if (bed && bed.state.pad) { S.bed.pad.on = false; bed.padOff(S.goFade); }
     save();
-    if ((n.bed.noise || '') !== (S.bed.noise.cur || '')) await noiseTo(n.bed.noise || null);
+    if ((n.bed.noise || '') !== (S.bed.noise.cur || '')) await noiseTo(n.bed.noise || null, n); else if (bed && noiseRec(S.bed.noise.cur)) bed.noiseTrim(noiseVol(noiseRec(S.bed.noise.cur), n));
+    if (bed && bed.state.pad) bed.padLevel(nPadLevel(n));
   } else if (bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n));
 }
 // Раскрыть файлы заранее: касание должно играть сразу. Сначала видимый банк и закреплённый ряд, потом остальное
@@ -157,10 +190,15 @@ function bedHTML() {
 }
 const KNOBS = [['master', 'desk.master'], ['deck', 'desk.track'], ['bed', 'desk.bed'], ['pads', 'desk.sounds']];
 // Крутилки громкости внизу каждой страницы, кроме «Пульта» (там фейдеры): общая, трек, фон, звуки — всегда под рукой
-function stripHTML() {
-  return '<div class="shstrip" role="group" aria-label="' + esc(t('desk.levels')) + '">' + KNOBS.map(([k, lb]) => { const v = volOf(k); return '<div class="shkn"><div class="shknob" data-knob="' + k + '" role="slider" tabindex="0" aria-label="' + esc(t(lb)) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '">' +
-    '<svg viewBox="0 0 44 44" aria-hidden="true"><path class="kt" pathLength="100" stroke-dasharray="99 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/><path class="kv" pathLength="100" stroke-dasharray="' + v * 0.99 + ' 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/></svg><b>' + v + '</b></div><span class="shkl">' + esc(t(lb)) + '</span></div>'; }).join('') + '</div>';
+function knobHTML(k, lb) {
+  const v = volOf(k); return '<div class="shkn"><div class="shknob" data-knob="' + k + '" role="slider" tabindex="0" aria-label="' + esc(t(lb)) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '">' +
+    '<svg viewBox="0 0 44 44" aria-hidden="true"><path class="kt" pathLength="100" stroke-dasharray="99 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/><path class="kv" pathLength="100" stroke-dasharray="' + v * 0.99 + ' 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/></svg><b>' + v + '</b></div><span class="shkl">' + esc(t(lb)) + '</span></div>';
 }
+function stripHTML() {
+  return '<div class="shstrip" role="group" aria-label="' + esc(t('desk.levels')) + '">' + KNOBS.map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
+}
+// Громкости самого номера: трек, пэд, шум — крутилки прямо над фейдерами пульта
+const numKnobsHTML = () => '<div class="shstrip shnk" role="group" aria-label="' + esc(t('desk.thisNum')) + '"><span class="shnkl">' + esc(t('desk.thisNum')) + '</span>' + [['nlevel', 'desk.knobTrack'], ['npad', 'desk.knobPad'], ['nnoise', 'desk.knobNoise']].map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
 const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(label) + '</span><b class="shfv" data-fv="' + k + '">' + v + '</b><div class="shtrack" data-fader="' + k + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" style="--v:' + v + '%">' +
   '<i class="tk" style="bottom:25%"></i><i class="tk" style="bottom:50%"></i><i class="tk" style="bottom:75%"></i><div class="shfill"></div><div class="shcap"></div></div><span class="shfo" data-fo="' + k + '">' + M.dbText(v) + ' ' + esc(t('db')) + '</span></div>';
 function deskHTML() {
@@ -171,7 +209,7 @@ function deskHTML() {
       : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
     '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
     (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
-    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + fader('master', t('desk.master'), S.master) + '</div>' +
+    (n ? numKnobsHTML() : '') + '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + fader('master', t('desk.master'), S.master) + '</div>' +
     '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b></div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
@@ -310,8 +348,10 @@ async function startNumber(n, from = 0) {
   if (n.kind === 'track' && n.file) {
     const d = ensureDeck();
     if (!d) { render(); return; }
-    try { await d.start({ file: n.file, level: n.level, fadeIn: n.fadeIn, fadeOut: n.fadeOut, shift: n.shift, from }); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('desk.trackErr')); }
+    if (S.norm.on && !loudOf(n.file)) await Promise.race([ensureLoud(n.file), new Promise((r) => setTimeout(r, 4000))]); // без измерения не задерживаем больше 4 с
+    try { await d.start({ file: n.file, level: n.level, fadeIn: n.fadeIn, fadeOut: n.fadeOut, shift: n.shift, from, normDb: normDb(n) }); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('desk.trackErr')); }
     const nx = M.nextNumber(S); if (nx && nx.kind === 'track' && nx.file) d.prepare(nx.file); // следующий — заранее, «ГО» не ждёт
+    if (nx && nx.kind === 'track' && nx.file) ensureLoud(nx.file);
   }
   render();
 }
@@ -336,12 +376,21 @@ function addMark() {
 }
 // фейдеры: перетаскивание по дорожке; двойное касание — на 0 и обратно
 const fdPrev = {}; let fdTap = { k: '', t: 0 };
-const volOf = (k) => (k === 'deck' ? S.deckLevel : k === 'bed' ? S.bedLevel : k === 'master' ? S.master : S.level);
+// своя громкость идущего номера: трек, пэд, шум (запоминается в номере, слышна сразу)
+function numBed(n) { if (!n.bed) n.bed = { pad: S.bed.pad.on, noise: S.bed.noise.cur || '', padLevel: null, noiseLevel: null }; return n.bed; }
+const volOf = (k) => { const n = M.currentNumber(S); return k === 'deck' ? S.deckLevel : k === 'bed' ? S.bedLevel : k === 'master' ? S.master : k === 'nlevel' ? (n ? n.level : 0) : k === 'npad' ? nPadLevel(n) : k === 'nnoise' ? nNoiseLevel(n) : S.level; };
 // Любая громкость пульта 0–100: в звук (если он уже есть — иначе применится при создании) и во все ручки и фейдеры на экране
 function fdSet(k, v) {
   v = Math.max(0, Math.min(100, Math.round(v)));
   if (k === 'deck') { S.deckLevel = v; if (deck) deck.setTrim(v); }
   else if (k === 'bed') { S.bedLevel = v; if (bed) bed.setLevel(v); }
+  else if (k === 'nlevel' || k === 'npad' || k === 'nnoise') {
+    const n = M.currentNumber(S), e = cur(); if (!n) return;
+    if (k === 'nlevel') { n.level = v; if (deck && deck.state.file === n.file) deck.setLevel(v); }
+    else if (k === 'npad') { numBed(n).padLevel = v; if (bed) bed.padLevel(v); }
+    else { numBed(n).noiseLevel = v; const r = noiseRec(S.bed.noise.cur); if (bed && r) bed.noiseTrim(noiseVol(r, n)); }
+    if (e) e.updatedAt = Date.now();
+  }
   else if (k === 'master') { S.master = v; if (master) master.gain.setTargetAtTime(M.faderGain(v), master.context.currentTime, 0.03); }
   else { S.level = v; if (eng) eng.setLevel(v); }
   if (!host) return;
@@ -385,6 +434,13 @@ function onWaveDown(e) {
   seek(e.clientX);
   const mv = (m) => seek(m.clientX), up = () => { cv.removeEventListener('pointermove', mv); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up); };
   cv.addEventListener('pointermove', mv); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+}
+
+// Нормализацию включили, выключили или сменили цель: идущий трек выравнивается сразу; измерение недостающего — фоном
+function applyNorm() {
+  const n = M.currentNumber(S);
+  if (deck && n && deck.state.file === n.file) deck.setNorm(normDb(n));
+  queueLoud();
 }
 
 /* ---------- создание ---------- */
@@ -501,15 +557,22 @@ function settingsSheet() {
     '<div class="group">' + ['info', 'timer', 'strip', 'buzz', 'awake', 'confirmStop'].map(sw).join('') + '</div>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + esc(t('bank.dock')) + '</span>' + ctx.ui.sw('v-dock', S.ui.dock, t('bank.dock')) + '</div>' +
       (S.ui.dock && M.dockOf(S) ? '<button class="cell" data-x="dock"><span class="grow">' + esc(t('bank.title')) + '</span><span class="val">' + M.dockOf(S).cols + '</span></button>' : '') + '</div>' +
+    '<div class="hdr">' + esc(t('view.norm')) + '</div><div class="group"><div class="cell"><span class="grow">' + esc(t('view.norm')) + '</span>' + ctx.ui.sw('v-normon', S.norm.on, t('view.norm')) + '</div>' +
+      (S.norm.on ? row(t('view.normTarget'), ctx.ui.seg('ntarget', [-14, -16, -19, -23].map((v) => [String(v), v + ' LUFS']), String(S.norm.target), t('view.normTarget'))) + '<div class="cell"><span class="grow">' + esc(t('view.normPads')) + '</span>' + ctx.ui.sw('v-normpads', S.norm.pads, t('view.normPads')) + '</div>' : '') + '</div><p class="ftr">' + esc(t('view.normHint')) + '</p>' +
     '<div class="group sgroup" style="margin-top:12px">' + slider('goFade', t('view.goFade'), S.goFade, 0, 10, 0.5, secTxt(S.goFade)) + '</div><p class="ftr">' + esc(t('view.goFadeHint')) + '</p>' +
     '<div class="hdr">' + esc(t('view.duck')) + '</div><div class="group sgroup">' + slider('duckAmount', t('view.duckAmount'), S.duckAmount, 0, 100, 5, S.duckAmount + '%') + slider('duckTime', t('view.duckTime'), S.duckTime, 0.05, 3, 0.05, secTxt(S.duckTime)) + '</div><p class="ftr">' + esc(t('view.hint')) + '</p>';
   ctx.ui.sheet(body, (el, sh) => {
     el.addEventListener('change', (e) => {
       const k = e.target.dataset.sw; if (!k || !k.startsWith('v-')) return;
+      if (k === 'v-normon' || k === 'v-normpads') { if (k === 'v-normon') S.norm.on = e.target.checked; else S.norm.pads = e.target.checked; save(); applyNorm(); sh.update(); return; }
       S.ui[k.slice(2)] = e.target.checked; save();
       if (k === 'v-awake') awake(); if (k === 'v-dock') sh.update();
     });
-    el.addEventListener('click', (e) => { if (e.target.closest('[data-x="dock"]')) bankSheet(M.dockOf(S)); });
+    el.addEventListener('click', (e) => {
+      const sg = e.target.closest('[data-seg="ntarget"] [data-v]');
+      if (sg) { S.norm.target = +sg.dataset.v; save(); applyNorm(); sh.update(); return; }
+      if (e.target.closest('[data-x="dock"]')) bankSheet(M.dockOf(S));
+    });
     el.addEventListener('input', (e) => {
       const s = e.target.dataset.s; if (!s) return;
       const v = +e.target.value; S[s] = v; save();
@@ -628,6 +691,7 @@ function eventSheet(ev) {
 function numSheet(n) {
   const e = cur(), touch = () => { if (e) e.updatedAt = Date.now(); save(); };
   const f = () => fileOf(n.file), a = () => (f() && f().ana) || null;
+  const loudLine = () => { const m = loudOf(n.file); return !n.file ? '' : !S.norm.on ? t('num.loud') + ': ' + t('num.loudOff') : m ? t('num.loud') + ': ' + (m.lufs > -150 ? ctx.num(m.lufs, 1) + ' LUFS · ' + t('num.loudFix', { g: (normDb(n) > 0 ? '+' : '') + ctx.num(normDb(n), 1) }) : t('num.loudNone')) : t('num.loud') + ': ' + t('num.loudWait'); };
   const keyLine = () => (a() && a().pc != null ? t('num.keyIs', { k: keyName(a().pc, a().minor) }) + (n.shift ? ' → ' + keyName(a().pc + n.shift, a().minor) : '') : t('num.keyUnknown'));
   const body = () => ctx.ui.snav(t('num.title'), { right: '<button class="link b r" data-close>' + esc(t('editDone')) + '</button>' }) +
     '<div class="group"><div class="cellcol"><span>' + esc(t('num.name')) + '</span><input class="shfield" data-f="title" maxlength="80" value="' + esc(n.title) + '" aria-label="' + esc(t('num.name')) + '"></div></div>' +
@@ -635,9 +699,11 @@ function numSheet(n) {
       '<div class="cellcol"><span>' + esc(t('num.dur')) + '</span><input class="shfield" data-f="dur" inputmode="decimal" placeholder="3:30" value="' + (n.dur ? M.mmss(n.dur) : '') + '" aria-label="' + esc(t('num.dur')) + '"></div></div>' +
     '<div class="group" style="margin-top:12px">' + row(t('num.kind'), ctx.ui.seg('nkind', M.NUM_KINDS.map((v) => [v, t('num.kind.' + v)]), n.kind, t('num.kind'))) +
       (n.kind === 'track' ? '<button class="cell" data-x="pick"><span class="grow">' + esc(t('num.file')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(f() ? f().name : t('num.noFile')) + '</span></span><span class="val">' + esc(t('pad.pick')) + '</span></button>' : '') + '</div>' +
+    (n.kind === 'track' ? '<p class="ftr" id="shloud" style="margin-top:12px">' + esc(loudLine()) + '</p>' : '') +
     (n.kind === 'track' ? '<div class="group sgroup" style="margin-top:12px">' + slider('shift', t('num.shift'), n.shift, -12, 12, 1, (n.shift > 0 ? '+' : n.shift < 0 ? '−' : '') + Math.abs(n.shift)) + slider('level', t('num.level'), n.level, 0, 100, 1, lvTxt(n.level)) + slider('fadeIn', t('num.fadeIn'), n.fadeIn, 0, 30, 0.5, secTxt(n.fadeIn)) + slider('fadeOut', t('num.fadeOut'), n.fadeOut, 0, 30, 0.5, secTxt(n.fadeOut)) + '</div><p class="ftr" id="shkey">' + esc(keyLine()) + '</p>' : '') +
     '<div class="hdr">' + esc(t('num.bed')) + '</div><div class="group">' + row(t('num.bed'), ctx.ui.seg('nbed', [['keep', t('num.bed.keep')], ['set', t('num.bed.set')]], n.bed ? 'set' : 'keep', t('num.bed'))) +
       (n.bed ? '<div class="cell"><span class="grow">' + esc(t('num.bed.pad')) + '</span>' + ctx.ui.sw('nbpad', n.bed.pad, t('num.bed.pad')) + '</div>' +
+        '<div class="group sgroup">' + slider('padLevel', t('num.bed.padLevel'), n.bed.padLevel == null ? S.bed.pad.level : n.bed.padLevel, 0, 100, 1, lvTxt(n.bed.padLevel == null ? S.bed.pad.level : n.bed.padLevel)) + slider('noiseLevel', t('num.bed.noiseLevel'), n.bed.noiseLevel == null ? S.bed.noise.level : n.bed.noiseLevel, 0, 100, 1, lvTxt(n.bed.noiseLevel == null ? S.bed.noise.level : n.bed.noiseLevel)) + '</div>' +
         '<div class="cellcol"><span>' + esc(t('num.bed.noise')) + '</span><div class="shchips" style="margin-top:8px"><button class="shchip' + (!n.bed.noise ? ' on' : '') + '" data-nnoise="">' + esc(t('num.bed.none')) + '</button>' + S.noises.map((r) => '<button class="shchip' + (n.bed.noise === r.id ? ' on' : '') + '" data-nnoise="' + r.id + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div></div>' : '') + '</div>' +
     '<div class="hdr">' + esc(t('num.note')) + '</div><div class="group"><textarea class="shfield area" data-f="note" maxlength="4000" placeholder="' + esc(t('num.noteHint')) + '" aria-label="' + esc(t('num.note')) + '">' + esc(n.note) + '</textarea></div>' +
     '<div class="hdr">' + esc(t('num.cues')) + '</div><div class="group">' + n.cues.map((c) => '<div class="shcue" data-cue="' + c.id + '"><input class="tt" data-ct inputmode="decimal" value="' + M.mmss(c.t) + '" aria-label="' + esc(t('num.cueTime')) + '"><input data-cx maxlength="200" value="' + esc(c.text) + '" placeholder="' + esc(t('num.cueText')) + '" aria-label="' + esc(t('num.cueText')) + '"><button data-x="cuedel" aria-label="' + esc(t('num.del')) + '">' + I.trash + '</button></div>').join('') +
@@ -651,7 +717,7 @@ function numSheet(n) {
       if ((b = g('[data-nnoise]'))) { if (n.bed) n.bed.noise = b.dataset.nnoise; touch(); sh.update(); return; }
       if (g('[data-x="run"]')) { sh.close(); S.page = 'desk'; save(); await startNumber(n); return; }
       if ((b = g('[data-seg="nkind"] [data-v]'))) { n.kind = b.dataset.v; Object.assign(n, M.normalizeNumber(n)); touch(); sh.update(); }
-      else if (g('[data-x="pick"]')) pickFile({ cur: n.file }, (id) => { n.file = id; if (id && !n.title) n.title = (fileOf(id) || {}).name || ''; const r = fileOf(id); if (r && r.dur && !n.dur) n.dur = Math.round(r.dur); touch(); sh.update(); });
+      else if (g('[data-x="pick"]')) pickFile({ cur: n.file }, (id) => { n.file = id; if (id && !n.title) n.title = (fileOf(id) || {}).name || ''; const r = fileOf(id); if (r && r.dur && !n.dur) n.dur = Math.round(r.dur); touch(); sh.update(); ensureLoud(id).then(() => { const o = el.querySelector('#shloud'); if (o) o.textContent = loudLine(); }); });
       else if (g('[data-x="cueadd"]')) { M.addCue(n, 0, ''); touch(); sh.update(); }
       else if ((b = g('[data-x="cuedel"]'))) { const id = b.closest('[data-cue]').dataset.cue; n.cues = n.cues.filter((c) => c.id !== id); touch(); sh.update(); }
       else if (g('[data-x="del"]') && await ctx.ui.confirm(t('num.del'), t('num.delAsk'), t('num.del'))) { if (e) e.numbers = e.numbers.filter((x) => x.id !== n.id); touch(); sh.close(); }
@@ -663,9 +729,11 @@ function numSheet(n) {
       else if (s) {
         const v = +ev.target.value; n[s] = v;
         const o = el.querySelector('[data-o="' + s + '"]');
-        if (o) o.textContent = s === 'level' ? lvTxt(v) : s === 'shift' ? (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) : secTxt(v);
+        if (o) o.textContent = s === 'level' || s === 'padLevel' || s === 'noiseLevel' ? lvTxt(v) : s === 'shift' ? (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) : secTxt(v);
         if (s === 'shift') { const k = el.querySelector('#shkey'); if (k) k.textContent = keyLine(); if (S.cur === n.id) { if (deck) deck.setShift(v); if (bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n)); } }
         if (s === 'level' && S.cur === n.id && deck) deck.setLevel(v);
+        if (s === 'padLevel' && n.bed) { n.bed.padLevel = v; if (S.cur === n.id && bed) bed.padLevel(v); }
+        if (s === 'noiseLevel' && n.bed) { n.bed.noiseLevel = v; const r = noiseRec(S.bed.noise.cur); if (S.cur === n.id && bed && r) bed.noiseTrim(noiseVol(r, n)); }
       }
       touch();
     });
@@ -710,6 +778,7 @@ export default {
     tickT = setInterval(() => { if (!host) return; const o = host.querySelector('#shtm'), r = timerText(); if (!!o !== !!r.s) { render(); return; } if (o) { o.textContent = r.s; o.classList.toggle('over', r.over); } }, 1000);
     awake();
     render();
+    setTimeout(queueLoud, 1500);
     if (S.page === 'pads' && ctx.audio.ready()) { if (ensureEng()) preload(); }
   },
   resize(sz) { size = sz; render(); },

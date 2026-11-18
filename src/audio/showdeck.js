@@ -5,6 +5,7 @@
 // Правки — только параметрами и плавно.
 import { holdAt } from './param.js';
 import { faderGain } from '../music/show.js';
+import { dbGain } from './loudness.js';
 import { createStretchPlayer, stretchAvailable } from './stretchplayer.js';
 import { createBufferPlayer } from './bufferplayer.js';
 
@@ -15,7 +16,8 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
   const c = dest.context;
   const trim = c.createGain(); trim.gain.value = 1; trim.connect(dest);
   const subs = new Set();
-  const mkSlot = () => { const env = c.createGain(); env.gain.value = 0; env.connect(trim); return { env, player: null, file: null, ready: null, loadedFile: null, opts: null, fading: false }; };
+  // огибающая (вход, выход, громкость номера) → поправка нормализации → общий фейдер трека
+  const mkSlot = () => { const env = c.createGain(), norm = c.createGain(); env.gain.value = 0; norm.gain.value = 1; env.connect(norm); norm.connect(trim); return { env, norm, player: null, file: null, ready: null, loadedFile: null, opts: null, fading: false }; };
   const slots = [mkSlot(), mkSlot()];
   let active = null;
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
@@ -53,6 +55,7 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
       try { pl.setPitch && pl.setPitch(opts.shift || 0, 0, false); } catch { /* запасной движок без тональности */ }
       pl.currentTime = opts.from || 0;
       holdAt(s.env.gain, t); s.env.gain.setValueAtTime(0, t); s.env.gain.linearRampToValueAtTime(lvl, t + fin);
+      s.norm.gain.setValueAtTime(dbGain(opts.normDb || 0), t); // выравнивание громкости записей до одной цели
       s.opts = { ...opts, lvl, fading: false }; s.fading = false;
       await pl.play();
       active = s;
@@ -73,6 +76,8 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
     seek(sec) { const s = active; if (s && s.player) s.player.currentTime = Math.max(0, sec); },
     // номер поменял громкость на ходу
     setLevel(v) { const s = active; if (!s || !s.opts) return; s.opts.lvl = faderGain(v); if (!s.fading) s.env.gain.setTargetAtTime(s.opts.lvl, now(), 0.03); },
+    // поправка нормализации идущего трека (дБ): настройку цели сменили на ходу
+    setNorm(db) { const s = active; if (s) s.norm.gain.setTargetAtTime(dbGain(db || 0), now(), 0.05); },
     setShift(semi) { const s = active; if (s && s.player && s.player.setPitch) { try { s.player.setPitch(semi, 0, false); } catch { /* */ } } },
     setTrim(v) { trim.gain.setTargetAtTime(faderGain(v), now(), 0.03); },
     // вызывается часто (UI): плавный уход в конце трека по fadeOut номера
@@ -87,7 +92,7 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
       return { file: s.file, playing: playing(s) && !s.fading, fading: s.fading, time: s.player.currentTime || 0, dur: s.player.duration || 0, ended: !!s.player.ended };
     },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
-    dispose() { api.stop(0.2); setTimeout(() => { slots.forEach((s) => { try { s.player && s.player.destroy && s.player.destroy(); s.env.disconnect(); } catch { /* */ } }); try { trim.disconnect(); } catch { /* */ } subs.clear(); }, 400); },
+    dispose() { api.stop(0.2); setTimeout(() => { slots.forEach((s) => { try { s.player && s.player.destroy && s.player.destroy(); s.env.disconnect(); s.norm.disconnect(); } catch { /* */ } }); try { trim.disconnect(); } catch { /* */ } subs.clear(); }, 400); },
   };
   return api;
 }

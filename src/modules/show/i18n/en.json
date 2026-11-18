@@ -191,5 +191,20 @@
   "desk.bed": "Bed",
   "desk.master": "Master",
   "desk.levels": "Levels",
-  "view.strip": "Level knobs on every page"
+  "view.strip": "Level knobs on every page",
+  "view.norm": "Loudness normalization",
+  "view.normTarget": "Target",
+  "view.normPads": "Pad sounds too",
+  "view.normHint": "Recordings and sounds are matched in loudness (LUFS) so a quiet and a loud track sound even. Gain only, no compression; the correction never lifts the peak above −1 dB. A limiter on the main output covers the rest.",
+  "num.loud": "Recording loudness",
+  "num.loudFix": "correction {g} dB",
+  "num.loudOff": "normalization is off",
+  "num.loudWait": "measuring…",
+  "num.loudNone": "not measured",
+  "num.bed.padLevel": "Pad level",
+  "num.bed.noiseLevel": "Noise level",
+  "desk.thisNum": "This number",
+  "desk.knobTrack": "Track",
+  "desk.knobPad": "Pad",
+  "desk.knobNoise": "Noise"
 }

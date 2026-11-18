@@ -88,7 +88,9 @@ export function normalizeNumber(n) {
   o.cues = (Array.isArray(o.cues) ? o.cues : []).filter((c) => c && Number.isFinite(+c.t)).map((c) => ({ id: c.id || uid('c'), t: Math.max(0, +c.t), text: String(c.text || '').slice(0, 200) })).sort((a, b) => a.t - b.t);
   o.done = !!o.done;
   // фон номера: null — не менять то, что звучит; иначе при запуске номера: пэд вкл/выкл и шум (id из S.noises, '' — без шума)
-  o.bed = o.bed && typeof o.bed === 'object' ? { pad: !!o.bed.pad, noise: typeof o.bed.noise === 'string' ? o.bed.noise : '' } : null;
+  // padLevel и noiseLevel — свои громкости пэда и шума у этого номера (null — общие со страницы «Фон»)
+  const lv = (v) => (v == null || v === '' || !Number.isFinite(+v) ? null : clamp(v, 0, 100, 0));
+  o.bed = o.bed && typeof o.bed === 'object' ? { pad: !!o.bed.pad, noise: typeof o.bed.noise === 'string' ? o.bed.noise : '', padLevel: lv(o.bed.padLevel), noiseLevel: lv(o.bed.noiseLevel) } : null;
   return o;
 }
 export const newNumber = (o = {}) => normalizeNumber({ id: uid('n'), ...o });
@@ -157,6 +159,8 @@ export function normalizeShow(s = {}) {
     pad: { on: !!bp.on, sound: pick(bp.sound, PAD_SOUNDS, 'warm'), level: clamp(bp.level, 0, 100, 60), tonic: Number.isFinite(+bp.tonic) && bp.tonic !== null && bp.tonic !== '' ? ((Math.round(+bp.tonic) % 12) + 12) % 12 : null }, // tonic null — от номера
     noise: { cur: o.noises.some((x) => x.id === bn.cur) ? bn.cur : null, level: clamp(bn.level, 0, 100, 70), xfade: clamp(bn.xfade, 0.2, 20, 6) },
   };
+  const nm = o.norm && typeof o.norm === 'object' ? o.norm : {};
+  o.norm = { on: nm.on == null ? true : !!nm.on, target: [-14, -16, -19, -23].includes(+nm.target) ? +nm.target : -16, pads: nm.pads == null ? true : !!nm.pads }; // нормализация громкости записей и звуков, LUFS
   o.master = clamp(o.master, 0, 100, 100);              // общая громкость пульта: всё, что он играет
   o.deckLevel = clamp(o.deckLevel, 0, 100, 85);          // фейдер основного трека
   o.goFade = clamp(o.goFade, 0, 10, 2);                  // с: плавный переход по «ГО», если у номера свой уход не задан
