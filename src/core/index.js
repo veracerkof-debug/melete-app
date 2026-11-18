@@ -65,7 +65,8 @@ import { createUpdater } from './update.js';
 import { createSnapshots } from './snapshots.js';
 import { applyVariants, DEV } from './variants.js';
 import { extendOutput } from './outputstub.js'; // дополнения над output.js для шторки «Вывод»
-import { createOutput } from './output.js';
+import { createOutput, linkTransport } from './output.js';
+import { linkNow, acceptedLinks, subscribeLink } from './linkhub.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 import { createDeskBg } from './deskbg.js';
@@ -287,6 +288,14 @@ export function boot(root) {
   setTimeout(() => clockNotice(app), 1500);
   const session = createSessionScreen(app);
   app.session = session;
+  if (DEV) {
+    // канал событий (linkhub) → слой вывода: телефон — свой исходящий канал, компьютер — первый принятый
+    const curLink = () => linkNow() || acceptedLinks().find((l) => l.state === 'open') || null;
+    let attached = null;
+    const sync = () => { const l = curLink(); if (l === attached) return; attached = l; app.output.attach(l ? linkTransport(l) : null); };
+    subscribeLink(sync);
+    app.output.ping = async () => { const l = curLink(); if (!l) return { ok: false, rtt: null }; try { return { ok: true, rtt: await l.ping() }; } catch { return { ok: false, rtt: null }; } };
+  }
   if (DEV) extendOutput(app.output, app); // кандидаты, выбор устройства, «всё на…», проверка связи для шторки (слой — core/output.js)
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
   activity = app.activity = createActivity(app, { soundingAudio });

@@ -417,19 +417,19 @@ export function createOutput({ device, audio, save = () => {}, enabled = true, l
   return out;
 }
 
-// Переходник к src/core/link.js: link.send(type, bytes), link.onFrame(fn(type, bytes)), link.state; linkclock — toRemote/toLocal.
-// Кадр — JSON в байтах (первый шаг; бинарное сжатие — позже, формат кадра не меняется)
-export function linkTransport(link, clock) {
+// Переходник к src/core/link.js: прикладные кадры 0x80 (обычный) и 0x81 (можно терять); состояние 'open' → связь есть.
+// Часы не передаются: у output.js время — часы звука, у link.js — эпоха; пока кадры играются по прибытии с буфером дрожания.
+export const OUT_FRAME = 0x80, OUT_FRAME_LOSSY = 0x81;
+export function linkTransport(link) {
   const enc = new TextEncoder(), dec = new TextDecoder();
+  const inf = () => { try { return link.info(); } catch { return {}; } };
   return {
-    send: (f) => link.send(f.lossy ? 'out.l' : 'out', enc.encode(JSON.stringify(f))),
-    onFrame: (fn) => link.onFrame((type, bytes) => { if (type !== 'out' && type !== 'out.l') return; try { fn(JSON.parse(dec.decode(bytes))); } catch { /* битый кадр — пропуск */ } }),
-    get connected() { const s = link.state; return s === 'on' || s === 'connecting'; },
+    send: (f) => link.send(f.lossy ? OUT_FRAME_LOSSY : OUT_FRAME, enc.encode(JSON.stringify(f))),
+    onFrame: (fn) => link.onFrame((type, bytes) => { if (type !== OUT_FRAME && type !== OUT_FRAME_LOSSY) return; try { fn(JSON.parse(dec.decode(bytes))); } catch { /* битый кадр — пропуск */ } }),
+    get connected() { return link.state === 'open' || link.state === 'connecting'; },
     get state() { return link.state; },
-    get rtt() { return link.rtt; },
-    get jitter() { return link.jitter; },
-    now: () => (clock && clock.now ? clock.now() : 0),
-    clock: clock && clock.toLocal ? clock : undefined,
-    onState: link.onState ? (fn) => link.onState(fn) : undefined,
+    get rtt() { return inf().rtt; },
+    get jitter() { const j = inf().jitter; return j && j.jitter; },
+    onState: (fn) => link.subscribe(fn),
   };
 }
