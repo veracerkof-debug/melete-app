@@ -24,6 +24,23 @@ import { outBtnHTML, bindOutput, outRefresh } from './screens/outputsheet.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
+// Листание между инструментами в сессии (слово автора 18.11.2026): meta.nav модуля — 'swipe' (по умолчанию) | 'edge' | 'none'.
+//   'swipe' — смахнуть влево-вправо по экрану; 'edge' — широкое смахивание от края до края (ui/gestures.js: wideSwipe);
+//   'none' — листания нет (там играют пальцами: скольжение, дрон, петли). Таблица — умолчания ядра, пока модули не
+//   объявили nav в своём meta.js (meta важнее таблицы).
+export const NAV_OVERRIDE = {
+  glider: 'none', theremin: 'none', drone: 'none', looper: 'none', studio: 'none',
+  piano: 'edge', notes: 'edge', beat: 'edge', show: 'edge',
+};
+export const NAV_MODES = ['swipe', 'edge', 'none'];
+// mod — модуль (объект meta) или id
+export function navOf(mod) {
+  const m = typeof mod === 'string' ? moduleById(mod) : mod;
+  const id = typeof mod === 'string' ? mod : mod && mod.id;
+  const v = (m && m.nav) || NAV_OVERRIDE[id];
+  return NAV_MODES.includes(v) ? v : 'swipe';
+}
+
 // Пространство имён настроек модуля на устройстве: device[id]
 function moduleStore(app, id) {
   const subs = new Set();

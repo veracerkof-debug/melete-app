@@ -20,7 +20,7 @@ import {
   fitOf,
 } from '../workspace.js';
 import { modules, moduleById } from '../../modules/index.js';
-import { mountModule, moduleName } from '../modules.js';
+import { mountModule, moduleName, navOf } from '../modules.js';
 import { mInput, bindM, STAGE_IC } from './common.js';
 import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
@@ -28,7 +28,7 @@ import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave } from '../pure.js';
 import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
-import { spread, swipe, NOSPREAD } from '../../ui/gestures.js';
+import { spread, swipe, NOSPREAD, addPageSwipe, wideSwipe } from '../../ui/gestures.js';
 import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
 import { pickRoutine } from './routine.js';
 import { outBtnHTML, bindOutput, badgeHTML } from './outputsheet.js';
@@ -201,7 +201,7 @@ export function createSessionScreen(app) {
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
     w = fixWS(getWS(device, a, { desk: isDesk() }), sessionGroups(st(), song()), a, minOf);
     layer = document.createElement('div');
-    layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
+    layer.innerHTML = '<div class="session' + (tm ? ' toolmode' : '') + (solidOn() ? ' solid' : '') + '" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin">' +
       '<div class="shd">' + icb('data-s="hide"', IC.down, t('ses.hide'), 'sm') +
       '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
       // помодоро (слово автора 06.11.2026): касание времени — пауза, удержание — помодоро; идущий помодоро виден кольцом рядом
@@ -248,6 +248,9 @@ export function createSessionScreen(app) {
       onStill: (b) => dockMenu(b),
       onDrop: (ids) => saveDock(ids),
     });
+    // листание между инструментами (слово автора 18.11.2026): смахнуть по экрану ('swipe') или широко от края до края ('edge')
+    offPage = addPageSwipe({ min: 90, ok: (tg, p) => pageOk(tg, p) && navNow() === 'swipe', step: (d) => pageTool(d) });
+    offWide = wideSwipe(wsEl, { ok: (tg) => pageOk(tg) && navNow() === 'edge', step: (d) => pageTool(d) });
     prevOpenTool = app.openTool;
     app.openTool = openTool;
     renderWS();
@@ -256,6 +259,29 @@ export function createSessionScreen(app) {
     updClock();
     clearInterval(tickT);
     tickT = setInterval(tick, 500);
+  }
+
+  // Монолитный вид (слово автора 18.11.2026): без рамок окон, листание между инструментами; в настройках можно выключить
+  const solidOn = () => st().solidView !== false;
+  let offPage = null, offWide = null, slideDir = null, lastLayout = null;
+  const EDGE_BACK = 24; // край экрана — «Назад» Android: листание отсюда не начинается
+  const canPage = () => !!(layer && wsEl && solidOn() && w.layout === 'F' && pureI < 0 && app.active && app.active.type !== 'tool' && !layer.querySelector('.session.rot'));
+  const navNow = () => { const p = panes[w.focus]; return p && p.mod ? navOf(p.mod) : 'swipe'; };
+  const pageOk = (tg, p) => canPage() && wsEl.contains(tg) && !(p && (p.clientX < EDGE_BACK || p.clientX > innerWidth - EDGE_BACK));
+  // Соседний инструмент в порядке панели; инструменты без листания (nav: 'none') пропускаются — туда только значком
+  function pageTool(d) {
+    if (!canPage()) return false;
+    const groups = dockGroups(st(), song()), i = groups.indexOf(w.panes[w.focus]);
+    if (i < 0) return false;
+    for (let j = i + d; j >= 0 && j < groups.length; j += d) {
+      const g = groups[j];
+      if (navOf(moduleById(g) || members(st(), g)[0] || g) === 'none') continue;
+      slideDir = d > 0 ? 'l' : 'r';
+      relayout(assign, g);
+      slideDir = null;
+      return true;
+    }
+    return false;
   }
 
   function saveDock(ids) {
@@ -301,6 +327,9 @@ export function createSessionScreen(app) {
     setPanePure(-1);
     unmountAll();
     if (ro) ro.disconnect();
+    if (offPage) offPage();
+    if (offWide) offWide();
+    offPage = offWide = null;
     clearInterval(tickT);
     unOut();
     leave(layer.firstElementChild, 260);
@@ -367,6 +396,10 @@ export function createSessionScreen(app) {
     });
     dockSel();
     rotCheck();
+    // плавность: листание — сдвиг экрана, смена раскладки — мягкое проявление (css: .session.solid .ws[data-motion])
+    const mo = slideDir ? 'slide-' + slideDir : lastLayout && lastLayout !== w.layout ? 'morph' : '';
+    lastLayout = w.layout;
+    if (mo && solidOn()) { wsEl.dataset.motion = mo; setTimeout(() => { if (wsEl && wsEl.dataset.motion === mo) delete wsEl.dataset.motion; }, 340); }
   }
 
   const measure = (p) => sizeOf(w.layout, p.offsetWidth, p.offsetHeight, wsEl.offsetWidth, wsEl.offsetHeight);
