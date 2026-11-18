@@ -3,6 +3,7 @@
 // Поворот: кнопка поворачивает весь экран инструмента вместе с надписями (телефон держат горизонтально);
 // сторону подсказывает наклон телефона — повернули как удобно, и при выключенном автоповороте положение остаётся.
 // Перенесено из legacy/practice.html (pianoHTML, pianoAfter, kbHTML, обработчики клавиш, pianoSheet).
+import { bleed } from '../../ui/bleed.js'; // клавиатура до краёв окна
 import './piano.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -13,6 +14,7 @@ import { synBody, synBind, synthSheet } from './synth-panel.js';
 import { kbHTML, lastWhite } from '../../ui/keyboard.js';
 import { mName } from '../../music/notes.js';
 import { voiceLines } from '../../ui/voicelines.js';
+import { onHold } from '../../ui/hold.js';
 
 import meta, { ICON } from './meta.js';
 const I = {
@@ -42,7 +44,8 @@ const linesOn = () => !!P().vl && size !== 'strip';
 // в полоску (слово автора 14.11.2026), звук тогда — кнопкой «Звук» в шторке
 const TALL = 400;
 const tall = () => !host || !host.clientHeight || host.clientHeight >= TALL;
-const panelOn = () => size === 'full' && !P().dual && !linesOn() && tall();
+// Панель ручек — по кнопке, не по умолчанию (слово автора 18.11.2026: клавиатура — вся рабочая поверхность, ручки её съедали)
+const panelOn = () => size === 'full' && !!P().panel && !P().dual && !linesOn() && tall();
 let lastTall = true;
 let vl = null;
 
@@ -72,8 +75,8 @@ function view() {
   const kb = (m) => kbHTML(m, nw, hl ? hl.pcs : null, hl ? hl.root : null, ctx.keyLabel);
   const syn = panelOn() ? '<div class="psyn">' + synBody(ctx, true) + '</div>' : '';
   // строка кнопок (октава, клавиш, Hold…) — на своём месте, над клавишами (слово автора 06.11.2026: её не трогать)
-  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + (syn || linesOn() ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + hlBtn + bar +
-    (linesOn() ? '<canvas class="pvl" aria-hidden="true"></canvas>' : '') + '<div class="kbs">' + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
+  const inner = '<div class="pwrap' + (syn ? ' wsyn' : '') + '">' + syn + hlBtn + bar +
+    (linesOn() ? '<canvas class="pvl" aria-hidden="true"></canvas>' : '') + '<div class="kbs">' + (syn || linesOn() ? '' : '<div class="lastnote num" id="lastnote" aria-live="polite"></div>') + (dual ? kb(m0 + 12) : '') + kb(m0) + '</div></div>';
   return rot ? '<div class="protbox"><div class="prot' + (p.rotDir === 'l' ? ' l' : '') + '">' + inner + '</div></div>' : inner;
 }
 
@@ -88,6 +91,9 @@ function layout() {
   if (rot) { rot.style.width = H + 'px'; rot.style.height = W + 'px'; [W, H] = [H, W]; }
   const kbs = [...host.querySelectorAll('.pwrap .kb')];
   if (!kbs.length) return;
+  // клавиатура — до краёв окна: поля рамки сессии (по бокам и снизу) возвращаются ей; в полосе клавиши и так рядом с ‹ ›
+  const kbsEl = host.querySelector('.kbs'), padB = size === 'strip' || rot ? 0 : bleedPad();
+  if (kbsEl && !rot && size !== 'strip') { bleed(kbsEl); W = kbsEl.clientWidth || W; H += padB; }
   const n = parseInt(kbs[0].style.getPropertyValue('--n'), 10) || 8, bar = host.querySelector('.pbar'), hl = host.querySelector('.hlp');
   // полный экран: клавиши — на всю высоту (две клавиатуры — пополам), без панели и полей
   if (host.closest('.tview.pure, .pfull')) { kbs.forEach((k) => (k.style.height = Math.floor(H / kbs.length) + 'px')); markHeld(); return; }
@@ -96,7 +102,9 @@ function layout() {
   const used = (bar && !side ? bar.offsetHeight + 8 : 0) + (hl && !side ? hl.offsetHeight + 6 : 0) + (side ? 4 : 24), avail = (H - used) / kbs.length - (kbs.length > 1 ? 8 : 0);
   const ps = host.querySelector('.psyn');
   // в малых окнах сессии клавиши выше (до 7 ширин, как настоящие ≈ 6,4): иначе узкое окно оставляет пустую половину
-  let kh = Math.round(Math.max(Math.min(96, avail), Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340))); // низкая полоса — клавиши по её высоте, не выше (иначе уезжали за верх)
+  let kh = Math.round(Math.max(Math.min(96, avail), Math.min((W / n) * (size === 'full' ? 5.2 : 7), avail, 340)));
+  // клавиши на всю свободную высоту окна (последняя нота — прозрачной надписью поверх клавиш, касания проходят сквозь)
+  if (size === 'full' && !host.querySelector('.psyn, .pvl')) kh = Math.round(Math.max(96, avail)); // низкая полоса — клавиши по её высоте, не выше (иначе уезжали за верх)
   // с панелью эффектов — клавиши ровно в нижней половине, панель занимает всё, что выше
   if (ps) kh = Math.round(Math.max(96, Math.min((W / n) * 6, (H - used) * 0.5)));
   // режим линий — как с панелью: клавиши в нижней части, всё, что выше, — линии (не меньше 60 px)
@@ -127,6 +135,8 @@ function linesLayout() {
 }
 const vOn = (id, m, v) => { if (vl) vl.on(id, m, v); };
 const vOff = (id) => { if (vl) vl.off(id); };
+
+function bleedPad() { const pane = host && host.closest('.pane'); return pane ? Math.max(0, Math.round(parseFloat(getComputedStyle(pane).paddingBottom) || 0)) : 0; }
 
 function markHeld() {
   host.querySelectorAll('.kb [data-m]').forEach((k) => { k.classList.toggle('held', hold.k.has(+k.dataset.m)); if (lit.has(+k.dataset.m)) k.classList.add('down'); });
@@ -244,6 +254,8 @@ function bind() {
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
 
+  // удержать «Звук» — панель ручек над клавишами (и обратно); по умолчанию клавиатура занимает всё окно
+  onHold(host, '[data-x="psound"]', () => { const p = P(); p.panel = !p.panel; ctx.store.save(); render(); });
   on(host, 'click', (e) => {
     const st = e.target.closest('[data-step]');
     const p = P();

@@ -122,3 +122,8 @@
 .dscope{display:block;width:100%;height:84px;border-radius:14px;background:var(--fill);margin:0 0 8px;touch-action:none}
 .dstick .gltab{font-size:11px;padding:4px 0}
 .sslider.cell .ssl{gap:8px;flex:none}
+
+/* пэды — до краёв окна (src/ui/bleed.js): панель кнопок остаётся с полями */
+.pane .dwrap.bleed{width:auto}
+.dwrap.bleed .dbar{padding:8px 10px 6px}
+.dwrap.bleed .dgrid{padding:0;gap:2px}

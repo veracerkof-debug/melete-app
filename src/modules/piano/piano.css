@@ -160,3 +160,9 @@
 .pane.strip .pwrap .lastnote{display:none!important}
 .pane.strip .pbar{flex:none;margin:0;flex-wrap:nowrap}
 .pane.strip .pbar .pgrp+.pgrp{display:none}
+
+/* Клавиатура — вся рабочая поверхность (слово автора 18.11.2026): последняя нота — прозрачной надписью поверх клавиш */
+.kbs{position:relative}
+.kbs>.lastnote{position:absolute;left:0;right:0;top:6%;flex:none;height:auto;z-index:3;pointer-events:none;font-size:clamp(34px,14cqmin,96px);font-weight:300;color:var(--tint-text);opacity:.55;text-shadow:0 0 14px color-mix(in srgb,var(--bg) 70%,transparent)}
+.pane.strip .kbs>.lastnote,.pane.quarter .kbs>.lastnote{display:none}
+.kbs.bleed .kb{border-radius:0}

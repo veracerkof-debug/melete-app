@@ -16,7 +16,26 @@ const LAYOUTS = [['full', 'F', 1, 0.5], ['half', 'HH', 2, 0.5], ['quarter', 'QQ'
 // SURF: id инструмента → селектор рабочей поверхности (объединение площадей всех совпавших, внутри окна).
 // gate — порог для full/half проверяется тестом (инструмент уже приведён к правилу); иначе только измерение.
 export const SURF = {
+  // ядро замеров: инструменты, приведённые к правилу (с порогом)
   glider: { sel: '#glpad', gate: true },
+  theremin: { sel: '.tm', gate: true },
+  piano: { sel: '.kbs', gate: true },
+  // круглые и «одна кнопка» (ширина окна ограничивает круг — доля площади ниже 80 % по природе фигуры)
+  drone: { sel: '.dgrid', gate: true },
+  looper: { sel: '.lpbtn' },
+  metro: { sel: '#mwheel' },
+  theory: { sel: '.csvg' },
+  // остальные — только замер
+  studio: { sel: '.stpl canvas', seed: 'studio' },
+  show: { sel: '.shbody' },
+  voice: { sel: '.vc-stage' },
+  tuner: { sel: '.tvis' },
+  spectrum: { sel: '.spbox' },
+  vocal: { sel: '.vcv' },
+  convert: { sel: '.cvlist' },
+  beat: { sel: '.rygrid' },
+  ear: { sel: '.edgrid' },
+  book: { sel: '.swrap' },
 };
 
 test.skip(!SNAP && !Object.values(SURF).some((v) => v.gate), 'нет инструментов с порогом');
@@ -43,21 +62,27 @@ for (const [size, layout, per, ratio] of LAYOUTS) {
     const { helpers } = await import('./melete.js');
     const melete = helpers(page);
     await melete.open({ settings: { church: true, feat: { studio: true } } });
-    const ids = Object.keys(SURF).filter((id) => !ONLY.length || ONLY.includes(id));
+    const ids = Object.keys(SURF).filter((id) => (SNAP || SURF[id].gate) && (!ONLY.length || ONLY.includes(id)));
     fs.mkdirSync(OUT, { recursive: true });
     const rows = {};
     for (const id of ids) {
-      const others = ['metro', 'tuner', 'timer'].filter((x) => x !== id).slice(0, per - 1);
+      const others = ['metro', 'tuner', 'drone'].filter((x) => x !== id).slice(0, per - 1);
       await page.evaluate(({ layout, panes, ratio }) => { const d = JSON.parse(localStorage.getItem('practice.v1.tools') || '{}'); d.wsMap = { free: { layout, panes, focus: 0, sub: {}, ratio } }; localStorage.setItem('practice.v1.tools', JSON.stringify(d)); }, { layout, panes: [id, ...others], ratio });
+      if (SURF[id].seed === 'studio') await page.evaluate(async () => { // проект в старом месте — при запуске переедет в базу
+        const P = await import('/src/music/project.js'), p = P.newProject(); p.name = 'Замер'; p.id = 'psurf'; p.clips = [];
+        P.addClip(p, p.tracks.find((x) => x.kind === 'notes'), 0).len = 4;
+        const s = JSON.parse(localStorage.getItem('practice.v1')); s.projects = [p]; localStorage.setItem('practice.v1', JSON.stringify(s));
+      });
       await page.reload(); await page.waitForTimeout(700);
       await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
       await page.waitForSelector('.session .pane', { timeout: 10_000 }).catch(() => {});
       await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 }).catch(() => {});
       await page.waitForTimeout(900);
+      if (SURF[id].seed === 'studio') { await page.evaluate(() => document.querySelector('.session .pane .stproj')?.click()); await page.waitForTimeout(1200); }
       const m = await page.evaluate(measure, { id, sel: SURF[id].sel });
       rows[id] = m;
       if (SNAP) await page.screenshot({ path: path.join(OUT, size + '-' + id + '.png') });
-      if (SURF[id].gate && m) {
+      if (SURF[id].gate && m && !process.env.SURFACE_NOGATE) {
         const min = size === 'full' ? 80 : size === 'half' ? 70 : 0;
         expect(m.share, id + ' ' + size + ' ' + JSON.stringify(m)).toBeGreaterThanOrEqual(min);
       }

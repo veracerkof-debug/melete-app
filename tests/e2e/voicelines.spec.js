@@ -4,7 +4,7 @@ import { test, expect } from './melete.js';
 
 test('пиано: режим «Линии голосов» — линии от клавиш, ручки — шторкой', async ({ page, melete, errors }) => {
   await page.setViewportSize({ width: 393, height: 851 });
-  await melete.open();
+  await melete.open({ tools: { piano: { panel: true } } }); // панель ручек — по удержанию «Звук» (18.11.2026), здесь включена
   await melete.free('F', ['piano']);
   await page.waitForSelector('.pbar');
   await expect(page.locator('.psyn')).toHaveCount(1);
