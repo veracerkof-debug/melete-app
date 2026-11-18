@@ -50,4 +50,24 @@ describe('копия по частям', () => {
     expect(partCounts(base())).toMatchObject({ songs: 1, profile: 1, reading: 1, calendar: 1 });
     expect(mergeTools({ a: { x: 1 }, b: { y: 1 } }, { b: { y: 2 } })).toEqual({ a: { x: 1 }, b: { y: 2 } });
   });
+  it('инструкции: helpSeen — объединение, helpOff — если выключено на любом; настройки не переносятся', () => {
+    const a = { version: 1, songs: [], sessions: [], settings: { theme: 'light', helpSeen: { metro: 1 }, updatedAt: 1 } };
+    const b = { version: 1, songs: [], sessions: [], settings: { theme: 'dark', helpSeen: { tuner: 1, metro: 2 }, helpOff: true, updatedAt: 2 } };
+    const SYNC = ['songs', 'profile', 'reading', 'calendar'];
+    const pb = pickParts(b, SYNC);
+    expect(pb.settings.theme).toBeUndefined();
+    expect(pb.settings.helpSeen).toEqual({ tuner: 1, metro: 2 });
+    const out = applyParts(a, pb, SYNC, { fresh: true });
+    expect(out.settings.helpSeen).toEqual({ metro: 1, tuner: 1 });
+    expect(out.settings.helpOff).toBe(true);
+    expect(out.settings.theme).toBe('light');
+    // в обратную сторону своё цело
+    const back = applyParts(out, pickParts(a, SYNC), SYNC, { fresh: true });
+    expect(back.settings.helpOff).toBe(true);
+    expect(back.settings.helpSeen).toEqual({ metro: 1, tuner: 1 });
+    // старая копия без этих полей ничего не стирает
+    const old = applyParts(out, { version: 1, parts: ['profile'], songs: [], sessions: [], settings: { profile: { name: 'Я' } } }, SYNC, { fresh: true });
+    expect(old.settings.helpSeen).toEqual({ metro: 1, tuner: 1 });
+    expect(old.settings.helpOff).toBe(true);
+  });
 });

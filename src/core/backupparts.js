@@ -7,7 +7,7 @@
 export const PARTS = ['settings', 'songs', 'profile', 'reading', 'calendar'];
 
 // Поля settings, которые принадлежат другим частям
-const OWN = { songs: ['lib'], profile: ['profile', 'leagueSeen'], reading: ['bible'], calendar: ['cal'] };
+const OWN = { songs: ['lib'], profile: ['profile', 'leagueSeen', 'helpSeen', 'helpOff'], reading: ['bible'], calendar: ['cal'] };
 const OWNED = new Set(Object.values(OWN).flat());
 // Служебное этого устройства — не переносится никогда
 const LOCAL = new Set(['configured', 'sealed', 'updatedAt', 'folder']);
@@ -88,6 +88,9 @@ export function applyParts(state, p, parts, { fresh = false } = {}) {
   if (on.has('profile')) {
     out.sessions = byId(out.sessions, p.sessions);
     if (P.profile && (!fresh || takeProfile(S.profile, P.profile))) S.profile = clone(P.profile);
+    // инструкции инструментов (help.js): отмечено на любом устройстве — отмечено везде; выключено на любом — выключено
+    if (P.helpSeen && typeof P.helpSeen === 'object') S.helpSeen = { ...P.helpSeen, ...(S.helpSeen && typeof S.helpSeen === 'object' ? S.helpSeen : {}) };
+    if (P.helpOff) S.helpOff = true;
     if (P.leagueSeen != null) S.leagueSeen = Math.max(+S.leagueSeen || 0, +P.leagueSeen || 0) || P.leagueSeen;
   }
   if (on.has('reading') && P.bible) {
