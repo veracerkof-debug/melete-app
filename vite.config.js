@@ -74,7 +74,7 @@ function ortAssets(mode) {
       // ORT ссылается на свой .wasm через import.meta.url (запасной путь, у нас не используется: пути заданы явно, ort/…) —
       // Vite кладёт из-за этого вторую копию .wasm (28 МБ) в assets/; убираем её
       Object.keys(bundle).forEach((k) => { if (/ort-wasm-simd-threaded[^/]*\.wasm$/.test(k)) delete bundle[k]; });
-      if (mode !== 'web') ORT_FILES.forEach((n) => { if (existsSync(join(ORT, n))) this.emitFile({ type: 'asset', fileName: 'ort/' + n, source: readFileSync(join(ORT, n)) }); });
+      if (mode !== 'web' && mode !== 'showcase') ORT_FILES.forEach((n) => { if (existsSync(join(ORT, n))) this.emitFile({ type: 'asset', fileName: 'ort/' + n, source: readFileSync(join(ORT, n)) }); });
     },
   };
 }
@@ -97,9 +97,10 @@ const packsOut = () => {
 };
 // Веб-версия без тяжёлого: рабочий поток разделения на дорожки подменяется пустышкой (ONNX Runtime и demucs.js в сборку
 // не попадают), модель из public/models/ после сборки удаляется (public/ копируется целиком)
+// Витрина (mode showcase) — тоже без моделей (~95 МБ): тяжёлые функции в ней показаны, но не работают (DECISIONS 2026-11-15)
 const lightWeb = (mode) => {
   let out = 'dist';
-  return mode !== 'web' ? null : {
+  return mode !== 'web' && mode !== 'showcase' ? null : {
     name: 'light-web',
     configResolved(c) { out = c.build.outDir; },
     closeBundle() { rmSync(join(out, 'models'), { recursive: true, force: true }); },
@@ -112,7 +113,7 @@ export default defineConfig(({ mode }) => ({
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
   // версия — в отчёт о проблеме (src/core/report.js)
-  define: { __WEB_BUILD__: mode === 'web', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version),
+  define: { __WEB_BUILD__: mode === 'web', __SHOWCASE__: mode === 'showcase', __BUILD_TIME__: Date.now(), __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync('package.json', 'utf8')).version),
     // канал и номер сборки — от GitHub Actions (src/core/update.js): dev — каждая отправка в main, pre — тестерам; у себя — dev, 0
     __CHANNEL__: JSON.stringify(process.env.MELETE_CHANNEL === 'pre' ? 'pre' : 'dev'), __BUILD__: JSON.stringify(+process.env.BUILD_NUMBER || 0),
     // пакеты, которых нет в этой сборке (скачиваются по кнопке)

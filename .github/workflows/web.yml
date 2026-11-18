@@ -1,8 +1,10 @@
-# Веб-версия Melete — для знакомства, с любого телефона и компьютера (iPhone, Android, браузер):
-# https://veracerkof-debug.github.io/melete-app/  (демонстрация с выдуманным музыкантом — …/melete-app/show/)
-# Собирается при выпуске в pre и выкладывается в ветку gh-pages (Settings → Pages → Deploy from a branch → gh-pages).
-# Это отдельная от APK версия: без напоминаний, папки и управления звуком из шторки; данные — только в браузере
-# (постоянное хранилище и service worker — src/core/webmemory.js, public/sw.js: работает без сети, ставится на главный экран).
+# Веб-версия Melete — рабочая, с ограниченными функциями, с любого телефона и компьютера (iPhone, Android, браузер):
+# https://veracerkof-debug.github.io/melete-app/  (корень ветки gh-pages)
+# Собирается при выпуске в pre. Это отдельная от APK версия: всё, что в браузере не работает (дорожки, текст песни, напоминания,
+# папка Melete, «Звук телефона»…), в ней не показывается совсем — ни кнопок, ни заглушек (DECISIONS 2026-11-15). Данные — только
+# в браузере (постоянное хранилище и service worker — src/core/webmemory.js, public/sw.js: работает без сети, ставится на главный экран).
+# Витрина — полная копия dev с демонстрационным набором — собирается отдельно, из main (showcase.yml), по адресу …/melete-app/show/.
+# Выкладка меняет только корень ветки gh-pages и не трогает show/ (build/pages-deploy.sh).
 name: Web version (GitHub Pages)
 
 on:
@@ -38,33 +40,7 @@ jobs:
       - name: Сборка
         run: npx vite build --mode web
 
-      # Видео к демо-песне «Amazing Grace»: астронавт NASA Челл Линдгрен играет её на волынке на МКС (NASA — общественное
-      # достояние, файл с Wikimedia Commons). В репозиторий не кладётся: скачивается при сборке, сжимается в MP4 (играет
-      # и на iPhone), звук — отдельной записью. Не скачалось — демонстрация просто без видео
-      - name: Видео для демонстрации
-        continue-on-error: true
-        run: |
-          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
-          mkdir -p showcase/media
-          curl -fsSL --retry 3 -A "MeleteBuild/1.0 (https://github.com/${{ github.repository }})" -o "$RUNNER_TEMP/grace.webm" \
-            "https://upload.wikimedia.org/wikipedia/commons/8/8e/NASA_astronaut_Kjell_Lindgren_plays_Amazing_Grace_on_the_bagpipes.webm"
-          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vf "scale=-2:'min(480,ih)'" -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 96k -movflags +faststart showcase/media/amazing-grace-iss.mp4
-          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vn -c:a aac -b:a 128k showcase/media/amazing-grace-iss.m4a
-          ls -la showcase/media
-
-      # Демонстрация — выдуманный музыкант без регистрации (src/showcase/): рядом, по адресу …/melete-app/show/
-      - name: Демонстрация
-        run: |
-          npx vite build --mode showcase --outDir dist-show
-          cp -r dist-show dist/show
-
-      - name: Выложить в gh-pages
-        run: |
-          cd dist
-          touch .nojekyll
-          git init -q -b gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "Веб-версия: сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ${GITHUB_REF_NAME})"
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+      - name: Выложить в gh-pages (корень; витрина show/ остаётся)
+        env:
+          PAGES_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: build/pages-deploy.sh dist root "Веб-версия: сборка ${{ github.run_number }} (${GITHUB_SHA::7}, ${GITHUB_REF_NAME})"

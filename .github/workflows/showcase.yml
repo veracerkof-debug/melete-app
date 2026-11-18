@@ -1,0 +1,60 @@
+# Витрина Melete — полная копия dev-сборки с готовым демонстрационным набором: посмотреть и потыкать всё, что есть
+# (понятно, что часть тяжёлых функций без моделей не работает): https://veracerkof-debug.github.io/melete-app/show/
+# Собирается из main на каждую отправку — всегда свежая, как dev. Обычная веб-версия (корень gh-pages) отдельно, из pre (web.yml).
+# Выкладка меняет только show/ и не трогает корень (build/pages-deploy.sh). Данные витрины — в своём хранилище браузера
+# (src/showcase/ns.js), настоящие данные веб-версии не трогаются.
+name: Showcase (GitHub Pages /show)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', 'android/**', 'src-tauri/**', 'launcher/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# общая очередь с web.yml: обе выкладки пишут в одну ветку gh-pages
+concurrency:
+  group: web-pages
+  cancel-in-progress: false
+
+jobs:
+  showcase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Тесты
+        run: npm test
+
+      # Видео к демо-песне «Amazing Grace»: астронавт NASA Челл Линдгрен играет её на волынке на МКС (NASA — общественное
+      # достояние, файл с Wikimedia Commons). В репозиторий не кладётся: скачивается при сборке. Не скачалось — без видео
+      - name: Видео для демонстрации
+        continue-on-error: true
+        run: |
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
+          mkdir -p showcase/media
+          curl -fsSL --retry 3 -A "MeleteBuild/1.0 (https://github.com/${{ github.repository }})" -o "$RUNNER_TEMP/grace.webm" \
+            "https://upload.wikimedia.org/wikipedia/commons/8/8e/NASA_astronaut_Kjell_Lindgren_plays_Amazing_Grace_on_the_bagpipes.webm"
+          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vf "scale=-2:'min(480,ih)'" -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 96k -movflags +faststart showcase/media/amazing-grace-iss.mp4
+          ffmpeg -loglevel error -y -i "$RUNNER_TEMP/grace.webm" -vn -c:a aac -b:a 128k showcase/media/amazing-grace-iss.m4a
+          ls -la showcase/media
+
+      - name: Сборка витрины
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx vite build --mode showcase --outDir dist-show
+
+      - name: Выложить в gh-pages (show/; корень остаётся)
+        env:
+          PAGES_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: build/pages-deploy.sh dist-show show "Витрина: сборка ${{ github.run_number }} (${GITHUB_SHA::7})"
