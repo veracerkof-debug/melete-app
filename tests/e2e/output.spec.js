@@ -52,13 +52,15 @@ test('вывод: без сопряжённого устройства оста�
   expect(await page.evaluate(() => window.__melete.output.get('sound'))).toBe('local');
 });
 
-test('вывод: страница «Вывод и пульт» в настройках — режимы устройства', async ({ page, melete, errors }) => {
+test('вывод: на странице связи есть вход в шторку «Вывод» (режимы «Пульт» и «Синхронизация» — переключатели устройства, core/linkmode.js)', async ({ page, melete }) => {
   await page.goto('/');
   await seedPc(page);
   await melete.open();
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   await melete.click('[data-pp="link"]'); await page.waitForTimeout(500);
   await page.waitForSelector('[data-act="outsheet"]', { timeout: 5000 });
+  expect(await page.locator('[data-pmd]').count()).toBe(0); // второго набора переключателей режимов нет: он один, в разделе устройства
+});
   await page.locator('[data-pmd="pc:192.168.1.5:53329|control"]').evaluate((el) => el.click());
   expect(await page.evaluate(() => window.__melete.output.mode('pc:192.168.1.5:53329'))).toEqual({ control: true, sync: false });
 });

@@ -420,18 +420,12 @@ function dataHTML(app) {
 // «Телефон и компьютер» — всё, что их связывает, в одном месте: подключение и синхронизация, ансамбль, раздача песен
 // в сети и приём файлов (LocalSend)
 const linkAvail = (app) => !!((app.syncSrv && app.syncSrv.avail) || Capacitor.isNativePlatform() || (DEV && app.output));
-// «Вывод и пульт» (Melete DEV, слово автора 18.11.2026): куда уходит звук — та же шторка, что в сессии; у каждого
-// сопряжённого устройства два переключателя: «Пульт» (им можно управлять) и «Синхронизация базы» (хранение — melete.sync)
+// «Вывод» (Melete DEV, слово автора 18.11.2026): куда уходит звук — та же шторка, что в сессии. Режимы «Пульт» и «Синхронизация базы»
+// у каждого сопряжённого устройства — переключатели ниже (core/linkmode.js, хранение в melete.sync); здесь только вход в шторку
 function outputHTML(app) {
   const O = DEV && app.output;
   if (!O) return '';
-  const list = O.candidates ? O.candidates() : (O.target ? [O.target] : []);
-  const sw = (key, k, on, label) => '<label class="sw"><input type="checkbox" data-pmd="' + esc(key) + '|' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label>';
-  return '<div class="hdr">' + t('out.setTitle') + '</div><div class="group"><button class="cell act" data-act="outsheet">' + t('out.open') + '</button>' +
-    list.map((c) => { const m = O.mode ? O.mode(c.key) : {}; return '<div class="cellcol"><span class="grow"><b>' + esc(c.name || t('out.remote')) + '</b></span>' +
-      '<div class="cell"><span class="grow">' + t('out.mode.control') + '<span class="psub">' + t('out.mode.controlHint') + '</span></span>' + sw(c.key, 'control', !!m.control, t('out.mode.control')) + '</div>' +
-      '<div class="cell"><span class="grow">' + t('out.mode.sync') + '<span class="psub">' + t('out.mode.syncHint') + '</span></span>' + sw(c.key, 'sync', !!m.sync, t('out.mode.sync')) + '</div></div>'; }).join('') +
-    '</div>' + (list.length ? '' : '<p class="ftr">' + t('out.noPaired') + '</p>') + '<p class="ftr">' + t('out.setHint') + '</p>';
+  return '<div class="hdr">' + t('out.setTitle') + '</div><div class="group"><button class="cell act" data-act="outsheet">' + t('out.open') + '</button></div><p class="ftr">' + t('out.setHint') + '</p>';
 }
 function linkHTML(app) {
   return '<div class="large">' + t('page.link') + '</div><p class="ftr" style="margin-top:0">' + t(isDesktop() ? 'link.howPc' : 'link.howPh') + '</p>' +
@@ -954,7 +948,6 @@ export function createPanel(app, onChange) {
         render(); return;
       }
       if (d.psw === 'deskBg') { app.store.state.settings.deskBg = e.target.checked; app.store.settingsChanged(); (app.deskBg ? app.deskBg.apply() : Promise.resolve()).finally(() => render()); return; }
-      if (e.target.hasAttribute('data-pmd') && app.output && app.output.setMode) { const [k, f] = e.target.dataset.pmd.split('|'); app.output.setMode(k, { [f]: e.target.checked }); return; }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
       if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
