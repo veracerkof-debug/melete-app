@@ -15,8 +15,10 @@ import { uid } from '../core/time.js';
 import { DEMO_PREFIX, DEMO_SONGS, isDemo, addDemo } from '../core/demo.js';
 import { t } from '../i18n/index.js';
 import { toast } from '../ui/index.js';
+import { SOUNDS, melodyTrack, wavBlob, SR, showData, studioSong } from './showdemo.js';
+import { projectFromSong } from '../music/project.js';
 
-const LS = 'practice.v1', DONE = 'showcase.seeded.v1';
+const LS = 'practice.v1', DONE = 'showcase.seeded.v1', DONE_SHOW = 'showcase.seeded.show.v1'; // второй признак — пульт выступления и студия: у тех, кто заходил раньше, набор добавится один раз
 const lang = (() => { const l = (navigator.language || 'ru').slice(0, 2); return l === 'uz' ? 'uz' : l === 'en' ? 'en' : 'ru'; })();
 const NAME = { ru: 'Анна', en: 'Anna', uz: 'Anna' };
 
@@ -37,7 +39,8 @@ function rng(seed) {
   return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 const DAY = 86400000;
-const TOOLS = [['metro', 5], ['tuner', 3], ['piano', 2], ['theory', 2], ['drone', 1], ['glider', 1]];
+// в истории — все инструменты, чтобы статистика и «Мои занятия» в витрине были с чем-то каждым (15.11.2026)
+const TOOLS = [['metro', 5], ['tuner', 3], ['piano', 2], ['theory', 2], ['drone', 1], ['glider', 1], ['ear', 2], ['beat', 1], ['vocal', 1], ['looper', 1], ['studio', 1], ['voice', 1], ['theremin', 1]];
 const pick = (r, list) => { const tot = list.reduce((a, x) => a + x[1], 0); let v = r() * tot; for (const x of list) { v -= x[1]; if (v <= 0) return x[0]; } return list[0][0]; };
 
 // Сессии с from по to (мс). songs — [{ id, since (доля пути, когда начали учить), weight, targetBpm, currentBpm }]
@@ -130,10 +133,33 @@ async function seed(app) {
   if (store.settingsChanged) store.settingsChanged();
 }
 
+// Пульт выступления и студия: звуки, шумы и мелодии из классики синтезируются тут же (showdemo.js); файлы — в медиатеку,
+// данные — в настройки инструмента (device.show), проект — в студию
+async function seedShowDemo(app) {
+  const now = Date.now(), f = {};
+  const add = async (key, data, name, extra = {}) => {
+    const blob = wavBlob(data), id = DEMO_PREFIX + uid();
+    await app.files.add({ id, kind: 'audio', name, size: blob.size, type: 'audio/wav', video: false, songs: [], created: now, blob, dur: data.length / SR, ...extra });
+    f[key] = id;
+  };
+  const pads = { roll: 'roll', fanfare: 'fanfare', gong: 'gong', applause: 'applause', tick: 'tick', right: 'right', wrong: 'wrong', hall: 'hall', rain: 'rain', wind: 'wind' };
+  for (const [k, fn] of Object.entries(pads)) await add(k, SOUNDS[fn](), 'demo ' + k, { show: true }); // звуки пульта — не в списке медиатеки
+  for (const k of ['hall', 'rain', 'wind']) await add('n_' + k, SOUNDS[k](), 'demo noise ' + k, { show: true });
+  const names = { ode: { ru: 'Ода к радости (демо)', en: 'Ode to Joy (demo)', uz: 'Shodlik qasidasi (demo)' }, jingle: { ru: 'Бубенцы (демо)', en: 'Jingle Bells (demo)', uz: 'Qo‘ng‘iroqchalar (demo)' }, twinkle: { ru: 'Мерцай, звёздочка (демо)', en: 'Twinkle, Twinkle (demo)', uz: 'Yulduzcha (demo)' } };
+  for (const k of Object.keys(names)) { const d = melodyTrack(k); if (d) await add('t_' + k, d, names[k][lang]); }
+  const dev = app.device.show ?? (app.device.show = {});
+  Object.assign(dev, showData(f, lang, now));
+  const pr = projectFromSong(studioSong(lang)); pr.id = DEMO_PREFIX + uid();
+  app.store.state.projects = [...(app.store.state.projects || []).filter((p) => !String(p.id).startsWith(DEMO_PREFIX)), pr];
+  app.store.save(); app.saveDevice();
+}
+
 preseed();
 const app = boot(document.getElementById('app'));
+const seedShowOnce = () => seedShowDemo(app).then(() => localStorage.setItem(DONE_SHOW, '1'), (e) => { console.error('showcase show seed', e); });
+if (localStorage.getItem(DONE) && !localStorage.getItem(DONE_SHOW)) seedShowOnce().then(() => location.reload()); // заходили раньше: добавить пульт и студию
 if (!localStorage.getItem(DONE)) {
   // первый заход: песни, файлы и история — один раз, затем перезапуск с готовыми данными
   // флаг — только после удачного посева: иначе сбой посреди оставлял демо полупустым навсегда (аудит 13.11.2026)
-  seed(app).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
+  seed(app).then(() => seedShowOnce()).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
 } else setTimeout(() => toast(t('show.hello')), 1200);
