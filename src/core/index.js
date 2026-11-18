@@ -66,6 +66,7 @@ import { createSnapshots } from './snapshots.js';
 import { applyVariants } from './variants.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
+import { createDeskBg } from './deskbg.js';
 
 export function boot(root) {
   // журнал — первым: ошибки запуска тоже попадут в него
@@ -355,6 +356,9 @@ export function boot(root) {
   // связь с телефоном (sync.js): на компьютере — сервер в своей сети по переключателю; был включён — включается снова
   app.syncSrv = createSyncServer(app, { isDesktop });
   if (app.syncSrv.avail && app.syncSrv.wasOn()) app.syncSrv.start().catch(() => {});
+  // компьютер в фоне (DEV, по настройке): значок в tray, закрытие крестиком — в tray (deskbg.js, src-tauri/src/bg.rs)
+  app.deskBg = createDeskBg(app);
+  if (app.deskBg.avail && store.state.settings.deskBg) app.deskBg.apply().catch(() => {});
   // связь всех со всеми (Melete DEV): телефон тоже принимает подключения — по переключателю; был включён — снова
   app.mesh = createSyncServer(app, { isDesktop, transport: 'mesh' });
   // сервер разработки (vite dev, проверки в браузере): доступ к приложению для пульта и связи; в сборки не попадает

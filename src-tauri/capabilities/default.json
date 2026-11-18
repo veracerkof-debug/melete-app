@@ -57,6 +57,8 @@
     "allow-update-pending",
     "allow-update-install",
     "allow-update-ok",
+    "allow-bg-set",
+    "allow-bg-tip",
     "dialog:allow-save",
     "dialog:allow-open",
     "fs:allow-write-file",

@@ -48,7 +48,8 @@ import { problemOf } from '../integrity.js';
 import { APP_VERSION } from '../report.js';
 import { PLAN_IDS, dayKeyOf } from '../reading.js';
 import { planSheet } from './bibleplan.js';
-import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev, meshClient } from '../sync.js';
+import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev, meshClient, setLinkMode } from '../sync.js';
+import { modeOf, modeName } from '../linkmode.js';
 import { setlistsOf } from '../guest.js';
 import { WEB } from '../platform.js';
 import { scanQR, parsePair, pairPayload } from './qrscan.js';
@@ -434,6 +435,10 @@ function onSyncErr(e) {
   if (e && (e.reason === 'key' || e.reason === 'pin')) { const pc = pcOf(); if (pc) { syncAddr = (pc.addr || '').replace(/^https?:\/\//, '').replace(':' + PORT, ''); forgetPc(); log('sync', 'компьютер забыт: ' + e.reason + ' — нужно подключиться заново', 'w'); } }
   return syncErr(e);
 }
+// Режимы связи устройства (linkmode.js): «Пульт» и «Синхронизация базы» — два переключателя; scope — чей это список:
+// 'srv' (подключившиеся к компьютеру), 'mesh' (к этому телефону), 'pc' (компьютер, к которому подключён телефон), 'dev' (мои устройства)
+const modeSw = (scope, id, entry) => { const m = modeOf(entry); return ['rc', 'sync'].map((k) => '<div class="cell sub"><span class="grow">' + t('lm.' + k) + '<span class="psub">' + t('lm.' + k + '.sub') + '</span></span><label class="sw"><input type="checkbox" data-lm="' + k + '" data-lms="' + scope + '" data-lmid="' + esc(id) + '"' + (m[k] ? ' checked' : '') + ' aria-label="' + esc(t('lm.' + k)) + '"><i></i></label></div>').join(''); };
+const modeHint = (entry) => t('lm.is.' + modeName(entry));
 const ago = (ts) => { if (!ts) return t('sy.never'); const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('sy.just') : m < 60 ? t('sy.min', { n: m }) : new Date(ts).toLocaleString(); };
 function syncHTML(app) {
   const S = app.syncSrv;
@@ -445,9 +450,9 @@ function syncHTML(app) {
         (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
         // QR (слово автора 06.11.2026): телефон наводит камеру — адрес, код и отпечаток без ввода
         (st.ips[0] ? '<div class="syqr" data-qr="' + esc(pairPayload(st.ips[0], st.code, st.fp || '')) + '">' + qrHTML(pairPayload(st.ips[0], st.code, st.fp || '')) + '</div><span class="l2">' + t('qr.pcHint') + '</span>' : '') + '</div>' : '') +
-      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + modeHint(x) + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="syforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>' + modeSw('srv', x.key, x)).join('') +
       '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
-      '</div><p class="ftr">' + (st.err === 'port' && !st.on ? '<b class="danger">' + t('sy.err.port2') + '</b><br>' : '') + t('sy.pcHint') + '</p>';
+      '</div><p class="ftr">' + (st.err === 'port' && !st.on ? '<b class="danger">' + t('sy.err.port2') + '</b><br>' : '') + t('sy.pcHint') + ' ' + t('lm.what') + '</p>' + deskBgHTML(app);
   }
   if (!Capacitor.isNativePlatform()) return '';
   const pc = pcOf();
@@ -459,12 +464,21 @@ function syncHTML(app) {
     '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('qr.scan') + '</button></div>' + (syncMsg ? '<p class="ftr">' + esc(syncMsg) + '</p>' : ''); // как подключить — вверху раздела (link.howPh)
   const C = app.syncCli, busy = syncBusy || !!(C && C.busy), st = app.store.state.settings, wait = C ? C.waiting() : 0;
   return '<div class="hdr">' + t('sy.phTitle') + '</div><div class="group"><div class="cell"><span class="grow">' + esc(pc.name) + '<span class="psub">' + t('sy.last', { when: ago(pc.last) }) + (wait ? ' · ' + t('sy.waiting', { n: wait }) : '') + (pc.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(pc.fp)) : '') + '</span></span></div>' +
-    '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' +
-    (app.mesh && app.mesh.avail ? '<button class="cell act" data-act="pcrc">' + t('rc.open') + '</button>' : '') + // пульт компьютера (Melete DEV)
+    modeSw('pc', '', pc) +
+    (modeOf(pc).sync ? '<button class="cell act" data-act="synow"' + (busy ? ' disabled' : '') + '>' + t(busy ? 'sy.busy' : 'sy.now') + '</button>' : '') +
+    (app.mesh && app.mesh.avail && modeOf(pc).rc ? '<button class="cell act" data-act="pcrc">' + t('rc.open') + '</button>' : '') + // пульт компьютера (Melete DEV)
     '<button class="cell act" data-act="ens">' + t('ens.open') + '</button>' +
-    '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
-    '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' +
-    '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t('sy.what') + ' ' + t('sy.pcWorkHint') + '</p>';
+    (modeOf(pc).sync ? '<div class="cell"><span class="grow">' + t('sy.pcWork') + '</span>' + psw('pcWork', st.pcWork !== false, t('sy.pcWork')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('sy.auto') + '</span>' + psw('syncAuto', st.syncAuto !== false, t('sy.auto')) + '</div>' : '') +
+    '<button class="cell act danger" data-act="sypcforget">' + t('sy.forgetPc') + '</button></div><p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t(modeOf(pc).sync ? 'sy.what' : 'lm.rcOnly') + ' ' + (modeOf(pc).sync ? t('sy.pcWorkHint') : '') + '</p>';
+}
+// Компьютер в фоне (DEV, deskbg.js): значок в области уведомлений, закрытие крестиком — в значок. По умолчанию выключено
+function deskBgHTML(app) {
+  const B = app.deskBg;
+  if (!B || !B.avail) return '';
+  const on = app.store.state.settings.deskBg === true;
+  return '<div class="hdr">' + t('bg.title') + '</div><div class="group"><div class="cell"><span class="grow">' + t('bg.sw') + '</span>' + psw('deskBg', on, t('bg.sw')) + '</div></div>' +
+    '<p class="ftr">' + (B.err === 'tray' ? '<b class="danger">' + t('bg.err') + '</b><br>' : '') + t('bg.hint') + (on ? '<br><b>' + t('bg.warn') + '</b>' : '') + '</p>';
 }
 // Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон принимает подключения других устройств (QR, адрес и
 // код — как у компьютера), сопряжённые устройства — списком: синхронизировать каждое, забыть. Компьютер — в разделе ниже
@@ -479,19 +493,19 @@ function meshHTML(app) {
         '<span class="l2" style="margin-top:8px">' + t('sy.code') + '</span><b class="num sybig">' + esc(st.code.slice(0, 3) + ' ' + st.code.slice(3)) + '</b>' +
         (st.fp ? '<span class="l2" style="margin-top:8px">' + t('sy.check') + ' <b class="num">' + esc(fpCheck(st.fp)) + '</b></span>' : '') +
         (payload ? '<div class="syqr" data-qr="' + esc(payload) + '">' + qrHTML(payload) + '</div><span class="l2">' + t('mesh.qrHint') + '</span>' : '') + '</div>' : '') +
-      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('mesh.in') + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="meshforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>').join('') +
+      peers.map((x) => '<div class="cell"><span class="grow">' + esc(x.name) + '<span class="psub">' + t('mesh.in') + ' · ' + modeHint(x) + ' · ' + t('sy.last', { when: ago(x.at) }) + '</span></span><button class="link danger" data-act="meshforget" data-k="' + esc(x.key) + '">' + t('sy.forget') + '</button></div>' + modeSw('mesh', x.key, x)).join('') +
       '</div>';
   }
   const devs = devsOf();
   h += '<div class="hdr">' + t('mesh.devs') + '</div><div class="group">' +
-    devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
-      '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button><button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button><button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>').join('') +
+    devs.map((d) => '<div class="cell"><span class="grow">' + esc(d.name) + '<span class="psub">' + modeHint(d) + ' · ' + t('sy.last', { when: ago(d.last) }) + (d.fp ? ' · ' + t('sy.check') + ' ' + esc(fpCheck(d.fp)) : '') + '</span></span>' +
+      (modeOf(d).rc ? '<button class="link" data-act="devrc" data-a="' + esc(d.addr) + '">' + t('rc.open') + '</button>' : '') + (modeOf(d).sync ? '<button class="link" data-act="devsync" data-a="' + esc(d.addr) + '"' + (syncBusy ? ' disabled' : '') + '>' + t('sy.now') + '</button>' : '') + '<button class="link danger" data-act="devforget" data-a="' + esc(d.addr) + '">' + t('sy.forget') + '</button></div>' + modeSw('dev', d.addr, d)).join('') +
     // подключить: телефон — QR камерой; везде — адрес и код с экрана того устройства
     (srv ? '<button class="cell act" data-act="syscan"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.add') + '</button>' : '') +
     '<label class="cell"><span>' + t('sy.addr') + '</span><input class="inp" data-mesh="addr" inputmode="decimal" placeholder="192.168.1.23" aria-label="' + esc(t('sy.addr')) + '"></label>' +
     '<label class="cell"><span>' + t('sy.code') + '</span><input class="inp" data-mesh="code" inputmode="numeric" maxlength="7" placeholder="000 000" aria-label="' + esc(t('sy.code')) + '"></label>' +
     '<button class="cell act" data-act="meshpair"' + (syncBusy ? ' disabled' : '') + '>' + t('mesh.pair') + '</button></div>' +
-    '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t(desk ? 'mesh.hintPc' : 'mesh.hint') + '</p>';
+    '<p class="ftr">' + (syncMsg ? esc(syncMsg) + '<br>' : '') + t(desk ? 'mesh.hintPc' : 'mesh.hint') + ' ' + t('lm.what') + '</p>';
   return h;
 }
 // Раздача в своей сети (src/core/guest.js, docs/guest-web.md): гости открывают песни в браузере телефона.
@@ -920,6 +934,12 @@ export function createPanel(app, onChange) {
         if (k === 'float' && on) canOverlay().then((ok) => { if (!ok) { toast(t('pl.askOverlay')); askOverlay(); } });
         return;
       }
+      if (d.lm) {
+        const patch = { [d.lm]: e.target.checked }, id = d.lmid;
+        if (d.lms === 'srv') app.syncSrv.setMode(id, patch); else if (d.lms === 'mesh') app.mesh.setMode(id, patch); else setLinkMode(patch, d.lms === 'dev' ? id : undefined);
+        render(); return;
+      }
+      if (d.psw === 'deskBg') { app.store.state.settings.deskBg = e.target.checked; app.store.settingsChanged(); (app.deskBg ? app.deskBg.apply() : Promise.resolve()).finally(() => render()); return; }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
       if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
