@@ -15,8 +15,8 @@ import { uid } from '../core/time.js';
 import { DEMO_PREFIX, DEMO_SONGS, isDemo, addDemo } from '../core/demo.js';
 import { t } from '../i18n/index.js';
 import { toast } from '../ui/index.js';
-import { SOUNDS, melodyTrack, wavBlob, SR, showData, studioSong } from './showdemo.js';
-import { projectFromSong } from '../music/project.js';
+import { wavBlob, SR } from './showdemo.js';
+import { runSeeds, seedFlag } from './seeds/index.js';
 
 const LS = 'practice.v1', DONE = 'showcase.seeded.v1', DONE_SHOW = 'showcase.seeded.show.v1'; // второй признак — пульт выступления и студия: у тех, кто заходил раньше, набор добавится один раз
 const lang = (() => { const l = (navigator.language || 'ru').slice(0, 2); return l === 'uz' ? 'uz' : l === 'en' ? 'en' : 'ru'; })();
@@ -133,33 +133,28 @@ async function seed(app) {
   if (store.settingsChanged) store.settingsChanged();
 }
 
-// Пульт выступления и студия: звуки, шумы и мелодии из классики синтезируются тут же (showdemo.js); файлы — в медиатеку,
-// данные — в настройки инструмента (device.show), проект — в студию
-async function seedShowDemo(app) {
-  const now = Date.now(), f = {};
-  const add = async (key, data, name, extra = {}) => {
-    const blob = wavBlob(data), id = DEMO_PREFIX + uid();
+// Демо-данные инструментов (seeds/index.js): у каждого инструмента свой посев, один раз; новые инструменты и посевы
+// добавляются зашедшим раньше при следующем заходе. Звуки, шумы и мелодии синтезируются тут же (showdemo.js)
+async function seedTools(app) {
+  const now = Date.now();
+  let seq = 0;
+  // прежний признак (пульт и студия, до 15.11.2026) — эти два посева уже сделаны
+  if (localStorage.getItem(DONE_SHOW)) ['show', 'studio'].forEach((id) => localStorage.setItem(seedFlag(id), '1'));
+  const addFile = async (data, name, extra = {}) => {
+    const blob = wavBlob(data), id = DEMO_PREFIX + uid() + '-' + (seq++); // номер — чтобы подряд созданные файлы не получали один id (uid по времени)
     await app.files.add({ id, kind: 'audio', name, size: blob.size, type: 'audio/wav', video: false, songs: [], created: now, blob, dur: data.length / SR, ...extra });
-    f[key] = id;
+    return id;
   };
-  const pads = { roll: 'roll', fanfare: 'fanfare', gong: 'gong', applause: 'applause', tick: 'tick', right: 'right', wrong: 'wrong', hall: 'hall', rain: 'rain', wind: 'wind' };
-  for (const [k, fn] of Object.entries(pads)) await add(k, SOUNDS[fn](), 'demo ' + k, { show: true }); // звуки пульта — не в списке медиатеки
-  for (const k of ['hall', 'rain', 'wind']) await add('n_' + k, SOUNDS[k](), 'demo noise ' + k, { show: true });
-  const names = { ode: { ru: 'Ода к радости (демо)', en: 'Ode to Joy (demo)', uz: 'Shodlik qasidasi (demo)' }, jingle: { ru: 'Бубенцы (демо)', en: 'Jingle Bells (demo)', uz: 'Qo‘ng‘iroqchalar (demo)' }, twinkle: { ru: 'Мерцай, звёздочка (демо)', en: 'Twinkle, Twinkle (demo)', uz: 'Yulduzcha (demo)' } };
-  for (const k of Object.keys(names)) { const d = melodyTrack(k); if (d) await add('t_' + k, d, names[k][lang]); }
-  const dev = app.device.show ?? (app.device.show = {});
-  Object.assign(dev, showData(f, lang, now));
-  const pr = projectFromSong(studioSong(lang)); pr.id = DEMO_PREFIX + uid();
-  app.store.state.projects = [...(app.store.state.projects || []).filter((p) => !String(p.id).startsWith(DEMO_PREFIX)), pr];
-  app.store.save(); app.saveDevice();
+  return runSeeds({ app, lang, now, addFile });
 }
 
 preseed();
 const app = boot(document.getElementById('app'));
-const seedShowOnce = () => seedShowDemo(app).then(() => localStorage.setItem(DONE_SHOW, '1'), (e) => { console.error('showcase show seed', e); });
-if (localStorage.getItem(DONE) && !localStorage.getItem(DONE_SHOW)) seedShowOnce().then(() => location.reload()); // заходили раньше: добавить пульт и студию
-if (!localStorage.getItem(DONE)) {
+const seedToolsOnce = () => seedTools(app).then((n) => { if (n) console.info('showcase: посев инструментов — ' + n); return n; }, (e) => { console.error('showcase seed', e); return 0; });
+if (localStorage.getItem(DONE)) seedToolsOnce().then((n) => { if (n) location.reload(); }); // заходили раньше: добавить то, чего ещё не было
+else {
   // первый заход: песни, файлы и история — один раз, затем перезапуск с готовыми данными
   // флаг — только после удачного посева: иначе сбой посреди оставлял демо полупустым навсегда (аудит 13.11.2026)
-  seed(app).then(() => seedShowOnce()).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
-} else setTimeout(() => toast(t('show.hello')), 1200);
+  seed(app).then(() => seedToolsOnce()).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
+}
+if (localStorage.getItem(DONE)) setTimeout(() => toast(t('show.hello')), 1200);

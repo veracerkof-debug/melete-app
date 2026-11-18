@@ -38,6 +38,27 @@ function loopify(b, sec = 0.4) {
 }
 const norm = (b, peak = 0.9) => { let m = 0; for (const v of b) m = Math.max(m, Math.abs(v)); if (m > 0) { const k = peak / m; for (let i = 0; i < b.length; i++) b[i] *= k; } return b; };
 
+/* ---------- записи для лупера и диктофона (в медиатеку) ---------- */
+// Петля лупера: бочка, малый, хэт, бас и аккорды Am – Dm – E7 – Am, 90 ударов, 4 такта дважды; диктофон: «идея» щипком
+export const EXTRA = {
+  loop() {
+    const beat = 60 / 90, bars = 4, one = bars * 4 * beat, b = buf(one * 2 + 0.5), r = rng(21), ch = [[57, 60, 64], [50, 53, 57], [52, 56, 59], [57, 60, 64]], bass = [45, 38, 40, 45];
+    for (let rep = 0; rep < 2; rep++) for (let bar = 0; bar < bars; bar++) {
+      const t0 = rep * one + bar * 4 * beat;
+      for (let k = 0; k < 4; k++) {
+        const t = t0 + k * beat;
+        if (k % 2 === 0) { const i0 = Math.round(t * SR), n = Math.round(0.18 * SR); for (let i = 0; i < n && i0 + i < b.length; i++) { const tt = i / SR; b[i0 + i] += 0.7 * Math.sin(TAU * (50 + 90 * Math.exp(-tt * 25)) * tt) * Math.exp(-tt * 14); } }
+        else noise(b, t, 0.16, r, { gain: 0.35, decay: 0.05, lp: 0.6, hp: 0.04 });
+        noise(b, t, 0.05, r, { gain: 0.12, decay: 0.012, lp: 0.9, hp: 0.6 }); noise(b, t + beat / 2, 0.05, r, { gain: 0.08, decay: 0.012, lp: 0.9, hp: 0.6 });
+      }
+      tone(b, t0, hz(bass[bar] ), 2 * beat, { gain: 0.3, decay: 0.7, partials: [[1, 1], [2, 0.3]] }); tone(b, t0 + 2 * beat, hz(bass[bar] + 7), 2 * beat, { gain: 0.25, decay: 0.7, partials: [[1, 1], [2, 0.3]] });
+      ch[bar].forEach((m) => { tone(b, t0, hz(m), 3.8 * beat, { gain: 0.07, decay: 1.4, partials: [[1, 1], [2, 0.2]], saw: true }); });
+    }
+    return norm(b);
+  },
+  idea() { const b = buf(12), notes = [57, 60, 64, 69, 64, 60, 57, 62, 65, 69, 65, 62, 59, 62, 67, 71, 67, 62]; notes.forEach((m, i) => tone(b, 0.3 + i * 0.6, hz(m), 1.6, { gain: 0.25, decay: 0.45, partials: [[1, 1], [2, 0.5], [3, 0.3], [4, 0.15]], saw: false })); return norm(b); },
+};
+
 /* ---------- звуки падов ---------- */
 export const SOUNDS = {
   roll() { const b = buf(3.6), r = rng(1); let t = 0, step = 0.11; while (t < 2.9) { noise(b, t, 0.12, r, { gain: 0.25 + 0.5 * t / 2.9, decay: 0.03, lp: 0.55, hp: 0.05 }); t += step; step = Math.max(0.035, step * 0.965); } noise(b, 3.0, 0.6, r, { gain: 0.7, decay: 0.3, lp: 0.9, hp: 0.6 }); return norm(b); },
