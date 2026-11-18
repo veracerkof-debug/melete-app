@@ -61,6 +61,3 @@ test('вывод: на странице связи есть вход в штор
   await page.waitForSelector('[data-act="outsheet"]', { timeout: 5000 });
   expect(await page.locator('[data-pmd]').count()).toBe(0); // второго набора переключателей режимов нет: он один, в разделе устройства
 });
-  await page.locator('[data-pmd="pc:192.168.1.5:53329|control"]').evaluate((el) => el.click());
-  expect(await page.evaluate(() => window.__melete.output.mode('pc:192.168.1.5:53329'))).toEqual({ control: true, sync: false });
-});

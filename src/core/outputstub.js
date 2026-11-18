@@ -48,6 +48,14 @@ export function extendOutput(out, app) {
   if (!out.candidates) out.candidates = cands;
   if (!out.setTarget) out.setTarget = (key) => { const c = cands().find((x) => x.key === key); out.target = c ? { key: c.key, name: c.name } : null; };
   if (!out.setAll) out.setAll = (mode) => { if (!MODES.includes(mode)) return; CATS.forEach((c) => out.set(c, mode)); };
+  // единственное сопряжённое устройство — цель по умолчанию (для вида и для выбора «Оба»/«Компьютер»)
+  const real = Object.getOwnPropertyDescriptor(out, 'target');
+  if (real && real.get) {
+    Object.defineProperty(out, 'target', { configurable: true, enumerable: real.enumerable,
+      get() { return real.get.call(out) || cands()[0] || null; }, set(v) { real.set.call(out, v); } });
+  }
+  const setRaw = out.set.bind(out);
+  out.set = (cat, mode) => { if (mode !== 'local' && !real.get.call(out)) { const c = cands()[0]; if (c) out.target = { key: c.key, name: c.name }; } return setRaw(cat, mode); };
   if (!out.ping) out.ping = async () => ({ ok: false, rtt: out.state && out.state.rtt != null ? out.state.rtt : null }); // замер задержки — делает транспорт (core/link.js)
   return out;
 }
