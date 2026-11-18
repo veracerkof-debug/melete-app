@@ -47,3 +47,6 @@ public/tmp-*
 # Graphify — граф кода строится при начале сессии (.claude/graphify-start.sh), в репозиторий не кладётся
 graphify-out/
 screens-out/
+
+# рабочие копии параллельных агентов Claude — не в репозиторий
+.claude/worktrees/
