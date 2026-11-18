@@ -259,9 +259,10 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' || S.page === 'bed' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
-    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
+  if (ctx.output) ctx.output.refresh(host);
   paint();
   clearInterval(deskT); deskT = 0;
   if (S.page === 'desk') { deskPaint(); deskT = setInterval(() => deskPaint(), 100); }
@@ -771,6 +772,7 @@ export default {
     host.addEventListener('input', onInput);
     host.addEventListener('change', onChange);
     host.addEventListener('keydown', onKey);
+    if (ctx.output) offs.push(ctx.output.bind(host, { cat: 'media' })); // вывод на другое устройство — та же шторка, что в сессии
     offs.push(swipe(host, { left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
     const vis = () => { if (document.visibilityState === 'visible') awake(); };
     document.addEventListener('visibilitychange', vis);

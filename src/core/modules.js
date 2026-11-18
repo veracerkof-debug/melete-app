@@ -20,6 +20,7 @@ import { guardOpen, guardClose } from './guard.js';
 import { isOn, setFeature } from './settings.js';
 import { moduleById } from '../modules/index.js';
 import { createSetlists } from './metrosets.js';
+import { outBtnHTML, bindOutput, outRefresh } from './screens/outputsheet.js';
 
 export const SIZES = ['full', 'half', 'quarter', 'strip'];
 
@@ -175,6 +176,8 @@ export function makeCtx(app, mod) {
       get saves() { return !app.store.state.settings.toolsOnly; },
       tags: () => FREE_TAGS.map((v) => ({ value: v, label: freeTagName(v) })),
     },
+    // Вывод на другое устройство (dev; null — нет): btn(cls) → html кнопки «Вывод», bind(root, { cat }) → отписка, refresh(root)
+    output: app.output ? { btn: (cls) => outBtnHTML(app, cls), bind: (root, o) => bindOutput(app, root, o), refresh: (root) => outRefresh(app, root) } : null,
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => app.openTool && app.openTool(id),
     // Своё расписание инструмента в «Неделе» (дни, время, напоминание называет инструмент) — шторка занятия
