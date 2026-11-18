@@ -1,0 +1,44 @@
+/* Вывод на другое устройство (core/screens/outputsheet.js): кнопка, значок в углу окна, шторка */
+.outbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;min-width:40px;padding:0 10px;border-radius:999px;background:var(--fill);color:var(--ink);font:600 14px var(--font);white-space:nowrap;max-width:46vw;position:relative;-webkit-tap-highlight-color:transparent}
+.outbtn svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.outbtn .outl{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.outbtn.away{background:color-mix(in srgb,var(--tint) 16%,var(--fill));color:var(--tint)}
+.outbtn .outdot{display:none;position:absolute;top:5px;right:5px}
+.outbtn.away .outdot{display:block}
+.outdot{width:8px;height:8px;border-radius:50%;background:var(--l3);flex:none}
+.outdot.big{width:12px;height:12px}
+[data-k="ok"]>.outdot,.outdot[data-k="ok"]{background:#4F9A5F}
+[data-k="slow"]>.outdot,.outdot[data-k="slow"]{background:#D8A23A}
+[data-k="bad"]>.outdot,.outdot[data-k="bad"]{background:#C8503F}
+[data-k="connecting"]>.outdot,.outdot[data-k="connecting"]{background:#D8A23A;animation:outpulse 1s ease-in-out infinite}
+@keyframes outpulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.outdot{animation:none!important}}
+/* узкое окно: только значок (в шапке сессии — на телефоне; подпись цели видна в значках окон) */
+@container (max-width: 420px){.shout .outl{display:none}.shout{padding:0 9px}}
+/* значок в углу окна инструмента: не перехватывает касаний */
+.outbadge{position:absolute;left:6px;top:6px;z-index:3;display:inline-flex;align-items:center;gap:4px;max-width:60%;padding:3px 8px 3px 6px;border-radius:999px;background:color-mix(in srgb,var(--bg) 72%,transparent);color:var(--l2);font:600 12px var(--font);pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.outbadge svg{flex:none;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.outbadge span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outbadge[data-k="ok"] svg{color:#4F9A5F}.outbadge[data-k="slow"] svg,.outbadge[data-k="connecting"] svg{color:#D8A23A}.outbadge[data-k="bad"] svg,.outbadge[data-k="off"] svg{color:#C8503F}
+.pane.pfull>.outbadge,.pane.strip>.outbadge{display:none}
+/* шторка */
+.outrow{min-height:48px}
+.outrow[disabled]{opacity:.5}
+.outrow .bksub{display:block;font-size:13px;color:var(--l2);margin-top:1px}
+.outerr{color:#C8503F}
+.outmore{min-height:48px}
+.outchev{width:20px;height:20px;fill:none;stroke:var(--l2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.outchev.up{transform:rotate(180deg)}
+.outcat .seg button{min-height:40px}
+.outcat.hot{background:color-mix(in srgb,var(--tint) 8%,transparent)}
+/* шапка сессии: лишняя колонка под кнопку «Вывод» */
+.shd:has(.sout){grid-template-columns:auto auto auto minmax(0,1fr) auto auto auto}
+.sout{max-width:34vw;padding:0 9px}
+.sout .outl{display:none}
+@media (min-width:640px){.sout .outl{display:inline}.sout{padding:0 12px 0 10px}}
+/* сцена: тёмный фон */
+.stage .outbtn{background:rgba(255,255,255,.07);color:inherit;min-height:44px}
+.stage .outbtn.away{color:#E8C27A;background:rgba(232,194,122,.16)}
+.stage .outbtn .outl{max-width:26vw}
+.shout{flex:none}
+@media (max-width:479px){.session:not(.toolmode) .shd:has(.sout) .stitle2{display:none}}

@@ -18,6 +18,7 @@ import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
 import { swipe, pinch } from '../../ui/gestures.js';
 import { onHold, holdMenu } from '../../ui/hold.js';
+import { outBtnHTML, bindOutput, outRefresh } from './outputsheet.js';
 const fmtDur = (sec) => Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0');
 
 const RESUME = 'melete.stage';
@@ -264,7 +265,7 @@ export function openStage(app, evId, i = 0) {
     S.el.classList.toggle('night', !!S.night);
     S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
       '<div class="sghead"><b>' + esc(s.title) + '</b><span>' + esc([S.i + 1 + ' / ' + L.length, it.key ? keyLabel(it.key) : '', it.capo ? t('stage.capoN', { n: it.capo }) : '', it.bpm ? it.bpm + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span></div>' +
-      '<i class="sgbeat" aria-hidden="true"></i>' +
+      '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
       '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? (it.scroll ? '<i class="sgprog" aria-hidden="true"><i></i></i>' : '') + '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
         '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>' +
@@ -273,6 +274,7 @@ export function openStage(app, evId, i = 0) {
       '<div class="sgbar"><button class="sgbtn" data-sg="prev"' + (S.i ? '' : ' disabled') + ' aria-label="' + esc(t('stage.prev')) + '">' + I.prev + '</button>' +
       '<button class="sgbtn main' + (S.playing ? ' on' : '') + '" data-sg="play" aria-label="' + esc(t(S.playing ? 'stage.stop' : 'stage.play')) + '">' + (S.playing ? I.stop : I.play) + '</button>' +
       '<button class="sgbtn" data-sg="next"' + (S.i < L.length - 1 ? '' : ' disabled') + ' aria-label="' + esc(t('stage.nextBtn')) + '">' + I.next + '</button></div>';
+    outRefresh(app, S.el);
     fit();
   };
 
@@ -325,6 +327,7 @@ export function openStage(app, evId, i = 0) {
     S.el && S.el.removeEventListener('scroll', onUserScroll, true);
     if (S.scrollRaf) cancelAnimationFrame(S.scrollRaf);
     offG.forEach((f) => f());
+    if (S.unOut) S.unOut();
     if (S.el) { S.el.removeEventListener('click', onClick); S.el.remove(); S.el = null; }
     try { localStorage.removeItem(RESUME); } catch { /* */ }
     document.documentElement.classList.remove('onstage');
@@ -337,6 +340,7 @@ export function openStage(app, evId, i = 0) {
   S.el.setAttribute('role', 'dialog');
   S.el.setAttribute('aria-label', t('stage.title'));
   S.el.addEventListener('click', onClick);
+  S.unOut = bindOutput(app, S.el); // вывод на другое устройство (dev): та же шторка, что в сессии
   document.body.appendChild(S.el);
   document.documentElement.classList.add('onstage');
   S.offBeat = audio.metro.onBeat(beat);

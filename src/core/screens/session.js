@@ -31,6 +31,7 @@ import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
 import { spread, swipe, NOSPREAD } from '../../ui/gestures.js';
 import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
 import { pickRoutine } from './routine.js';
+import { outBtnHTML, bindOutput, badgeHTML } from './outputsheet.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -205,7 +206,7 @@ export function createSessionScreen(app) {
       '<button class="stime' + (a.mode === 'strict' ? ' gold' : '') + '" data-s="pause" id="stime" aria-label="' + esc(t('ses.pause')) + '"' + (a.mode === 'strict' ? ' title="' + esc(t('track.strictTitle')) + '"' : '') + '><i class="sdot"></i>' + (hide ? '' : '<span id="clk" class="num">00:00</span>') + '</button>' +
       // помодоро (слово автора 06.11.2026): касание времени — пауза, удержание — помодоро; идущий помодоро виден кольцом рядом
       (tm || !isOn(st(), 'timer') ? '<span></span>' : '<button class="pchip" data-s="pomo" id="pchip" aria-label="' + esc(t('ses.pomo')) + '"' + (app.pomodoro.active() ? '' : ' hidden') + '>' + pchipHTML() + '</button>') +
-      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + (tm ? '' : '<button class="sstage" data-s="stage" aria-label="' + esc(t('stage.btn')) + '">' + STAGE_IC + '<span>' + esc(t('stage.btn')) + '</span></button>') + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
+      '<div class="stitle2">' + esc(titleOf(a)) + '</div>' + outBtnHTML(app, 'sout') + (tm ? '' : '<button class="sstage" data-s="stage" aria-label="' + esc(t('stage.btn')) + '">' + STAGE_IC + '<span>' + esc(t('stage.btn')) + '</span></button>') + icb('data-s="finish"', IC.check, t(st().toolsOnly ? 'ses.close' : 'ses.finish'), 'sm done') + '</div>' +
       (a.routine ? '<div class="splan" id="splan" role="button" tabindex="0" aria-label="' + esc(t('rt.bar')) + '"></div>' : '') +
       '<div class="ws"></div></div>' +
       (tm ? '' : '<div class="sdock"><div class="tbar" id="tpills" role="tablist" aria-label="' + esc(t('ses.tools')) + '">' +
@@ -230,6 +231,9 @@ export function createSessionScreen(app) {
     });
     ses.addEventListener('click', onClick);
     ses.addEventListener('keydown', calmWake);
+    // вывод на другое устройство (dev): кнопка в шапке (касание — шторка, удержание — телефон ↔ компьютер), значки в окнах
+    unOut(); unBind = bindOutput(app, ses);
+    if (app.output) unBadge = app.output.subscribe(paintBadges);
     calmAt = Date.now();
     if (!tm && isOn(st(), 'timer')) onHold(ses, '#stime', () => pomoSheet());
     // два пальца (слово автора 06.11.2026): развести — окно во весь экран, свести — окна звучащих инструментов
@@ -280,12 +284,25 @@ export function createSessionScreen(app) {
     panes = [];
   }
 
+  let unBind = null, unBadge = null;
+  function unOut() { if (unBind) unBind(); if (unBadge) unBadge(); unBind = unBadge = null; }
+  // значок вывода в углу окна, если категория его инструмента уходит на другое устройство (не перехватывает касаний)
+  function paintBadges() {
+    panes.forEach((p) => {
+      if (!p || !p.frame) return;
+      p.frame.querySelectorAll(':scope > .outbadge').forEach((x) => x.remove());
+      const h = p.mod ? badgeHTML(app, p.mod.id) : '';
+      if (h) p.frame.insertAdjacentHTML('beforeend', h);
+    });
+  }
+
   function hide() {
     if (!layer) return;
     setPanePure(-1);
     unmountAll();
     if (ro) ro.disconnect();
     clearInterval(tickT);
+    unOut();
     leave(layer.firstElementChild, 260);
     { const l = layer; setTimeout(() => l.remove(), 280); }
     layer = wsEl = null;
@@ -325,6 +342,7 @@ export function createSessionScreen(app) {
     const prev = panes[i];
     if (prev && prev.inst) prev.inst.unmount();
     panes[i] = { frame, mod: m, size, inst: m ? mountModule(app, m, host, size, frame) : null };
+    paintBadges();
   }
 
   function renderWS(animIdx) { return bareScope(() => renderWSNow(animIdx)); }

@@ -63,7 +63,8 @@ import { initLocalSend } from './localsend.js';
 import { initDesktop } from './desktop.js';
 import { createUpdater } from './update.js';
 import { createSnapshots } from './snapshots.js';
-import { applyVariants } from './variants.js';
+import { applyVariants, DEV } from './variants.js';
+import { createOutputStub } from './outputstub.js'; // временно: вместо него — ./output.js (одна строка ниже)
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 import { createDeskBg } from './deskbg.js';
@@ -283,6 +284,7 @@ export function boot(root) {
   setTimeout(() => clockNotice(app), 1500);
   const session = createSessionScreen(app);
   app.session = session;
+  if (DEV) app.output = createOutputStub(app); // единственная точка вывода на другое устройство (слияние: заменить на настоящий слой output.js)
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
   activity = app.activity = createActivity(app, { soundingAudio });
   // Мелета-тамагочи: по желанию рядом на занятии, слушает (если разрешено) и говорит, как идёт
