@@ -284,5 +284,6 @@
   "sing.hi": "eng baland {n}",
   "sing.phr": "Jumla {n}: {p} % — qayta kuylash",
   "sing.micDenied": "Mikrofonga ruxsat yo‘q",
-  "sing.micNone": "Mikrofon topilmadi"
+  "sing.micNone": "Mikrofon topilmadi",
+  "showBtn": "Chiqish pulti"
 }

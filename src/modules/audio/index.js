@@ -26,11 +26,13 @@ import { readMidiSong } from '../../music/daw.js';
 import { after, cancel } from '../../audio/clock.js';
 import { voice } from '../../audio/metronome.js';
 import { fmtDur } from '../../core/format.js';
+import { DEV } from '../../core/variants.js';
 import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './marks.js';
 
 import meta, { ICON } from './meta.js';
 import { createSing } from './sing.js';
 const I = {
+  show: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>',
   share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
   mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
@@ -138,7 +140,7 @@ const st = () => ctx.store.all();
 const variantOf = (x) => !!(x && x.conv && Array.isArray(x.conv.src) && x.conv.src.length === 1 && ctx.files.get(x.conv.src[0]));
 const variantsOf = (x) => ctx.files.list('audio').filter((r) => r.conv && Array.isArray(r.conv.src) && r.conv.src.length === 1 && r.conv.src[0] === x.id);
 const fmtOf = (x) => (((x.conv && x.conv.fmt) || (x.name.match(/\.([a-z0-9]{2,5})$/i) || [])[1] || (x.type || '').split('/')[1] || '?') + '').toUpperCase();
-const tracks = () => ctx.files.list('audio').filter((x) => !x.stem && !variantOf(x));
+const tracks = () => ctx.files.list('audio').filter((x) => !x.stem && !x.show && !variantOf(x)); // show — звуки пульта выступления: в списке медиатеки не видны
 // удалить запись вместе с её дорожками
 // Запись целиком: дорожки, ноты и все её форматы
 async function removeWithStems(id) { const x = ctx.files.get(id); for (const r of [...stemsOf(ctx.files, id), ...(x ? variantsOf(x) : [])]) await ctx.files.remove(r.id); await ctx.files.remove(id); }
@@ -941,7 +943,7 @@ function libHTML() {
   let h = '<div class="medlib"><div class="mlhead">' + (sel
     ? '<button class="link mlsall" data-x="mlsall">' + t(allOn ? 'selNone' : 'selAll') + '</button><b class="mlselt" aria-live="polite">' + t('selN', { n: sel.size }) + '</b><button class="link b" data-x="mlseloff">' + t('done') + '</button>'
     : '<label class="mlsearch">' + I.search + '<input type="search" data-mlq placeholder="' + t('search') + '" aria-label="' + t('search') + '" value="' + esc(ML.q) + '"></label>' +
-      (all.length ? '<button class="link mlselon" data-x="mlselon">' + t('select') + '</button>' : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm')) + '</div>' +
+      (all.length ? '<button class="link mlselon" data-x="mlselon">' + t('select') + '</button>' : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm') + (DEV && ctx.hasTool('show') ? icb('data-x="ashow"', I.show, t('showBtn'), 'sm') : '')) + '</div>' +
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
     [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
@@ -1601,6 +1603,7 @@ function act(a, el) {
     case 'arate1': setRate(nextRate()); render(); break; // следующая ступень по кругу (…→ 100 % → первая)
     case 'alist': trackSheet(); break;
     case 'aadd': addFile(); break;
+    case 'ashow': ctx.openTool('show'); break;
     case 'apick': pickSheet(curSong()); break;
     case 'aload2': { const x = ctx.files.get(el.dataset.id); if (x) { load(x); render(); } break; }
     case 'astyle': styleSheet(); break;

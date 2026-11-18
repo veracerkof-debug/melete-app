@@ -285,5 +285,6 @@
   "sing.hi": "highest {n}",
   "sing.phr": "Phrase {n}: {p} % — sing again",
   "sing.micDenied": "No microphone access",
-  "sing.micNone": "No microphone found"
+  "sing.micNone": "No microphone found",
+  "showBtn": "Show desk"
 }

@@ -1,0 +1,71 @@
+// Звуки пульта: игра падов на подложной звуковой системе (src/audio/showpads.js)
+import { describe, it, expect } from 'vitest';
+import { createShowPads } from '../src/audio/showpads.js';
+import { newPad } from '../src/music/show.js';
+
+function fakeCtx() {
+  const c = { currentTime: 0, made: [] };
+  const param = () => ({ value: 0, setValueAtTime(v) { this.value = v; }, linearRampToValueAtTime(v) { this.last = v; }, setTargetAtTime(v) { this.target = v; }, cancelScheduledValues() {}, cancelAndHoldAtTime() {} });
+  const node = () => ({ gain: param(), connect(x) { return x; }, disconnect() {} });
+  c.createGain = () => node();
+  c.createBufferSource = () => { const s = { ...node(), started: null, stopped: null, loop: false, start(t, o, d) { s.started = { t, o, d }; }, stop(t) { s.stopped = t; setTimeout(() => s.onended && s.onended(), 0); } }; c.made.push(s); return s; };
+  c.decodeAudioData = async () => ({ duration: 4 });
+  return c;
+}
+const setup = () => {
+  const c = fakeCtx(), dest = { context: c, connect() {} };
+  const files = { f1: { arrayBuffer: async () => new ArrayBuffer(8) }, f2: { arrayBuffer: async () => new ArrayBuffer(8) } };
+  return { c, eng: createShowPads({ dest, getBlob: (id) => files[id], now: () => c.currentTime }) };
+};
+const tick = () => new Promise((r) => setTimeout(r, 5));
+
+describe('звуки пульта', () => {
+  it('пад без файла молчит и не падает', () => {
+    const { eng } = setup();
+    expect(eng.press(newPad({}))).toBe('empty');
+    expect(eng.active).toBe(0);
+  });
+  it('первое касание ждёт раскрытия файла и играет, после preload — сразу', async () => {
+    const { eng, c } = setup(), p = newPad({ file: 'f1' });
+    expect(eng.press(p)).toBe('wait'); await tick();
+    expect(c.made.length).toBe(1); expect(eng.active).toBe(1);
+    eng.stopAll(0); await tick();
+    const q = newPad({ file: 'f2' }); await eng.preload([q]);
+    expect(eng.press(q)).toBe('play'); expect(c.made.length).toBe(2);
+  });
+  it('повторное касание: с начала / стоп / поверх', async () => {
+    const { eng, c } = setup(); const mk = (again) => newPad({ file: 'f1', again }); await eng.preload([mk()]);
+    const a = mk('restart'); eng.press(a); eng.press(a); expect(c.made.length).toBe(2); expect(eng.active).toBe(1);
+    const b = mk('stop'); eng.press(b); expect(eng.press(b)).toBe('stop');
+    const l = mk('layer'); eng.press(l); eng.press(l); expect(eng.active).toBeGreaterThanOrEqual(2);
+  });
+  it('петля: повторное касание останавливает; отрезок задаёт границы', async () => {
+    const { eng, c } = setup(), p = newPad({ file: 'f1', mode: 'loop', from: 1, to: 3 }); await eng.preload([p]);
+    expect(eng.press(p)).toBe('play');
+    const s = c.made.at(-1); expect(s.loop).toBe(true); expect(s.loopStart).toBe(1); expect(s.loopEnd).toBe(3);
+    expect(eng.press(p)).toBe('stop');
+  });
+  it('группа: новый звук глушит прежний из той же группы', async () => {
+    const { eng, c } = setup(), a = newPad({ file: 'f1', group: 2 }), b = newPad({ file: 'f2', group: 2 }); await eng.preload([a, b]);
+    eng.press(a); eng.press(b);
+    expect(c.made[0].stopped).not.toBeNull(); expect(eng.active).toBe(1);
+  });
+  it('«пока держат»: отпустили — звук уходит', async () => {
+    const { eng, c } = setup(), p = newPad({ file: 'f1', mode: 'hold' }); await eng.preload([p]);
+    eng.press(p); eng.release(p); expect(c.made[0].stopped).not.toBeNull();
+  });
+  it('приглушение: пока играет пад с «приглушать» — основной тише, потом возвращается', async () => {
+    const { eng } = setup(), p = newPad({ file: 'f1', duck: true }); await eng.preload([p]);
+    eng.setDuck(40, 0.2); eng.press(p);
+    expect(eng.duckNode.gain.target).toBeCloseTo(0.6); eng.stopAll(0); await tick();
+    expect(eng.duckNode.gain.target).toBe(1);
+  });
+  it('нет файла в медиатеке: ошибка, а не тишина без объяснения', async () => {
+    const { eng } = setup(), p = newPad({ file: 'нет' });
+    expect(eng.press(p)).toBe('wait'); await tick();
+    expect(eng.failed('нет')).toBe(true); expect(eng.press(p)).toBe('error');
+  });
+  it('громкость падов: правится параметром', () => {
+    const { eng } = setup(); eng.setLevel(50); expect(eng.out.gain.target).toBeCloseTo(0.25);
+  });
+});
