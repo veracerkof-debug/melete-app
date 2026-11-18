@@ -110,3 +110,43 @@ test('пульт: ГО запускает номер с треком, метка
   expect(ev.numbers[0].done).toBe(true); expect(sh.cur).toBe(ev.numbers[1].id);
   expect(errors).toEqual([]);
 });
+
+test('фон: шум своим файлом, наплыв, пэд на квинте от тональности, фон номера', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-page="bed"]');
+  await expect(page.locator(T + '.shbedp')).toBeVisible();
+  // шум: свой файл, касание включает (наплыв), повторное — убирает
+  await page.click(T + '[data-x="noiseadd"]');
+  await page.setInputFiles('.sheet input[type="file"]', { name: 'hall.wav', mimeType: 'audio/wav', buffer: wav(3) });
+  await expect(page.locator(T + '.shnoise')).toContainText('hall', { timeout: 8000 });
+  await page.click(T + '.shnoise');
+  await expect(page.locator(T + '.shnoise.on')).toHaveCount(1, { timeout: 8000 });
+  await page.click(T + '.shnoise');
+  await expect(page.locator(T + '.shnoise.on')).toHaveCount(0, { timeout: 8000 });
+  // пэд: включить, тональность вручную — подпись сменилась
+  await page.click(T + '[data-sw="bpad"] + i, ' + T + 'label:has([data-sw="bpad"])');
+  await page.click(T + '[data-tonic="8"]');
+  await expect(page.locator(T + '.shbk')).toContainText('A♭');
+  await page.click(T + '[data-bsnd="air"]');
+  // фон номера: задан в шторке номера
+  await page.click(T + '[data-page="prog"]');
+  await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click(T + '[data-x="numnew"]');
+  await page.fill('.sheet [data-f="title"]', 'Тихий момент');
+  await page.click('.sheet [data-seg="nbed"] [data-v="set"]');
+  await page.click('.sheet [data-nnoise]:not([data-nnoise=""])');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  const sh = (await melete.toolsNow()).show;
+  expect(sh.bed.pad).toMatchObject({ on: true, tonic: 8, sound: 'air' });
+  expect(sh.noises.length).toBe(1);
+  expect(sh.events[0].numbers[0].bed).toMatchObject({ noise: sh.noises[0].id });
+  // ГО запускает номер и включает его шум
+  await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
+  await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(3);
+  await page.click(T + '[data-page="bed"]');
+  await expect(page.locator(T + '.shnoise.on')).toHaveCount(1, { timeout: 8000 });
+  expect(errors).toEqual([]);
+});

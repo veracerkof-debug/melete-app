@@ -1,6 +1,6 @@
 // Пульт выступления: данные, шкала громкости, метки и таймер (src/music/show.js)
 import { describe, it, expect } from 'vitest';
-import { faderDb, faderGain, gainFader, dbText, normalizePad, normalizeBank, resizeBank, normalizeNumber, normalizeEvent, normalizeShow, cueNow, addCue, newNumber, eventTimer, clock, parseTime, parseHhmm, hhmm, padById, bankOf, dockOf, newPad, currentNumber, nextNumber, newEvent } from '../src/music/show.js';
+import { faderDb, faderGain, gainFader, dbText, normalizePad, normalizeBank, resizeBank, normalizeNumber, normalizeEvent, normalizeShow, cueNow, addCue, newNumber, eventTimer, clock, parseTime, parseHhmm, hhmm, padById, bankOf, dockOf, newPad, currentNumber, nextNumber, newEvent, tonicFor, fifthNotes } from '../src/music/show.js';
 
 describe('шкала громкости 0…100', () => {
   it('100 — без ослабления, 50 — −12 дБ, ниже 1 — тишина', () => {
@@ -89,5 +89,25 @@ describe('идущий номер и следующий', () => {
     const e = newEvent({ numbers: [{ id: 'a' }] });
     expect(normalizeShow({ events: [e], event: e.id, cur: 'zzz' }).cur).toBeNull();
     expect(normalizeShow({ events: [e], event: e.id, cur: 'a' }).cur).toBe('a');
+  });
+});
+
+describe('фон: пэд на квинте и шумы', () => {
+  it('квинта: тоника и квинта в двух октавах, без терции', () => {
+    expect(fifthNotes(8)).toEqual([44, 51, 56, 63]);
+    expect(fifthNotes(-1)).toEqual([47, 54, 59, 66]);
+  });
+  it('тоника: вручную, иначе тональность записи со сдвигом, иначе прежняя', () => {
+    const s = normalizeShow({}), n = { kind: 'track', shift: 1 };
+    expect(tonicFor(s, n, { pc: 7 }, 3)).toBe(8);
+    expect(tonicFor(s, { kind: 'none', shift: 0 }, null, 3)).toBe(3);
+    s.bed.pad.tonic = 2; expect(tonicFor(s, n, { pc: 7 })).toBe(2);
+    expect(tonicFor(normalizeShow({}), { kind: 'track', shift: -2 }, { pc: 1 })).toBe(11);
+  });
+  it('шумы и фон: умолчания, лишнее отбрасывается', () => {
+    const s = normalizeShow({ noises: [{ file: 'f' }, { name: 'без файла' }], bed: { noise: { cur: 'нет' }, pad: { sound: 'x', tonic: 14 } } });
+    expect(s.noises.length).toBe(1); expect(s.bed.noise.cur).toBeNull(); expect(s.bed.pad.sound).toBe('warm'); expect(s.bed.pad.tonic).toBe(2);
+    expect(normalizeNumber({ bed: { pad: true, noise: 'a' } }).bed).toEqual({ pad: true, noise: 'a' });
+    expect(normalizeNumber({}).bed).toBeNull();
   });
 });

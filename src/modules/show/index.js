@@ -6,6 +6,7 @@ import './show.css';
 import meta from './meta.js';
 import { createShowPads } from '../../audio/showpads.js';
 import { createShowDeck } from '../../audio/showdeck.js';
+import { createShowBed } from '../../audio/showbed.js';
 import { swipe } from '../../ui/gestures.js';
 import { sortable, buzz } from '../../ui/hold.js';
 import * as M from '../../music/show.js';
@@ -20,8 +21,8 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 
 let host = null, ctx = null, size = 'full', S = null, eng = null, unsubEng = null, edit = false;
-let deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
-const PAGES = ['prog', 'desk', 'pads'];
+let bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
+const PAGES = ['prog', 'desk', 'bed', 'pads'];
 const held = new Map(); // касание → пад «пока держат»
 
 const t = (k, v) => ctx.t(k, v), esc = (s) => ctx.ui.esc(s);
@@ -49,6 +50,32 @@ function ensureDeck() {
   if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf }); }
   if (!unsubDeck) { unsubDeck = deck.subscribe(() => deskPaint(true)); deck.setTrim(S.deckLevel); }
   return deck;
+}
+function ensureBed() {
+  if (!ctx.audio.unlock()) { ctx.ui.toast(t('noAudio')); return null; }
+  ctx.audio.release();
+  if (!bed) { const bus = ctx.audio.bus('media'); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf }); }
+  if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (S.page === 'bed') render(); }); }
+  return bed;
+}
+const anaOf = (n) => { const f = n && n.kind === 'track' ? fileOf(n.file) : null; return f && f.ana ? f.ana : null; };
+const bedTonic = (n) => M.tonicFor(S, n, anaOf(n), bed ? bed.state.tonic : 0);
+const noiseRec = (id) => S.noises.find((x) => x.id === id) || null;
+const noiseVol = (r) => Math.round((r ? r.level : 100) * S.bed.noise.level / 100);
+function padStart(n) { const b = ensureBed(); if (b) b.padOn({ pc: bedTonic(n), level: S.bed.pad.level, sound: S.bed.pad.sound }); }
+async function noiseTo(id) {
+  const b = ensureBed(); if (!b) return;
+  const r = noiseRec(id);
+  try { if (r) await b.setNoise(r.file, noiseVol(r), S.bed.noise.xfade); else b.stopNoise(S.bed.noise.xfade); S.bed.noise.cur = r ? r.id : null; save(); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('bed.noiseErr')); }
+  if (S.page === 'bed') render();
+}
+// Фон номера при его запуске: заданное в номере; тональность пэда следует за номером, если не задана вручную
+async function applyBed(n) {
+  if (n.bed) {
+    if (n.bed.pad) { S.bed.pad.on = true; padStart(n); } else if (bed && bed.state.pad) { S.bed.pad.on = false; bed.padOff(S.goFade); }
+    save();
+    if ((n.bed.noise || '') !== (S.bed.noise.cur || '')) await noiseTo(n.bed.noise || null);
+  } else if (bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n));
 }
 // Раскрыть файлы заранее: касание должно играть сразу. Сначала видимый банк и закреплённый ряд, потом остальное
 function preload() {
@@ -110,6 +137,19 @@ function progHTML() {
     (e.numbers.length ? '<div class="shlist">' + e.numbers.map(numHTML).join('') + '</div>' : '<div class="shempty"><b>' + esc(t('prog.empty')) + '</b>' + esc(t('prog.emptyText')) + '</div>') +
     '<button class="shadd" data-x="numnew">+ ' + esc(t('num.add')) + '</button></div>';
 }
+function bedHTML() {
+  const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES;
+  return '<div class="shprog shbedp"><div class="hdr">' + esc(t('bed.pad')) + '</div>' +
+    '<div class="group"><div class="cell"><span class="grow"><b class="shbk">' + esc(t('bed.keyNow', { k: tn[ton] })) + '</b><span class="st l2" style="display:block;font-size:13px">' + esc(t('bed.padOn')) + '</span></span>' + ctx.ui.sw('bpad', b.pad.on, t('bed.padOn')) + '</div></div><p class="ftr">' + esc(t('bed.padHint')) + '</p>' +
+    '<div class="hdr">' + esc(t('bed.tonic')) + '</div><div class="shchips tight">' + [['', t('bed.tonicAuto')], ...tn.map((x, i) => [String(i), x])].map(([v, l]) => { const on = (b.pad.tonic == null ? '' : String(b.pad.tonic)) === v; return '<button class="shchip' + (on ? ' on' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>'; }).join('') + '</div>' +
+    '<div class="hdr">' + esc(t('bed.sound')) + '</div><div class="shchips">' + M.PAD_SOUNDS.map((k) => '<button class="shchip' + (b.pad.sound === k ? ' on' : '') + '" data-bsnd="' + k + '" aria-pressed="' + (b.pad.sound === k) + '">' + esc(t('bed.snd.' + k)) + '</button>').join('') + '</div>' +
+    '<div class="group sgroup" style="margin-top:12px">' + slider('padlvl', t('bed.level'), b.pad.level, 0, 100, 1, lvTxt(b.pad.level)) + '</div>' +
+    '<div class="hdr">' + esc(t('bed.noise')) + '</div>' +
+    (S.noises.length ? '<div class="shnoises">' + S.noises.map((r) => '<button class="shnoise' + (b.noise.cur === r.id ? ' on' : '') + '" data-noise="' + r.id + '" aria-pressed="' + (b.noise.cur === r.id) + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div>' : '<p class="ftr">' + esc(t('bed.noiseEmpty')) + '</p>') +
+    '<div class="group" style="margin-top:8px"><button class="cell act" data-x="noiseadd"><span class="grow">' + esc(t('bed.noiseAdd')) + '</span></button></div>' +
+    '<div class="group sgroup" style="margin-top:12px">' + slider('noiselvl', t('bed.noiseLevel'), b.noise.level, 0, 100, 1, lvTxt(b.noise.level)) + slider('xfade', t('bed.xfade'), b.noise.xfade, 0.2, 20, 0.2, secTxt(b.noise.xfade)) + '</div><p class="ftr">' + esc(t('bed.noiseHint')) + '</p>' +
+    '<div class="group" style="margin-top:12px"><button class="cell" data-x="bedoff" style="color:var(--red)"><span class="grow">' + esc(t('bed.off')) + '</span></button></div></div>';
+}
 const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(label) + '</span><b class="shfv" data-fv="' + k + '">' + v + '</b><div class="shtrack" data-fader="' + k + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" style="--v:' + v + '%">' +
   '<i class="tk" style="bottom:25%"></i><i class="tk" style="bottom:50%"></i><i class="tk" style="bottom:75%"></i><div class="shfill"></div><div class="shcap"></div></div><span class="shfo" data-fo="' + k + '">' + M.dbText(v) + ' ' + esc(t('db')) + '</span></div>';
 function deskHTML() {
@@ -120,7 +160,7 @@ function deskHTML() {
       : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
     '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
     (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
-    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('pads', t('desk.sounds'), S.level) + '</div>' +
+    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + '</div>' +
     '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b></div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
@@ -169,8 +209,8 @@ function render() {
   const tm = timerText();
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
-    (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
-    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : progHTML()) + '</div></div>';
+    (S.page === 'pads' || S.page === 'bed' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
+    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   paint();
@@ -205,6 +245,9 @@ function onClick(e) {
   if ((b = g('[data-page]'))) { go(b.dataset.page); return; }
   if ((b = g('[data-bank]'))) { if (S.bank === b.dataset.bank && edit) { bankSheet(M.bankOf(S)); return; } S.bank = b.dataset.bank; save(); render(); preload(); return; }
   if ((b = g('.shpad[data-pad]'))) { const p = M.padById(S, b.dataset.pad); if (p && (edit || !p.file)) padSheet(p); return; }
+  if ((b = g('[data-tonic]'))) { S.bed.pad.tonic = b.dataset.tonic === '' ? null : +b.dataset.tonic; save(); if (bed && bed.state.pad) bed.padTonic(bedTonic(M.currentNumber(S))); render(); return; }
+  if ((b = g('[data-bsnd]'))) { S.bed.pad.sound = b.dataset.bsnd; save(); if (bed) bed.padSound(S.bed.pad.sound); render(); return; }
+  if ((b = g('[data-noise]'))) { const r = noiseRec(b.dataset.noise); if (!r) return; if (edit) noiseSheet(r); else noiseTo(S.bed.noise.cur === r.id ? null : r.id); return; }
   if ((b = g('.shpad[data-cell]'))) { newPadAt(+b.dataset.cell, !!b.dataset.dock); return; }
   if ((b = g('[data-num]'))) { const n = cur() && cur().numbers.find((x) => x.id === b.dataset.num); if (n) numSheet(n); return; }
   const x = g('[data-x]'); if (!x) return;
@@ -218,6 +261,8 @@ function onClick(e) {
     case 'evnew': newEvent(); break;
     case 'numnew': newNumber(); break;
     case 'go': goNext(); break;
+    case 'noiseadd': pickFile({ pad: true }, (id) => { const f = fileOf(id); S.noises.push({ id: 's' + Date.now().toString(36), name: f ? f.name : '', file: id, level: 100 }); save(); render(); }); break;
+    case 'bedoff': S.bed.pad.on = false; S.bed.noise.cur = null; save(); if (bed) { bed.padOff(S.goFade); bed.stopNoise(S.goFade); } render(); break;
     case 'pp': playPause(); break;
     case 'fadeout': if (deck) deck.stop(S.goFade); break;
     case 'mark': addMark(); break;
@@ -228,7 +273,21 @@ function stopAll() {
   const run = () => { if (eng) eng.stopAll(0.2); };
   if (S.ui.confirmStop) ctx.ui.confirm(t('stopAllAsk'), '', t('stopAll')).then((ok) => { if (ok) run(); }); else run();
 }
+function onChange(e) {
+  if (e.target.dataset.sw === 'bpad') {
+    S.bed.pad.on = e.target.checked; save();
+    if (S.bed.pad.on) padStart(M.currentNumber(S)); else if (bed) bed.padOff(S.goFade);
+  }
+}
 function onInput(e) {
+  const sk = e.target.dataset && e.target.dataset.s;
+  if (sk && ['padlvl', 'noiselvl', 'xfade'].includes(sk)) {
+    const v = +e.target.value, o = host.querySelector('[data-o="' + sk + '"]');
+    if (sk === 'padlvl') { S.bed.pad.level = v; if (bed) bed.padLevel(v); if (o) o.textContent = lvTxt(v); }
+    else if (sk === 'noiselvl') { S.bed.noise.level = v; const r = noiseRec(S.bed.noise.cur); if (bed && r) bed.noiseTrim(noiseVol(r)); if (o) o.textContent = lvTxt(v); }
+    else { S.bed.noise.xfade = v; if (o) o.textContent = secTxt(v); }
+    save(); return;
+  }
   if (e.target.matches('[data-lv]')) {
     S.level = +e.target.value; const o = host.querySelector('#shlv'); if (o) o.textContent = S.level;
     if (eng) eng.setLevel(S.level); else if (ensureEng()) eng.setLevel(S.level);
@@ -240,6 +299,7 @@ function onInput(e) {
 
 async function startNumber(n, from = 0) {
   S.cur = n.id; save();
+  applyBed(n).catch((e) => ctx.logErr(e));
   if (n.kind === 'track' && n.file) {
     const d = ensureDeck();
     if (!d) { render(); return; }
@@ -272,6 +332,7 @@ const fdPrev = {}; let fdTap = { k: '', t: 0 };
 function fdSet(k, v) {
   v = Math.max(0, Math.min(100, Math.round(v)));
   if (k === 'deck') { S.deckLevel = v; if (deck) deck.setTrim(v); else if (eng || ensureDeck()) deck && deck.setTrim(v); }
+  else if (k === 'bed') { S.bedLevel = v; if (bed || ensureBed()) bed.setLevel(v); }
   else { S.level = v; if (eng) eng.setLevel(v); else if (ensureEng()) eng.setLevel(v); }
   const tr = host && host.querySelector('[data-fader="' + k + '"]'); if (!tr) return;
   tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v);
@@ -281,7 +342,7 @@ function onFaderDown(e) {
   const tr = e.target.closest && e.target.closest('[data-fader]'); if (!tr) return;
   const k = tr.dataset.fader, r = () => tr.getBoundingClientRect();
   const now = performance.now();
-  if (fdTap.k === k && now - fdTap.t < 320) { const cur0 = k === 'deck' ? S.deckLevel : S.level; if (cur0 > 0) { fdPrev[k] = cur0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
+  if (fdTap.k === k && now - fdTap.t < 320) { const cur0 = k === 'deck' ? S.deckLevel : k === 'bed' ? S.bedLevel : S.level; if (cur0 > 0) { fdPrev[k] = cur0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
   fdTap = { k, t: now };
   try { tr.setPointerCapture(e.pointerId); } catch { /* */ }
   const at = (y) => { const b = r(); fdSet(k, (1 - (y - b.top) / b.height) * 100); };
@@ -431,6 +492,27 @@ function settingsSheet() {
   }, { onClose: render });
 }
 
+function noiseSheet(r) {
+  const body = () => ctx.ui.snav(t('bed.noise'), { right: '<button class="link b r" data-close>' + esc(t('editDone')) + '</button>' }) +
+    '<div class="group"><div class="cellcol"><span>' + esc(t('bed.noiseName')) + '</span><input class="shfield" data-f="name" maxlength="40" value="' + esc(r.name) + '" aria-label="' + esc(t('bed.noiseName')) + '"></div></div>' +
+    '<div class="group sgroup" style="margin-top:12px">' + slider('level', t('pad.level'), r.level, 0, 100, 1, lvTxt(r.level)) + '</div>' +
+    '<div class="group" style="margin-top:16px"><button class="cell" data-x="del" style="color:var(--red)"><span class="grow">' + esc(t('bed.noiseDel')) + '</span></button></div>';
+  ctx.ui.sheet(body, (el, sh) => {
+    el.addEventListener('input', (e) => {
+      if (e.target.dataset.f === 'name') { r.name = e.target.value.slice(0, 40); save(); }
+      if (e.target.dataset.s === 'level') { r.level = +e.target.value; const o = el.querySelector('[data-o="level"]'); if (o) o.textContent = lvTxt(r.level); if (bed && S.bed.noise.cur === r.id) bed.noiseTrim(noiseVol(r)); save(); }
+    });
+    el.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-x="del"]')) return;
+      if (S.bed.noise.cur === r.id) { S.bed.noise.cur = null; if (bed) bed.stopNoise(S.bed.noise.xfade); }
+      const f = fileOf(r.file); S.noises = S.noises.filter((x) => x.id !== r.id);
+      if (f && f.show && !S.noises.some((x) => x.file === r.file) && !allPads().some((x) => x.file === r.file)) ctx.files.remove(r.file);
+      if (bed) bed.forget(r.file);
+      save(); sh.close();
+    });
+  }, { onClose: render });
+}
+
 /* ---------- выбор файла ---------- */
 
 // opts.pad — файл добавляется как звук (в списке медиатеки не показывается); cur — выбранный сейчас
@@ -527,6 +609,9 @@ function numSheet(n) {
     '<div class="group" style="margin-top:12px">' + row(t('num.kind'), ctx.ui.seg('nkind', M.NUM_KINDS.map((v) => [v, t('num.kind.' + v)]), n.kind, t('num.kind'))) +
       (n.kind === 'track' ? '<button class="cell" data-x="pick"><span class="grow">' + esc(t('num.file')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(f() ? f().name : t('num.noFile')) + '</span></span><span class="val">' + esc(t('pad.pick')) + '</span></button>' : '') + '</div>' +
     (n.kind === 'track' ? '<div class="group sgroup" style="margin-top:12px">' + slider('shift', t('num.shift'), n.shift, -12, 12, 1, (n.shift > 0 ? '+' : n.shift < 0 ? '−' : '') + Math.abs(n.shift)) + slider('level', t('num.level'), n.level, 0, 100, 1, lvTxt(n.level)) + slider('fadeIn', t('num.fadeIn'), n.fadeIn, 0, 30, 0.5, secTxt(n.fadeIn)) + slider('fadeOut', t('num.fadeOut'), n.fadeOut, 0, 30, 0.5, secTxt(n.fadeOut)) + '</div><p class="ftr" id="shkey">' + esc(keyLine()) + '</p>' : '') +
+    '<div class="hdr">' + esc(t('num.bed')) + '</div><div class="group">' + row(t('num.bed'), ctx.ui.seg('nbed', [['keep', t('num.bed.keep')], ['set', t('num.bed.set')]], n.bed ? 'set' : 'keep', t('num.bed'))) +
+      (n.bed ? '<div class="cell"><span class="grow">' + esc(t('num.bed.pad')) + '</span>' + ctx.ui.sw('nbpad', n.bed.pad, t('num.bed.pad')) + '</div>' +
+        '<div class="cellcol"><span>' + esc(t('num.bed.noise')) + '</span><div class="shchips" style="margin-top:8px"><button class="shchip' + (!n.bed.noise ? ' on' : '') + '" data-nnoise="">' + esc(t('num.bed.none')) + '</button>' + S.noises.map((r) => '<button class="shchip' + (n.bed.noise === r.id ? ' on' : '') + '" data-nnoise="' + r.id + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div></div>' : '') + '</div>' +
     '<div class="hdr">' + esc(t('num.note')) + '</div><div class="group"><textarea class="shfield area" data-f="note" maxlength="4000" placeholder="' + esc(t('num.noteHint')) + '" aria-label="' + esc(t('num.note')) + '">' + esc(n.note) + '</textarea></div>' +
     '<div class="hdr">' + esc(t('num.cues')) + '</div><div class="group">' + n.cues.map((c) => '<div class="shcue" data-cue="' + c.id + '"><input class="tt" data-ct inputmode="decimal" value="' + M.mmss(c.t) + '" aria-label="' + esc(t('num.cueTime')) + '"><input data-cx maxlength="200" value="' + esc(c.text) + '" placeholder="' + esc(t('num.cueText')) + '" aria-label="' + esc(t('num.cueText')) + '"><button data-x="cuedel" aria-label="' + esc(t('num.del')) + '">' + I.trash + '</button></div>').join('') +
       '<button class="cell act" data-x="cueadd"><span class="grow">' + esc(t('num.cueAdd')) + '</span></button></div><p class="ftr">' + esc(t('num.cuesHint')) + '</p>' +
@@ -535,6 +620,8 @@ function numSheet(n) {
   ctx.ui.sheet(body, (el, sh) => {
     el.addEventListener('click', async (ev) => {
       const g = (s) => ev.target.closest(s); let b;
+      if ((b = g('[data-seg="nbed"] [data-v]'))) { n.bed = b.dataset.v === 'set' ? { pad: S.bed.pad.on, noise: S.bed.noise.cur || '' } : null; touch(); sh.update(); return; }
+      if ((b = g('[data-nnoise]'))) { if (n.bed) n.bed.noise = b.dataset.nnoise; touch(); sh.update(); return; }
       if (g('[data-x="run"]')) { sh.close(); S.page = 'desk'; save(); await startNumber(n); return; }
       if ((b = g('[data-seg="nkind"] [data-v]'))) { n.kind = b.dataset.v; Object.assign(n, M.normalizeNumber(n)); touch(); sh.update(); }
       else if (g('[data-x="pick"]')) pickFile({ cur: n.file }, (id) => { n.file = id; if (id && !n.title) n.title = (fileOf(id) || {}).name || ''; const r = fileOf(id); if (r && r.dur && !n.dur) n.dur = Math.round(r.dur); touch(); sh.update(); });
@@ -550,13 +637,15 @@ function numSheet(n) {
         const v = +ev.target.value; n[s] = v;
         const o = el.querySelector('[data-o="' + s + '"]');
         if (o) o.textContent = s === 'level' ? lvTxt(v) : s === 'shift' ? (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) : secTxt(v);
-        if (s === 'shift') { const k = el.querySelector('#shkey'); if (k) k.textContent = keyLine(); }
+        if (s === 'shift') { const k = el.querySelector('#shkey'); if (k) k.textContent = keyLine(); if (S.cur === n.id) { if (deck) deck.setShift(v); if (bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n)); } }
+        if (s === 'level' && S.cur === n.id && deck) deck.setLevel(v);
       }
       touch();
     });
     el.addEventListener('change', (ev) => {
       const f = ev.target.dataset.f;
       if (ev.target.dataset.sw === 'ndone') { n.done = ev.target.checked; touch(); return; }
+      if (ev.target.dataset.sw === 'nbpad') { if (n.bed) n.bed.pad = ev.target.checked; touch(); return; }
       if (f === 'at') { const v = ev.target.value.trim() ? M.parseHhmm(ev.target.value) : null; n.at = v; sh.update(); touch(); }
       else if (f === 'dur') { const v = ev.target.value.trim() ? M.parseTime(ev.target.value) : 0; n.dur = v == null ? n.dur : v; sh.update(); touch(); }
       else if (ev.target.matches('[data-ct]')) { const c = n.cues.find((x) => x.id === ev.target.closest('[data-cue]').dataset.cue), v = M.parseTime(ev.target.value); if (c && v != null) { c.t = v; n.cues.sort((x, y) => x.t - y.t); } sh.update(); touch(); }
@@ -585,6 +674,7 @@ export default {
     host.addEventListener('pointerup', onUp);
     host.addEventListener('pointercancel', onUp);
     host.addEventListener('input', onInput);
+    host.addEventListener('change', onChange);
     offs.push(swipe(host, { left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
     const vis = () => { if (document.visibilityState === 'visible') awake(); };
     document.addEventListener('visibilitychange', vis);
@@ -598,8 +688,9 @@ export default {
   unmount() {
     clearInterval(tickT); clearInterval(deskT); deskT = 0; cancelAnimationFrame(raf); raf = 0;
     offs.splice(0).forEach((f) => f());
-    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); }
+    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); host.removeEventListener('change', onChange); }
     held.clear();
+    if (bed) { bed.padOff(0.5); bed.stopNoise(0.5); if (unsubBed) { unsubBed(); unsubBed = null; } }
     if (deck) { deck.stop(0.3); if (unsubDeck) { unsubDeck(); unsubDeck = null; } }
     if (eng) { eng.stopAll(0.3); if (unsubEng) { unsubEng(); unsubEng = null; } }
     try { if (wake) wake.release(); } catch { /* уже */ }

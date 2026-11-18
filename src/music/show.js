@@ -7,6 +7,7 @@
 export const PAD_MODES = ['shot', 'loop', 'hold']; // один раз / петля до повторного касания / пока держат
 export const PAD_AGAIN = ['restart', 'stop', 'layer']; // повторное касание играющего пада: с начала / стоп / поверх
 export const PAD_COLORS = ['pink', 'amber', 'teal', 'green', 'red', 'violet', 'blue', 'gray'];
+export const PAD_SOUNDS = ['warm', 'soft', 'air']; // тембры фонового пэда на квинте
 export const NUM_KINDS = ['track', 'none']; // номер с треком и номер без трека
 export const COLS = [2, 5], ROWS = [1, 6]; // границы сетки банка
 
@@ -86,6 +87,8 @@ export function normalizeNumber(n) {
   o.fadeOut = clamp(o.fadeOut, 0, 60, 0);
   o.cues = (Array.isArray(o.cues) ? o.cues : []).filter((c) => c && Number.isFinite(+c.t)).map((c) => ({ id: c.id || uid('c'), t: Math.max(0, +c.t), text: String(c.text || '').slice(0, 200) })).sort((a, b) => a.t - b.t);
   o.done = !!o.done;
+  // фон номера: null — не менять то, что звучит; иначе при запуске номера: пэд вкл/выкл и шум (id из S.noises, '' — без шума)
+  o.bed = o.bed && typeof o.bed === 'object' ? { pad: !!o.bed.pad, noise: typeof o.bed.noise === 'string' ? o.bed.noise : '' } : null;
   return o;
 }
 export const newNumber = (o = {}) => normalizeNumber({ id: uid('n'), ...o });
@@ -146,7 +149,14 @@ export function normalizeShow(s = {}) {
   o.v = 1;
   o.ui = { ...DEFAULT_UI, ...(o.ui || {}) };
   Object.keys(DEFAULT_UI).forEach((k) => { o.ui[k] = !!o.ui[k]; });
-  o.page = pick(o.page, ['prog', 'desk', 'pads'], 'prog');
+  o.page = pick(o.page, ['prog', 'desk', 'bed', 'pads'], 'prog');
+  o.bedLevel = clamp(o.bedLevel, 0, 100, 70);            // фейдер фона (пэд и шум вместе)
+  o.noises = (Array.isArray(o.noises) ? o.noises : []).filter((x) => x && typeof x.file === 'string').map((x) => ({ id: x.id || uid('s'), name: String(x.name || '').slice(0, 40), file: x.file, level: clamp(x.level, 0, 100, 100) })).slice(0, 40);
+  const bd = o.bed && typeof o.bed === 'object' ? o.bed : {}, bp = bd.pad || {}, bn = bd.noise || {};
+  o.bed = {
+    pad: { on: !!bp.on, sound: pick(bp.sound, PAD_SOUNDS, 'warm'), level: clamp(bp.level, 0, 100, 60), tonic: Number.isFinite(+bp.tonic) && bp.tonic !== null && bp.tonic !== '' ? ((Math.round(+bp.tonic) % 12) + 12) % 12 : null }, // tonic null — от номера
+    noise: { cur: o.noises.some((x) => x.id === bn.cur) ? bn.cur : null, level: clamp(bn.level, 0, 100, 70), xfade: clamp(bn.xfade, 0.2, 20, 6) },
+  };
   o.deckLevel = clamp(o.deckLevel, 0, 100, 85);          // фейдер основного трека
   o.goFade = clamp(o.goFade, 0, 10, 2);                  // с: плавный переход по «ГО», если у номера свой уход не задан
   o.cur = typeof o.cur === 'string' ? o.cur : null;      // идущий номер
@@ -183,3 +193,13 @@ export function nextNumber(s) {
   const i = e.numbers.findIndex((n) => n.id === s.cur);
   return e.numbers.slice(i + 1).find((n) => !n.done) || (i < 0 ? e.numbers.find((n) => !n.done) || null : null);
 }
+
+export const TONIC_NAMES = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+// Тоника фона для номера: заданная вручную, иначе тональность записи со сдвигом, иначе прежняя (или до)
+export function tonicFor(s, n, ana, last = 0) {
+  if (s.bed.pad.tonic != null) return s.bed.pad.tonic;
+  if (n && n.kind === 'track' && ana && Number.isFinite(ana.pc)) return (((ana.pc + n.shift) % 12) + 12) % 12;
+  return last;
+}
+// Ноты квинтового пэда (MIDI): тоника и квинта в двух октавах — два звука, без терции, поэтому ни мажор, ни минор
+export function fifthNotes(pc) { const b = 36 + (((pc % 12) + 12) % 12); return [b, b + 7, b + 12, b + 19]; }
