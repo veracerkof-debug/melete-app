@@ -264,8 +264,13 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   }
   let cur = size, live = null, closed = false;
   const setSize = (next) => { frame.classList.remove(...SIZES); frame.classList.add(next); frame.dataset.size = next; cur = next; };
+  const failed = (e) => { // упавший mount не должен валить остальные окна и сессию: заглушка вместо инструмента
+    logErr('mod', e); live = null;
+    try { mod.unmount(host); } catch { /* частично смонтированное — убрать за собой */ }
+    try { host.innerHTML = '<div class="modload err" role="alert"><span class="mlic" style="--c:' + mod.color + '">' + mod.icon + '</span><p>' + ui.esc(coreT('mod.loadErr')) + '</p></div>'; } catch { /* */ }
+  };
   const start = () => {
-    mod.mount(host, ctx, cur);
+    try { mod.mount(host, ctx, cur); } catch (e) { failed(e); return; }
     // инструмент, где играют несколькими пальцами: пока открыт — системный снимок экрана тремя пальцами не срабатывает
     // (у остальных — медиатека, ноты, тюнер… — защиты нет: она выключала бы и запись экрана)
     const guarded = !!mod.multitouch;
@@ -300,7 +305,7 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
     ctx,
     resize(next) {
       setSize(next);
-      if (live) mod.resize(next);
+      if (live) { try { mod.resize(next); } catch (e) { logErr('mod', e); } }
       log('mod', mod.id + ' → ' + next);
     },
     unmount() {
