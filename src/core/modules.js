@@ -86,6 +86,7 @@ export function makeCtx(app, mod) {
     num: fmtNum,
     store: moduleStore(app, mod.id),
     audio: app.audio,
+    output: app.output, // вывод на другое устройство: get/set цели категории, share для движков (core/output.js)
     mic: { request: () => app.audio.openMic() },
     // Сигналы метронома без звука (вспышка, фонарик, вибрация): info() → { vibrate, torch } — что есть на устройстве
     pulse: app.pulse,

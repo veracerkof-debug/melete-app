@@ -40,3 +40,14 @@ export function createOutputStub(app) {
   };
   return out;
 }
+
+// Дополнения над настоящим слоем (core/output.js) для шторки «Вывод»: список устройств-кандидатов, выбор устройства по ключу,
+// «всё на…», проверка связи. Настоящий слой хранит выбор и гонит события; здесь только то, что нужно интерфейсу
+export function extendOutput(out, app) {
+  const cands = () => { let pc = null, devs = []; try { pc = pcOf(); devs = devsOf(); } catch { /* связь не готова */ } return candidates(pc, devs); };
+  if (!out.candidates) out.candidates = cands;
+  if (!out.setTarget) out.setTarget = (key) => { const c = cands().find((x) => x.key === key); out.target = c ? { key: c.key, name: c.name } : null; };
+  if (!out.setAll) out.setAll = (mode) => { if (!MODES.includes(mode)) return; CATS.forEach((c) => out.set(c, mode)); };
+  if (!out.ping) out.ping = async () => ({ ok: false, rtt: out.state && out.state.rtt != null ? out.state.rtt : null }); // замер задержки — делает транспорт (core/link.js)
+  return out;
+}

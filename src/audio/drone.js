@@ -198,6 +198,7 @@ export function createDrone({ mixer, getSettings, getA4 = () => 440 }) {
   const changed = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   const dr = {
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+    notify: changed, // слой вывода (core/output-hooks.js): состояние «у них» поменялось — окна и арпеджиатор перечитывают
     get on() { return !!nodes; },
     // звучит ли хоть что-то: пэд или клавиши
     get sounding() { return !!nodes || keys.size > 0; },

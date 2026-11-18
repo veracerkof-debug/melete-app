@@ -64,7 +64,8 @@ import { initDesktop } from './desktop.js';
 import { createUpdater } from './update.js';
 import { createSnapshots } from './snapshots.js';
 import { applyVariants, DEV } from './variants.js';
-import { createOutputStub } from './outputstub.js'; // временно: вместо него — ./output.js (одна строка ниже)
+import { extendOutput } from './outputstub.js'; // дополнения над output.js для шторки «Вывод»
+import { createOutput } from './output.js';
 import { mountUpdateBar } from './screens/update.js';
 import { initWhatsNew } from './screens/whatsnew.js';
 import { createDeskBg } from './deskbg.js';
@@ -234,6 +235,8 @@ export function boot(root) {
     get active() { return active; },
     set active(a) { active = a; saveActive(a); },
   };
+  // вывод на другое устройство (DEV; docs/link.md): цели по категориям, умолчание — всё у себя
+  app.output = createOutput({ device, audio, save: () => saveDevice(device), enabled: DEV });
   app.rec = createRecorder(app, { onDiskFail: () => toast(t('rec.diskFail')) });
   // запись, оборванная сбоем или выгрузкой приложения, — склеить из кусков на диске и вернуть в медиатеку
   setTimeout(() => app.rec.recover().then((l) => l.forEach((r) => toast(t('rec.recoveredToast', { name: r.name })))).catch(() => {}), 2500);
@@ -284,7 +287,7 @@ export function boot(root) {
   setTimeout(() => clockNotice(app), 1500);
   const session = createSessionScreen(app);
   app.session = session;
-  if (DEV) app.output = createOutputStub(app); // единственная точка вывода на другое устройство (слияние: заменить на настоящий слой output.js)
+  if (DEV) extendOutput(app.output, app); // кандидаты, выбор устройства, «всё на…», проверка связи для шторки (слой — core/output.js)
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
   activity = app.activity = createActivity(app, { soundingAudio });
   // Мелета-тамагочи: по желанию рядом на занятии, слушает (если разрешено) и говорит, как идёт

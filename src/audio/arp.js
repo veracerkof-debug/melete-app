@@ -129,6 +129,8 @@ export const arpStat = { notes: 0, glide: 0 };
 
 // Движок: drone — пэды (что звучит), synth — общий синтезатор, metro — метроном, mixer — шины, getArp() — настройки
 export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 = () => 440 }) {
+  // звучит ли пэд у себя (слой вывода подменяет drone.on тенью «пэд играет на другом устройстве» — тогда арпеджиатор молчит)
+  const dOn = () => (drone.local ? drone.local.on : drone.on);
   let timer = 0, next = 0, step = 0, bar = null, prevName = null, keyN = 0, glide = null, gNext = 0, gNote = 0;
   let sig = '', lad = null, root = 0, keyPc = null, scale = null; // звучащий аккорд и его лесенка, тональность
   let psig = '', gsig = '', gBusyAt = 0, gFirst = true; // подпись настроек рисунка и спутника: правка слышна сразу, не со следующего такта
@@ -149,7 +151,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
   function tick() {
     const c = getContext(mixer.state.mode), a = normalizeArp(getArp());
     lastC = c;
-    if (!c || !a.on || !drone.on) { stop(); return; }
+    if (!c || !a.on || !dOn()) { stop(); return; }
     const d = getDrone(), per = RATES[a.rate], st = beatLen() / per, steps = per * 4;
     const anc = anchor();
     if (anc != null) { const k = Math.ceil((next - anc) / st - 0.001); const snap = anc + k * st; if (Math.abs(snap - next) > 0.004) next = Math.max(c.currentTime + 0.02, snap); }
@@ -264,7 +266,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
     glideOff();
   }
   // пэд зазвучал или смолк, настройку включили — арпеджиатор сам идёт или стоит
-  const sync = () => { const a = normalizeArp(getArp()); if (a.on && drone.on) start(); else stop(); };
+  const sync = () => { const a = normalizeArp(getArp()); if (a.on && dOn()) start(); else stop(); };
   drone.subscribe(sync);
   // trace и time — для окна сигнала в настройках (только чтение)
   return { sync, start, stop, trace, time: () => (lastC ? lastC.currentTime : 0), get running() { return !!timer; } };

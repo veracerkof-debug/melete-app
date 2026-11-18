@@ -43,6 +43,8 @@ function destNode() {
     master.connect(lim); lim.connect(bus); }
   return master;
 }
+// Вывод на другое устройство (DEV, core/output.js): методы движков уходят туда, куда выбрано для категории; по умолчанию — у себя
+function shareOut(cat, name, engine, methods, o) { try { if (ctx.output && ctx.output.enabled) ctx.output.share(cat, name, engine, methods, o); } catch (e) { ctx.logErr(e); } }
 function ensureEng() {
   if (!ctx.audio.unlock()) { ctx.ui.toast(t('noAudio')); return null; }
   ctx.audio.release();
@@ -50,20 +52,25 @@ function ensureEng() {
     const bus = destNode();
     if (!bus) return null;
     eng = createShowPads({ dest: bus, getBlob: blobOf, getNorm: () => S.norm, known: (id) => { const f = fileOf(id); return f && Number.isFinite(f.lufs) ? { lufs: f.lufs, peak: f.pk } : null; }, onMeasure: (id, m) => saveLoud(id, m) });
+    shareOut('sound', 'show.pads', eng, ['press', 'release', 'stop', 'stopAll', 'setLevel', 'setDuck'], { ret: { press: 'play' }, drop: () => eng.stopAll(0.4) });
   }
   if (!unsubEng) { unsubEng = eng.subscribe(kick); eng.setLevel(S.level); eng.setDuck(S.duckAmount, S.duckTime); }
   return eng;
 }
 function ensureDeck() {
   const en = ensureEng(); if (!en) return null;
-  if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf }); }
+  if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf });
+    shareOut('media', 'show.deck', deck, ['start', 'stop', 'pause', 'resume', 'seek', 'setLevel', 'setNorm', 'setShift', 'setTrim'], { ret: { start: () => Promise.resolve(0), resume: () => Promise.resolve() }, drop: () => deck.stop(0.3) });
+  }
   if (!unsubDeck) { unsubDeck = deck.subscribe(() => deskPaint(true)); deck.setTrim(S.deckLevel); }
   return deck;
 }
 function ensureBed() {
   if (!ctx.audio.unlock()) { ctx.ui.toast(t('noAudio')); return null; }
   ctx.audio.release();
-  if (!bed) { const bus = destNode(); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf }); }
+  if (!bed) { const bus = destNode(); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf });
+    shareOut('sound', 'show.bed', bed, ['padOn', 'padOff', 'padTonic', 'padLevel', 'padSound', 'setNoise', 'stopNoise', 'noiseTrim', 'setLevel'], { ret: { setNoise: () => Promise.resolve() }, drop: () => { bed.padOff(0.4); bed.stopNoise(0.4); } });
+  }
   if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (S.page === 'bed') render(); }); }
   return bed;
 }
