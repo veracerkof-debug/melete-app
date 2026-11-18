@@ -105,7 +105,19 @@ function render() {
   stopListen();
   releaseAll();
   host.innerHTML = view();
+  bleed();
   dense();
+}
+
+// Доска — до краёв окна (слово автора 18.11.2026): рамка окна сессии оставляет поля 6–14 px по бокам и снизу,
+// у доски они возвращаются отрицательным отступом; сверху остаётся ручка окна и кнопка «во весь экран»
+function bleed() {
+  const g = host && host.querySelector('.gl'), pane = host && host.closest('.pane');
+  if (!g || !pane) return;
+  const cs = getComputedStyle(pane), px = (v) => Math.max(0, Math.round(parseFloat(v) || 0));
+  g.style.margin = '0 -' + px(cs.paddingRight) + 'px -' + px(cs.paddingBottom) + 'px -' + px(cs.paddingLeft) + 'px';
+  g.style.width = 'auto';
+  g.classList.add('bleed');
 }
 
 // Мало места между подписями — подписываем только «до» и тонику (в ладу нот меньше — места больше)
@@ -486,7 +498,7 @@ export default {
     if (!probed) { c.audio.mixer.probe('glider', () => touches.size > 0); probed = true; }
     render();
     bind();
-    ro = new ResizeObserver(() => dense());
+    ro = new ResizeObserver(() => { bleed(); dense(); });
     ro.observe(host);
   },
   resize(sz) { size = sz; render(); },

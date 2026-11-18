@@ -2,7 +2,8 @@
 .gl{flex:1;display:flex;min-height:0;width:100%;height:100%}
 .glpad{position:relative;flex:1;min-height:80px;border-radius:16px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair;
   background:linear-gradient(0deg,color-mix(in srgb,var(--tint) 3%,var(--cell)),color-mix(in srgb,var(--tint) 16%,var(--cell)))}
-.tview.imm .glpad{border-radius:0}
+.tview.imm .glpad,.gl.bleed .glpad{border-radius:0 0 var(--pane-r,18px) var(--pane-r,18px)}
+.gl.bleed{width:auto}
 .glk{position:absolute;top:0;bottom:0;pointer-events:none}
 .glk.b{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .glk.off{background:color-mix(in srgb,var(--ink) 8%,transparent)}
