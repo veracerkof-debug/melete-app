@@ -188,5 +188,8 @@
   "num.bed.pad": "Kvinta padi",
   "num.bed.noise": "Shovqin",
   "num.bed.none": "Shovqinsiz",
-  "desk.bed": "Fon"
+  "desk.bed": "Fon",
+  "desk.master": "Umumiy",
+  "desk.levels": "Balandlik",
+  "view.strip": "Har sahifada balandlik tugmalari"
 }

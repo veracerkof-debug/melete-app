@@ -188,5 +188,8 @@
   "num.bed.pad": "Пэд на квинте",
   "num.bed.noise": "Шум",
   "num.bed.none": "Без шума",
-  "desk.bed": "Фон"
+  "desk.bed": "Фон",
+  "desk.master": "Общая",
+  "desk.levels": "Громкость",
+  "view.strip": "Крутилки громкости на всех страницах"
 }

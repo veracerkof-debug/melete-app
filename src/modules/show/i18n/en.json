@@ -188,5 +188,8 @@
   "num.bed.pad": "Fifth pad",
   "num.bed.noise": "Noise",
   "num.bed.none": "No noise",
-  "desk.bed": "Bed"
+  "desk.bed": "Bed",
+  "desk.master": "Master",
+  "desk.levels": "Levels",
+  "view.strip": "Level knobs on every page"
 }

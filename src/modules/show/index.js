@@ -21,7 +21,7 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 
 let host = null, ctx = null, size = 'full', S = null, eng = null, unsubEng = null, edit = false;
-let bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
+let master = null, bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
 const PAGES = ['prog', 'desk', 'bed', 'pads'];
 const held = new Map(); // касание → пад «пока держат»
 
@@ -34,11 +34,16 @@ const allPads = () => S.banks.flatMap((b) => b.pads.filter(Boolean));
 
 /* ---------- звук ---------- */
 
+// Общая громкость пульта: узел между всем, что играет пульт (пады, трек, фон), и шиной медиатеки; шкала 0–100
+function destNode() {
+  if (!master) { const bus = ctx.audio.bus('media'); if (!bus) return null; master = bus.context.createGain(); master.gain.value = M.faderGain(S.master); master.connect(bus); }
+  return master;
+}
 function ensureEng() {
   if (!ctx.audio.unlock()) { ctx.ui.toast(t('noAudio')); return null; }
   ctx.audio.release();
   if (!eng) {
-    const bus = ctx.audio.bus('media');
+    const bus = destNode();
     if (!bus) return null;
     eng = createShowPads({ dest: bus, getBlob: blobOf });
   }
@@ -54,7 +59,7 @@ function ensureDeck() {
 function ensureBed() {
   if (!ctx.audio.unlock()) { ctx.ui.toast(t('noAudio')); return null; }
   ctx.audio.release();
-  if (!bed) { const bus = ctx.audio.bus('media'); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf }); }
+  if (!bed) { const bus = destNode(); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf }); }
   if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (S.page === 'bed') render(); }); }
   return bed;
 }
@@ -111,7 +116,7 @@ function padsHTML() {
     '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => p ? padHTML(p) : '<button class="shpad empty" data-cell="' + i + '" aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>').join('') + '</div>' +
     (d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => p ? padHTML(p, true) : '<button class="shpad empty" data-cell="' + i + '" data-dock="1"><b>+</b></button>').join('') + '<button class="shstop" data-x="stopall" style="grid-row:span ' + d.rows + '">' + esc(t('stopAll')) + '</button></div>'
       : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') +
-    '<div class="shlevel"><span>' + esc(t('level')) + '</span><input type="range" class="range" data-lv min="0" max="100" step="1" value="' + S.level + '" aria-label="' + esc(t('level')) + '"><b id="shlv">' + S.level + '</b></div>';
+    '';
 }
 function numHTML(n, i) {
   const f = fileOf(n.file), a = f && f.ana;
@@ -150,6 +155,12 @@ function bedHTML() {
     '<div class="group sgroup" style="margin-top:12px">' + slider('noiselvl', t('bed.noiseLevel'), b.noise.level, 0, 100, 1, lvTxt(b.noise.level)) + slider('xfade', t('bed.xfade'), b.noise.xfade, 0.2, 20, 0.2, secTxt(b.noise.xfade)) + '</div><p class="ftr">' + esc(t('bed.noiseHint')) + '</p>' +
     '<div class="group" style="margin-top:12px"><button class="cell" data-x="bedoff" style="color:var(--red)"><span class="grow">' + esc(t('bed.off')) + '</span></button></div></div>';
 }
+const KNOBS = [['master', 'desk.master'], ['deck', 'desk.track'], ['bed', 'desk.bed'], ['pads', 'desk.sounds']];
+// Крутилки громкости внизу каждой страницы, кроме «Пульта» (там фейдеры): общая, трек, фон, звуки — всегда под рукой
+function stripHTML() {
+  return '<div class="shstrip" role="group" aria-label="' + esc(t('desk.levels')) + '">' + KNOBS.map(([k, lb]) => { const v = volOf(k); return '<div class="shkn"><div class="shknob" data-knob="' + k + '" role="slider" tabindex="0" aria-label="' + esc(t(lb)) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '">' +
+    '<svg viewBox="0 0 44 44" aria-hidden="true"><path class="kt" pathLength="100" stroke-dasharray="99 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/><path class="kv" pathLength="100" stroke-dasharray="' + v * 0.99 + ' 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/></svg><b>' + v + '</b></div><span class="shkl">' + esc(t(lb)) + '</span></div>'; }).join('') + '</div>';
+}
 const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(label) + '</span><b class="shfv" data-fv="' + k + '">' + v + '</b><div class="shtrack" data-fader="' + k + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" style="--v:' + v + '%">' +
   '<i class="tk" style="bottom:25%"></i><i class="tk" style="bottom:50%"></i><i class="tk" style="bottom:75%"></i><div class="shfill"></div><div class="shcap"></div></div><span class="shfo" data-fo="' + k + '">' + M.dbText(v) + ' ' + esc(t('db')) + '</span></div>';
 function deskHTML() {
@@ -160,7 +171,7 @@ function deskHTML() {
       : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
     '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
     (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
-    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + '</div>' +
+    '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + fader('master', t('desk.master'), S.master) + '</div>' +
     '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b></div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
@@ -210,7 +221,7 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' || S.page === 'bed' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
-    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + '</div></div>';
+    ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   paint();
@@ -223,6 +234,7 @@ function go(page) { if (S.page === page) return; S.page = page; save(); render()
 
 function onDown(e) {
   if (e.target.closest && e.target.closest('[data-fader]')) { onFaderDown(e); return; }
+  if (e.target.closest && e.target.closest('[data-knob]')) { onKnobDown(e); return; }
   if (e.target.closest && e.target.closest('#shwave')) { onWaveDown(e); return; }
   const el = e.target.closest && e.target.closest('.shpad[data-pad]');
   if (!el || edit) return;
@@ -288,11 +300,6 @@ function onInput(e) {
     else { S.bed.noise.xfade = v; if (o) o.textContent = secTxt(v); }
     save(); return;
   }
-  if (e.target.matches('[data-lv]')) {
-    S.level = +e.target.value; const o = host.querySelector('#shlv'); if (o) o.textContent = S.level;
-    if (eng) eng.setLevel(S.level); else if (ensureEng()) eng.setLevel(S.level);
-    save();
-  }
 }
 
 /* ---------- основной трек ---------- */
@@ -329,20 +336,40 @@ function addMark() {
 }
 // фейдеры: перетаскивание по дорожке; двойное касание — на 0 и обратно
 const fdPrev = {}; let fdTap = { k: '', t: 0 };
+const volOf = (k) => (k === 'deck' ? S.deckLevel : k === 'bed' ? S.bedLevel : k === 'master' ? S.master : S.level);
+// Любая громкость пульта 0–100: в звук (если он уже есть — иначе применится при создании) и во все ручки и фейдеры на экране
 function fdSet(k, v) {
   v = Math.max(0, Math.min(100, Math.round(v)));
-  if (k === 'deck') { S.deckLevel = v; if (deck) deck.setTrim(v); else if (eng || ensureDeck()) deck && deck.setTrim(v); }
-  else if (k === 'bed') { S.bedLevel = v; if (bed || ensureBed()) bed.setLevel(v); }
-  else { S.level = v; if (eng) eng.setLevel(v); else if (ensureEng()) eng.setLevel(v); }
-  const tr = host && host.querySelector('[data-fader="' + k + '"]'); if (!tr) return;
-  tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v);
-  host.querySelector('[data-fv="' + k + '"]').textContent = v; host.querySelector('[data-fo="' + k + '"]').textContent = M.dbText(v) + ' ' + t('db');
+  if (k === 'deck') { S.deckLevel = v; if (deck) deck.setTrim(v); }
+  else if (k === 'bed') { S.bedLevel = v; if (bed) bed.setLevel(v); }
+  else if (k === 'master') { S.master = v; if (master) master.gain.setTargetAtTime(M.faderGain(v), master.context.currentTime, 0.03); }
+  else { S.level = v; if (eng) eng.setLevel(v); }
+  if (!host) return;
+  host.querySelectorAll('[data-fader="' + k + '"]').forEach((tr) => { tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v); });
+  host.querySelectorAll('[data-knob="' + k + '"]').forEach((kn) => { kn.setAttribute('aria-valuenow', v); kn.querySelector('.kv').setAttribute('stroke-dasharray', v * 0.99 + ' 100'); kn.querySelector('b').textContent = v; });
+  host.querySelectorAll('[data-fv="' + k + '"]').forEach((o) => { o.textContent = v; });
+  host.querySelectorAll('[data-fo="' + k + '"]').forEach((o) => { o.textContent = M.dbText(v) + ' ' + t('db'); });
+}
+// Крутилка: тянуть вверх-вниз (140 px — весь ход); двойное касание — на 0 и обратно; стрелки на клавиатуре — по единице
+function onKnobDown(e) {
+  const kn = e.target.closest && e.target.closest('[data-knob]'); if (!kn) return;
+  const k = kn.dataset.knob, now = performance.now();
+  if (fdTap.k === 'knob' + k && now - fdTap.t < 320) { const c0 = volOf(k); if (c0 > 0) { fdPrev[k] = c0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
+  fdTap = { k: 'knob' + k, t: now };
+  try { kn.setPointerCapture(e.pointerId); } catch { /* */ }
+  const y0 = e.clientY, v0 = volOf(k);
+  const mv = (m) => fdSet(k, v0 + (y0 - m.clientY) / 1.4), up = () => { kn.removeEventListener('pointermove', mv); kn.removeEventListener('pointerup', up); kn.removeEventListener('pointercancel', up); save(); };
+  kn.addEventListener('pointermove', mv); kn.addEventListener('pointerup', up); kn.addEventListener('pointercancel', up);
+}
+function onKey(e) {
+  const kn = e.target.closest && e.target.closest('[data-knob]'); if (!kn || !['ArrowUp', 'ArrowDown', 'ArrowRight', 'ArrowLeft'].includes(e.key)) return;
+  e.preventDefault(); const k = kn.dataset.knob; fdSet(k, volOf(k) + (e.key === 'ArrowUp' || e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 10 : 1)); save();
 }
 function onFaderDown(e) {
   const tr = e.target.closest && e.target.closest('[data-fader]'); if (!tr) return;
   const k = tr.dataset.fader, r = () => tr.getBoundingClientRect();
   const now = performance.now();
-  if (fdTap.k === k && now - fdTap.t < 320) { const cur0 = k === 'deck' ? S.deckLevel : k === 'bed' ? S.bedLevel : S.level; if (cur0 > 0) { fdPrev[k] = cur0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
+  if (fdTap.k === k && now - fdTap.t < 320) { const cur0 = volOf(k); if (cur0 > 0) { fdPrev[k] = cur0; fdSet(k, 0); } else fdSet(k, fdPrev[k] || 85); fdTap = { k: '', t: 0 }; save(); return; }
   fdTap = { k, t: now };
   try { tr.setPointerCapture(e.pointerId); } catch { /* */ }
   const at = (y) => { const b = r(); fdSet(k, (1 - (y - b.top) / b.height) * 100); };
@@ -471,7 +498,7 @@ function bankSheet(b) {
 function settingsSheet() {
   const sw = (k) => '<div class="cell"><span class="grow">' + esc(t('view.' + k)) + '</span>' + ctx.ui.sw('v-' + k, S.ui[k], t('view.' + k)) + '</div>';
   const body = () => ctx.ui.snav(t('settings'), { right: '<button class="link b r" data-close>' + esc(t('editDone')) + '</button>' }) +
-    '<div class="group">' + ['info', 'timer', 'buzz', 'awake', 'confirmStop'].map(sw).join('') + '</div>' +
+    '<div class="group">' + ['info', 'timer', 'strip', 'buzz', 'awake', 'confirmStop'].map(sw).join('') + '</div>' +
     '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + esc(t('bank.dock')) + '</span>' + ctx.ui.sw('v-dock', S.ui.dock, t('bank.dock')) + '</div>' +
       (S.ui.dock && M.dockOf(S) ? '<button class="cell" data-x="dock"><span class="grow">' + esc(t('bank.title')) + '</span><span class="val">' + M.dockOf(S).cols + '</span></button>' : '') + '</div>' +
     '<div class="group sgroup" style="margin-top:12px">' + slider('goFade', t('view.goFade'), S.goFade, 0, 10, 0.5, secTxt(S.goFade)) + '</div><p class="ftr">' + esc(t('view.goFadeHint')) + '</p>' +
@@ -675,6 +702,7 @@ export default {
     host.addEventListener('pointercancel', onUp);
     host.addEventListener('input', onInput);
     host.addEventListener('change', onChange);
+    host.addEventListener('keydown', onKey);
     offs.push(swipe(host, { left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
     const vis = () => { if (document.visibilityState === 'visible') awake(); };
     document.addEventListener('visibilitychange', vis);
@@ -688,7 +716,7 @@ export default {
   unmount() {
     clearInterval(tickT); clearInterval(deskT); deskT = 0; cancelAnimationFrame(raf); raf = 0;
     offs.splice(0).forEach((f) => f());
-    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); host.removeEventListener('change', onChange); }
+    if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); host.removeEventListener('change', onChange); host.removeEventListener('keydown', onKey); }
     held.clear();
     if (bed) { bed.padOff(0.5); bed.stopNoise(0.5); if (unsubBed) { unsubBed(); unsubBed = null; } }
     if (deck) { deck.stop(0.3); if (unsubDeck) { unsubDeck(); unsubDeck = null; } }

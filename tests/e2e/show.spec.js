@@ -145,8 +145,31 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   expect(sh.events[0].numbers[0].bed).toMatchObject({ noise: sh.noises[0].id });
   // ГО запускает номер и включает его шум
   await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
-  await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(3);
+  await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(4);
   await page.click(T + '[data-page="bed"]');
   await expect(page.locator(T + '.shnoise.on')).toHaveCount(1, { timeout: 8000 });
+  expect(errors).toEqual([]);
+});
+
+test('громкость: крутилки внизу «Программы» и «Звуков», общая громкость; двойное касание — на 0', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await expect(page.locator(T + '[data-knob]')).toHaveCount(4); // страница «Программа»
+  const kn = T + '[data-knob="master"]', b = await page.locator(kn).boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + 42, { steps: 6 }); await page.mouse.up(); // вниз на 42 px ≈ −30
+  const v = +(await page.locator(kn).getAttribute('aria-valuenow'));
+  expect(v).toBeGreaterThan(60); expect(v).toBeLessThan(80);
+  await page.click(T + '[data-page="pads"]');
+  await expect(page.locator(T + '[data-knob="master"]')).toHaveAttribute('aria-valuenow', String(v)); // то же значение на другой странице
+  await page.locator(T + '[data-knob="pads"]').focus(); await page.keyboard.press('ArrowDown');
+  await expect(page.locator(T + '[data-knob="pads"]')).toHaveAttribute('aria-valuenow', '84');
+  await page.click(T + '[data-page="desk"]');
+  await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(4);
+  await expect(page.locator(T + '[data-knob]')).toHaveCount(0); // на «Пульте» — фейдеры
+  const sh = (await melete.toolsNow()).show;
+  expect(sh.master).toBe(v); expect(sh.level).toBe(84);
   expect(errors).toEqual([]);
 });

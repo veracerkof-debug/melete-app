@@ -143,7 +143,7 @@ export function parseHhmm(str) {
 }
 
 /* ---------- всё хранилище ---------- */
-export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true };
+export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true, strip: true };
 export function normalizeShow(s = {}) {
   const o = { ...s };
   o.v = 1;
@@ -157,6 +157,7 @@ export function normalizeShow(s = {}) {
     pad: { on: !!bp.on, sound: pick(bp.sound, PAD_SOUNDS, 'warm'), level: clamp(bp.level, 0, 100, 60), tonic: Number.isFinite(+bp.tonic) && bp.tonic !== null && bp.tonic !== '' ? ((Math.round(+bp.tonic) % 12) + 12) % 12 : null }, // tonic null — от номера
     noise: { cur: o.noises.some((x) => x.id === bn.cur) ? bn.cur : null, level: clamp(bn.level, 0, 100, 70), xfade: clamp(bn.xfade, 0.2, 20, 6) },
   };
+  o.master = clamp(o.master, 0, 100, 100);              // общая громкость пульта: всё, что он играет
   o.deckLevel = clamp(o.deckLevel, 0, 100, 85);          // фейдер основного трека
   o.goFade = clamp(o.goFade, 0, 10, 2);                  // с: плавный переход по «ГО», если у номера свой уход не задан
   o.cur = typeof o.cur === 'string' ? o.cur : null;      // идущий номер
