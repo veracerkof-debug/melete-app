@@ -56,7 +56,7 @@ export function streakPill(app, extra = '') {
 
 /* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
 // Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
-export const HOME_BLOCKS = ['voice', 'week', 'league', 'reading', 'study', 'start', 'review', 'quick', 'events', 'songs'];
+export const HOME_BLOCKS = ['voice', 'week', 'start', 'quick', 'study', 'league', 'reading', 'review', 'events', 'songs'];
 export const HOME_SIZES = ['s', 'm', 'l'];
 export function homeLayout(st) {
   const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));

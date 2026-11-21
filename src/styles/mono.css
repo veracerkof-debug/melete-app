@@ -446,3 +446,5 @@
 :root[data-style="mono"][data-bare] .tgrid .tci2, :root[data-style="mono"][data-bare] .mono-home .mcirc { width: 100px !important; height: 100px !important; }
 :root[data-style="mono"][data-bare] .tgrid .tci2 svg, :root[data-style="mono"][data-bare] .mono-home .mcirc svg { width: 46px !important; height: 46px !important; }
 :root[data-style="mono"][data-bare] .tgrid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+
+:root[data-style="mono"] .tbtitle { text-transform: uppercase; font-weight: 800; letter-spacing: -.01em; }

@@ -92,7 +92,7 @@ export function calendarHTML(app, cv) {
   // в месяце «+» — круглой кнопкой у выбранного дня; сверху — только в неделе и списке
   const right = '<span class="ctop">' + icb('data-cics', I.share, t('cal.export'), 'plain') + (cv.view === 'month' ? '' : icb('data-cnew', IC.plus, t('cal.new'), 'plain')) + '</span>';
   // стих эпиграфом — Пс 89:12 (src/core/verses.js)
-  let h = topbar(right) + '<div class="large">' + t('cal.title') + '</div>' + epigraphHTML() + '<div class="calw">' + head +
+  let h = topbar(right, '<span class="tbtitle">' + t('cal.title') + '</span>') + epigraphHTML() + '<div class="calw">' + head +
     seg('cview', bareNow() ? CVIEW_IC : [['month', t('cal.v.month')], ['week', t('cal.v.week')], ['list', t('cal.v.list')]], cv.view, withText(() => t('cal.view')));
   h += cv.view === 'week' ? weekHTML(app, cv) : cv.view === 'list' ? listHTML(app, cv) : monthHTML(app, cv);
   return h + '</div>';

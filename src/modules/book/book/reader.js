@@ -99,7 +99,7 @@ export function createBook(ctx, L, { save }) {
   function tocHTML() {
     const sec = curSec(), found = q.trim() ? Object.entries(L.TERMS).filter(([, [a, b]]) => (a + ' ' + b).toLowerCase().includes(q.trim().toLowerCase())).slice(0, 12) : null;
     return '<div class="bhero"><div class="bhicon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5v13c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg></div>' +
-      '<h2>' + T('bk.title') + '</h2><p>' + T(lvl() === 'beginner' ? 'bk.lead.first' : 'bk.lead') + '</p>' + lvlSeg() +
+      '<h2>' + T('bk.title') + '</h2><p class="blead' + (lvl() === 'beginner' ? ' first' : '') + '">' + T(lvl() === 'beginner' ? 'bk.lead.first' : 'bk.lead') + '</p>' + lvlSeg() +
       '<input class="bsearch" data-bq value="' + esc(q) + '" placeholder="' + T('bk.find') + '" aria-label="' + T('bk.find') + '"></div>' +
       (found ? '<div class="bfound">' + (found.length ? found.map(([id, [a, b]]) => '<button class="bfrow" data-term="' + id + '"><b>' + a + '</b><span>' + b + '</span></button>').join('') : '<p class="hint">' + T('bk.none') + '</p>') + '</div>' : '') +
       (secsShown().length < 2 ? '' : '<div class="bsecs" role="tablist" aria-label="' + T('bk.secs') + '">' + secsShown().map((k) => '<button class="bsec ' + k + (k === sec ? ' on' : '') + '" data-bsec="' + k + '" role="tab" aria-selected="' + (k === sec) + '"><b>' + T('bk.sec.' + k) + '</b><span>' + T('bk.sub.' + k) + '</span></button>').join('') + '</div>') +

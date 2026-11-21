@@ -20,7 +20,7 @@ export function routinesHTML(app) {
   return '<div class="hdr rthdr"><span>' + t('rt.title') + '</span><button class="link" data-act="rtNew">' + t('rt.new') + '</button></div>' +
     (list.length ? '<div class="group rtlist">' + list.map((r) => '<div class="cell rtrow"><button class="grow rtopen" data-rt="' + esc(r.id) + '"><b>' + esc(r.title || t('rt.untitled')) + '</b><span class="st l2">' + esc(sumText(r)) + '</span></button>' +
       '<button class="rtplay" data-rtgo="' + esc(r.id) + '" aria-label="' + esc(t('rt.start', { title: r.title || t('rt.untitled') })) + '">' + PLAY + '</button></div>').join('') + '</div>'
-      : '<div class="group"><div class="cellcol rtempty"><span class="l2">' + t('rt.empty') + '</span><div class="rtex"><button class="btn sm" data-rtex="guitar">' + t('rt.ex.guitar') + '</button><button class="btn sm" data-rtex="vocal">' + t('rt.ex.vocal') + '</button></div></div></div>');
+      : '<div class="group"><div class="cellcol rtempty">' + (app.store.songs().length ? '' : '<span class="l2">' + t('rt.empty') + '</span>') + '<div class="rtex"><button class="btn sm" data-rtex="guitar">' + t('rt.ex.guitar') + '</button><button class="btn sm" data-rtex="vocal">' + t('rt.ex.vocal') + '</button></div></div></div>');
 }
 
 // Нажатия раздела; true — нажатие его

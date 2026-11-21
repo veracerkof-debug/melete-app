@@ -438,3 +438,7 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 .pane[data-fit="1"] .bhero h2,.pane[data-fit="2"] .bhero h2{margin:0;font-size:20px}
 .pane[data-fit="1"] .bhicon svg,.pane[data-fit="2"] .bhicon svg{width:26px;height:26px}
 .pane[data-fit="2"] .bhero>.bsearch{flex:1;min-width:120px}
+
+/* Полный экран «Учебника»: название уже в шапке инструмента — без значка, второго заголовка и общего пояснения (оно остаётся новичку) */
+.tview .bhero{padding:10px 12px;gap:8px}
+.tview .bhero .bhicon,.tview .bhero h2,.tview .bhero p.blead:not(.first){display:none}

@@ -28,7 +28,7 @@ export function studyCard(app) {
   if (!rows.length) {
     // ничего не выбрано: после первого занятия слуха, ритма, вокала или учебника — предложение собрать свой блок
     const used = sessions.some((s) => s.type === 'tool' && STUDY_IDS.includes(s.tool === 'train' ? 'ear' : s.tool));
-    return used ? '<div class="hstudy"><div class="hhdr"><span>' + t('study.title') + '</span></div><button class="hsrow" data-act="studyset"><span class="grow"><b>' + esc(t('study.add')) + '</b><span class="hsub">' + esc(t('study.addSub')) + '</span></span></button></div>' : '';
+    return used ? '<div class="hstudy"><button class="hsrow" data-act="studyset"><span class="grow"><b>' + esc(t('study.add')) + '</b><span class="hsub">' + esc(t('study.addSub')) + '</span></span></button></div>' : '';
   }
   return '<div class="hstudy"><div class="hhdr"><span>' + t('study.title') + '</span><button class="hsset" data-act="studyset" aria-label="' + esc(t('study.hours')) + '">⋯</button></div>' + rows.map((r) => {
     const p = r.goal ? Math.min(1, r.sec / (r.goal * 60)) : 0, sc = schedText(r);

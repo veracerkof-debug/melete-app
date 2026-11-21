@@ -178,3 +178,6 @@
 .pane[data-fit="1"] .stlist [data-x="new"],.pane[data-fit="2"] .stlist [data-x="new"]{order:-1;margin-top:0!important;flex:none}
 .pane[data-fit="1"] .stlist .group{display:none}
 .pane[data-fit="2"] .stlist .group{margin-top:8px}
+
+/* Полный экран «Студии»: название и справка уже в шапке инструмента */
+.tview .stlist .sthdr{display:none}

@@ -37,7 +37,7 @@ export function libraryHTML(app, view) {
     '<button class="addbtn" style="margin:0" data-act="share" aria-label="' + t('share.team') + '">' + SHARE_IC + '</button>' +
     // церковный режим: импорт песен из программ для вывода текста и Holyrics
     (st.church ? '<button class="addbtn" style="margin:0" data-act="songImport" aria-label="' + t('songs.import') + '">' + IMPORT_IC + '</button>' : '') +
-    '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>') + '<div class="large">' + t('songs.title') + '</div>';
+    '<button class="addbtn" style="margin:0" data-act="addSong" aria-label="' + t('songs.add') + '">' + ADD_IC + '</button></div>', '<span class="tbtitle">' + t('songs.title') + '</span>');
   // демо-набор — сверху, убрать одним нажатием (песни с занятиями остаются в статистике)
   const nDemo = songs.filter((x) => isDemo(x.id)).length;
   h += routinesHTML(app); // планы занятия (screens/routine.js)
@@ -46,19 +46,17 @@ export function libraryHTML(app, view) {
     (st.church ? '<br><button class="btn" style="margin-top:10px" data-act="songImport">' + t('songs.import') + '</button>' : '') +
     // посмотреть, как всё устроено: демо-набор (убирается в «Данных и копиях»)
     '<br><button class="btn" style="margin-top:10px" data-act="demoAdd">' + t('demo.add') + '</button></div>';
+  const { list, usedGenres, usedTags } = listSongs(songs, app.store.sessions(), L, view, getLang());
+  // одна полоса: категории, жанры и теги (было три ряда); поиск и сортировка — в одной строке
+  const filt = usedGenres.map((g) => '<button class="fchip' + (view.genre && view.genre.toLowerCase() === g.name.toLowerCase() ? ' on' : '') + '" data-fg="' + esc(g.name) + '" style="--c:' + g.color + ';--t:' + textColor(g) + '"><i></i>' + esc(g.name) + '</button>').join('') +
+    usedTags.map((x) => '<button class="fchip tagf' + (view.tag === x.id ? ' on' : '') + '" data-ft="' + x.id + '" style="--c:' + x.color + ';--t:' + textColor(x) + '">#' + esc(x.name) + '</button>').join('');
   h += '<div class="hscroll catbar"><button class="catp' + (!view.cat ? ' on' : '') + '" data-cat="" style="--c:var(--ink);--t:var(--bg)">' + t('songs.all') + ' <i>' + songs.length + '</i></button>' +
     L.cats.map((c) => '<button class="catp' + (view.cat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" style="--c:' + c.color + ';--t:' + textColor(c) + '">' + esc(c.name) + ' <i>' + countInCat(songs, c.id) + '</i></button>').join('') +
-    (countInCat(songs, '') && L.cats.length ? '<button class="catp' + (view.cat === '_none' ? ' on' : '') + '" data-cat="_none" style="--c:var(--l2);--t:#fff">' + t('songs.noCat') + ' <i>' + countInCat(songs, '') + '</i></button>' : '') + '</div>';
-  const { list, usedGenres, usedTags } = listSongs(songs, app.store.sessions(), L, view, getLang());
-  h += '<label class="search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg><input type="search" placeholder="' + t('songs.search') + '" aria-label="' + t('songs.searchAria') + '" value="' + esc(view.q) + '" data-input="q"></label>';
-  if (usedGenres.length || usedTags.length || view.genre || view.tag) {
-    h += '<div class="hscroll fbar">' + usedGenres.map((g) => '<button class="fchip' + (view.genre && view.genre.toLowerCase() === g.name.toLowerCase() ? ' on' : '') + '" data-fg="' + esc(g.name) + '" style="--c:' + g.color + ';--t:' + textColor(g) + '"><i></i>' + esc(g.name) + '</button>').join('') +
-      (usedGenres.length && usedTags.length ? '<span class="fsep"></span>' : '') +
-      usedTags.map((x) => '<button class="fchip tagf' + (view.tag === x.id ? ' on' : '') + '" data-ft="' + x.id + '" style="--c:' + x.color + ';--t:' + textColor(x) + '">#' + esc(x.name) + '</button>').join('') + '</div>';
-  }
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 6px 8px"><span class="l2" style="font-size:13px">' + tn('songs.count', list.length) +
-    (view.genre || view.tag ? ' · <button class="link" data-fclear style="font-size:13px;min-height:0">' + t('songs.clearFilter') + '</button>' : '') +
-    '</span><select class="sortsel sortr" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
+    (countInCat(songs, '') && L.cats.length ? '<button class="catp' + (view.cat === '_none' ? ' on' : '') + '" data-cat="_none" style="--c:var(--l2);--t:#fff">' + t('songs.noCat') + ' <i>' + countInCat(songs, '') + '</i></button>' : '') +
+    (filt ? '<span class="fsep"></span>' + filt : '') + '</div>';
+  h += '<div class="srow"><label class="search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg><input type="search" placeholder="' + t('songs.search') + '" aria-label="' + t('songs.searchAria') + '" value="' + esc(view.q) + '" data-input="q"></label>' +
+    (view.genre || view.tag ? '<button class="link" data-fclear style="font-size:13px;min-height:0">' + t('songs.clearFilter') + '</button>' : '') +
+    '<select class="sortsel" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
   if (!list.length) return h + '<div class="empty">' + t('songs.notFound') + '</div>';
   const due = new Set(st.toolsOnly ? [] : dueSongs(songs, app.store.sessions()).map((x) => x.s.id)); // к повторению (review.js)
   return h + '<div class="slist">' + list.map(({ s, st: ss }) => {
