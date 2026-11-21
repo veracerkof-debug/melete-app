@@ -9,6 +9,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong, linkSong } from '../../core/files.js';
 import { foldQ } from '../../core/library.js';
+import { coverOfBlob } from '../../music/cover.js';
 import { SH, FL } from '../../music/notes.js';
 import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
@@ -872,10 +873,49 @@ export function artPath(pk, N = 16) {
   return p;
 }
 
+/* ---------- обложка из тегов файла (слово автора 21.11.2026) ---------- */
+// Миниатюра ≤ 192 px, JPEG data-URL (≈ 10–15 КБ) — лежит в записи файла (IndexedDB), в localStorage не попадает
+async function coverThumb(c, px = 192) {
+  try {
+    const bmp = await createImageBitmap(new Blob([c.bytes], { type: c.mime }));
+    const k = Math.min(1, px / Math.max(bmp.width, bmp.height)), cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(bmp.width * k)); cv.height = Math.max(1, Math.round(bmp.height * k));
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    if (bmp.close) bmp.close();
+    return cv.toDataURL('image/jpeg', 0.82);
+  } catch { return ''; }
+}
+// t.cover: строка — картинка, '' — в файле обложки нет (повторно не ищем), undefined — ещё не смотрели. Ничего не бросает.
+async function ensureCover(t) {
+  if (!t || t.cover !== undefined || isVideo(t) || t.stem || t.dict || t.show || !t.blob) return false;
+  t.cover = '';
+  try { const c = await coverOfBlob(t.blob); if (c) t.cover = await coverThumb(c); } catch { t.cover = ''; }
+  try { await ctx.files.save(t); } catch { /* не записалось — найдём при следующем проходе */ }
+  return !!t.cover;
+}
+let coverBusy = false;
+// Тихий проход по трекам без обложки (по одному, в паузах): уже загруженные раньше тоже получают обложки сами
+async function sweepCovers() {
+  if (coverBusy || !ctx) return;
+  coverBusy = true;
+  try {
+    let found = false, n = 0;
+    for (const t of tracks()) {
+      if (t.cover !== undefined) continue;
+      if (++n > 40) break; // за один заход — немного
+      if (await ensureCover(t)) found = true;
+      await new Promise((r) => setTimeout(r, 60));
+      if (!host || !ctx) return;
+    }
+    if (found) render();
+  } finally { coverBusy = false; }
+}
+
 function artHTML(t, cls) {
   const pk = t.peaks && t.peaks.length ? t.peaks : null;
   let p = '';
   if (pk) p = artPath(pk);
+  if (t.cover) return '<span class="mlart cov ' + (cls || '') + '" style="background-image:url(&quot;' + esc(t.cover) + '&quot;)">' + (AU.cur && AU.cur.id === t.id && !pl().paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
   return '<span class="mlart ' + (cls || '') + '" style="--h:' + hueOf(t.name) + '">' + (isVideo(t) ? I.film : pk ? '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + p + '"/></svg>' : ICON) +
     (AU.cur && AU.cur.id === t.id && !pl().paused ? '<i class="eq"><b></b><b></b><b></b></i>' : '') + '</span>';
 }
@@ -1024,7 +1064,7 @@ function vinylHTML() {
   setTimeout(vinStart, 0);
   const disc = '<div class="vdisc" id="vdisc" style="--h:' + hueOf(tr.name) + '" role="group" aria-label="' + t('discAria') + '"><svg viewBox="0 0 100 100" class="vring" aria-hidden="true"><circle cx="50" cy="50" r="' + R +
     '" class="vtrk"/><path id="vab" class="vab" d=""/><g id="vabm"></g><circle cx="50" cy="50" r="' + R + '" class="vprog" id="vprog" stroke-dasharray="' + (C * fr).toFixed(1) + ' ' + C.toFixed(1) +
-    '" transform="rotate(-90 50 50)"/></svg><span class="vrec"><i class="vgr"></i><span class="vlab"><b>' + esc(tr.name.slice(0, 18)) + '</b></span><i class="vhole"></i></span><span class="varm" style="transition:none;transform:rotate(' +
+    '" transform="rotate(-90 50 50)"/></svg><span class="vrec"><i class="vgr"></i><span class="vlab' + (tr.cover ? ' cov' : '') + '"' + (tr.cover ? ' style="background-image:url(&quot;' + esc(tr.cover) + '&quot;)"' : '') + '>' + (tr.cover ? '' : '<b>' + esc(tr.name.slice(0, 18)) + '</b>') + '</span><i class="vhole"></i></span><span class="varm" style="transition:none;transform:rotate(' +
     (!pl().paused || pl().currentTime > 0.05 ? 5 + 27 * fr : -6).toFixed(2) + 'deg)" aria-label="' + t('armAria') + '"></span><button class="vstate" data-x="aplay" aria-label="' + t('playPause') + '">' +
     (!pl().paused ? I.pause : I.play) + '</button></div>';
   const time = '<div class="vtime num"><span id="acur">' + fmtT(pl().currentTime) + '</span> / ' + fmtT(d) + '</div>';
@@ -1091,6 +1131,7 @@ function render() {
   if (AU.el && document.fullscreenElement === AU.el) return;
   host.innerHTML = playerHTML();
   place();
+  setTimeout(sweepCovers, 1500); // тихий проход: обложки у уже загруженных треков
 }
 
 // Видео — в окно плеера (или в мини-плеер медиатеки), иначе — обратно в скрытое хранилище
@@ -1566,6 +1607,7 @@ async function onFile(e) {
       video: p ? p.video : /^video\//.test(f.type) || VIDEO_EXT.test(f.name) };
     if (p && p.dur) rec.dur = p.dur;
     if (!(await ctx.files.add(rec))) lost = true;
+    else ensureCover(rec).then((ok) => { if (ok) render(); }); // обложка — по тегам файла, не задерживает загрузку
     ids.push(id);
     first = first || rec;
   }

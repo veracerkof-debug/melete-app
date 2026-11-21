@@ -161,3 +161,6 @@
 .mlhead .ic.sm{min-width:40px;min-height:40px}
 /* Низкое и маленькое окно (data-fit, слово автора 14.11.2026): поиск и список; фильтр и сортировка — в окне побольше */
 .pane[data-fit="1"] .mlbar,.pane[data-fit="2"] .mlbar{display:none}
+/* Обложка из тегов файла вместо плитки-значка */
+.mlart.cov{background-size:cover;background-position:center;background-color:var(--fill)}
+.vlab.cov{background-size:cover;background-position:center}
