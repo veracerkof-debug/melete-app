@@ -79,9 +79,9 @@ test('занятие: любой инструмент во весь экран �
   await expect(page.locator('.sheet [data-pm="pure"]')).toHaveCount(1);
 });
 
-test('занятие: кнопка полного экрана видна в каждом окне — войти и свернуть', async ({ page, melete, errors }) => {
+test('занятие: кнопка полного экрана — у пианино и глайдера (у остальных жест); войти и свернуть', async ({ page, melete, errors }) => {
   await melete.open();
-  await melete.free('HH', ['drone', 'metro']); // окна внутри колонок — тоже на весь экран
+  await melete.free('HH', ['piano', 'glider']); // окна внутри колонок — тоже на весь экран
   const btn = page.locator('.ws .pane .pfbtn').first();
   await expect(btn).toBeVisible();
   await btn.click(); await page.waitForTimeout(600);

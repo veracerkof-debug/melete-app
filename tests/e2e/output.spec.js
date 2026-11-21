@@ -43,12 +43,10 @@ test('вывод: шторка, «Оба сразу», по категориям
   await expect(page.locator('.session .outbadge')).toHaveCount(2);
 });
 
-test('вывод: без сопряжённого устройства остаётся на телефоне', async ({ page, melete, errors }) => {
+test('вывод: без сопряжённого устройства кнопки «Вывод» нет, звук — на телефоне', async ({ page, melete, errors }) => {
   await melete.open();
   await melete.free('F', ['piano']);
-  await melete.click('.session .outbtn');
-  await expect(page.locator('.sheet [data-all="both"]')).toBeDisabled();
-  await expect(page.locator('.sheet [data-all="remote"]')).toBeDisabled();
+  await expect(page.locator('.session .outbtn')).toHaveCount(0); // слово автора 21.11.2026: без компьютера кнопка не нужна
   expect(await page.evaluate(() => window.__melete.output.get('sound'))).toBe('local');
 });
 

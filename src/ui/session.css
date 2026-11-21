@@ -305,3 +305,11 @@ html:has(.session),html:has(.session) body{overscroll-behavior-x:none}
   .session.solid .ws[data-motion]>*{animation:ws-fade .2s linear}
   .session.solid .ws .pane.toolhost{transition:none}
 }
+
+/* «Полный экран»: кнопка — у пианино и глайдера (щипок занят игрой) и «Свернуть» в самом полном экране; у остальных окон — жест (слово автора 21.11.2026) */
+.pane.toolhost:not(.pfull):not([data-fb])>.pfbtn{display:none}
+.pane.toolhost[data-fb]:not(.pfull)>.pfbtn{width:40px;height:40px;top:0;right:max(2px,var(--cp,0px))}
+.pane.toolhost[data-fb]:not(.pfull)>.pfbtn svg{width:20px;height:20px}
+.pane.pfull>.pfbtn{right:calc(6px + var(--cp,0px));top:calc(env(safe-area-inset-top,0px) + 6px + var(--cp,0px))}
+.shd{padding-inline:var(--cp,0px)}
+.sdock{padding-inline:var(--cp,0px)}

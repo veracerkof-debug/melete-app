@@ -1,4 +1,5 @@
 // Ядро: песни, сессии, статистика, цели, ударный режим, хранение.
+import { watchCorner } from './corner.js';
 import { initTama } from '../ui/tama.js';
 import { webIcon, iconOf, setAppIcon, ICON_BY_MASCOT } from './appicon.js';
 import { Capacitor } from '@capacitor/core';
@@ -72,6 +73,7 @@ import { initWhatsNew } from './screens/whatsnew.js';
 import { createDeskBg } from './deskbg.js';
 
 export function boot(root) {
+  try { watchCorner(); } catch { /* углы не критичны */ } // радиус скругления углов экрана → --cr, --cp (corner.js)
   // журнал — первым: ошибки запуска тоже попадут в него
   try { startEdgeFade(); } catch { /* не страшно */ }
   startLog(APP_VERSION + ' · ' + (navigator.userAgent.match(/Android [\d.]+|Chrome\/[\d.]+/g) || []).join(' · '));

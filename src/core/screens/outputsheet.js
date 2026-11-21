@@ -33,8 +33,12 @@ const usesRemote = (app) => CATS.some((c) => app.output.get(c) !== 'local');
 /* ---------- кнопка ---------- */
 
 // Кнопка «Вывод»: значок и короткая подпись цели; точка — состояние канала (когда что-то уходит на другое устройство)
+// Кнопка «Вывод» — только если есть к чему подключиться: сопряжённый компьютер или устройство (слово автора 21.11.2026: без компьютера
+// вечная кнопка раздражает). Нет устройств — кнопки нет; подключение — «Настройки → Связь».
+export const outputHasDevice = (app) => { try { return outputOn(app) && !!(app.output.candidates && app.output.candidates().length); } catch { return false; } };
+
 export function outBtnHTML(app, cls = '') {
-  if (!outputOn(app)) return '';
+  if (!outputHasDevice(app)) return '';
   return '<button type="button" class="outbtn' + (cls ? ' ' + cls : '') + '" data-out aria-label="' + esc(t('out.btn')) + '" title="' + esc(t('out.hint')) + '">' + OUT_IC + '<span class="outl"></span><i class="outdot" aria-hidden="true"></i></button>';
 }
 

@@ -2390,7 +2390,7 @@
   "hc.start.tour.tabs": "Sections. Hold an icon to rearrange.",
   "hc.session.tour.time": "Session time. Tap — pause; hold — pomodoro.",
   "hc.session.tour.grip": "Window strip: tap — window menu, double tap — full screen, drag — swap windows.",
-  "hc.session.tour.full": "Window full screen. Also — spread two fingers.",
+  "hc.session.tour.full": "Window full screen: spread two fingers.",
   "hc.session.tour.dock": "Tools. Tap — into a window, drag onto a window — open there; pinch two fingers — windows of what is playing.",
   "hc.session.tour.stage": "Stage: the set list full screen for a performance.",
   "hc.session.tour.finish": "Finish the session — summary and statistics.",

@@ -73,7 +73,7 @@ function openHint(btn) {
   const pop = document.createElement('div');
   pop.className = 'hintpop'; pop.setAttribute('role', 'dialog'); pop.dataset.for = btn.dataset.hid;
   pop.innerHTML = btn._hint;
-  document.body.appendChild(pop);
+  document.body.appendChild(pop); hintPop = pop;
   const r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
   const w = Math.min(340, vw - 24);
   pop.style.width = w + 'px';

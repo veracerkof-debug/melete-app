@@ -712,3 +712,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .tvhd{padding:2px 10px 0}
 .tvhd .stitle2{font-size:16px;text-align:left}
 .tvbody{padding-top:4px}
+
+/* Скруглённые углы экрана: верхняя и нижняя полосы отодвигают крайние кнопки от углов (--cp, corner.js) */
+.topbar{padding-inline:var(--cp,0px)}
+.tabbar .in{padding-inline:var(--cp,0px)}

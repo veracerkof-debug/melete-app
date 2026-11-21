@@ -10,7 +10,7 @@ import { IC, tabModsInTools, pagesInTools, isPage, pageName, TAB_ICONS } from '.
 import { showHelp } from '../help.js';
 import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
-import { pureEnter, pureLeave } from '../pure.js';
+import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { spread, NOSPREAD } from '../../ui/gestures.js';
 import { bareScope } from '../../i18n/index.js';
 
@@ -91,7 +91,8 @@ export const openToolView = (app, id, onClose) => bareScope(() => openToolViewNo
 function openToolViewNow(app, id, onClose) {
   const mod = moduleById(id), name = moduleName(mod);
   // полный экран (manifest.pure): кнопка — рядом с «?», выход — «Назад», Esc
-  const pureBtn = ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')); // любой инструмент
+  // кнопка «Полный экран» — только у пианино и глайдера (там щипок занят игрой); у остальных — жест «развести два пальца»
+  const pureBtn = NEEDS_FULL_BTN.has(mod.id) ? ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')) : '';
   const layer = document.createElement('div');
   // запись — во всех инструментах (звук приложения, по желанию микрофон; у терменвокса — и видео)
   const rec = canRecord() && mod.record !== false;

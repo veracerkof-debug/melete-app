@@ -50,7 +50,39 @@ public class MainActivity extends BridgeActivity {
             // Звук в фоне без заиканий: когда приложение свёрнуто, Android по умолчанию снимает с отрисовщика WebView
             // приоритет (waivedWhenNotVisible) — звуковой поток в нём начинает голодать. Приоритет остаётся важным всегда
             if (Build.VERSION.SDK_INT >= 26) getBridge().getWebView().setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+            // Скруглённые углы экрана (21.11.2026): страница читает радиус и отодвигает от углов кнопки (src/core/corner.js)
+            getBridge().getWebView().addJavascriptInterface(new CornerJs(), "MeleteCorner");
         }
+    }
+
+    // Радиус скругления углов экрана в CSS-пикселях (0 — углы прямые или система не сообщает; Android 12+)
+    static volatile float cornerCss = 0f;
+
+    static final class CornerJs {
+        @android.webkit.JavascriptInterface
+        public float radius() { return cornerCss; }
+    }
+
+    @android.annotation.TargetApi(31)
+    private void readCorner() {
+        try {
+            android.view.WindowInsets wi = getWindow().getDecorView().getRootWindowInsets();
+            if (wi == null) return;
+            float best = 0f;
+            int[] pos = { android.view.RoundedCorner.POSITION_TOP_LEFT, android.view.RoundedCorner.POSITION_TOP_RIGHT,
+                android.view.RoundedCorner.POSITION_BOTTOM_LEFT, android.view.RoundedCorner.POSITION_BOTTOM_RIGHT };
+            for (int p : pos) {
+                android.view.RoundedCorner c = wi.getRoundedCorner(p);
+                if (c != null) best = Math.max(best, c.getRadius());
+            }
+            cornerCss = best / getResources().getDisplayMetrics().density;
+        } catch (Throwable ignored) { }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && Build.VERSION.SDK_INT >= 31) readCorner();
     }
 
     // Видно ли приложение (в том числе всплывающим окном): плавающая кнопка нужна, только когда оно скрыто

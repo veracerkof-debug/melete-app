@@ -32,7 +32,7 @@ export const CORE_TOPICS = Object.keys(IC);
 // Шаги с подсветкой у механизмов ядра: [селектор, ключ текста hc.<id>.tour.<ключ>]
 const CORE_TOURS = {
   start: [['.topbar .avatar', 'profile'], ['.hpomo', 'pomo'], ['.hcard, .mweek', 'week'], ['[data-act="free"]', 'go'], ['.tabbar', 'tabs']],
-  session: [['#stime', 'time'], ['.ws .grip', 'grip'], ['.ws .pfbtn', 'full'], ['#tpills', 'dock'], ['.sstage', 'stage'], ['[data-s="finish"]', 'finish']],
+  session: [['#stime', 'time'], ['.ws .grip', 'grip'], ['.ws .pane', 'full'], ['#tpills', 'dock'], ['.sstage', 'stage'], ['[data-s="finish"]', 'finish']],
 };
 
 // Тема-инструмент из модуля

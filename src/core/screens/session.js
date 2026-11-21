@@ -26,7 +26,7 @@ import { freeTagName } from './panel.js';
 import { clockNotice } from './clock.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
-import { pureEnter, pureLeave } from '../pure.js';
+import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
 import { spread, swipe, NOSPREAD, addPageSwipe, wideSwipe } from '../../ui/gestures.js';
 import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
@@ -346,7 +346,7 @@ export function createSessionScreen(app) {
   const PFBTN = (i) => '<button class="pfbtn" data-s="ppure" data-p="' + i + '" aria-label="' + esc(t('pm.pure')) + '" title="' + esc(t('pm.pure')) + '">' + IC.full + '</button>';
   function paneHTML(i, flex) {
     const sz = lsizes(w.layout)[i], multi = lsizes(w.layout).length > 1;
-    return '<div class="pane toolhost ' + sz + (multi && w.focus === i ? ' focus' : '') + '" data-pane="' + i + '" data-group="' + w.panes[i] + '" style="flex:' + (flex == null ? 1 : flex) + ' 1 0px">' + GRIP(i) + PFBTN(i) + '</div>';
+    return '<div class="pane toolhost ' + sz + (multi && w.focus === i ? ' focus' : '') + '" data-pane="' + i + '" data-group="' + w.panes[i] + '"' + (NEEDS_FULL_BTN.has(w.panes[i]) ? ' data-fb="1"' : '') + ' style="flex:' + (flex == null ? 1 : flex) + ' 1 0px">' + GRIP(i) + PFBTN(i) + '</div>';
   }
 
   // Содержимое окна: переключатель модулей группы (если их два) и место для модуля

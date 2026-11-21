@@ -253,6 +253,14 @@ function bind() {
   };
   on(window, 'pointerup', up);
   on(window, 'pointercancel', up);
+  // Приложение ушло в фон или потеряло фокус при нажатой клавише (звонок, шторка, жест системы): pointerup не придёт — все ноты касания
+  // отпускаются сами (отчёт автора 21.11.2026: нота не затихала)
+  const dropAll = () => {
+    ptr.forEach((p) => { p.el.classList.remove('down'); syn.off(p.key); ctx.midi.ev({ k: 'off', id: p.key }); vOff(p.key); });
+    ptr.clear();
+  };
+  on(document, 'visibilitychange', () => { if (document.hidden) dropAll(); });
+  on(window, 'blur', dropAll);
 
   // удержать «Звук» — панель ручек над клавишами (и обратно); по умолчанию клавиатура занимает всё окно
   onHold(host, '[data-x="psound"]', () => { const p = P(); p.panel = !p.panel; ctx.store.save(); render(); });
