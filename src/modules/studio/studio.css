@@ -61,7 +61,7 @@
 .rkrows{display:flex;flex-direction:column;gap:4px;width:calc(var(--rkn,92px) + (100% - var(--rkn,92px)) * var(--zx,1))}
 .rkrow{display:flex;align-items:stretch;gap:4px;height:var(--rkh,46px)}
 .rkname{width:88px;flex:none;position:sticky;left:0;z-index:1;border-radius:9px;background:linear-gradient(color-mix(in srgb,var(--c) 18%,var(--fill)),color-mix(in srgb,var(--c) 18%,var(--fill))),var(--cell);box-shadow:4px 0 0 var(--cell);text-align:left;padding:0 8px;overflow:hidden}
-.rkname b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rkname b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rkcells{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:3px;touch-action:none}
 .rkcells[hidden]{display:none}
 .rkc{display:block;border-radius:5px;background:var(--fill);min-width:0}

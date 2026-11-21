@@ -82,8 +82,8 @@
 .cwcol{position:relative;border-left:.5px solid var(--sep);cursor:pointer}
 .cwcol.today{background:color-mix(in srgb,var(--tint) 5%,transparent)}
 .cwev{position:absolute;display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:2px 3px;border-radius:5px;overflow:hidden;background:color-mix(in srgb,var(--c) 22%,var(--cell));border:0;border-left:3px solid var(--c);color:var(--ink);text-align:left;cursor:pointer;box-shadow:0 0 0 1px var(--cell)}
-.cwev b{font-size:10.5px;font-weight:600;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word}
-.cwev small{font-size:9.5px;color:var(--l2)}
+.cwev b{font-size:11px;font-weight:600;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;word-break:break-word}
+.cwev small{font-size:10px;color:var(--l2)}
 .cwev.done b{text-decoration:line-through}
 .cwnow{position:absolute;left:-1px;right:0;height:2px;background:var(--red);pointer-events:none;z-index:1}
 .cwnow::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--red)}
@@ -120,7 +120,7 @@
 .cadd{flex:none;width:44px;height:44px;border-radius:50%;background:var(--tint);color:var(--on-tint);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px color-mix(in srgb,var(--tint) 35%,transparent)}
 .cadd svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .calmt{cursor:pointer}
-.mverse.vref{margin:-4px 4px 8px;font-size:12.5px;color:var(--l2)}
+.mverse.vref{margin:-4px 4px 8px;font-size:13px;color:var(--l2)}
 .mverse.vref span{margin:0}
 .calmt{text-align:left;color:var(--ink);background:none}
 

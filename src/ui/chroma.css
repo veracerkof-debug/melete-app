@@ -9,7 +9,7 @@
 .chroma .cr-n.on circle{fill:var(--tint);stroke:color-mix(in srgb,var(--tint) 60%,#fff);stroke-width:1.6;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--tint) 70%,transparent))}
 .chroma .cr-n.on .cr-l{fill:var(--on-tint);font-size:13px;font-weight:700}
 .chroma .cr-n.r circle{stroke:var(--ink);stroke-width:2}
-.chroma .cr-d{font-size:7.5px;font-weight:600;fill:var(--on-tint);opacity:.85;pointer-events:none}
+.chroma .cr-d{font-size:8px;font-weight:600;fill:var(--on-tint);opacity:.85;pointer-events:none}
 .chroma .cr-arc path{fill:none;stroke:var(--tint);stroke-width:2;stroke-linecap:round;opacity:.9}
 .chroma .cr-arc circle{fill:var(--tint)}
 .chroma .cr-arc rect{fill:var(--bg);stroke:var(--tint);stroke-width:1.4}

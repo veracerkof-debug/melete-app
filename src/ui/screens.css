@@ -7,7 +7,7 @@
 .tabbar .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);overflow-x:auto;scrollbar-width:none}
 .tabbar .in::-webkit-scrollbar{display:none}
 .tabbar .tab.lifting{opacity:.85}
-.tab{padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:500;color:var(--l2);letter-spacing:0}
+.tab{padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:500;color:var(--l2);letter-spacing:0}
 .tab svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--tint)}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px 12px 16px}
@@ -254,7 +254,7 @@ a.cell{color:inherit;text-decoration:none}
   font:11.5px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
 /* церковный режим: чтение дня на главной (src/core/screens/home.js) */
 .hread{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin:12px 0 2px;padding:14px 16px;border-radius:18px;background:var(--cell);box-shadow:var(--shadow, none)}
-.hread .hrt,.mread .hrt{font-size:12.5px;color:var(--l2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hread .hrt,.mread .hrt{font-size:13px;color:var(--l2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .hread .hrr{font-size:20px;font-weight:600;font-family:Georgia,"Noto Serif",serif}
 .hread .hrs,.mread .hrs{font-size:13px;color:var(--tint-text)}
 /* вкладка «Библия» (церковный режим): модуль на всё окно между верхом экрана и вкладками */
@@ -277,7 +277,7 @@ a.cell{color:inherit;text-decoration:none}
 .hrbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--red) 10%,var(--cell));display:flex;flex-direction:column;gap:6px}
 .hrbox.ok{background:color-mix(in srgb,#5F8568 14%,var(--cell))}
 .hrdet{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--l2);word-break:break-all}
-.hrtip{font-size:13.5px;line-height:1.4;color:var(--ink)}
+.hrtip{font-size:14px;line-height:1.4;color:var(--ink)}
 /* личное обращение после кода (обычный вид): строка приветствия и тихая строчка под ней */
 .hgreet{display:flex;flex-direction:column;gap:3px;margin:6px 4px 14px}
 .hgreet b{font-size:20px;font-weight:700;letter-spacing:-.01em}
@@ -343,7 +343,7 @@ a.cell{color:inherit;text-decoration:none}
 .icopt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:18px;background:var(--cell);border:2px solid transparent;min-height:44px;font:inherit;color:var(--ink)}
 .icopt.on{border-color:var(--tint)}
 .icopt .appic{display:block;filter:drop-shadow(0 2px 6px rgba(0,0,0,.15))}
-.icopt span{font-size:12.5px;text-align:center;line-height:1.2}
+.icopt span{font-size:13px;text-align:center;line-height:1.2}
 /* «Лунный свет» — одна широкая плитка; свои цвета — круглая кнопка выбора цвета */
 .pal.wide{grid-column:1 / -1}
 .owncol{width:44px;height:44px;padding:0;border:0;border-radius:50%;background:none;cursor:pointer;flex:none;overflow:hidden}
@@ -406,7 +406,7 @@ a.cell{color:inherit;text-decoration:none}
 /* Вариант «подписи вкладок» (variants.js: tabs) */
 html.tablabels:not(.desk) .tab{gap:3px;padding:6px 0 5px}
 html.tablabels:not(.desk) .tab{min-width:0}
-html.tablabels:not(.desk) .tab .tl{display:block;font-size:10.5px;font-weight:600;letter-spacing:-.02em;line-height:1.15;max-width:calc(100% + 4px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.tablabels:not(.desk) .tab .tl{display:block;font-size:11px;font-weight:600;letter-spacing:-.02em;line-height:1.15;max-width:calc(100% + 4px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html.tablabels:not(.desk) .tab svg{width:24px;height:24px}
 html.tablabels:not(.desk) .tab::before{top:5px;margin-top:0;width:54px;height:30px;margin-left:-27px}
 /* Демо-набор в «Песнях»: строка сверху, убрать одним нажатием */
@@ -495,7 +495,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
    одна, есть оно или нет; название начинается на одной высоте во всём ряду */
 .tgrid .tcb{--nfs:clamp(14px,12cqmin,17px);width:100%;height:calc(var(--nfs) * 2.3 + 18px);justify-content:flex-start;flex:none}
 .tgrid .tcn2{font-size:var(--nfs);line-height:1.15;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.tgrid .tcs2{font-size:11.5px;line-height:16px;min-height:16px;flex:none}
+.tgrid .tcs2{font-size:12px;line-height:16px;min-height:16px;flex:none}
 .tgrid .arrb.in{top:4px;right:4px}
 @media (min-width:600px){.tgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media (min-width:900px){.tgrid{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
@@ -543,7 +543,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rvq{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--l3) 18%,transparent) 0 3px,transparent 3px 7px);border-radius:8px;pointer-events:none}
 .rvdot{position:absolute;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--l2);pointer-events:none}
 .rvmark{position:absolute;left:-2px;right:-2px;min-height:40px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}
-.rvmark .num{display:block;width:100%;padding:3px 0;border-radius:7px;background:var(--tint);color:var(--on-tint);font-size:10.5px;font-weight:700;letter-spacing:-.02em;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.rvmark .num{display:block;width:100%;padding:3px 0;border-radius:7px;background:var(--tint);color:var(--on-tint);font-size:11px;font-weight:700;letter-spacing:-.02em;box-shadow:0 2px 6px rgba(0,0,0,.15)}
 .rvmark.own .num{background:var(--tint-text)}
 .rvlist .rvrow{gap:10px;min-height:44px}
 .rvt{width:46px;font-weight:700;color:var(--ink)}
@@ -606,7 +606,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .gform .gfdays{display:flex;gap:4px}
 .gform .gfday{flex:1 1 0;min-width:0;max-width:44px;aspect-ratio:1;min-height:36px;padding:0;border-radius:50%;border:1.5px solid var(--sep);background:none;color:var(--ink);font-size:14px;font-weight:600}
 .gform .gfday.on{background:var(--tint);border-color:var(--tint);color:var(--on-tint)}
-.gform .gfsub{font-size:13.5px}
+.gform .gfsub{font-size:14px}
 .gform .gfitem{display:flex;align-items:center;gap:8px;min-height:40px;flex-wrap:wrap}
 .gform .gfadd{align-self:flex-start;background:none;border:0;color:var(--tint);font-weight:600;font-size:15px;min-height:40px;padding:0}
 .gform .gfq{display:flex;align-items:center;gap:8px}
@@ -616,7 +616,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pstrip{display:flex;align-items:stretch;gap:2px;padding:8px 4px 6px}
 .pstrip .pwk{flex:none;width:30px;min-width:30px;font-size:22px;color:var(--l2)}
 .pday{flex:1 1 0;min-width:0;min-height:56px;border:0;background:none;color:var(--ink);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 0}
-.pday small{font-size:11.5px;color:var(--l2);text-transform:capitalize}
+.pday small{font-size:12px;color:var(--l2);text-transform:capitalize}
 .pday b{font-size:18px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .pday.today b{color:var(--tint)}
 .pday.on b{background:var(--tint);color:var(--on-tint)}
@@ -625,7 +625,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pday.off b{text-decoration:line-through;opacity:.55}
 .phead{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 8px}
 .phead b{font-size:17px}
-.pnote{margin:0 14px 8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--tint) 12%,transparent);font-size:13.5px}
+.pnote{margin:0 14px 8px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--tint) 12%,transparent);font-size:14px}
 .pnote.off{background:color-mix(in srgb,var(--l2) 14%,transparent)}
 .pscroll{height:min(56vh,520px);overflow-y:auto;overscroll-behavior:contain;border-top:.5px solid var(--sep);touch-action:pan-y}
 .pgrid{position:relative;margin-left:54px;margin-right:10px;user-select:none;-webkit-user-select:none}
@@ -635,7 +635,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pnow{position:absolute;left:-6px;right:0;height:2px;background:var(--red,#d33);z-index:2}
 .pnow::before{content:'';position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:inherit}
 .pblk{position:absolute;left:2px;right:2px;border-radius:8px;background:var(--tint);color:var(--on-tint);padding:4px 8px;overflow:hidden;font-size:13px;line-height:1.25;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.12);z-index:1;touch-action:pan-y}
-.pblk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pblk b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pblk.once{background:color-mix(in srgb,var(--tint) 70%,var(--cell));outline:1.5px dashed var(--on-tint);outline-offset:-3px}
 .pblk.ghost{opacity:.75;justify-content:center;font-weight:600}
 .pblk.drag{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:3}
@@ -690,9 +690,9 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .trimg{display:block;width:100%;height:auto;max-height:50vh;object-fit:contain;object-position:top}
 .trchk{width:24px;height:24px;accent-color:var(--tint)}
 /* Блок «Мои занятия»: расписание и дни недели под названием (src/core/screens/study.js) */
-.hsub{display:block;font-size:12.5px;color:var(--l2);margin-top:3px}
+.hsub{display:block;font-size:13px;color:var(--l2);margin-top:3px}
 .hsdays{display:flex;gap:4px;margin-top:5px}
-.hsdays i{font-style:normal;font-size:10.5px;line-height:1;padding:3px 5px;border-radius:6px;color:var(--l3);background:var(--fill)}
+.hsdays i{font-style:normal;font-size:11px;line-height:1;padding:3px 5px;border-radius:6px;color:var(--l3);background:var(--fill)}
 .hsdays i.on{color:var(--on-tint);background:var(--tint)}
 .hsrow .grow{flex:1;min-width:0}
 

@@ -96,7 +96,7 @@
 .shgo .nx b{display:block;color:var(--ink);font:700 14px var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shgobtn{min-width:104px;min-height:56px;border-radius:16px;background:var(--tint);color:var(--on-tint);font:800 20px var(--font);letter-spacing:.05em}
 .shgobtn:disabled{opacity:.35}
-@container (max-width:420px){.shtabs{gap:11px}.shtabs button{font-size:13.5px}}
+@container (max-width:420px){.shtabs{gap:11px}.shtabs button{font-size:14px}}
 /* фон */
 .shbedp .shbk{font:700 20px var(--font)}
 .shnoises{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px}

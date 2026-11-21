@@ -187,7 +187,7 @@ html[data-style="inst"] { --k-in: k-drop; --k-dur: .42s; --k-tab: k-drop; --k-sw
 [data-style="inst"] .l-sheet-head h2 { font-weight: 600; }
 [data-style="inst"] .l-sec { border-top: 0; background: var(--cell); border-radius: 16px; padding: 14px 14px 8px; margin: 0 0 10px; box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 2px 6px rgba(0,0,0,.06); }
 [data-style="inst"] .l-sec:first-child, [data-style="inst"] .l-set-tabs + .l-sec { padding-top: 14px; }
-[data-style="inst"] .l-sec h3 { text-transform: uppercase; letter-spacing: .14em; font-size: 10.5px; color: var(--l2); display: flex; align-items: center; gap: 8px; }
+[data-style="inst"] .l-sec h3 { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; color: var(--l2); display: flex; align-items: center; gap: 8px; }
 [data-style="inst"] .l-sec h3::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--l-acc); }
 [data-style="inst"] .l-set-tabs { background: var(--bg); border-bottom: 0; }
 [data-style="inst"] .l-set-tabs button { background: var(--cell); box-shadow: 0 2px 4px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9); }

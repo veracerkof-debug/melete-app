@@ -30,7 +30,7 @@
 .voice .vc-dev .vc-lbl{flex:none;min-width:64px}
 .voice .vc-dev .sortsel{flex:1;min-width:0}
 .voice .vc-note{font-size:13px}
-.voice .st{display:block;font-size:12.5px}
+.voice .st{display:block;font-size:13px}
 /* окно уровня: дБ, шкала, лампочка перегруза, спектр */
 .voice .vc-mon{width:100%;max-width:560px;margin:0 auto 12px;background:var(--cell);border-radius:16px;padding:10px 12px 12px;box-sizing:border-box}
 .voice .vc-mon{cursor:pointer}
@@ -54,7 +54,7 @@
 .voice .vc-bar #vc-barp{background:linear-gradient(90deg,#5F8568 0 70%,#C9A23A 70% 88%,#D2463F 88%);opacity:.45}
 .voice .vc-bar #vc-barr{background:linear-gradient(90deg,#5F8568 0 70%,#C9A23A 70% 88%,#D2463F 88%);z-index:1}
 .voice .vc-bar b{position:absolute;top:0;bottom:0;width:2px;left:0;background:var(--ink);z-index:2}
-.voice .vc-ticks{position:relative;height:14px;font-size:9.5px;color:var(--l2);margin-top:2px}
+.voice .vc-ticks{position:relative;height:14px;font-size:10px;color:var(--l2);margin-top:2px}
 .voice .vc-ticks span{position:absolute;transform:translateX(-50%)}
 .voice .vc-ticks span:first-child{transform:none}
 .voice .vc-ticks span:last-child{transform:translateX(-100%)}
@@ -97,7 +97,7 @@
 .voice .vc-ico{display:grid;place-items:center;width:24px;height:24px;color:var(--tint)}
 .voice .vc-ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
 /* сокращение усиления ступенями — тонкие полоски под уровнем, загораются, когда ступень работает */
-.vc-gr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;font-size:10.5px;color:var(--l2)}
+.vc-gr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;font-size:11px;color:var(--l2)}
 .vc-gr span{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px;min-width:0}
 .vc-gr em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vc-gr i{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
@@ -113,11 +113,11 @@
 .vc-ink svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .voice .vc-int{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .voice .vc-int b{font-weight:600;font-size:14px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:break-word}
-.voice .vc-int .l2{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice .vc-int .l2{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .voice .vc-inrow .vc-in{gap:8px;padding:6px 10px}
 .voice .vc-inrow .vc-lamp{min-width:0;width:64px;font-size:11px;line-height:1.15;text-align:center;white-space:normal}
 .voice .vc-inrow .vc-in,.voice .vc-inrow .vc-out{flex:1 1 0}
-.voice .vc-warn{font-size:12.5px;color:#A86A12}
+.voice .vc-warn{font-size:13px;color:#A86A12}
 .voice .vc-lamp{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:72px;min-height:52px;padding:4px 8px;border:0;border-radius:14px;background:var(--fill);color:var(--l2);font:500 11px/1.15 var(--font);text-align:center;cursor:pointer}
 .voice .vc-lamp em{font-style:normal}
 .voice .vc-lamp i{width:12px;height:12px;border-radius:50%;background:var(--l3);transition:background .2s,box-shadow .2s}
@@ -164,8 +164,8 @@
 .vcs .vc-lbl{flex:none}
 @container (max-height: 420px){.voice .vc-stage .vc-time{font-size:30px}.voice .vc-inrow{padding-top:4px}.voice .vc-in,.voice .vc-lamp{min-height:44px}}
 .voice .vc-btn svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#vps-head .st{display:block;font-size:12.5px}
-.vcsh .st{display:block;font-size:12.5px;color:var(--l2)}
+#vps-head .st{display:block;font-size:13px}
+.vcsh .st{display:block;font-size:13px;color:var(--l2)}
 .vcsh .vc-irow .grow{display:flex;flex-direction:column}
 @container (max-height: 420px){.voice .vc-bot{padding-top:6px;padding-bottom:6px}.voice .vc-bot .vc-btn{width:46px;height:46px}.voice .vc-bot .vc-btn.main{width:64px;height:64px;box-shadow:0 0 0 4px color-mix(in srgb,#D2463F 18%,transparent)}.voice .vc-pre{padding-bottom:4px}}
 /* Маленькое окно (data-fit, слово автора 14.11.2026): 1/8 и низкое — только запись и время в ряд, по высоте окна */

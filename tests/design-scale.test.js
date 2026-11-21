@@ -12,7 +12,7 @@ const CSS = files('src').map((p) => [p, readFileSync(p, 'utf8').replace(/\/\*[\s
 const distinct = (re, skip = () => false) => new Set(CSS.filter(([p]) => !skip(p)).flatMap(([, t]) => [...t.matchAll(re)].map((m) => m[1].toLowerCase()))).size;
 
 // Потолки на 21.11.2026 (замер в docs/design-system.md, раздел 3); цель — шкала из 8 / 5 ступеней
-const MAX = { fontSize: 57, radius: 28, hexOutsideTokens: 567 };
+const MAX = { fontSize: 49, radius: 28, hexOutsideTokens: 567 };
 
 describe('шкалы оформления', () => {
   it('разных font-size не больше потолка', () => {

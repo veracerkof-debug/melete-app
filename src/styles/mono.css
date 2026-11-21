@@ -73,7 +73,7 @@
 
 /* ---------- заголовки и подписи разделов ---------- */
 :root[data-style="mono"] .large { text-transform: uppercase; font-weight: 800; letter-spacing: -.01em; font-size: 30px; }
-:root[data-style="mono"] .hdr { text-transform: uppercase; letter-spacing: .16em; font-size: 11.5px; font-weight: 600; color: var(--l2); margin-left: 4px; }
+:root[data-style="mono"] .hdr { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 600; color: var(--l2); margin-left: 4px; }
 :root[data-style="mono"] .hhdr span { text-transform: uppercase; letter-spacing: .2em; font-size: 15px; font-weight: 400; }
 :root[data-style="mono"] .hhdr .link { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--l2); }
 :root[data-style="mono"] .ftr, :root[data-style="mono"] .segcap { color: var(--l2); }
@@ -95,7 +95,7 @@
 :root[data-style="mono"] .btn { color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; }
 :root[data-style="mono"] .btn.fill, :root[data-style="mono"] .hcta { background: var(--ink); color: var(--bg); border-color: var(--ink); box-shadow: none; }
 :root[data-style="mono"] .seg { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
-:root[data-style="mono"] .seg button { border-radius: 999px; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px; }
+:root[data-style="mono"] .seg button { border-radius: 999px; text-transform: uppercase; letter-spacing: .06em; font-size: 13px; }
 :root[data-style="mono"] .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
 :root[data-style="mono"] .sw i { background: transparent; border: 1.5px solid var(--l3); }
 :root[data-style="mono"] .sw i::after { background: var(--l3); box-shadow: none; top: 3.5px; left: 3.5px; width: 21px; height: 21px; }
@@ -109,7 +109,7 @@
 
 /* ---------- нижние вкладки: подписи прописными, без цвета ---------- */
 :root[data-style="mono"] .tabbar { border-top: 1px solid var(--sep); -webkit-backdrop-filter: none; backdrop-filter: none; }
-:root[data-style="mono"] .tab { color: var(--l3); text-transform: uppercase; letter-spacing: .12em; font-size: 9.5px; font-weight: 600; }
+:root[data-style="mono"] .tab { color: var(--l3); text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 600; }
 :root[data-style="mono"] .tab svg { width: 22px; height: 22px; stroke-width: 1.4; }
 :root[data-style="mono"] .tab[aria-current="page"] { color: var(--ink); }
 
@@ -121,7 +121,7 @@
 :root[data-style="mono"] .prname { color: var(--l2); text-transform: uppercase; letter-spacing: .18em; font-size: 12px; padding: 0; min-height: 32px; }
 :root[data-style="mono"] .phero .l2 { text-align: left !important; }
 :root[data-style="mono"] .tile { background: transparent; border: 1px solid var(--sep); border-radius: 18px; }
-:root[data-style="mono"] .tile span { text-transform: uppercase; letter-spacing: .1em; font-size: 10.5px; }
+:root[data-style="mono"] .tile span { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; }
 :root[data-style="mono"] .avatar { background: transparent; border: 1px solid var(--line); color: var(--ink); }
 :root[data-style="mono"] .about b { letter-spacing: .2em; text-transform: uppercase; }
 :root[data-style="mono"] .goldshine { background: none !important; -webkit-text-fill-color: currentColor !important; color: var(--ink) !important; animation: none !important; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
@@ -138,7 +138,7 @@
 .mono-home .mleague svg { flex: none; }
 .mono-home .mstone canvas:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
 .mono-home .mstxt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.mono-home .mslbl { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--l2); font-weight: 600; }
+.mono-home .mslbl { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--l2); font-weight: 600; }
 .mono-home .msval { font-size: 30px; font-weight: 250; letter-spacing: -.02em; line-height: 1.05; }
 .stonefull { display: flex; justify-content: center; margin: 4px 0 10px; }
 .stonefull canvas { width: min(88vw, 60vh, 520px); height: min(88vw, 60vh, 520px); cursor: grab; touch-action: none; }
@@ -172,7 +172,7 @@
 .mono-home .mcirc svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .mono-home .mtools.mall { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 18px 10px; overflow: visible; padding: 4px 0 6px; }
 .mono-home .mtools.mall button { width: auto; justify-self: center; }
-.mono-home .mlbl { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--l2); font-weight: 700; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mono-home .mlbl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--l2); font-weight: 700; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mono-home .mlist { display: flex; flex-direction: column; }
 .mono-home .mrow { display: flex; align-items: center; border-bottom: 1px solid var(--sep); }
 .mono-home .mrow > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 60px; text-align: left; padding: 0 2px; }
@@ -188,7 +188,7 @@
 :root[data-style="mono"] .tci2 { background: transparent !important; border: 1px solid var(--line); border-radius: 50%; box-shadow: none !important; }
 :root[data-style="mono"] .tci2 svg { stroke: var(--ink); stroke-width: 1.5; width: 24px; height: 24px; }
 :root[data-style="mono"] .tcn2 { font-weight: 500; letter-spacing: -.01em; }
-:root[data-style="mono"] .tcs2 { text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px; }
+:root[data-style="mono"] .tcs2 { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
 :root[data-style="mono"] .qbtn { background: transparent !important; color: var(--ink); border: 1px solid var(--line); box-shadow: none !important; }
 :root[data-style="mono"] .tile b { font-size: 18px; font-weight: 500; }
 :root[data-style="mono"] .calendar, :root[data-style="mono"] .cgrid, :root[data-style="mono"] .cwk, :root[data-style="mono"] .cmonth,
@@ -307,7 +307,7 @@
 /* стих-эпиграф (Пс 89:12) — в календаре и таймере, в обоих видах (стили здесь общие), тихо, книжным шрифтом */
 .mverse { margin: 10px auto 18px; max-width: 420px; font-family: "Melete Greek", var(--font); font-size: 15px; line-height: 1.5; color: var(--l2); font-style: normal; text-align: center; cursor: pointer; }
 .mverse span { display: block; margin-top: 6px; font-size: 11px; letter-spacing: .14em; color: var(--l3); }
-.mcard .mverse { margin: 18px auto 2px; font-size: 13.5px; }
+.mcard .mverse { margin: 18px auto 2px; font-size: 14px; }
 .large + .mverse { text-align: left; margin-left: 2px; }
 /* у GFS Didot одно начертание — жирное не подделывается, греческие названия остаются тонкими */
 :root[data-style="mono"] { font-synthesis-weight: none; }
@@ -317,15 +317,15 @@
 .bvcard:last-child { border-bottom: 0; }
 .bvname { font-size: 26px; line-height: 1.1; margin-bottom: 10px; }
 .bvgr { margin: 0 0 10px; font-family: "Melete Greek", var(--font); font-size: 18px; line-height: 1.55; }
-.bvru { margin: 0 0 6px; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
+.bvru { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--l2); }
 .bvcs { margin: 0 0 10px; font-family: "Melete Slavonic", var(--font); font-size: 19px; line-height: 1.6; }
-.bven { margin: 0 0 8px; font-family: Georgia, "Noto Serif", serif; font-style: italic; font-size: 14.5px; line-height: 1.5; color: var(--l2); }
+.bven { margin: 0 0 8px; font-family: Georgia, "Noto Serif", serif; font-style: italic; font-size: 15px; line-height: 1.5; color: var(--l2); }
 .bvtext { margin: 0 0 8px; font-family: Georgia, "Noto Serif", "Times New Roman", serif; font-size: 17px; line-height: 1.55; }
 .bvref { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--l3); }
 /* чтение дня в «Минимале» */
 .mono-home .mread { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; margin: 26px 0 0; padding: 18px 2px; border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
 .mono-home .mread .hrr { font-size: 24px; font-weight: 300; }
-.mono-home .mread .hrs { color: var(--l2); text-transform: uppercase; letter-spacing: .12em; font-size: 10.5px; }
+.mono-home .mread .hrs { color: var(--l2); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; }
 /* Библия: изучение по логике MyBible работает только здесь (src/modules/bible/study.js): номера Стронга, словари,
    комментарии и сноски, перекрёстные ссылки, подзаголовки; жесты — двойное касание слова, касание меток, долгое касание стиха,
    смахивание по главам, щипок для шрифта. В обычном виде модуль показывает чистый текст и принимает только переводы. */
@@ -407,7 +407,7 @@
 :root[data-style="mono"] .mono-home .rank, :root[data-style="mono"] .mono-home .mrank { border: 0; }
 :root[data-style="mono"] .tmsi { display: none; }
 :root[data-style="mono"] .tmsec .grow > span:first-child { font-size: 20px; font-weight: 300; }
-:root[data-style="mono"] .tmsub { text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px !important; }
+:root[data-style="mono"] .tmsub { text-transform: uppercase; letter-spacing: .08em; font-size: 11px !important; }
 /* слово дня под приветствием */
 .mono-home .mquote { margin: 12px 0 0; font-size: 14px; line-height: 1.45; color: var(--l2); max-width: 46ch; }
 .mono-home .mquote .qref { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }

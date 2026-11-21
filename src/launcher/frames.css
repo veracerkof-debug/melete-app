@@ -173,7 +173,7 @@ html[data-style="cli"][data-mono] #app { filter: none; }
 [data-style="inst"]:not([data-page="notes"]) .bar { height: 12px; border-radius: 6px; background: var(--fill2); box-shadow: inset 0 1px 3px rgba(0,0,0,.15); position: relative; }
 [data-style="inst"]:not([data-page="notes"]) .bar::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0,0,0,.18) calc(10% - 1px) 10%); pointer-events: none; }
 [data-style="inst"]:not([data-page="notes"]) .bar i { border-radius: 6px; }
-[data-style="inst"] .day { text-transform: uppercase; letter-spacing: .12em; font-size: 10.5px; }
+[data-style="inst"] .day { text-transform: uppercase; letter-spacing: .12em; font-size: 11px; }
 [data-style="inst"] .row .badge { background: var(--cell); box-shadow: 0 2px 4px rgba(0,0,0,.12); }
 [data-style="inst"] .seg { box-shadow: inset 0 1px 3px rgba(0,0,0,.12); }
 [data-style="inst"] .seg button.on { background: var(--l-acc); color: #fff; }

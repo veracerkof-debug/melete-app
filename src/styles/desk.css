@@ -17,7 +17,7 @@ html.desk .tabbar .in {
   max-width: none; margin: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;
 }
 html.desk .tab { min-height: 64px; padding: 8px 4px; gap: 4px; }
-html.desk .tab .tl { display: block; font-size: 11.5px; font-weight: 600; line-height: 1.15; max-width: 84px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.desk .tab .tl { display: block; font-size: 12px; font-weight: 600; line-height: 1.15; max-width: 84px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html.desk .tab svg { width: 26px; height: 26px; }
 html.desk .tab::before { top: 8px; margin-top: 0; width: 56px; height: 32px; margin-left: -28px; }
 html.desk .tab:hover { color: var(--ink); }

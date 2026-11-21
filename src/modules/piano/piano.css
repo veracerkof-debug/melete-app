@@ -98,10 +98,10 @@
 .pwrap.wsyn .psyn{flex:1 1 0;min-height:0;overflow:hidden;margin:0 0 8px;padding:0;display:flex;flex-direction:column;container-type:size}
 .psyn .prow{flex:none;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;margin:0 0 6px;padding:0 0 2px;scrollbar-width:none}
 .psyn .prow::-webkit-scrollbar{display:none}
-.psyn .prow .pill{min-height:30px;font-size:13.5px;padding:0 12px;flex:none}
+.psyn .prow .pill{min-height:30px;font-size:14px;padding:0 12px;flex:none}
 .psyn .retro.inl{flex:1 1 0;min-height:0;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:auto minmax(28px,1fr) auto auto;gap:5px;padding:7px 8px 6px;border-radius:18px}
 .psyn .retro.inl .rhead{grid-column:1/-1;padding:0 6px;min-height:0}
-.psyn .retro.inl .rhead b{font-size:9.5px}
+.psyn .retro.inl .rhead b{font-size:10px}
 .psyn .retro.inl .lcd{grid-column:1/-1;min-height:0}
 .psyn .retro.inl .lcd canvas{height:100%!important;min-height:28px}
 .psyn .retro.inl .rsec{grid-column:span 1;padding:3px 2px 2px;border-radius:12px;min-width:0}
