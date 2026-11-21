@@ -154,6 +154,15 @@
 /* Маленькое окно (data-fit, слово автора 14.11.2026): клавиши и октава ‹ ›; число клавиш, звук и линии — в окне побольше */
 .pane[data-fit="1"] .pbar [data-step="pkeys"],.pane[data-fit="1"] .pbar [data-x="psound"],.pane[data-fit="1"] .pbar [data-x="plines"],
 .pane[data-fit="2"] .pbar [data-step="pkeys"],.pane[data-fit="2"] .pbar [data-x="psound"],.pane[data-fit="2"] .pbar [data-x="plines"]{display:none}
+/* Узкий телефон (окно < 400 px, 21.11.2026, docs/design-system.md п. 8): строка кнопок остаётся на месте и в одну строку, а не в две —
+   число клавиш (−/+) уходит в окно пошире, клавиш столько, сколько помещается, считается само (lastFit) */
+@container (max-width: 399px){
+  .pane:not(.strip) .pbar{flex-wrap:nowrap}
+  .pane:not(.strip) .pbar [data-step="pkeys"]{display:none}
+  .pane:not(.strip) .pbar .pk{min-width:38px}
+  .pane:not(.strip) .pbar .pk.txt2{min-width:46px}
+  .pane:not(.strip) .pbar .pval{min-width:4.6ch}
+}
 /* Полоса: клавиши на всю высоту, октава ‹ › — сбоку; остальные кнопки — в окне побольше */
 .pane.strip .pwrap{display:flex;flex-direction:row;align-items:center;gap:6px}
 .pane.strip .pwrap .kbs{flex:1 1 0!important;min-width:0}
