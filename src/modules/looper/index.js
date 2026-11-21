@@ -76,12 +76,12 @@ function view() {
     : '<div class="lphint l2">' + ui.esc(t(small ? 'hintShort' : s === 'idle' ? 'hint' : 'hintMore')) + '</div>';
   const slots = '<div class="lpslots" role="group" aria-label="' + ui.esc(t('loops')) + '">' + Array.from({ length: SLOTS }, (_, i) => '<button class="lpslot' + (i === S.slot ? ' on' : '') + (S.slots[i] ? ' has' : '') + '" data-x="slot" data-i="' + i + '" aria-pressed="' + (i === S.slot) + '" aria-label="' + ui.esc(t('loopN', { n: i + 1 })) + '">' + (i + 1) + '</button>').join('') + '</div>';
   const bar = '<div class="lpbar">' +
-    ui.icb('data-x="view"', reelsView() ? I.parts : partsView() ? I.ring : I.reels, t(reelsView() ? 'viewParts' : partsView() ? 'viewRing' : 'viewReels'), 'sm') +
-    ui.icb('data-x="metro"', I.metro, t('metro'), 'sm' + (withMetro() ? ' on' : '')) +
-    ui.icb('data-x="mon"', I.ear, t('mon'), 'sm' + (S.mon ? ' on' : '')) +
-    ui.icb('data-x="undo"', I.undo, t('undo'), 'sm') +
-    ui.icb('data-x="stop"', I.stop, t('stop'), 'sm') +
-    ui.icb('data-x="save"', I.save, t('save'), 'sm') + '</div>';
+    ui.icb('data-x="view"', reelsView() ? I.parts : partsView() ? I.ring : I.reels, t(reelsView() ? 'viewParts' : partsView() ? 'viewRing' : 'viewReels')) +
+    ui.icb('data-x="metro"', I.metro, t('metro'), ''+ (withMetro() ? ' on' : '')) +
+    ui.icb('data-x="mon"', I.ear, t('mon'), ''+ (S.mon ? ' on' : '')) +
+    ui.icb('data-x="undo"', I.undo, t('undo')) +
+    ui.icb('data-x="stop"', I.stop, t('stop')) +
+    ui.icb('data-x="save"', I.save, t('save')) + '</div>';
   // точная донастройка: ‹ ±1 мс › с автоповтором при удержании; число — сдвиг, касание — в ноль
   const nudge = (L, i, cls = '') => '<span class="lpnudge' + cls + '">' + ui.icb('data-nd="-' + NUDGE + '" data-i="' + i + '"', I.left, t('earlier1'), 'sm plain') +
     '<button class="lpshv num" data-nd="0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-nd="' + NUDGE + '" data-i="' + i + '"', I.right, t('later1'), 'sm plain') + '</span>';
@@ -207,6 +207,7 @@ function render() {
   if (!host) return;
   const act = document.activeElement, keep = act && host.contains(act) && act.dataset.vol;
   host.innerHTML = view();
+  ctx.ui.foldHints(host); // длинная подсказка — кружок «?» (слово автора 21.11.2026)
   if (keep) { const r = host.querySelector('[data-vol="' + keep + '"]'); if (r) r.focus(); }
   if (partsView()) drawAll(); // на паузе — один раз (ход рисует tick)
   tick();

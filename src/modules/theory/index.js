@@ -381,11 +381,14 @@ function stopListen() { if (lis) { clearTimeout(lis.timer); lis.m.stop(); lis = 
 
 function view() {
   const s = curSec(), big = size === 'full' || size === 'half', { t } = ctx;
-  const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + secs().map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' +
+  // «Определитель» — не отдельная вкладка, а переключатель внутри «Гамм» (слово автора 21.11.2026: все разделы должны помещаться на экране)
+  const on = (k) => k === s || (k === 'scales' && s === 'find');
+  const sub = findOn() && (s === 'scales' || s === 'find') ? '<div class="tsw tsub" role="tablist">' + ['scales', 'find'].map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' + t('sec.' + k) + '</button>').join('') + '</div>' : '';
+  const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + SECS.map((k) => '<button class="tswb' + (on(k) ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + on(k) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div></div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
   const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
-  return '<div class="comp ' + size + '"' + (sw ? ' data-swtabs' : '') + '>' + sw + '<div class="cbody">' + body + '</div></div>';
+  return '<div class="comp ' + size + '"' + (sw ? ' data-swtabs' : '') + '>' + sw + sub + '<div class="cbody">' + body + '</div></div>';
 }
 
 let lastSec = null;

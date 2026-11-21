@@ -158,10 +158,10 @@
 .sttoolin{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0}
 /* узкий телефон: транспорт в одну строку без обрезки — шестерёнка прячется (настройки открывает и плашка темпа), значки меньше */
 @container (max-width: 480px) {
-  .stwrap .sttop .ic.sm{width:32px;height:32px;min-width:32px}
+  .stwrap .sttop .ic.sm{width:40px;height:40px;min-width:40px} /* цель касания ≥ 40 px (слово автора 21.11.2026: кнопки слишком маленькие) */
   .sttop .stgrp > [data-x="settings"]{display:none}
   .sttop .stinfo{min-width:62px;padding:2px 6px}
-  .sttop .stplay{width:42px;height:42px}
+  .sttop .stplay{width:52px;height:52px}
 }
 
 /* Пусто: заголовок и одна строка, дальше — залитая кнопка «Новый проект» */
@@ -181,3 +181,7 @@
 
 /* Полный экран «Студии»: название и справка уже в шапке инструмента */
 .tview .stlist .sthdr{display:none}
+/* Пустоты нет (слово автора 21.11.2026): «Новый проект» — внизу, под большим пальцем; подсказка — посередине свободного места */
+.stlist{display:flex;flex-direction:column}
+.stlist>.stempty{margin:auto 0;padding-top:0}
+.stlist>.btn.block{margin-top:auto!important;min-height:52px}

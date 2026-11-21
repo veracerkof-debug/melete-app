@@ -127,3 +127,10 @@
 .pane .dwrap.bleed{width:auto}
 .dwrap.bleed .dbar{padding:8px 10px 6px}
 .dwrap.bleed .dgrid{padding:0;gap:2px}
+/* Узкий телефон: слои «Низ/Сред/Выс» — отдельной строкой во всю ширину, а не сплющенные между кнопками (слово автора 21.11.2026) */
+@container (max-width: 440px){
+  .pane.full .dbar{flex-wrap:wrap;row-gap:6px;justify-content:space-evenly}
+  .pane.full .dbar .layers{order:-1;flex:1 1 100%}
+}
+/* Диезы и бемоли — темнее, чтобы отличались от натуральных ступеней (слово автора 21.11.2026) */
+.dtile.sh{background:color-mix(in srgb,var(--tint) 30%,var(--cell));color:var(--ink)}

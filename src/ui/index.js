@@ -105,7 +105,7 @@ export function foldHints(root) {
     b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(b); });
     h.parentNode.insertBefore(b, h); h.hidden = true;
   });
-  root.querySelectorAll('.ftr, .segcap').forEach((h) => {
+  root.querySelectorAll('.ftr, .segcap, .lphint, .hintx').forEach((h) => {
     if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop')) return;
     let host = null;
     if (h.classList.contains('segcap')) host = h.parentElement && h.parentElement.querySelector(':scope > .segttl');
@@ -116,7 +116,7 @@ export function foldHints(root) {
       host = hd && hd.classList.contains('hdr') ? hd : p && p.classList.contains('hdr') ? p : null;
     }
     if (!host) { // нет названия рядом — сам кружок вместо абзаца
-      const row = document.createElement('div'); row.className = 'hqrow'; h.parentNode.insertBefore(row, h); host = row;
+      const row = document.createElement('div'); row.className = 'hqrow' + (h.classList.contains('lphint') || h.classList.contains('hintx') ? ' c' : ''); h.parentNode.insertBefore(row, h); host = row;
     }
     mk(host, h.innerHTML);
     h.hidden = true;
@@ -256,4 +256,4 @@ export function agree(title, text, check, yes) {
 }
 
 export { loader };
-export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, agree, leave, loader };
+export const ui = { esc, icons, seg, sw, stepper, icb, snav, sheet, toast, confirm, agree, leave, loader, foldHints };

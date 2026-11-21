@@ -52,6 +52,9 @@
 .cbtn .fnb{width:auto;min-width:30px;padding:0 4px;font-size:11px}
 .cbtn:active{transform:scale(.96)}
 .cwrap.f .cgrid{grid-template-columns:repeat(4,1fr);margin-top:6px}
+/* четыре в ряд: ступень над названием — длинные «Dm7♭5», «IIImaj7» больше не обрезаются «…» (слово автора 21.11.2026) */
+.cwrap.f .cbtn{flex-direction:column;gap:3px;padding:6px 2px;justify-content:center}
+.cwrap.f .cbtn b{max-width:100%;overflow:visible;text-overflow:clip}
 .cwrap.h .csvg{max-width:52%}
 .cside{justify-content:center}
 .cname{font-size:clamp(24px,14cqmin,56px);font-weight:700;letter-spacing:-.02em}
@@ -201,3 +204,4 @@
 /* 1/8: аккорды — одной полосой с прокруткой вбок */
 .pane[data-fit="1"] .cgrid.qg{display:flex;overflow-x:auto;scrollbar-width:none;flex:none;gap:6px}
 .pane[data-fit="1"] .cgrid.qg .cbtn{flex:none;min-width:64px;min-height:44px}
+.tsub{margin:6px 0 2px}
