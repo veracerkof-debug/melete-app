@@ -1,4 +1,11 @@
 {
+  "feat.cat.time": "Время и ритм",
+  "feat.cat.pitch": "Звук и высота",
+  "feat.cat.play": "Игра",
+  "feat.cat.learn": "Учёба",
+  "feat.cat.media": "Запись и медиа",
+  "feat.cat.paper": "Ноты и тексты",
+  "feat.cat.util": "Служебное",
   "group.ear": "Тренажёр",
   "group.studio": "Студия",
   "group.theory": "Теория",

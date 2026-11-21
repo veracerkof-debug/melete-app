@@ -79,3 +79,18 @@
 
 /* поверхность до краёв окна сессии (src/ui/bleed.js): верхние углы остаются круглыми под ручкой окна */
 .tm.bleed{width:auto;height:auto;border-radius:0 0 var(--pane-r,18px) var(--pane-r,18px)}
+
+/* Инфографика рук: две карточки — какая рука что делает (цвет семьи окна --mod, любая палитра) */
+.tig{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 2px;text-align:left}
+.tigc{background:var(--cell);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 3px 0 0 var(--mod,var(--tint));min-width:0}
+.tigc.w{grid-column:span 2}
+.tigh{display:flex;flex-direction:column;gap:0}
+.tigh b{font-size:15px;font-weight:700;color:var(--mod,var(--tint-text))}
+.tigh span{font-size:12px;color:var(--l2)}
+.tigr{display:flex;align-items:center;gap:8px;font-size:13px;line-height:1.25}
+.tigr svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--mod,var(--tint));stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tig.dark{max-width:440px;width:100%}
+.tig.dark .tigc{background:rgba(255,255,255,.1);color:white}
+.tig.dark .tigh span{color:rgba(255,255,255,.7)}
+.tig.dark .tigh b{color:white}
+.tig.dark .tigr svg{stroke:white}

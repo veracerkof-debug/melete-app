@@ -1,4 +1,11 @@
 {
+  "feat.cat.time": "Vaqt va ritm",
+  "feat.cat.pitch": "Tovush va balandlik",
+  "feat.cat.play": "Ijro",
+  "feat.cat.learn": "Oʻqish",
+  "feat.cat.media": "Yozuv va media",
+  "feat.cat.paper": "Nota va matn",
+  "feat.cat.util": "Xizmat",
   "group.ear": "Trenajyor",
   "group.studio": "Studiya",
   "group.theory": "Nazariya",

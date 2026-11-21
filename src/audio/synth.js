@@ -405,6 +405,25 @@ export function createSynth({ mixer, getPatch, getLayer = () => null, getA4 = ()
       if (!key.endsWith(LK)) offOne(key + LK, fast, at);
     },
 
+    // Живая правка звучащей ноты пальцем (слово автора 21.11.2026: на длинных клавишах движение вверх — ярче и громче, вниз — тише и мягче; как у глайдера, без ладов).
+    // x: 0…1 (0,5 — как сыграна); яркость — фильтр голоса, у рояля ещё и громкость. Плавно (≈ 40 мс), голос не пересоздаётся; нет такого голоса — ничего.
+    // Звуки с огибающей громкости (пэды, органы) меняют только яркость: громкость у них ведёт огибающая.
+    expr(key, x) {
+      const k0 = Math.max(0, Math.min(1, +x));
+      if (!Number.isFinite(k0)) return;
+      [key, key + LK].forEach((k) => {
+        const vo = voices.get(k);
+        if (!vo || !vo.lp || vo.expired) return;
+        try {
+          const c = vo.g.context, t = c.currentTime;
+          if (vo.lpBase == null) vo.lpBase = vo.lp.frequency.value;
+          if (vo.grand && vo.gBase == null) vo.gBase = vo.peak;
+          vo.lp.frequency.setTargetAtTime(Math.max(200, Math.min(20000, vo.lpBase * (0.45 + 1.1 * k0))), t, 0.04);
+          if (vo.grand) vo.g.gain.setTargetAtTime(vo.gBase * (0.65 + 0.7 * k0), t, 0.04);
+        } catch { /* голос уже ушёл — не страшно */ }
+      });
+    },
+
     // Отпустить «с педалью» (Sustain): нота не глушится, а затухает долгим хвостом, как струна при нажатой педали.
     // Затухающие звуки (колокол) и рояль просто доигрывают сами — запись и так звучит, пока не затихнет струна
     release(key) {

@@ -741,3 +741,6 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .tgrid.tgtop .tcs2{font-size:12px;line-height:15px;min-height:15px;max-width:100%;text-align:center}
 .tgrid.tgtop .tcard2.tpage .tci2{background:color-mix(in srgb,var(--tint) 16%,var(--cell))}
 .szfr{overflow:hidden}
+/* Разделы «Модулей и функций»: цветная точка семьи перед названием */
+.featcat{display:flex;align-items:center;gap:8px}
+.catdot{width:10px;height:10px;border-radius:50%;flex:none}

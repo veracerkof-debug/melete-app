@@ -48,3 +48,9 @@
 - Перед отправкой в `main`: `git merge origin/main`, `npm test`, нужные e2e, сборка (`npx vite build`).
 - Ручные инструменты проверки лаунчера (аудит всех стилей, снимки экранов) — `tests/launcher-tools/`; в обычные проверки
   не входят, как запускать — `docs/launcher.md`, раздел «Состояние и хвосты».
+
+## Новые проверки 21.11.2026
+
+e2e: `groups.spec.js` (объединённые инструменты), `levels.spec.js` (уровни и «без прокрутки»), `palettes.spec.js` (семьи и контраст в 7 палитрах), `corner.spec.js` (углы, кнопка полного экрана),
+`cover.spec.js` (обложка), `pianoexpr.spec.js` (выразительность клавиши); юнит: `groups`, `corner`, `cover`, `earlevels`, `rhythmlevels`, `design-scale` (ратчет), `palettes` (семьи).
+Правило «без прокрутки»: `scrollHeight − clientHeight ≤ 1` у рабочего блока на 390×844 (`levels.spec.js`).

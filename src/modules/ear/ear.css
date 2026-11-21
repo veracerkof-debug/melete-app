@@ -134,7 +134,7 @@
 .elvdots i{width:20px;height:4px;border-radius:2px;background:var(--fill2)}
 .elvdots i.past{background:color-mix(in srgb,var(--mod,var(--tint)) 45%,var(--fill2))}
 .elvdots i.on{background:var(--mod,var(--tint))}
-.elgo{min-height:52px;font-size:17px;background:color-mix(in srgb,var(--mod,var(--tint)) 78%,black)!important;color:white!important}
+.elgo{min-height:52px;font-size:17px;background:var(--mod-deep,var(--tint))!important;color:var(--mod-on,white)!important}
 .edgrid{grid-auto-rows:minmax(56px,auto);flex:none;gap:8px}
 .edcard{flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 10px;gap:10px;min-height:56px}
 .edcard .edic{position:static;width:34px;height:34px;border-radius:11px;flex:none}
@@ -142,3 +142,6 @@
 .edcard .edr{position:relative;margin-left:auto;width:32px;height:32px;flex:none}
 .edcard .edn{margin:0;font-size:15px}
 .edcard .eds{display:none}
+.edgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.edcard{min-width:0;overflow:hidden}
+.edcard .edn{min-width:0;flex:1;text-align:left;line-height:1.15}

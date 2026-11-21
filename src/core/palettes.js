@@ -76,6 +76,12 @@ export const TOOL_HUE = {
   voice: 'red', looper: 'red', studio: 'pink', audio: 'pink', show: 'pink',
   notes: 'brown', bible: 'brown', convert: 'graphite',
 };
+// Разделы списка «Модули и функции» (слово автора 21.11.2026: по категориям, интуитивно): категория — смысл, оттенок — из системы цветов; названия — i18n feat.cat.<id>
+export const CATEGORIES = ['time', 'pitch', 'play', 'learn', 'media', 'paper', 'util'];
+export const FAMILY_CATEGORY = { time: 'time', pitch: 'pitch', play: 'play', learn: 'learn', record: 'media', media: 'media', paper: 'paper', util: 'util' };
+export const CATEGORY_HUE = { time: 'orange', pitch: 'teal', play: 'indigo', learn: 'green', media: 'pink', paper: 'brown', util: 'graphite' };
+export const categoryOf = (id) => FAMILY_CATEGORY[TOOL_FAMILY[id]] || 'util'; // личные и неизвестные модули — «Служебное»
+
 // Акцент (названия — как в settings.ACCENTS) → оттенок
 export const ACCENT_HUE = { orange: 'orange', red: 'red', pink: 'pink', purple: 'purple', indigo: 'indigo', blue: 'blue', teal: 'mint', green: 'green', graphite: 'graphite' };
 

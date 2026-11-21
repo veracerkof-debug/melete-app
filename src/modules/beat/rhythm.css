@@ -144,7 +144,7 @@
 .elvdots i{width:20px;height:4px;border-radius:2px;background:var(--fill2)}
 .elvdots i.past{background:color-mix(in srgb,var(--mod,var(--tint)) 45%,var(--fill2))}
 .elvdots i.on{background:var(--mod,var(--tint))}
-.elgo{min-height:52px;font-size:17px;background:color-mix(in srgb,var(--mod,var(--tint)) 78%,black)!important;color:white!important}
+.elgo{min-height:52px;font-size:17px;background:var(--mod-deep,var(--tint))!important;color:var(--mod-on,white)!important}
 .rygrid{grid-auto-rows:minmax(56px,auto);flex:none;gap:8px}
 .rycardd{flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 10px;gap:10px;min-height:56px}
 .rycardd .ryic{position:static;width:34px;height:34px;border-radius:11px;flex:none}

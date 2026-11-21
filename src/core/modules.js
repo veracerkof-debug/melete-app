@@ -280,6 +280,10 @@ export function mountModule(app, mod, host, size = 'full', frame = host) {
   frame.dataset.tool = mod.id;
   frame.dataset.size = size;
   frame.style.setProperty('--mod', mod.color);
+  // залитые кнопки внутри окна (--mod-deep) и цвет текста на них (--mod-on): тёмный оттенок на светлой палитре не нужен, на тёмной — глубже, чтобы читалось в любой палитре
+  const onWhite = /^#?f{3}(f{3})?$/i.test(mod.on || '#fff');
+  frame.style.setProperty('--mod-on', mod.on || '#fff');
+  frame.style.setProperty('--mod-deep', onWhite ? 'color-mix(in srgb,' + mod.color + ' 78%,black)' : mod.color);
   if (heavyStub(mod)) { // тяжёлый модуль в веб-версии: заглушка с описанием и ссылкой на приложение
     host.innerHTML = heavyHTML(ctx, mod);
     return { ctx, resize() {}, unmount() { host.innerHTML = ''; frame.classList.remove('pane', size); } };

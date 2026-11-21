@@ -1,4 +1,11 @@
 {
+  "feat.cat.time": "Time and rhythm",
+  "feat.cat.pitch": "Sound and pitch",
+  "feat.cat.play": "Play",
+  "feat.cat.learn": "Learn",
+  "feat.cat.media": "Record and media",
+  "feat.cat.paper": "Scores and text",
+  "feat.cat.util": "Utilities",
   "group.ear": "Trainer",
   "group.studio": "Studio",
   "group.theory": "Theory",

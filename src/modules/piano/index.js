@@ -159,6 +159,9 @@ function showNote(m) {
   if (ln) ln.textContent = mName(m);
 }
 
+// Выразительность по высоте пальца на клавише: где коснулись — «как сыграно» (0,5); вверх — ярче и громче, вниз — мягче (synth.expr)
+const exprOf = (el, y0, y) => { const r = el.getBoundingClientRect(); return r.height > 0 ? 0.5 + (y0 - y) / (r.height * 0.6) : 0.5; };
+
 function noteOn(k, pid) {
   const m = +k.dataset.m, key = 'p' + pid + '_' + m + '_' + performance.now();
   k.classList.add('down');
@@ -234,14 +237,19 @@ function bind() {
       else { const key = 'ph' + m + '_' + Date.now(); syn.on(m, key, { hold: true, bus: 'piano' }); hold.k.set(m, key); k.classList.add('held'); showNote(m); ctx.midi.ev({ k: 'on', id: key, m, v: 0.8 }); vOn(key, m, 0.8); }
       return;
     }
-    ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) });
+    ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId), y0: e.clientY, ex: 0.5 });
   });
   // Скольжение пальцем по клавишам
   on(window, 'pointermove', (e) => {
     const p = ptr.get(e.pointerId);
     if (!p) return;
     const el = document.elementFromPoint(e.clientX, e.clientY), k = el && el.closest ? el.closest('.kb [data-m]') : null;
-    if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId) }); }
+    if (k && k !== p.el && host.contains(k)) { noteOff(p); ptr.set(e.pointerId, { el: k, key: noteOn(k, e.pointerId), y0: e.clientY, ex: 0.5 }); return; }
+    // тот же палец на той же клавише: вверх — ярче и громче, вниз — тише; шаг не чаще заметной разницы
+    if (p.y0 != null && hold.mode !== 2) {
+      const x = Math.max(0, Math.min(1, exprOf(p.el, p.y0, e.clientY)));
+      if (Math.abs(x - p.ex) >= 0.03) { p.ex = x; syn.expr(p.key, x); }
+    }
   });
   // Sustain: отпущенная клавиша не глушится — звук уходит долгим хвостом
   const up = (e) => {

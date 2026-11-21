@@ -50,6 +50,32 @@ const padHall = () => { try { return +(ctx.peek('drone').hall) || 0; } catch { r
 const createPadVoice = (c, d, sound, opt) => tapped(padVoice(c, d, sound, { ...opt, hall: padHall() }), { kind: 'pad', sound });
 
 import meta, { ICON } from './meta.js';
+/* ---------- инфографика рук (слово автора 21.11.2026: «настройки непонятны — нужны значки и схемы») ---------- */
+// Две карточки: какая рука что делает в выбранном режиме; значки — свои, цвет — семьи окна (--mod), работает в любой палитре
+const IGI = {
+  note: '<path d="M9 18V6l9-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="16" cy="16" r="2"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  palm: '<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.5-2.4 6-5.5 6S7 18 6 15l-1.4-3.2a1.4 1.4 0 0 1 2.4-1.3L8 12"/>',
+  fist: '<rect x="6" y="9" width="12" height="9" rx="4"/><path d="M9 9V7M12 9V6M15 9V7"/>',
+  turn: '<path d="M20 12a8 8 0 1 1-3-6.2M20 4v4h-4"/>',
+  fingers: '<path d="M7 20V10M11 20V5M15 20V7M19 20V12"/>',
+  cam: '<rect x="3" y="7" width="18" height="12" rx="3"/><circle cx="12" cy="13" r="3.2"/>',
+};
+function handsInfo(s, dark) {
+  const { t } = ctx, ic = (k) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + IGI[k] + '</svg>';
+  const row = (k, key) => '<div class="tigr">' + ic(k) + '<span>' + t(key) + '</span></div>';
+  const card = (side, title, rows, wide) => '<div class="tigc' + (wide ? ' w' : '') + '"><div class="tigh"><b>' + t(title) + '</b>' + (side ? '<span>' + t('ig.' + side + 'Hand') + '</span>' : '') + '</div>' + rows.join('') + '</div>';
+  let body;
+  if (s.mode === 'guitar') body = card(null, 'ig.cam', [row('cam', 'ig.cam1'), row('note', 'ig.cam2')], true);
+  else {
+    const pitch = s.mode === 'chord' ? card(s.side, 'ig.deg', [row('fingers', 'ig.deg1'), row('palm', 'ig.deg2'), row('turn', 'ig.deg3')])
+      : card(s.side, 'ig.pitch', [row('note', 'ig.pitch1'), row('up', 'ig.pitch2')]);
+    const fx = card(s.side === 'right' ? 'left' : 'right', 'ig.fx', [row('palm', 'ig.fx1'), row('fist', 'ig.fx2'), row('up', 'ig.fx3'), row('turn', 'ig.fx4')]);
+    body = s.side === 'right' ? fx + pitch : pitch + fx; // слева — левая рука, справа — правая
+  }
+  return '<div class="tig' + (dark ? ' dark' : '') + '">' + body + '</div>';
+}
+
 const I = {
   left: '<svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></svg>',
   right: '<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>',
@@ -159,7 +185,7 @@ function view() {
   if (S.state === 'off' || S.state === 'error') {
     mid = '<div class="tmstart">' + (S.state === 'error' ? '<p class="tmerr">' + t('err.' + S.err) + '</p>' : '') +
       '<button class="btn fill" data-x="tcam">' + I.cam + '<span>' + t('start') + '</span></button>' +
-      (size !== 'strip' && size !== 'quarter' ? '<p class="tmhint">' + t(gtr ? 'hint.guitar' : 'hint.' + s.side) + '</p><p class="tmpriv">' + t(gtr ? 'gPrivacy' : 'privacy') + '</p>' : '') + '</div>';
+      (size !== 'strip' && size !== 'quarter' ? handsInfo(s, true) + '<p class="tmpriv">' + t(gtr ? 'gPrivacy' : 'privacy') + '</p>' : '') + '</div>';
   } // пока камера включается — сплошной фон и тихая синусоида (её сменяет картинка с камеры)
   // poster — пустой кадр: иначе Android до первого кадра рисует на видео свою серую заставку
   return '<div class="tm ' + size + (s.facing === 'environment' ? ' back' : '') + ' sd-' + s.side + ' hud-' + s.hud + (gtr ? ' gtr' : '') + (on && s.light && (s.facing === 'user' || !S.cam || !S.cam.hasTorch) ? ' ring' : '') + (s.showCam ? '' : ' nocam') + (S.live ? ' live' : '') + '"><video class="tmcam" playsinline muted aria-hidden="true" poster="' + BLANK + '"></video><div class="tmvig"></div><canvas class="tmcv" aria-hidden="true"></canvas>' +
@@ -798,7 +824,7 @@ function setSheet() {
     // режим — сразу сверху: от него зависит, что есть во вкладках
     return ui.snav(t('name')) +
       '<div class="group" style="margin-top:4px"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('mode')) +
-      '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : s.mode === 'chord' ? 'chordHint' : 'soloHint') + '</div></div></div>' +
+      '</div></div>' + handsInfo(s) +
       tabsHTML(ui, tabs.map((k) => [k, t(MODES.includes(k) ? 'mode.' + k : 'tab.' + k)]), s.stab, t('settings')) + '<div class="gltabbody">' + pages[s.stab](s) + '</div>';
   };
   ui.sheet(body, (el, sh) => {

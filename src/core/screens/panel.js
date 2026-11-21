@@ -31,7 +31,7 @@ import { remindFormHTML, meleteHTML, bindMelete, mountMelete } from './melete.js
 import { planHTML, bindPlan, mountPlan, planSummary } from './plan.js';
 import { setsOf, QSETS, qsetsFor } from '../quotes.js';
 const QUOTE_IC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 7H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5A1.5 1.5 0 0 1 6.5 18H6v2h.5A3.5 3.5 0 0 0 10 16.5zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2v1.5a1.5 1.5 0 0 1-1.5 1.5H16v2h.5a3.5 3.5 0 0 0 3.5-3.5z"/></svg>';
-import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES } from '../palettes.js';
+import { PALETTE_IDS, PALETTES, SPECIAL_PALETTES, ownPalette, OWN_DEFAULT, isHex, hueColor, onColor, TEXT_MODES, CATEGORIES, CATEGORY_HUE, categoryOf } from '../palettes.js';
 import { modules, moduleById, skippedModules } from '../../modules/index.js';
 import { packsHTML, bindPacks } from './packs.js';
 import { moduleName } from '../modules.js';
@@ -577,8 +577,13 @@ function featHTML(app) {
     '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
 '</div>' +
     '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
-    '<div class="hdr">' + t('feat.modules') + '</div><div class="group">' +
-    modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>' +
+    // по категориям (слово автора 21.11.2026): время и ритм · звук и высота · игра · учёба · запись и медиа · тексты и ноты · служебное; цвет раздела — из системы цветов
+    CATEGORIES.map((cat) => {
+      const list = modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf && (m.local ? 'util' : categoryOf(m.id)) === cat);
+      if (!list.length) return '';
+      return '<div class="hdr featcat"><i class="catdot" style="background:' + hueColor(st, CATEGORY_HUE[cat]) + '"></i>' + t('feat.cat.' + cat) + '</div><div class="group">' +
+        list.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>';
+    }).join('') +
     // пакеты моделей (полный рояль, вокал телефона): скачать один раз, удалить (src/core/packs.js)
     // определитель аккордов и гамм в «Теории»: выключен по умолчанию (слово автора 06.11.2026)
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
