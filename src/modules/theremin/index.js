@@ -796,7 +796,7 @@ function setSheet() {
     const s = cfg(), tabs = tabsOf(s);
     if (!tabs.includes(s.stab)) s.stab = 'sound';
     // режим — сразу сверху: от него зависит, что есть во вкладках
-    return ui.snav(t('settings')) +
+    return ui.snav(t('name')) +
       '<div class="group" style="margin-top:4px"><div class="cellcol">' + ui.seg('tmode2', MODES.map((k) => [k, t('mode.' + k)]), s.mode, t('mode')) +
       '<div class="segcap">' + t(s.mode === 'guitar' ? 'gHint' : s.mode === 'chord' ? 'chordHint' : 'soloHint') + '</div></div></div>' +
       tabsHTML(ui, tabs.map((k) => [k, t(MODES.includes(k) ? 'mode.' + k : 'tab.' + k)]), s.stab, t('settings')) + '<div class="gltabbody">' + pages[s.stab](s) + '</div>';

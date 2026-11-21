@@ -397,7 +397,7 @@ function setSheet() {
   const body = () => {
     const s = cfg();
     if (!TABS.includes(s.stab)) s.stab = 'sound';
-    return ui.snav(t('settings')) + tabsHTML(ui, TABS.map((k) => [k, t('tab.' + k)]), s.stab, t('settings')) + '<div class="gltabbody">' + pages[s.stab](s) + '</div>';
+    return ui.snav(t('name')) + tabsHTML(ui, TABS.map((k) => [k, t('tab.' + k)]), s.stab, t('settings')) + '<div class="gltabbody">' + pages[s.stab](s) + '</div>';
   };
   ui.sheet(body, (el, sh) => {
     const done = () => { save(); sh.update(); render(); updateBus(); };
