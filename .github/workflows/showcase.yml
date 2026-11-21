@@ -57,4 +57,5 @@ jobs:
       - name: Выложить в gh-pages (show/; корень остаётся)
         env:
           PAGES_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: build/pages-deploy.sh dist-show show "Витрина: сборка ${{ github.run_number }} (${GITHUB_SHA::7})"
+        run: |
+          build/pages-deploy.sh dist-show show "Витрина: сборка ${{ github.run_number }} (${GITHUB_SHA::7})"
