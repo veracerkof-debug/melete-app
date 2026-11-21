@@ -46,8 +46,16 @@ const impSave = () => { imp = trim(impLoad(), Date.now(), IMP_MS, IMP_CHARS); tr
 export const important = () => impLoad().slice();
 
 // Запись: cat — раздел (app, nav, mod, pdf, cam…), msg — текст; lvl: i — событие, w — предупреждение, e — ошибка
+// Одно и то же предупреждение или ошибка подряд (цикл, дребезг) — одна запись, а не сотни: повтор в течение DUP_MS
+// не пишется и не считается (диагностика видит реальное число разных событий); число пропущенных — счёт log.dup
+const DUP_MS = 10_000;
+let lastBad = null;
 export function log(cat, msg, lvl = 'i') {
   const line = [Date.now(), lvl, String(cat).slice(0, 12), String(msg).slice(0, LINE_MAX)];
+  if (lvl !== 'i') {
+    if (lastBad && lastBad[1] === lvl && lastBad[2] === line[2] && lastBad[3] === line[3] && line[0] - lastBad[0] < DUP_MS) { dCount('log.dup'); return; }
+    lastBad = line;
+  }
   load().push(line);
   if (lvl !== 'i') { impLoad().push(line); impSave(); dCount('log.' + lvl + '.' + line[2]); } // счёт по разделам — диагностика
   if (lvl === 'e') flush(); // ошибка — сразу на диск: следом может случиться вылет
@@ -93,6 +101,8 @@ export function startLog(info = '') {
   addEventListener('error', (e) => {
     // ошибка загрузки файла (картинка, скрипт) — имя тега и путь внутри приложения
     if (e.target && e.target !== window && e.target.tagName) { log('load', e.target.tagName.toLowerCase() + ' ' + String(e.target.src || e.target.href || '').replace(/^[a-z]+:\/\/[^/]+/, ''), 'w'); return; }
+    // «ResizeObserver loop…» — безвредное замечание браузера (кадр не успел дорисоваться), не ошибка приложения
+    if (!e.error && /ResizeObserver loop/.test(String(e.message || ''))) return;
     log('js', errText(e.error || { name: 'Error', message: e.message + ' ' + String(e.filename || '').replace(/^[a-z]+:\/\/[^/]+/, '') + ':' + e.lineno }), 'e');
   }, true);
   addEventListener('unhandledrejection', (e) => log('js', 'promise ' + errText(e.reason), 'e'));

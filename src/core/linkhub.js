@@ -53,7 +53,8 @@ export function openLink(dev, name = 'Melete') {
   closeLink();
   const link = createLink({ role: 'client', name, key: dev.key, connect: androidConnect(dev) });
   link.subscribe(() => emit());
-  link.subscribe((s) => { if (s === 'failed' || s === 'retry') log('link', 'канал событий: ' + s + ' (' + link.error + ')', s === 'failed' ? 'w' : undefined); });
+  let was = '';
+  link.subscribe((s) => { if ((s === 'failed' || s === 'retry') && was !== s) log('link', 'канал событий: ' + s + ' (' + link.error + ')', s === 'failed' ? 'w' : undefined); was = s; });
   cur = { link, dev };
   link.open();
   log('link', 'канал событий: открываю ' + String(dev.addr).replace(/^https:\/\//, ''));
@@ -83,7 +84,9 @@ export async function acceptOn(mem, name = 'PC') {
       close: () => { invoke('link_close', { cid }).catch(() => {}); },
       auth: (ok) => { invoke('link_auth', { cid, ok }).catch(() => {}); },
     });
-    link.subscribe((s) => { if (s === 'open') log('link', 'канал событий: подключилось ' + ((link.peer && link.peer.name) || '').slice(0, 30)); emit(); });
+    // подписчиков оповещают и на каждый обмен пингами (часы) с тем же состоянием — в журнал только переход в «открыт»
+    let was = '';
+    link.subscribe((s) => { if (s === 'open' && was !== 'open') log('link', 'канал событий: подключилось ' + ((link.peer && link.peer.name) || '').slice(0, 30)); was = s; emit(); });
     conns.set(cid, { link, hd });
     accepted.add(link);
   }));

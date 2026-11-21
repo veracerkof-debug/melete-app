@@ -1,6 +1,6 @@
 // Технический журнал: хранится не дольше 3 часов и не больше заданного объёма; текст — «время [раздел] сообщение»
 import { describe, it, expect } from 'vitest';
-import { trim, logText, errText, KEEP_MS } from '../src/core/log.js';
+import { trim, logText, errText, KEEP_MS, log, entries, clearLog } from '../src/core/log.js';
 
 describe('журнал', () => {
   it('старое уходит по времени', () => {
@@ -22,5 +22,15 @@ describe('журнал', () => {
     e.stack = 'TypeError: x is undefined\n    at f (https://localhost/assets/index-1.js:10:5)';
     expect(errText(e)).toBe('TypeError: x is undefined @ at f (/assets/index-1.js:10:5)');
     expect(errText(null)).toBe('unknown');
+  });
+  it('одинаковая ошибка подряд — одна запись, другая — отдельная', () => {
+    clearLog();
+    for (let k = 0; k < 50; k++) log('js', 'TypeError: x', 'e');
+    log('js', 'RangeError: y', 'e');
+    log('app', 'событие', 'i'); log('app', 'событие', 'i'); // обычные события не склеиваются
+    const m = entries().map((l) => l[3]);
+    expect(m.filter((x) => x === 'TypeError: x').length).toBe(1);
+    expect(m).toContain('RangeError: y');
+    expect(m.filter((x) => x === 'событие').length).toBe(2);
   });
 });
