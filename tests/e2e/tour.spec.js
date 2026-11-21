@@ -44,11 +44,11 @@ test('инструкция: касание мимо — дальше до кон
 test('инструмент без шагов — карточка с яркой галочкой, касание мимо закрывает', async ({ page, melete, errors }) => {
   await melete.open({ settings: { helpOff: false, helpSeen: { 'core:start': true, 'core:share': true } } });
   await melete.tab('tools');
-  await melete.click('[data-open-tool="tuner"]');
+  await melete.click('[data-open-tool="piano"]');
   await expect(page.locator('.helpask .hcnever')).toBeVisible({ timeout: 5000 });
   await page.click('.helpask .hcnever');
   await page.mouse.click(3, 3); await page.waitForTimeout(400);
   await expect(page.locator('.helpask')).toHaveCount(0);
-  expect((await melete.settings()).helpSeen.tuner).toBe(true);
+  expect((await melete.settings()).helpSeen.piano).toBe(true);
   expect(errors).toEqual([]);
 });
