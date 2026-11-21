@@ -5,8 +5,8 @@
     "piano": ["android"],
     "vocals": ["android"],
     "ffmpeg": ["android"],
-    "stems": ["android-dev"],
-    "roformer": ["android-dev"]
+    "stems": [],
+    "roformer": []
   },
   "models": [
     {

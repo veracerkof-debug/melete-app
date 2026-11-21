@@ -23,15 +23,15 @@ const onDesktop = () => !Capacitor.isNativePlatform() && isDesktop();
 export const stemsNative = () => !!Native || isDesktop();
 // В веб-сборке моделей нет (рабочий поток подменён пустышкой) — разделение недоступно, кнопки прячутся.
 // APK (и Windows) — модель в пакете (src/core/packs.js): пока не скачан, разделения нет, stemsPack() — какой скачать.
-// Телефон в Melete DEV (слово автора 07.11.2026: «полное разделение — обязательно»): ещё 4 и 6 дорожек (пакет stems,
-// HTDemucs) и улучшенный вокал RoFormer (пакет roformer); в pre этих пакетов нет — телефон делит на вокал и инструментал
+// Слово автора 21.11.2026 (отменило 07.11): телефон, и в DEV тоже, делит только на вокал и инструментал — 4/6 дорожек и
+// улучшенный вокал на телефоне греют и разряжают его; их делает только компьютер (DECISIONS 2026-11-21)
 const WEB = typeof __WEB_BUILD__ !== 'undefined' && __WEB_BUILD__;
-export const fullStems = () => isDesktop() || (Capacitor.getPlatform() === 'android' && isPacked('stems'));
+export const fullStems = () => isDesktop(); // 21.11.2026: и в DEV телефон только вокал/инструментал (нагрев), остальное — компьютер
 const packId = (mode = '2') => (isDesktop() ? 'stems' : mode === '4' || mode === '6' ? 'stems' : 'vocals');
 export const stemsSupported = (mode = '2') => !WEB && (mode === '2' || fullStems()) && hasPack(packId(mode));
-export const stemsPack = (mode = '2') => (!WEB && isPacked(packId(mode)) && !hasPack(packId(mode)) ? packId(mode) : null);
+export const stemsPack = (mode = '2') => (!WEB && (isDesktop() || mode === '2') && isPacked(packId(mode)) && !hasPack(packId(mode)) ? packId(mode) : null);
 // Пакет улучшенного вокала (телефон DEV), который ещё не скачан, — или null
-export const hqPack = () => (!WEB && !isDesktop() && isPacked('roformer') && !hasPack('roformer') ? 'roformer' : null);
+export const hqPack = () => null; // телефону RoFormer не даётся (21.11.2026); на компьютере модель встроена
 
 const SR = 44100;
 // Режимы: '2' — вокал и инструментал (из четырёх дорожек: остальное суммируется), '4' — вокал, ударные, бас,
@@ -78,7 +78,7 @@ export const estimateSec = (dur, mode = '4', hq = false) => (hq && isDesktop() ?
   : Math.round(dur * (Native || isDesktop() ? (isDesktop() ? 0.5 : 2) : stemsThreads() > 1 ? 2.5 : 5.5) * (mode === '6' ? 1.5 : 1) * (hq ? HQ_MUL : 1)));
 // Улучшенное разделение — вокал моделью Mel-RoFormer (компьютер — src-tauri/src/roformer.rs, телефон DEV — RoFormer.java
 // из пакета roformer), остальное — HTDemucs по инструменталу
-export const hqVocalsModel = () => isDesktop() || (!WEB && isPacked('roformer') && hasPack('roformer'));
+export const hqVocalsModel = () => isDesktop();
 
 let worker = null, ready = null, readyModel = '';
 // Рабочий поток с моделью (stems.worker.js): создаётся один раз на модель, модель грузится один раз; другая модель — заново

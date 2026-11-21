@@ -22,6 +22,9 @@ export const AUTO_MODES = ['off', '2', '4', '6'];
 // Телефон — только вокал и инструментал (MDX-Net): прежние «4» и «6» становятся «2»; компьютер — все режимы, по умолчанию 4.
 // Телефон Melete DEV с полным разделением (fullStems) — тоже все, по умолчанию 2
 export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '4' : '2'; return !desk && !fullStems() && m !== 'off' ? '2' : m; };
+// Что телефон заказывает у компьютера (решение автора 21.11.2026: всё, кроме вокала и инструментала, — только компьютер)
+export const PC_STEMS = ['off', '4', '6'];
+export const pcStems = (settings) => (PC_STEMS.includes(settings.pcStems) ? settings.pcStems : '4');
 export const autoAna = (settings) => settings.autoAna !== false;
 export const autoHq = (settings) => settings.autoHq === true; // улучшенное разделение (вторая очередь)
 export const autoLyr = (settings) => settings.autoLyr !== false; // текст песни (только где есть whisper — Windows)
@@ -55,7 +58,8 @@ export function createAutoStems(app) {
   const ok = (r) => !(failed.get(r.id) > Date.now());
   // режим записи: свой, а запись с телефона — как просил телефон (rec.want); своё выключено — не считаем
   const modeOf = (r) => { const m = autoMode(settings(), desk); return m !== 'off' && r.want && ['2', '4', '6'].includes(r.want.stems) ? r.want.stems : m; };
-  const hqOf = (r) => autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings(), desk) !== 'off');
+  // улучшенное разделение — только компьютер (21.11.2026): телефон его лишь заказывает (want.hq), сам не считает — нагрев
+const hqOf = (r) => desk && (autoHq(settings()) || !!(r.want && r.want.hq && autoMode(settings(), desk) !== 'off'));
   const needsStems = (r) => { const m = modeOf(r); return m !== 'off' && jobs.supported(m) && !hasStems(files, r.id, m) && ok(r) && !pcWaits(r, 'stems'); };
   // текст — после дорожек (по вокалу точнее); дорожки выключены — по записи целиком
   const needsLyr = (r) => { const m = modeOf(r); return autoLyr(settings()) && jobs.lyricsSupported() && !r.lyr && !r.lyrTried && ok(r) && (m === 'off' || !jobs.supported(m) || hasStems(files, r.id, m)); };
@@ -122,7 +126,9 @@ export function createAutoStems(app) {
     kick: () => schedule(1000),
     waitsPc: (r) => pcWaits(r, 'stems') && !hasStems(files, r.id), // плеер: «посчитает компьютер»
     quiet, playing, // для связи с компьютером: фоновая синхронизация — только в тишине, приём — не во время музыки
-    want: () => ({ stems: autoMode(settings(), desk), hq: autoHq(settings()) }), // какие дорожки нужны этому устройству
+    // какие дорожки нужны этому устройству; телефон заказывает у компьютера 4/6 дорожек (settings.pcStems, умолчание 4) и улучшенный вокал
+    want: () => ({ stems: desk ? autoMode(settings(), desk) : pcStems(settings()), hq: autoHq(settings()) }),
+    pcStems: () => pcStems(settings()),
     // что это устройство считает само (компьютер сообщает телефону)
     caps: () => ({ stems: jobs.supported() ? autoMode(settings(), desk) : 'off', ana: autoAna(settings()) && mirOk, lyr: autoLyr(settings()) && jobs.lyricsSupported() }),
     power: () => autoPower(settings()),
