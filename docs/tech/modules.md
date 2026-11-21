@@ -66,7 +66,7 @@ src/modules/<id>/
 | `audio` | Медиатека | плеер с дорожками, нотами, аккордами, A–B, скоростью и тональностью |
 | `convert` | Конвертер | `inner`, часть медиатеки; движок `audio/convert/` |
 | `show` | Пульт выступления | `inner`, часть медиатеки (dev); данные `music/show.js`, звук падов `audio/showpads.js`; `docs/show.md` |
-| `notes` | Ноты и табы | alphaTab, pdf.js, текст с аккордами, «С игры» |
+| `notes` | Ноты (табы, ноты, текст) | alphaTab, pdf.js, текст с аккордами, «С игры» |
 | `voice` | Диктофон | движок `audio/voiceengine.js`, обработка `audio/vocal.js` |
 | `vocal` | Вокал | распевки по диапазону (`music/warmup.js`, библиотека `exercises.js`), голос и тип (`music/voicetype.js`), импровизация над дроном; шина `vocal`; тема — `docs/vocal.md` |
 | `looper` | Лупер | `audio/looper.js`; партии студии в шторке |
