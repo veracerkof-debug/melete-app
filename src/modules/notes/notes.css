@@ -11,6 +11,11 @@
 .athl.play{background:color-mix(in srgb,var(--tint) 30%,transparent)}
 .atload{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px}
 .tablist{flex:1;overflow:auto;min-height:0}
+/* Пустоты нет (слово автора 21.11.2026): кнопки — внизу, под большим пальцем, подсказка — в середине свободного места; с длинным списком — после него */
+.tpin{display:flex;flex-direction:column}
+.tpin>p.l2{margin:auto 8px!important}
+.tpin>.vrow{margin-top:auto!important;padding-top:12px;justify-content:center}
+.tpin>.vrow .btn.sm{min-height:44px}
 .pane.strip .lyr{font-size:12px!important}
 .pane.strip .ntools{display:none}
 .pane.quarter .ntools{flex-wrap:wrap;justify-content:center}

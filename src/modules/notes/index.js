@@ -434,7 +434,7 @@ function tabsBody() {
   if (!AT.cur || AT.state === 'error' || isDaw(AT.cur)) {
     const mine = song ? all.filter((x) => inSong(x, song.id)) : [];
     const rest = all.filter((x) => !mine.includes(x));
-    return '<div class="tablist">' + (all.length
+    return '<div class="tablist tpin">' + (all.length
       ? (mine.length ? '<div class="hdr" style="margin-top:4px">' + t('thisSong') + '</div><div class="group">' + mine.map(tabRow).join('') + '</div>' : '') +
         (rest.length ? '<div class="hdr">' + t(mine.length ? 'others' : 'allTabs') + '</div><div class="group">' + rest.map(tabRow).join('') + '</div>' : '')
       : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('uploadHint') + '</p>') +
@@ -474,7 +474,7 @@ function scoreView() {
 function midiBody() {
   const { t } = ctx, all = daws();
   if (!AT.cur || !isDaw(AT.cur) || AT.state === 'error') {
-    return '<div class="tablist">' + (all.length ? '<div class="group">' + all.map(dawRow).join('') + '</div>' : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('dawEmpty') + '</p>') +
+    return '<div class="tablist tpin">' + (all.length ? '<div class="group">' + all.map(dawRow).join('') + '</div>' : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('dawEmpty') + '</p>') +
       '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadDaw') + '</button></div>' +
       (AT.state === 'error' && isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('dawFail') + '</p>' : '') + '</div>';
   }
