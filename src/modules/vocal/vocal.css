@@ -172,3 +172,14 @@
 /* Низкое и маленькое окно (data-fit): «Сначала — диапазон» — заголовок и кнопка, без пояснения */
 .pane[data-fit="1"] .vcv .card.first>.l2,.pane[data-fit="2"] .vcv .card.first>.l2{display:none}
 .pane[data-fit="1"] .vcv .card.first,.pane[data-fit="2"] .vcv .card.first{gap:8px;padding:10px}
+.vclvl{position:absolute;left:10px;right:10px;bottom:10px;z-index:2;background:color-mix(in srgb,var(--cell) 92%,transparent);border-radius:20px;padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px var(--sep)}
+.vclr{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.vclr .ic{font-size:24px;font-weight:700;color:var(--l2)}
+.vclt{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.vclt b{font-size:17px;font-weight:700}
+.vclt span{font-size:13px;color:var(--l2)}
+.vcdots{display:flex;gap:5px;justify-content:center}
+.vcdots i{width:20px;height:4px;border-radius:2px;background:var(--fill2)}
+.vcdots i.past{background:color-mix(in srgb,var(--mod,var(--tint)) 45%,var(--fill2))}
+.vcdots i.on{background:var(--mod,var(--tint))}
+.vcgo{min-height:52px;font-size:17px;background:var(--mod-deep,var(--tint))!important;color:var(--mod-on,white)!important}

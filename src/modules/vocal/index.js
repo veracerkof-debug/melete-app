@@ -21,6 +21,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './vocal.css';
 import meta, { ICON } from './meta.js';
+import { VLEVEL_COUNT, clampVLevel } from '../../music/vocallevels.js';
 import { EXERCISES, PROGRAMS, PROGRAM_IDS, LEVELS, exById } from './exercises.js';
 import { buildRun, runSeconds, syllable, spellNote, noteName, trainRange } from '../../music/warmup.js';
 import { TYPES, voiceType, typeComfort, typeRange, createNoteTracker, rangeOf, workingOf, scoreNote, improvSummary, detectMode } from '../../music/voicetype.js';
@@ -682,6 +683,15 @@ function overlayHTML() {
   else { const r = exRange(ex); sub = t('idle', { lo: noteName(r.lo), hi: noteName(r.hi), min: minOf(exSec(ex)) }); }
   return '<div class="vcov"><b>' + DOTS(ex.lv || 1) + esc(exName(ex)) + '</b><span id="vcsub">' + esc(sub) + '</span>' + (!playing() && size !== 'quarter' ? '<span class="how">' + esc(t('how.' + ex.id)) + '</span>' : '') + '</div>';
 }
+function startCardHTML() {
+  if (playing() || (P && P.wait) || size === 'strip' || size === 'quarter') return '';
+  const t = ctx.t, lv = clampVLevel(S().lv10);
+  return '<div class="vclvl"><div class="vclr"><button class="ic sm plain" data-x="vlv" data-d="-1" aria-label="' + esc(t('lv10.prev')) + '"' + (lv <= 1 ? ' disabled' : '') + '>‹</button>' +
+    '<div class="vclt"><b>' + esc(t('lv10.title', { n: lv, max: VLEVEL_COUNT })) + '</b><span>' + esc(t('lv10.' + lv)) + '</span></div>' +
+    '<button class="ic sm plain" data-x="vlv" data-d="1" aria-label="' + esc(t('lv10.next')) + '"' + (lv >= VLEVEL_COUNT ? ' disabled' : '') + '>›</button></div>' +
+    '<div class="vcdots" aria-hidden="true">' + Array.from({ length: VLEVEL_COUNT }, (_, i) => '<i' + (i + 1 === lv ? ' class="on"' : i + 1 < lv ? ' class="past"' : '') + '></i>').join('') + '</div>' +
+    '<button class="btn fill block vcgo" data-x="vstart">' + esc(t('lv10.start')) + '</button></div>';
+}
 function freeHTML() { return P && P.ex.free ? '<div class="vcfree" id="vcfree"></div>' : ''; }
 function updFree() {
   const el = root && root.querySelector('#vcfree');
@@ -712,7 +722,7 @@ function warmHTML() {
     const ex = (P && P.ex) || exById(S().ex);
     return ctx.ui.icb('data-x="prev"', ctx.ui.icons.left, ctx.t('prev')) + '<div class="vcmid"><b>' + esc(exName(ex)) + '</b><span id="vcsub"></span></div>' + barHTML() + ctx.ui.icb('data-x="next"', ctx.ui.icons.right, ctx.t('next'));
   }
-  return '<div class="vcstaff" id="vcstaff">' + staffHTML() + '</div><div class="vcsurf" id="vcsurf"><canvas aria-hidden="true"></canvas>' + overlayHTML() + freeHTML() + '</div>' + barHTML();
+  return '<div class="vcstaff" id="vcstaff">' + staffHTML() + '</div><div class="vcsurf" id="vcsurf"><canvas aria-hidden="true"></canvas>' + overlayHTML() + freeHTML() + startCardHTML() + '</div>' + barHTML();
 }
 
 function improvHTML() {
@@ -920,6 +930,8 @@ function onClick(e) {
   if (!(b = g('[data-x]'))) return;
   const x = b.dataset.x, s = S();
   if (x === 'play') { if (playing() || (P && P.wait)) stopPlay(); else startEx(exById(s.ex)); }
+  else if (x === 'vlv') { s.lv10 = clampVLevel((s.lv10 || 1) + +b.dataset.d); ctx.store.save(); render(); }
+  else if (x === 'vstart') { const id = 'vl' + clampVLevel(s.lv10), ex = exById(PROGRAMS[id][0]); s.ex = ex.id; ctx.store.save(); startEx(ex, { id, i: 0 }); }
   else if (x === 'list') listSheet();
   else if (x === 'set') setSheet();
   else if (x === 'prev') stepEx(-1);

@@ -1,3 +1,4 @@
+import { VLEVEL_PLAN } from '../../music/vocallevels.js';
 // Библиотека распевок (слово автора 13.11.2026; источники — docs/vocal.md): мотивы ступенями, слоги, темп. Разворот по
 // диапазону — src/music/warmup.js. Названия и подсказки «как петь» — в словарях модуля (ex.<id>, how.<id>).
 // Поля: g — группа; p — мотив (warmup.js: parseMotif); bpm — темп в четвертях; syl — слоги { ru, en } (строка — на все
@@ -74,3 +75,5 @@ export const PROGRAMS = {
   cool: ['coolTrill', 'coolHum', 'yawn'],
 };
 export const PROGRAM_IDS = Object.keys(PROGRAMS);
+// уровни «Начать занятие» — тоже программы (id vl1…vl10), но в списке программ не показываются (PROGRAM_IDS выше)
+VLEVEL_PLAN.forEach((l, i) => { PROGRAMS['vl' + (i + 1)] = l; });
