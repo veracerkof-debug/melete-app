@@ -131,7 +131,7 @@ export const arpStat = { notes: 0, glide: 0 };
 export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 = () => 440 }) {
   // звучит ли пэд у себя (слой вывода подменяет drone.on тенью «пэд играет на другом устройстве» — тогда арпеджиатор молчит)
   const dOn = () => (drone.local ? drone.local.on : drone.on);
-  let timer = 0, next = 0, step = 0, bar = null, prevName = null, keyN = 0, glide = null, gNext = 0, gNote = 0;
+  let timer = 0, lastTick = 0, next = 0, step = 0, bar = null, prevName = null, keyN = 0, glide = null, gNext = 0, gNote = 0;
   let sig = '', lad = null, root = 0, keyPc = null, scale = null; // звучащий аккорд и его лесенка, тональность
   let psig = '', gsig = '', gBusyAt = 0, gFirst = true; // подпись настроек рисунка и спутника: правка слышна сразу, не со следующего такта
   let lastC = null;
@@ -150,7 +150,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
 
   function tick() {
     const c = getContext(mixer.state.mode), a = normalizeArp(getArp());
-    lastC = c;
+    lastC = c; lastTick = performance.now();
     if (!c || !a.on || !dOn()) { stop(); return; }
     const d = getDrone(), per = RATES[a.rate], st = beatLen() / per, steps = per * 4;
     const anc = anchor();
@@ -254,7 +254,11 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
   }
 
   function start() {
-    if (timer) return;
+    // таймер есть, а тиков нет больше секунды (часы звука встали при перегрузке) — запускаем заново, иначе настройка
+    // не слышна, пока пэд не нажмут ещё раз
+    if (timer && performance.now() - lastTick > 1000) { cancel(timer); timer = 0; }
+    if (timer) { tick(); return; } // настройки правят уже играющий — применяем сразу, не ждём следующего тика
+    lastTick = performance.now();
     const c = getContext(mixer.state.mode);
     if (!c) return;
     next = c.currentTime + 0.1; step = 0; bar = null; sig = ''; lad = null;

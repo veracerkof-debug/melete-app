@@ -114,14 +114,20 @@ test('сравнение дублей: две записи песни — А/Б,
   expect(errors).toEqual([]);
 });
 
-test('тихий вид: 30 с без касаний — лишнее уходит, касание возвращает и не ставит паузу', async ({ page, melete, errors }) => {
+test('тихий вид: 45 с без касаний — панель уезжает, окно растёт, касание возвращает и не ставит паузу', async ({ page, melete, errors }) => {
   await melete.open({ settings: { calmView: true } });
   await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
   await page.waitForSelector('.session', { timeout: 10_000 });
   await page.waitForTimeout(800);
   await expect(page.locator('.session.calm')).toHaveCount(0);
+  const h0 = await page.evaluate(() => document.querySelector('.session .ws').getBoundingClientRect().height);
   await page.evaluate(() => { const o = Date.now; Date.now = () => o() + 31000; });
+  await page.waitForTimeout(1500);
+  await expect(page.locator('.session.calm')).toHaveCount(0); // 30 с — ещё рано (по умолчанию 45)
+  await page.evaluate(() => { const o = Date.now; Date.now = () => o() + 15000; });
   await expect(page.locator('.session.calm')).toHaveCount(1, { timeout: 3000 });
+  await page.waitForTimeout(900);
+  expect(await page.evaluate(() => document.querySelector('.session .ws').getBoundingClientRect().height)).toBeGreaterThan(h0 + 40); // место панели отдано окну
   await page.click('#stime');
   await expect(page.locator('.session.calm')).toHaveCount(0);
   expect(await page.evaluate(() => !!window.__melete.active.pausedAt)).toBe(false);

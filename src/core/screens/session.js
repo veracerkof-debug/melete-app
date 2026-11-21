@@ -710,16 +710,16 @@ export function createSessionScreen(app) {
     });
     sin.appendChild(b);
   }
-  // Тихий вид (слово автора 13.11.2026, «как Forest»): 30 с без касаний — шапка, панель инструментов и ручки окон
-  // уходят, остаются крупное время и сам инструмент (ноты, метроном). Касание возвращает всё и проходит дальше —
-  // по инструменту играть можно сразу. Раскладка не двигается (только прозрачность). Выключить — «Неделя» (calmView)
-  const CALM_MS = 30000;
+  // Тихий вид (слово автора 13.11.2026, «как Forest»; 21.11.2026 — панель уезжает, инструмент занимает её место): 45 с без касаний —
+  // нижняя панель уезжает вниз, шапка и ручки окон гаснут, остаются крупное время и сам инструмент. Касание возвращает всё
+  // и проходит дальше — по инструменту играть можно сразу. Время и выключение — «Неделя» (calmSec, calmView)
+  const calmMs = () => (+st().calmSec > 0 ? +st().calmSec : 45) * 1000; // по умолчанию 45 с, меняется в «Неделе»
   let calmAt = 0, calmWoke = 0;
   function calmWake() { calmAt = Date.now(); const ses = layer && layer.querySelector('.session'); if (ses && ses.classList.contains('calm')) { ses.classList.remove('calm'); calmWoke = calmAt; } }
   function calmTick() {
     const ses = layer && layer.querySelector('.session');
     if (!ses || ses.classList.contains('calm') || st().calmView === false || !app.active || app.active.pausedAt) return;
-    if (Date.now() - calmAt < CALM_MS || document.querySelector('#sheetLayer .scrim:not(.leaving), .ask, .tour') || layer.querySelector('.sbrk')) return;
+    if (Date.now() - calmAt < calmMs() || document.querySelector('#sheetLayer .scrim:not(.leaving), .ask, .tour') || layer.querySelector('.sbrk')) return;
     ses.classList.add('calm');
   }
   function tickNow() {
