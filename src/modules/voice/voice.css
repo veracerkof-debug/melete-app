@@ -175,3 +175,13 @@
 .pane[data-fit="1"] .voice .vc-btn.main,.pane[data-fit="2"] .voice .vc-btn.main{width:min(56px,calc(100cqh - 10px));height:min(56px,calc(100cqh - 10px))}
 .pane[data-fit="1"] .voice .vc-state,.pane[data-fit="1"] .voice .vc-meter,.pane[data-fit="2"] .voice .vc-state,.pane[data-fit="2"] .voice .vc-meter{display:none}
 .pane[data-fit="1"] .voice .vc-rec,.pane[data-fit="2"] .voice .vc-rec{width:100%;justify-content:center;box-sizing:border-box}
+
+/* Записи диктофона (шторка): строка — кнопка прослушивания, название и время, ползунок позиции, меню */
+.voice-recs .vcr,.vcr{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:56px}
+.vcr-p,.vcr-m{flex:none;width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--fill);color:var(--ink);cursor:pointer}
+.vcr-m{background:transparent}
+.vcr-p svg,.vcr-m svg{width:22px;height:22px}
+.vcr.on .vcr-p{background:var(--tint);color:#fff}
+.vcr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vcr-t b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcr-bar{width:100%;margin:4px 0 0;min-height:28px}

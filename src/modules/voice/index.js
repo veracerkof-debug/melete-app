@@ -30,6 +30,7 @@ const I = {
   tune: '<svg viewBox="0 0 24 24"><path d="M5 4v6M5 14v6M12 4v2M12 10v10M19 4v10M19 18v2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="19" cy="16" r="2"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z" fill="currentColor" stroke="none"/></svg>',
   ear: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.5" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="13.5" width="4.5" height="7" rx="1.8"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><path d="M8 6.5h12M8 12h12M8 17.5h12"/><circle cx="4" cy="6.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4" cy="17.5" r="1.1" fill="currentColor" stroke="none"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>',
   save: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>',
   mark: '<svg viewBox="0 0 24 24"><path d="M7 3.5h10a1 1 0 0 1 1 1V20l-6-4-6 4V4.5a1 1 0 0 1 1-1z"/></svg>',
@@ -56,7 +57,8 @@ const RAW_KEEP_DAYS = 14, RAW_KEEP_MIN = 10; // исходники сохран�
 const METER_DEF = { spec: true, style: 'bars', mode: 'both', clip: -0.3, hold: 2, range: 60, smooth: 'mid' };
 
 let host = null, ctx = null, size = 'full', offs = [], onClick = null, onChange = null, onPtr = null, onInput = null;
-const S = { marks: [], warned: {}, recDev: null, liveDev: null, inWarn: '', gr: null, phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null, kept: [] };
+const S = { marks: [], warned: {}, recDev: null, liveDev: null, inWarn: '', gr: null, phase: 'idle', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, take: null, sel: [0, 1], playing: false, pos: 0, mode: 'proc', busy: false, devs: { inputs: [], outputs: [] }, err: null, proc: null, kept: [], saving: 0 };
+let stopping = false, listSh = null, PL = null; // PL — идёт прослушивание записи из списка: { id, a, url }
 
 const st = () => {
   const s = ctx.store.all();
@@ -65,7 +67,7 @@ const st = () => {
   if (!s.voice) { s.voice = migrateVoice(s.fx); ctx.store.save(); } // режимы обработки (2026-11) — из прежних настроек один раз
   s.voice = normalizeVoiceSet(s.voice);
   s.meter = { ...METER_DEF, ...(s.meter || {}) }; s.in ??= null; s.out ??= null; if (!Array.isArray(s.outs)) s.outs = s.out ? [s.out] : []; /* выходы — несколько сразу (07.11.2026) */ s.stereo ??= false; s.raw ??= true; s.live ??= true; s.hear ??= false;
-  s.bits ??= 24; s.keepRaw ??= false; s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = [];
+  s.bits ??= 24; s.keepRaw ??= false; s.autoSave ??= true; /* остановка = сразу в папку диктофона (21.11.2026) */ s.pick ??= 'mix'; if (!Array.isArray(s.savedRaw)) s.savedRaw = [];
   // пресеты (02.11.2026): свой режим или настроенные эффекты становятся своим пресетом «Мой» — звук не меняется
   if (migratePresets(s, t('preset.mine'))) ctx.store.save();
   s.presets = normalizePresets(s.presets);
@@ -180,6 +182,7 @@ const liveFx = () => { if (L && L.fx) L.fx.update({ chain: st().chain, gain: st(
 const liveHear = () => { if (L && L.mon) L.mon.gain.setTargetAtTime(st().hear ? 1 : 0, L.c.currentTime, 0.03); };
 const liveRestart = async () => { await liveStop(); if (st().live) liveStart(); };
 async function startRec() {
+  stopItem();
   await liveStop();
   if (S.take && !S.take.saved && !(await ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')))) return;
   await dropTake();
@@ -198,15 +201,25 @@ async function startRec() {
   render();
 }
 async function stopRec() {
+  if (stopping || S.phase !== 'rec') return; // двойное нажатие при тормозящем экране не должно давать «idle»
+  stopping = true;
   try {
     const r = await engine().stop();
     const s = st();
     if (S.marks.length) s.marksBy[r.path] = S.marks.slice(); // метки — к исходнику (до чтения: чтение может не удаться)
     delete s.liveMarks; ctx.store.save();
-    S.take = await loadTake(r.path);
-    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null, marks: [], inWarn: '' });
-    ctx.log('записано ' + S.take.sec.toFixed(1) + ' с' + (r.reason ? ' (остановлено: ' + r.reason + ')' : ''));
+    ctx.log('записано ' + (r.sec || 0).toFixed(1) + ' с' + (r.reason ? ' (остановлено: ' + r.reason + ')' : ''));
+    if (s.autoSave) {
+      // Остановка — запись сразу уходит в папку диктофона, экран остаётся тем же (готов к новой записи); тяжёлого разбора
+      // и обработки здесь нет — исходник читается как есть, дальше — в фоне. Правка и обработка — потом, кнопкой.
+      Object.assign(S, { phase: 'idle', marks: [], inWarn: '' });
+      saveRecorded(r);
+    } else {
+      S.take = await loadTake(r.path);
+      Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null, marks: [], inWarn: '' });
+    }
   } catch (e) { ctx.logErr(e); S.phase = 'idle'; ctx.ui.toast(t('recFail')); loadKept(); }
+  finally { stopping = false; }
   render();
 }
 // Исходник → дубль: каналы, волна. Вход с двумя каналами, а нужен один (петличка в канале 1 звуковой карты) —
@@ -255,6 +268,132 @@ async function dropTake() {
   loadKept();
 }
 
+
+/* ---------- записи диктофона: отдельная папка ---------- */
+
+// Файлы диктофона — обычные записи медиатеки с пометкой dict: в общем списке медиатеки их нет (папка диктофона — здесь),
+// «В медиатеку» снимает пометку. noAuto — тяжёлый фоновый разбор и дорожки им не нужны (телефон не греется)
+const DICT = { dict: true, noAuto: true };
+const dictList = () => ctx.files.list('audio').filter((x) => x.dict).sort((a, b) => (b.created || 0) - (a.created || 0));
+const wavSec = (u8, rate, ch) => (u8.length > 44 && rate && ch ? (u8.length - 44) / (rate * ch * 2) : 0);
+// Исходник → папка диктофона: читается как есть (байт в байт), без разбора и обработки
+async function saveRecorded(r) {
+  S.saving++; refreshRecs();
+  try {
+    const u8 = await engine().read(r.path), marks = st().marksBy[r.path] || [];
+    if (!u8 || u8.length <= 44) throw new Error('empty');
+    const sr = r.rate || 48000, sec = r.sec || wavSec(u8, sr, r.channels || 1);
+    const ok = await addFile(t('fileName', stamp()) + '.wav', marks.length ? withCue(u8, marks, sr) : u8, sec, marks, DICT);
+    if (ok === false) throw new Error('add');
+    const s = st();
+    if (!s.savedRaw.some((x) => x.path === r.path)) { s.savedRaw.push({ path: r.path, at: Date.now() }); ctx.store.save(); }
+    ctx.ui.toast(t('saved.dict'));
+    ctx.log('записано в папку диктофона: ' + sec.toFixed(1) + ' с, меток ' + marks.length);
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(t('saveFail')); } // исходник остаётся в памяти диктофона («Ещё» → «Записи в памяти»)
+  finally { S.saving--; refreshRecs(); loadKept(); }
+}
+function refreshRecs() {
+  if (listSh && listSh.el.isConnected) listSh.update();
+  const b = host && host.querySelector('[data-x="recs"]');
+  if (b) { const n = dictList().length; let c = b.querySelector('.vc-mn'); if (n || S.saving) { if (!c) { b.insertAdjacentHTML('beforeend', '<span class="vc-mn num"></span>'); c = b.querySelector('.vc-mn'); } c.textContent = S.saving ? '…' : n; } else if (c) c.remove(); }
+}
+// Воспроизведение из списка: прямо из файла (HTMLAudio), без разбора и обработки — мгновенно и без нагрузки
+function stopItem() { if (!PL) return; const p = PL; PL = null; try { p.a.pause(); p.a.src = ''; } catch { /* уже */ } URL.revokeObjectURL(p.url); if (listSh && listSh.el.isConnected) listSh.update(); }
+function playItem(id) {
+  if (PL && PL.id === id) { stopItem(); return; }
+  stopItem();
+  const f = ctx.files.get(id);
+  if (!f || !f.blob) return;
+  if (S.phase === 'rec') { ctx.ui.toast(t('recs.busy')); return; }
+  stopPlay();
+  const url = URL.createObjectURL(f.blob), a = new Audio(url);
+  PL = { id, a, url };
+  a.addEventListener('ended', () => { if (PL && PL.a === a) stopItem(); });
+  a.addEventListener('timeupdate', () => {
+    if (!PL || PL.a !== a || !listSh) return;
+    const bar = listSh.el.querySelector('[data-pbar="' + id + '"]'); if (bar && !bar.dataset.drag) bar.value = String(Math.round((a.currentTime / (a.duration || f.dur || 1)) * 1000));
+    const tm = listSh.el.querySelector('[data-ptm="' + id + '"]'); if (tm) tm.textContent = fmt(a.currentTime);
+  });
+  a.play().then(() => listSh && listSh.update()).catch((e) => { ctx.logErr(e); ctx.ui.toast(t('playFail')); stopItem(); });
+}
+const dstamp = (ms) => { const x = new Date(ms), p = (n) => String(n).padStart(2, '0'); return p(x.getDate()) + '.' + p(x.getMonth() + 1) + ' ' + p(x.getHours()) + ':' + p(x.getMinutes()); };
+function recsHTML() {
+  const L = dictList();
+  const rows = L.map((x) => {
+    const on = PL && PL.id === x.id;
+    return '<div class="vcr' + (on ? ' on' : '') + '"><button class="vcr-p" data-rplay="' + esc(x.id) + '" aria-label="' + esc(t(on ? 'stop' : 'play')) + '">' + (on ? I.stop : I.play) + '</button>' +
+      '<div class="vcr-t"><b>' + esc(x.name) + '</b><span class="l2 num">' + dstamp(x.created) + ' · ' + (on ? '<span data-ptm="' + esc(x.id) + '">0:00.0</span> / ' : '') + fmt(x.dur || 0) + ' · ' + ((x.size || 0) / 1048576).toFixed(1) + ' ' + t('mb') + '</span>' +
+      (on ? '<input type="range" min="0" max="1000" value="0" class="vcr-bar" data-pbar="' + esc(x.id) + '" aria-label="' + esc(t('recs.pos')) + '">' : '') + '</div>' +
+      '<button class="vcr-m" data-rmore="' + esc(x.id) + '" aria-label="' + esc(t('more')) + '">' + I.more + '</button></div>';
+  }).join('');
+  return ctx.ui.snav(t('recs.title')) + (S.saving ? '<p class="ftr">' + t('recs.saving') + '</p>' : '') +
+    (L.length ? '<div class="group">' + rows + '</div>' : '<p class="ftr">' + t('recs.empty') + '</p>') + '<p class="ftr">' + t('recs.hint') + '</p>';
+}
+function recsSheet() {
+  ctx.ui.sheet(recsHTML, (el, sh) => {
+    listSh = sh;
+    el.addEventListener('click', (e) => {
+      const p = e.target.closest('[data-rplay]'), m = e.target.closest('[data-rmore]');
+      if (p) { playItem(p.dataset.rplay); return; }
+      if (m) recMenu(m.dataset.rmore);
+    });
+    // перемотка: ползунок — не жест листания, правка отпускает
+    el.addEventListener('input', (e) => { const b = e.target.closest('[data-pbar]'); if (b && PL && PL.id === b.dataset.pbar) { b.dataset.drag = '1'; const d = PL.a.duration || 0; if (d) PL.a.currentTime = (+b.value / 1000) * d; } });
+    el.addEventListener('change', (e) => { const b = e.target.closest('[data-pbar]'); if (b) delete b.dataset.drag; });
+  }, { onClose: () => { stopItem(); listSh = null; } });
+}
+function recMenu(id) {
+  const x = ctx.files.get(id);
+  if (!x) return;
+  ctx.ui.sheet(() => ctx.ui.snav(x.name) + '<div class="group">' +
+    '<button class="cell act" data-rm="edit">' + t('recs.edit') + '</button>' +
+    '<button class="cell act" data-rm="rename">' + t('recs.rename') + '</button>' +
+    '<button class="cell act" data-rm="send">' + t('recs.send') + '</button>' +
+    '<button class="cell act" data-rm="lib">' + t('recs.toLib') + '</button>' +
+    '<button class="cell act danger" data-rm="del">' + t('recs.del') + '</button></div>',
+  (el, sh) => el.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-rm]');
+    if (!b) return;
+    const k = b.dataset.rm;
+    sh.close();
+    if (k === 'edit') editRec(id);
+    else if (k === 'rename') renameRec(id);
+    else if (k === 'send') { try { await ctx.sendFile(new Uint8Array(await x.blob.arrayBuffer()), x.name, x.name, 'audio/wav'); } catch (er) { ctx.logErr(er); } }
+    else if (k === 'lib') { delete x.dict; await ctx.files.save(x); ctx.ui.toast(t('recs.moved')); refreshRecs(); }
+    else if (k === 'del') { if (await ctx.ui.confirm(t('recs.delTitle'), t('recs.delText'), t('discardYes'))) { if (PL && PL.id === id) stopItem(); await ctx.files.remove(id); refreshRecs(); } }
+  }));
+}
+function renameRec(id) {
+  const x = ctx.files.get(id);
+  if (!x) return;
+  ctx.ui.sheet(() => ctx.ui.snav(t('recs.rename'), { left: '<button class="link l" data-close>' + esc(ctx.t('ui.cancel')) + '</button>', right: '<button class="link b r" id="rnok">' + esc(t('recs.ok')) + '</button>' }) +
+    '<div class="group"><label class="cell"><input class="inp left" id="rnv" maxlength="80" aria-label="' + esc(t('recs.rename')) + '" value="' + esc(x.name.replace(/\.wav$/i, '')) + '"></label></div>',
+  (el, sh) => {
+    const i = el.querySelector('#rnv');
+    setTimeout(() => { i.focus(); i.select(); }, 80);
+    const ok = async () => { const v = i.value.trim(); if (!v) { i.focus(); return; } sh.close(); x.name = v + '.wav'; await ctx.files.save(x); refreshRecs(); };
+    el.querySelector('#rnok').addEventListener('click', ok);
+    i.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); });
+  });
+}
+// Правка: копия идёт во временный файл движка, дальше — прежний экран обрезки и обработки; «Готово» сохраняет новый файл рядом
+async function editRec(id) {
+  const x = ctx.files.get(id);
+  if (!x || !x.blob || S.phase !== 'idle') return;
+  stopItem();
+  if (listSh) { const l = listSh; listSh = null; l.close(); } // шторка списка уходит — правка занимает окно
+  try {
+    await liveStop();
+    const path = 'proc-edit-' + Date.now() + '.wav';
+    await engine().write(path, new Uint8Array(await x.blob.arrayBuffer()));
+    if (x.marks && x.marks.length) st().marksBy[path] = x.marks.map((m) => ({ ...m }));
+    S.take = await loadTake(path);
+    S.take.edit = { id, name: x.name, back: true };
+    Object.assign(S, { phase: 'take', sel: [0, 1], pos: 0, mode: 'proc', proc: null });
+  } catch (e) { ctx.logErr(e); ctx.ui.toast(t('recFail')); S.take = null; S.phase = 'idle'; }
+  render();
+}
+
 /* ---------- обработка и воспроизведение ---------- */
 
 const selSec = () => [S.sel[0] * S.take.sec, S.sel[1] * S.take.sec];
@@ -286,9 +425,9 @@ async function stopPlay() { if (S.playing) { S.playing = false; try { await engi
 
 const stamp = () => { const d = new Date(), pad = (n) => String(n).padStart(2, '0'); return { d: pad(d.getDate()) + '.' + pad(d.getMonth() + 1), t: pad(d.getHours()) + '-' + pad(d.getMinutes()) }; };
 // Метки — и в запись медиатеки (плеер показывает их на волне), и в сам WAV (cue: видят Reaper, Audition, Audacity)
-async function addFile(name, wav, dur, marks = []) {
+async function addFile(name, wav, dur, marks = [], extra = {}) {
   const song = ctx.session && ctx.session.songId;
-  await ctx.files.add({ id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur, ...(marks.length ? { marks } : {}) });
+  return ctx.files.add({ ...extra, id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur, ...(marks.length ? { marks } : {}) });
 }
 // Исходник в медиатеку как есть (звук байт в байт; метки — блоком после звука, только у целого файла)
 async function saveRaw() {
@@ -312,8 +451,11 @@ async function save() {
   }
   try {
     const [a, b] = selSec(), marks = marksIn(S.take.marks, a, b);
-    const wav = withCue(encodeWav(p.ch, S.take.sr, st().bits), marks, S.take.sr);
-    await addFile(t('fileName', stamp()) + '.wav', wav, p.sec, marks);
+    const wav = withCue(encodeWav(p.ch, S.take.sr, st().bits), marks, S.take.sr), ed = S.take.edit;
+    // правка записи из папки диктофона — новый файл рядом с прежним (прежний не перезаписывается)
+    const ok = await addFile(ed ? ed.name.replace(/\.wav$/i, '') + ' · ' + t('editSfx') + '.wav' : t('fileName', stamp()) + '.wav', wav, p.sec, marks, ed ? DICT : {});
+    if (ok === false) throw new Error('add');
+    if (ed) { ctx.ui.toast(t('saved.dict')); await dropTake(); S.take = null; render(); if (ed.back) recsSheet(); return; }
     if (st().keepRaw) await saveRaw();
     markSaved();
     ctx.ui.toast(t('saved'));
@@ -605,6 +747,7 @@ function presetSheet() {
     const f = st().fx, s = st();
     return '<div class="group"><label class="cellcol vc-fx"><span class="vc-fxh"><span>' + t('fx.gain') + '</span><b class="num" id="vfx-gain">' + fxTxt('gain', f.gain) + '</b></span><input type="range" min="-12" max="18" step="1" value="' + f.gain + '" data-fx="gain" aria-label="' + esc(t('fx.gain')) + '"></label>' +
       '<div class="cellcol"><span class="vc-lbl">' + t('bits') + '</span>' + ui.seg('vbits', [['16', '16 ' + t('bit')], ['24', '24 ' + t('bit')], ['32', '32 float']], String(s.bits), t('bits')) + '</div>' +
+      '<div class="cell"><span class="grow"><span>' + t('autoSave') + '</span><span class="st l2">' + t('autoSaveHint') + '</span></span>' + sw('autoSave', s.autoSave) + '</div>' +
       '<div class="cell"><span class="grow"><span>' + t('keepRaw') + '</span><span class="st l2">' + t('keepRawHint') + '</span></span>' + sw('keepRaw', s.keepRaw) + '</div></div><p class="ftr">' + t('fxHint') + '</p>';
   };
   let sh = null;
@@ -630,6 +773,7 @@ function presetSheet() {
     el.addEventListener('change', (e) => {
       const d = e.target.dataset;
       if (d.vp) apply(d.vp, e.target.type === 'checkbox' ? (e.target.checked ? 1 : 0) : +e.target.value, true);
+      else if (d.v === 'autoSave') { st().autoSave = e.target.checked; ctx.store.save(); }
       else if (d.v === 'keepRaw') { st().keepRaw = e.target.checked; ctx.store.save(); }
     });
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-pname]')) { e.preventDefault(); el.querySelector('[data-pa="' + naming + '"]')?.click(); } });
@@ -730,6 +874,7 @@ function moreSheet() {
 
 const bottom = (inner) => '<div class="vc-bot">' + inner + '</div>';
 const bt = (x, icon, label, cls = '', extra = '') => '<button class="vc-btn sec' + (cls ? ' ' + cls : '') + '" data-x="' + x + '" aria-label="' + esc(label) + '"' + extra + '>' + icon + '</button>';
+const recsBtn = () => { const n = dictList().length; return '<button class="vc-btn sec vc-mk" data-x="recs" aria-label="' + esc(t('recs.title')) + '">' + I.list + (S.saving ? '<span class="vc-mn num">…</span>' : n ? '<span class="vc-mn num">' + n + '</span>' : '') + '</button>'; };
 const markBtn = (n, dis) => '<button class="vc-btn sec vc-mk" data-x="mark" aria-label="' + esc(t('mark.add')) + '"' + (dis ? ' disabled' : '') + '>' + I.mark + (n ? '<span class="vc-mn num">' + n + '</span>' : '') + '</button>';
 function stageHTML() {
   const m = st().meter, s = st();
@@ -760,13 +905,13 @@ function html() {
       presetsHTML() +
       bottom('<button class="vc-btn sec" data-x="play" aria-label="' + t(S.playing ? 'stop' : 'play') + '">' + (S.busy ? '…' : S.playing ? I.stop : I.play) + '</button>' +
         markBtn((S.take.marks || []).length, !S.playing) +
-        '<button class="vc-btn main" data-x="rec" aria-label="' + t('newRec') + '">' + I.rec + '</button>' +
+        (S.take.edit ? '<button class="vc-btn main back" data-x="back" aria-label="' + t('recs.back') + '">' + I.list + '</button>' : '<button class="vc-btn main" data-x="rec" aria-label="' + t('newRec') + '">' + I.rec + '</button>') +
         '<button class="vc-btn sec' + (S.take.saved ? ' done' : '') + '" data-x="save"' + (S.busy ? ' disabled' : '') + ' aria-label="' + t(S.take.saved ? 'savedAgain' : 'save') + '">' + I.save + '</button>' +
         bt('more', I.more, t('more')));
   }
   if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-btns"><button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button></div>' + err + '</div>';
   return inHTML() + err + stageHTML() + presetsHTML() +
-    bottom(bt('insheet', I.inp, t('in')) + markBtn(0, true) +
+    bottom(bt('insheet', I.inp, t('in')) + recsBtn() +
       '<button class="vc-btn main" data-x="rec" aria-label="' + t('record') + '">' + I.rec + '</button>' +
       bt('preset', I.tune, t('preset.title')) + bt('more', I.more, t('more')));
 }
@@ -874,6 +1019,8 @@ export default {
       else if (a === 'pause') { S.paused = !S.paused; engine().pause(S.paused); render(); }
       else if (a === 'play') play();
       else if (a === 'save') save();
+      else if (a === 'recs') recsSheet();
+      else if (a === 'back') { stopPlay().then(() => dropTake()).then(() => { render(); recsSheet(); }); }
       else if (a === 'mark') addMark();
       else if (a === 'insheet') inSheet();
       else if (a === 'outsheet') outSheet();
@@ -908,6 +1055,7 @@ export default {
   unmount() {
     offs.forEach((f) => f()); offs = [];
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onPtr); host.removeEventListener('keydown', onInput); }
+    stopItem(); listSh = null;
     liveStop();
     stopPlay();
     // запись не прерывается молча: остановить и оставить дубль до следующего открытия

@@ -141,7 +141,7 @@ const st = () => ctx.store.all();
 const variantOf = (x) => !!(x && x.conv && Array.isArray(x.conv.src) && x.conv.src.length === 1 && ctx.files.get(x.conv.src[0]));
 const variantsOf = (x) => ctx.files.list('audio').filter((r) => r.conv && Array.isArray(r.conv.src) && r.conv.src.length === 1 && r.conv.src[0] === x.id);
 const fmtOf = (x) => (((x.conv && x.conv.fmt) || (x.name.match(/\.([a-z0-9]{2,5})$/i) || [])[1] || (x.type || '').split('/')[1] || '?') + '').toUpperCase();
-const tracks = () => ctx.files.list('audio').filter((x) => !x.stem && !x.show && !variantOf(x)); // show — звуки пульта выступления: в списке медиатеки не видны
+const tracks = () => ctx.files.list('audio').filter((x) => !x.stem && !x.show && !x.dict && !variantOf(x)); // dict — папка диктофона (модуль «Диктофон»); show — звуки пульта выступления: в списке медиатеки не видны
 // удалить запись вместе с её дорожками
 // Запись целиком: дорожки, ноты и все её форматы
 async function removeWithStems(id) { const x = ctx.files.get(id); for (const r of [...stemsOf(ctx.files, id), ...(x ? variantsOf(x) : [])]) await ctx.files.remove(r.id); await ctx.files.remove(id); }
