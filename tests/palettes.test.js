@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { PALETTES, HUES, TOOL_HUE, registerTools, paintTools, accentVars, onColor } from '../src/core/palettes.js';
+import { PALETTES, HUES, TOOL_HUE, TOOL_FAMILY, registerTools, paintTools, accentVars, onColor } from '../src/core/palettes.js';
 
 describe('палитры', () => {
   it('в каждой палитре есть все оттенки', () => {
     Object.values(PALETTES).forEach((p) => HUES.forEach((h) => expect(p[h]).toMatch(/^#[0-9A-F]{6}$/i)));
   });
-  it('у каждого инструмента свой оттенок', () => {
-    const hues = Object.values(TOOL_HUE);
-    expect(new Set(hues).size).toBe(hues.length);
+  it('родственные инструменты — один оттенок или соседние (система цветов)', () => {
+    // семейство → допустимые оттенки: основной и соседний
+    const OK = { time: ['orange'], pitch: ['teal', 'cyan'], play: ['indigo', 'purple'], learn: ['green', 'mint'], record: ['red', 'pink'], media: ['pink'], paper: ['brown'], util: ['graphite'] };
+    expect(Object.keys(TOOL_FAMILY).sort()).toEqual(Object.keys(TOOL_HUE).sort());
+    Object.entries(TOOL_FAMILY).forEach(([id, f]) => expect(OK[f], id + ' ' + f).toContain(TOOL_HUE[id]));
+    expect(TOOL_HUE.metro).toBe(TOOL_HUE.timer);
+    expect(TOOL_HUE.ear).toBe(TOOL_HUE.beat);
+    expect(TOOL_HUE.glider).toBe(TOOL_HUE.piano);
   });
   it('инструменты перекрашиваются, личные модули — со своим цветом', () => {
     const list = [{ id: 'metro', color: '#111111' }, { id: 'mine', color: '#222222', local: true }];

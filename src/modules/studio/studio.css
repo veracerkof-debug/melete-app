@@ -17,7 +17,7 @@
 .sttop .ic.plain.on{color:var(--tint)}
 .sttop .ic[disabled]{opacity:.3}
 .stplay{width:46px;height:46px;border-radius:50%;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;flex:none;box-shadow:0 3px 10px color-mix(in srgb,var(--tint) 40%,transparent)}
-.stplay.on{background:#D9534F;box-shadow:none}
+.stplay.on{background:var(--red);box-shadow:none}
 .stplay svg{width:24px;height:24px}
 .stinfo{min-width:72px;height:44px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr 1fr;column-gap:5px;align-items:center;text-align:left;padding:2px 8px;border-radius:12px;background:var(--ink);color:var(--bg)}
 .stinfo b{grid-row:1/3;font-size:22px;line-height:1;letter-spacing:-.02em}
@@ -25,7 +25,7 @@
 .stinfo i{font-style:normal;font-size:11px;font-weight:700;opacity:.9;align-self:start}
 .stinfo{position:relative}
 .stld{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#E0A030}
-.stld[data-lvl="high"]{background:#D9534F}
+.stld[data-lvl="high"]{background:var(--red)}
 /* телефон боком: плейлист и микшер — во всю высоту, транспорт — колонкой справа */
 @media (orientation: landscape) and (max-height: 520px) {
   .stwrap.side{flex-direction:row}
@@ -90,7 +90,7 @@
   .rkrow{height:var(--rkh,50px)}
 }
 /* запись и живой ввод */
-.sttop .strec.on,.sthead .strec.on{color:#D9534F;animation:blink 1s step-end infinite}
+.sttop .strec.on,.sthead .strec.on{color:var(--red);animation:blink 1s step-end infinite}
 .sthead .strec{color:var(--l2)}
 .stkb{flex:none;display:flex;align-items:stretch;gap:4px;padding:2px 0}
 .stkb .kbwrap{flex:1;min-width:0;overflow:hidden;padding:0}
@@ -117,7 +117,7 @@
 .smv{font-size:11px;font-weight:700;color:var(--l2)}
 .smt{position:relative;width:48px;flex:1;min-height:120px;touch-action:none;outline:none}
 .smt::before{content:"";position:absolute;left:20px;width:8px;top:0;bottom:0;border-radius:4px;background:var(--cell)}
-.smt .smm{position:absolute;left:6px;width:6px;bottom:0;border-radius:3px;background:linear-gradient(to top,#5F8568 0 70%,#C9A227 70% 90%,#D9534F 90%);height:0;transition:height .05s linear}
+.smt .smm{position:absolute;left:6px;width:6px;bottom:0;border-radius:3px;background:linear-gradient(to top,var(--ok) 0 70%,#C9A227 70% 90%,var(--red) 90%);height:0;transition:height .05s linear}
 .smt b{position:absolute;left:20px;width:8px;bottom:0;border-radius:4px;background:var(--c)}
 .smt i{position:absolute;left:12px;width:24px;height:24px;margin-bottom:-12px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .smt em{position:absolute;left:14px;width:20px;height:1px;background:var(--l2)}
@@ -151,7 +151,7 @@
 .cptile.down{transform:scale(.96)}
 .cptile.rest b{color:var(--l2)}
 .cphint{margin:0 6px;font-size:12px;color:var(--l2);text-align:center}
-.cpwrap.rec .cphint{color:#D9534F}
+.cpwrap.rec .cphint{color:var(--red)}
 @container (max-height:560px){.cptile{min-height:44px}.cptile b{font-size:17px}.cphint{display:none}}
 /* свой инструмент под редактором нот (пианино, глайдер, терменвокс) — окно модуля размера half */
 .sttool{flex:0 0 46%;min-height:200px;position:relative;border-radius:14px;overflow:hidden;background:var(--cell)}

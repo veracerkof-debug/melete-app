@@ -396,8 +396,8 @@ function homeHTML() {
   return '<div class="ewrap ehome">' + top + '<div class="edash"><div class="edtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.t + ' <small class="l2">' + tn('answersN', w.t) +
     '</small></div>' + (w.t ? '<div class="l2" style="font-size:14px">' + t('accWeek', { p: Math.round((w.c / w.t) * 100) }) + '</div>' : '') + '</div>' + bars +
     '<div class="edbtns">' + ui.icb('data-x="estats"', I.stats, t('statsBtn'), 'sm') + '</div></div>' +
-    '<div class="edgrid">' + DRILLS.map(([id, c]) => {
-      const a = accuracy(E, id);
+    '<div class="edgrid">' + DRILLS.map(([id]) => {
+      const c = 'var(--mod, ' + meta.color + ')', a = accuracy(E, id); // один цвет семейства «Учёба» вместо радуги (docs/color-system.md)
       return '<button class="edcard" data-x="esec" data-v="' + id + '" style="--c:' + c + '"><span class="edic">' + DICON[id] + '</span><span class="edr">' + miniRing(a.p, c) +
         '<b class="num">' + (a.t ? Math.round(a.p * 100) + '%' : '') + '</b></span><span class="edn">' + t('sec.' + id) + '</span><span class="eds">' + t('sub.' + id) + '</span></button>';
     }).join('') + '</div></div>';

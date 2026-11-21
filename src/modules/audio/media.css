@@ -108,7 +108,7 @@
    аккорды внутри такта по долям, цвет — функция в тональности; в текущем такте — полоса хода (--p) */
 .pchords{gap:10px}
 .chnow{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,auto);align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--cell);box-shadow:0 1px 0 var(--sep);--fc:var(--tint)}
-.chnow[data-fn="t"]{--fc:var(--tint)}.chnow[data-fn="s"]{--fc:#5F8568}.chnow[data-fn="d"]{--fc:#A75750}.chnow[data-fn="x"]{--fc:var(--l2)}
+.chnow[data-fn="t"]{--fc:var(--tint)}.chnow[data-fn="s"]{--fc:var(--ok)}.chnow[data-fn="d"]{--fc:#A75750}.chnow[data-fn="x"]{--fc:var(--l2)}
 .chcur{display:flex;align-items:baseline;gap:8px;min-width:0}
 .chcur b{font-size:clamp(34px,10cqi,64px);line-height:1;font-weight:800;color:var(--fc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chdeg{font-size:19px;color:var(--l2);font-weight:700}
@@ -129,7 +129,7 @@
 .chps{position:absolute;inset:14px 4px 6px;display:flex;gap:2px}
 .chps i{font-style:normal;display:flex;align-items:center;justify-content:center;min-width:0;border-radius:6px;font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 .chps i.fn-t{background:color-mix(in srgb,var(--tint) 16%,transparent)}
-.chps i.fn-s{background:color-mix(in srgb,#5F8568 16%,transparent)}
+.chps i.fn-s{background:color-mix(in srgb,var(--ok) 16%,transparent)}
 .chps i.fn-d{background:color-mix(in srgb,#A75750 16%,transparent)}
 .chps i.rep{color:var(--l2);font-weight:500}
 .chpg{position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0) * 100%);background:var(--tint);border-radius:0 2px 2px 0;transition:width .12s linear}
@@ -157,6 +157,6 @@
 .sgsum{font-size:13px;color:var(--l2)}
 .sgphr{display:flex;flex-wrap:wrap;gap:5px}
 .sgp{min-width:40px;height:40px;border-radius:12px;font-weight:700;font-size:13px;color:#fff}
-.sgp.ok{background:#3E9A5E}.sgp.near{background:#C9962C}.sgp.miss{background:#C2564B}
+.sgp.ok{background:var(--ok)}.sgp.near{background:#C9962C}.sgp.miss{background:#C2564B}
 .sgbtns{display:flex;gap:8px;justify-content:center}
 .sgbtns .btn.on{background:var(--tint);color:var(--on-tint)}

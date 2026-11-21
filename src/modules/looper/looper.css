@@ -6,11 +6,11 @@
 .lpbtn svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .lptrack{fill:none;stroke:var(--fill);stroke-width:6}
 .lpring{fill:none;stroke:var(--tint);stroke-width:6;stroke-linecap:round;transition:none}
-.lpbtn.rec .lpring,.lpbtn.dub .lpring{stroke:#D9534F}
+.lpbtn.rec .lpring,.lpbtn.dub .lpring{stroke:var(--red)}
 .lpic{position:relative;z-index:1;display:grid;place-items:center}
 .lpic svg{position:static;width:min(22cqw,16cqh,88px);height:min(22cqw,16cqh,88px);transform:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.lpbtn.idle .lpic{color:#D9534F}
-.lpbtn.rec .lpic,.lpbtn.dub .lpic{color:#D9534F;animation:lpblink 1s ease-in-out infinite}
+.lpbtn.idle .lpic{color:var(--red)}
+.lpbtn.rec .lpic,.lpbtn.dub .lpic{color:var(--red);animation:lpblink 1s ease-in-out infinite}
 .lpbtn.play .lpic{color:var(--tint)}
 .lpbtn.idle .lpic svg path{fill:currentColor}
 .lpcount{font-size:min(26cqw,20cqh,110px);font-weight:300;line-height:1;color:var(--tint)}
@@ -112,8 +112,8 @@
 .lpbtn[data-beat="2"] .lptrack{stroke:var(--tint)}
 .lpcvw{position:relative;flex:1;min-width:0;height:100%;display:flex}
 .lptkb{position:absolute;right:4px;top:50%;transform:translateY(-50%);min-width:44px;height:40px;padding:0 8px;border:0;border-radius:12px;background:color-mix(in srgb,var(--cell) 85%,transparent);color:var(--ink);font-size:13px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.lpcap{flex:none;height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--red,#D9534F);color:#fff;font-weight:600;font-size:13px}
-.lpcap.wait{background:color-mix(in srgb,var(--red,#D9534F) 40%,var(--fill));color:var(--ink);animation:lppend .5s ease-in-out infinite alternate}
+.lpcap{flex:none;height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--red,var(--red));color:#fff;font-weight:600;font-size:13px}
+.lpcap.wait{background:color-mix(in srgb,var(--red,var(--red)) 40%,var(--fill));color:var(--ink);animation:lppend .5s ease-in-out infinite alternate}
 /* «Сыграть в петлю»: вкладки инструментов и кнопка записи круга одной полосой, под ними — окно инструмента */
 .lptop{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 6px}
 .lptop .lptabs{flex:1 1 100%}

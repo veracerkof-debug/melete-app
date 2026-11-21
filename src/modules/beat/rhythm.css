@@ -29,7 +29,7 @@
 .ryhide{font-size:34px;letter-spacing:.3em;color:var(--l3,var(--l2));padding:14px 0;font-family:"Melete Bravura","Bravura",serif}
 .ryinfo{font-size:14px;color:var(--l2);padding:6px 0}
 .ryfb{font-size:15px;line-height:1.4}
-.ryfb.ok b{color:#1f9d45}.ryfb.bad b{color:var(--red)}
+.ryfb.ok b{color:var(--ok)}.ryfb.bad b{color:var(--red)}
 .ryfb .link{min-height:40px;font-size:14px}
 .rysol{width:100%}.rysol small{color:var(--l2)}
 .ryempty{font-size:14px;color:var(--l2);padding:18px 0}
@@ -62,7 +62,7 @@
 .ryline .g{stroke:var(--sep);stroke-width:2}
 .ryline .e{stroke:var(--l2);stroke-width:3}
 .ryline circle{stroke-width:3}
-.ryline .ok{fill:#34C759}.ryline .near{fill:#FF9F0A}.ryline .off{fill:var(--red)}
+.ryline .ok{fill:var(--ok)}.ryline .near{fill:#FF9F0A}.ryline .off{fill:var(--red)}
 .ryline .miss{fill:none;stroke:var(--red)}.ryline .extra{fill:none;stroke:#FF9F0A}
 
 /* полиритм */
@@ -97,7 +97,7 @@
 :is(.ryh,.rypal,.rypick,.ryweak) .bkscore .rd,:is(.ryh,.rypal,.rypick,.ryweak) .bkscore .pcl{fill:var(--ink)}
 :is(.ryh,.rypal,.rypick,.ryweak) .bkscore .tie,:is(.ryh,.rypal,.rypick,.ryweak) .bkscore .tbr{fill:none;stroke:var(--ink);stroke-width:1.2}
 :is(.ryh,.rypal,.rypick,.ryweak) .bkscore .tn{font-size:12px;text-anchor:middle;fill:var(--ink);font-style:italic;font-weight:600}
-.ryh .bkscore .smf.nh.ok{fill:#1f9d45}.ryh .bkscore .smf.nh.near{fill:#E08600}.ryh .bkscore .smf.nh.off,.ryh .bkscore .smf.nh.miss{fill:var(--red)}
+.ryh .bkscore .smf.nh.ok{fill:var(--ok)}.ryh .bkscore .smf.nh.near{fill:#E08600}.ryh .bkscore .smf.nh.off,.ryh .bkscore .smf.nh.miss{fill:var(--red)}
 
 /* малые окна: только площадка и самое нужное */
 @container (max-height:360px){

@@ -59,10 +59,22 @@ export function ownPalette(main) {
 export const paletteOf = (settings) => (settings && settings.palette === 'own' ? 'own' : PALETTES[settings && settings.palette] ? settings.palette : 'classic');
 const palOf = (settings) => (paletteOf(settings) === 'own' ? ownPalette(settings.ownMain) : PALETTES[paletteOf(settings)]);
 
-// Инструмент → оттенок: у каждого свой (неизвестные и личные модули — со своим цветом)
+// Инструмент → оттенок. Система цветов (слово автора 21.11.2026, docs/color-system.md): родственные инструменты — один оттенок или соседние,
+// чтобы глаз сразу видел связанное; палитра (классическая, яркая…) по-прежнему задаёт, как выглядят сами оттенки.
+//   Время и ритм — оранжевый · Звук и высота — бирюзовый (спектр — голубой) · Игра руками — индиго (терменвокс — фиолетовый) ·
+//   Учёба — зелёный (теория и учебник — мятный) · Запись — красный (студия — розовый) · Медиа — розовый · Тексты и ноты — коричневый · Служебное — графитовый
+export const TOOL_FAMILY = {
+  metro: 'time', timer: 'time', tuner: 'pitch', drone: 'pitch', spectrum: 'pitch', piano: 'play', glider: 'play', theremin: 'play',
+  ear: 'learn', beat: 'learn', vocal: 'learn', theory: 'learn', book: 'learn', voice: 'record', looper: 'record', studio: 'record',
+  audio: 'media', show: 'media', notes: 'paper', bible: 'paper', convert: 'util',
+};
 export const TOOL_HUE = {
-  metro: 'orange', timer: 'red', bible: 'yellow', tuner: 'green', theremin: 'mint', drone: 'teal', spectrum: 'cyan',
-  theory: 'blue', piano: 'indigo', glider: 'purple', audio: 'pink', notes: 'brown',
+  metro: 'orange', timer: 'orange',
+  tuner: 'teal', drone: 'teal', spectrum: 'cyan',
+  piano: 'indigo', glider: 'indigo', theremin: 'purple',
+  ear: 'green', beat: 'green', vocal: 'green', theory: 'mint', book: 'mint',
+  voice: 'red', looper: 'red', studio: 'pink', audio: 'pink', show: 'pink',
+  notes: 'brown', bible: 'brown', convert: 'graphite',
 };
 // Акцент (названия — как в settings.ACCENTS) → оттенок
 export const ACCENT_HUE = { orange: 'orange', red: 'red', pink: 'pink', purple: 'purple', indigo: 'indigo', blue: 'blue', teal: 'mint', green: 'green', graphite: 'graphite' };
