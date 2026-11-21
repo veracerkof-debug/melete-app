@@ -8,7 +8,7 @@ import { log, logErr } from '../log.js';
 import { updateSheet, variantsSheet } from './update.js';
 import { DEV, VARIANTS } from '../variants.js';
 import { t, tn, getLang, LANGS, LANG_NAMES, loadLang } from '../../i18n/index.js';
-import { esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
+import { foldHints, closeHint, esc, seg, sheet, snav, toast, confirm, leave, icons } from '../../ui/index.js';
 // Переключатель видов с видимой подписью над ним (21.11.2026: безымянные «Выкл/4/6» в «Звуке» были непонятны)
 const lseg = (n, items, v, label) => '<div class="segttl">' + esc(label) + '</div>' + seg(n, items, v, label);
 import { autoMode, autoAna, autoHq, autoPower, autoLyr, pcStems } from '../autostems.js';
@@ -696,6 +696,7 @@ export function createPanel(app, onChange) {
     if (lastPage && lastPage !== page && !desk) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
+    closeHint(); foldHints(layer);
     if (page === 'look') mountSizePreview(app, layer);
     if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»

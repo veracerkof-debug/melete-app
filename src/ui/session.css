@@ -63,6 +63,10 @@
 .shd{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto auto;align-items:center;gap:6px;padding-top:2px}
 .stime{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:600;padding:0 4px;min-height:36px;color:var(--ink)}
 .stime.paused{color:var(--l2)}
+/* Верхняя полоса сессии: цели касания не меньше 40 px (правило 7, docs/design-system.md) */
+.shd .ic.sm{width:40px;height:40px;min-width:40px}
+.shd .ic.sm.txt{width:auto}
+.shd .stime,.shd .pchip{min-height:40px}
 .sdot{width:7px;height:7px;border-radius:50%;background:#5F8568;animation:blink 2s ease-in-out infinite;flex:none}
 .stime.paused .sdot{background:var(--l3);animation:none;width:9px;height:9px;border-radius:2px}
 .pchip{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:0 6px;border-radius:999px;color:var(--l2);font-size:13px;font-weight:600}

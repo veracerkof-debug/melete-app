@@ -61,16 +61,65 @@ export function leave(el, ms = 240) {
   setTimeout(() => el.remove(), reduced() ? 0 : ms);
 }
 
-// Пояснения в шторках — две строки, касание раскрывает целиком (обзор дизайна 28.10.2026: подробности — по запросу).
-// Только простой текст: пояснение со ссылкой или кнопкой внутри остаётся как есть
-function clampHints(root, opened) {
-  root.querySelectorAll('.ftr').forEach((h) => {
-    if (h.textContent.length < 90 || h.querySelector('a,button,input,select')) return;
-    h.classList.add('clamp');
-    if (h.scrollHeight <= h.clientHeight + 2) { h.classList.remove('clamp'); return; }
-    const on = opened.has(h.textContent);
-    h.classList.toggle('open', on);
-    h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', String(on));
+// Пояснения — не текстом, а по запросу (слово автора 21.11.2026: «текст нужен один-два раза, а место занимает постоянно»).
+// Абзац-пояснение (.ftr, .segcap) прячется, а у названия раздела или параметра появляется маленький кружок «?»;
+// касание — окошко с пояснением. Только простой текст: пояснение со ссылкой или кнопкой остаётся как есть.
+let hintPop = null;
+export function closeHint() { if (hintPop) { hintPop.remove(); hintPop = null; } }
+function openHint(btn) {
+  const was = hintPop && hintPop.dataset.for === btn.dataset.hid;
+  closeHint();
+  if (was) return;
+  const pop = document.createElement('div');
+  pop.className = 'hintpop'; pop.setAttribute('role', 'dialog'); pop.dataset.for = btn.dataset.hid;
+  pop.innerHTML = btn._hint;
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  const w = Math.min(340, vw - 24);
+  pop.style.width = w + 'px';
+  pop.style.left = Math.max(12, Math.min(vw - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+  const h = pop.offsetHeight, below = r.bottom + 8 + h <= vh - 12;
+  pop.style.top = (below ? r.bottom + 8 : Math.max(12, r.top - 8 - h)) + 'px';
+}
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') { // (в тестах без DOM — пропускаем)
+  document.addEventListener('pointerdown', (e) => { if (hintPop && !e.target.closest('.hintpop,.hq')) closeHint(); }, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hintPop) { closeHint(); e.stopPropagation(); } }, true);
+}
+let hintId = 0;
+export function foldHints(root) {
+  const mk = (host, html) => {
+    let b = host.querySelector(':scope > .hq');
+    if (b) { b._hint += '<br>' + html; return; }
+    b = document.createElement('button');
+    b.type = 'button'; b.className = 'hq'; b.textContent = '?';
+    b.setAttribute('aria-label', t('ui.hint')); b.dataset.hid = 'h' + (++hintId); b._hint = html;
+    b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(b); });
+    host.appendChild(b);
+  };
+  // Длинное пояснение под названием строки (не однострочная подпись с «…») — «?» сразу после названия
+  root.querySelectorAll('.cell .bksub').forEach((h) => {
+    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 40 || getComputedStyle(h).whiteSpace === 'nowrap' || h.closest('.hintpop')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'hq hqi'; b.textContent = '?';
+    b.setAttribute('aria-label', t('ui.hint')); b.dataset.hid = 'h' + (++hintId); b._hint = h.innerHTML;
+    b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(b); });
+    h.parentNode.insertBefore(b, h); h.hidden = true;
+  });
+  root.querySelectorAll('.ftr, .segcap').forEach((h) => {
+    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop')) return;
+    let host = null;
+    if (h.classList.contains('segcap')) host = h.parentElement && h.parentElement.querySelector(':scope > .segttl');
+    else {
+      let p = h.previousElementSibling;
+      while (p && p.classList.contains('ftr')) p = p.previousElementSibling;
+      const hd = p && p.previousElementSibling;
+      host = hd && hd.classList.contains('hdr') ? hd : p && p.classList.contains('hdr') ? p : null;
+    }
+    if (!host) { // нет названия рядом — сам кружок вместо абзаца
+      const row = document.createElement('div'); row.className = 'hqrow'; h.parentNode.insertBefore(row, h); host = row;
+    }
+    mk(host, h.innerHTML);
+    h.hidden = true;
   });
 }
 
@@ -86,13 +135,13 @@ export function sheet(render, init, { onClose } = {}) {
   setTimeout(() => scrim.classList.remove('opening'), 650);
   scrim.style.zIndex = 45 + stack.length;
   scrim.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"></div>';
-  const el = scrim.firstChild, opened = new Set(); // раскрытые пояснения (по тексту) — держатся при обновлениях шторки
+  const el = scrim.firstChild;
   const api = {
     el,
     update() {
       const y = el.scrollTop;
       el.innerHTML = '<div class="grab"></div>' + withText(render); // настройки — с текстом и в «Минимале» без текста
-      clampHints(el, opened);
+      foldHints(el);
       el.scrollTop = y;
     },
     close() {
@@ -106,12 +155,9 @@ export function sheet(render, init, { onClose } = {}) {
   };
   const onKey = (e) => {
     if (e.key === 'Escape' && stack.at(-1) === api) api.close();
-    else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.matches?.('.ftr.clamp') && el.contains(document.activeElement)) { e.preventDefault(); document.activeElement.click(); }
   };
   scrim.addEventListener('click', (e) => {
     if (e.target === scrim || e.target.closest('[data-close]')) { api.close(); return; }
-    const h = e.target.closest('.ftr.clamp');
-    if (h) { const on = h.classList.toggle('open'); h.setAttribute('aria-expanded', String(on)); if (on) opened.add(h.textContent); else opened.delete(h.textContent); }
   });
   document.addEventListener('keydown', onKey);
   layer.appendChild(scrim);

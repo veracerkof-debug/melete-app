@@ -23,6 +23,7 @@
   "lib.tags.repeat": "Takrorlash",
   "ui.less": "Kamroq",
   "ui.more": "Koʻproq",
+  "ui.hint": "Izoh",
   "ui.done": "Tayyor",
   "ui.cancel": "Bekor qilish",
   "ui.save": "Saqlash",

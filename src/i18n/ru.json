@@ -23,6 +23,7 @@
   "lib.tags.repeat": "Повторить",
   "ui.less": "Меньше",
   "ui.more": "Больше",
+  "ui.hint": "Пояснение",
   "ui.done": "Готово",
   "ui.cancel": "Отмена",
   "ui.save": "Сохранить",

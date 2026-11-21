@@ -23,6 +23,7 @@
   "lib.tags.repeat": "Review",
   "ui.less": "Less",
   "ui.more": "More",
+  "ui.hint": "Explanation",
   "ui.done": "Done",
   "ui.cancel": "Cancel",
   "ui.save": "Save",
