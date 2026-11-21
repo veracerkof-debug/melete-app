@@ -1,0 +1,1 @@
+.bkmod{flex-direction:column;flex:1;height:100%;min-height:0;display:flex}.bkmod .bkwrap{scrollbar-width:none;flex-direction:column;flex:1;min-height:0;display:flex;overflow-y:auto}.bkmod .bkwrap::-webkit-scrollbar{display:none}.bkmod .bkload{flex:1;min-height:120px}

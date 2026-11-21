@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7">
+<!-- веб-версия: установка на главный экран (Safari «На экран „Домой“», Chrome «Установить») -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icons/icon-192.png"><!-- до запуска (язык грузится раньше ядра): иначе браузер просит /favicon.ico; потом значок ставит appicon.js: webIcon -->
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Melete">
+<!-- Сеть: только свои файлы и поиск песни в MusicBrainz (по кнопке). Любые другие обращения браузер не пропустит —
+     вторая защита после вырезки статистики MediaPipe (build/mediapipe.js). ws — живая перезагрузка при разработке -->
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' blob: data: ipc: http://ipc.localhost https://musicbrainz.org https://api.github.com; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>Melete — демонстрация</title>
+  <script type="module" crossorigin src="./assets/main-Fb7ceR1l.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-B0Z9INg1.js">
+  <link rel="modulepreload" crossorigin href="./assets/stage-Cdowzj2Z.js">
+  <link rel="modulepreload" crossorigin href="./assets/preload-helper-BaNbYf_w.js">
+  <link rel="modulepreload" crossorigin href="./assets/i18n-V9Ix5qTN.js">
+  <link rel="modulepreload" crossorigin href="./assets/ui-D8lNWP4J.js">
+  <link rel="modulepreload" crossorigin href="./assets/mascot-CVHgyHD9.js">
+  <link rel="modulepreload" crossorigin href="./assets/dist-C5Vgn5nD.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-B0ud_tkU.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-Bo-mqRq7.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-DROvIDcg.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-CSrnm_CZ.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-CFY6HA0j.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-Or55t3Z4.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-BP0-MvLV.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-BBB-Wtcc.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-DEvkf0yM.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-DBYnoHzC.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-D6Vi40Rr.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-CKWDahxW.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-xk9975gZ.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-BP332gy-.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-om34ezln.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-CSY74jGI.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-C9o1s-HE.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-BytfWWUr.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-BOYteW7E.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-D3hECoCE.js">
+  <link rel="modulepreload" crossorigin href="./assets/meta-fkLUWvPJ.js">
+  <link rel="modulepreload" crossorigin href="./assets/modules-D-lXUCHp.js">
+  <link rel="modulepreload" crossorigin href="./assets/integrity-A2q074sI.js">
+  <link rel="modulepreload" crossorigin href="./assets/time-CZ7zArwa.js">
+  <link rel="modulepreload" crossorigin href="./assets/schedule-B_xZCd5Q.js">
+  <link rel="modulepreload" crossorigin href="./assets/stats-DI9doJd0.js">
+  <link rel="modulepreload" crossorigin href="./assets/library-J0_0pzo5.js">
+  <link rel="modulepreload" crossorigin href="./assets/melodies-BKKAZtge.js">
+  <link rel="modulepreload" crossorigin href="./assets/demo-CTJgb4yc.js">
+  <link rel="modulepreload" crossorigin href="./assets/metrosets-DGzgXqnd.js">
+  <link rel="modulepreload" crossorigin href="./assets/settings-ADRS6U_I.js">
+  <link rel="modulepreload" crossorigin href="./assets/waves-B3Vt4ANv.js">
+  <link rel="modulepreload" crossorigin href="./assets/clock-ClEh8Vkm.js">
+  <link rel="modulepreload" crossorigin href="./assets/log-DeVrG4Cc.js">
+  <link rel="modulepreload" crossorigin href="./assets/context-Cs6PaNZx.js">
+  <link rel="modulepreload" crossorigin href="./assets/fx-7SbyRzcd.js">
+  <link rel="modulepreload" crossorigin href="./assets/param-DAK6GLX5.js">
+  <link rel="modulepreload" crossorigin href="./assets/packs-Cf43wAtn.js">
+  <link rel="modulepreload" crossorigin href="./assets/packs-w6dWcQpS.js">
+  <link rel="modulepreload" crossorigin href="./assets/common-B_M15adW.js">
+  <link rel="modulepreload" crossorigin href="./assets/format-BN9u-V9e.js">
+  <link rel="modulepreload" crossorigin href="./assets/profile-Cfp6w0KN.js">
+  <link rel="modulepreload" crossorigin href="./assets/hold-CnJR9WF8.js">
+  <link rel="modulepreload" crossorigin href="./assets/desktop-CbnyMcsE.js">
+  <link rel="modulepreload" crossorigin href="./assets/outputsheet-Dv4MkDuQ.js">
+  <link rel="modulepreload" crossorigin href="./assets/modules-DaKQXlcK.js">
+  <link rel="modulepreload" crossorigin href="./assets/analyze-DXdV-PqG.js">
+  <link rel="modulepreload" crossorigin href="./assets/vocal-UTLLX-Ge.js">
+  <link rel="modulepreload" crossorigin href="./assets/voicefx-B2T3aVUp.js">
+  <link rel="modulepreload" crossorigin href="./assets/share-DHAcaho_.js">
+  <link rel="modulepreload" crossorigin href="./assets/browser-C1TS3muK.js">
+  <link rel="stylesheet" crossorigin href="./assets/stage-B0rdSFwd.css">
+  <link rel="stylesheet" crossorigin href="./assets/ui-CXezPXRc.css">
+  <link rel="stylesheet" crossorigin href="./assets/hold-DS3E8iM9.css">
+  <link rel="stylesheet" crossorigin href="./assets/outputsheet-vgDbeqK3.css">
+  <link rel="stylesheet" crossorigin href="./assets/modules-Pwx5drWh.css">
+  <link rel="stylesheet" crossorigin href="./assets/main-BMFM-h8X.css">
+</head>
+<body>
+<div id="app"></div>
+</body>
+</html>
