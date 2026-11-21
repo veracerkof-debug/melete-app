@@ -394,7 +394,7 @@ function homeHTML() {
   const days = weekDays(), w = weekOf(E, days), mx = Math.max(1, ...days.map((k) => (E.days[k] || { t: 0 }).t));
   const bars = '<div class="ewbars" aria-hidden="true">' + days.map((k) => { const d = E.days[k] || { c: 0, t: 0 }; return '<i style="--h:' + (d.t / mx) + ';--q:' + (d.t ? d.c / d.t : 0) + '"></i>'; }).join('') + '</div>';
   return '<div class="ewrap ehome">' + top + '<div class="edash"><div class="edtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.t + ' <small class="l2">' + tn('answersN', w.t) +
-    '</small></div><div class="l2" style="font-size:14px">' + (w.t ? t('accWeek', { p: Math.round((w.c / w.t) * 100) }) : t('noAnswers')) + '</div></div>' + bars +
+    '</small></div>' + (w.t ? '<div class="l2" style="font-size:14px">' + t('accWeek', { p: Math.round((w.c / w.t) * 100) }) + '</div>' : '') + '</div>' + bars +
     '<div class="edbtns">' + ui.icb('data-x="estats"', I.stats, t('statsBtn'), 'sm') + '</div></div>' +
     '<div class="edgrid">' + DRILLS.map(([id, c]) => {
       const a = accuracy(E, id);

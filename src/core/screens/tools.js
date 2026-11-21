@@ -39,7 +39,7 @@ function renderToolsNow(app, root) {
   const arr = document.documentElement.classList.contains('arrange') && st.uiStyle !== 'mono';
   const badge = (id) => (arr ? '<i class="arrb in" data-arr="in:' + id + '" role="button" tabindex="0" aria-label="' + esc(t('hold.makeTab')) + '">+</i>' +
     (isPage(id) ? '' : '<i class="arrb off" data-arr="off:' + id + '" role="button" tabindex="0" aria-label="' + esc(t('tools.offBtn')) + '">−</i>') : '');
-  root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop">' + list.map((m) => {
+  root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop" style="--rows:' + Math.max(1, Math.ceil(list.length / 3)) + '">' + list.map((m) => {
     if (m.page) return '<button class="tcard2 tpage" data-open-tool="' + m.id + '" style="--c:var(--tint);--on:var(--on-tint)">' + badge(m.id) + '<span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' + esc(m.name) + '</span><span class="tcs2"></span></span></button>';
     let s2 = '';
     if (st.uiStyle !== 'mono' && !NO_STATUS.includes(m.id)) { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния

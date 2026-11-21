@@ -306,7 +306,7 @@ function mountSizePreview(app, root) {
   const st = app.store.state.settings, s = +st.uiScale ? uiScale(st) : autoScale(base), L = layoutWidth(base, s), tabsH = app.preview.tabs();
   box.querySelectorAll('.szfr').forEach((fr, i) => {
     const W = fr.clientWidth || 140, k = W / L, H = Math.round(h / s);
-    fr.style.height = Math.round(H * k) + 'px';
+    fr.style.height = Math.min(Math.round(H * k), 190) + 'px'; // показывается верх экрана — размер виден, страница не растягивается (слово автора 21.11.2026: всё на одном экране)
     fr.innerHTML = '<div class="szin" style="width:' + L + 'px;height:' + H + 'px;transform:scale(' + k + ')"><main class="wrap"></main>' +
       '<nav class="tabbar"><div class="in" style="grid-template-columns:repeat(' + ((tabsH.match(/class="tab"/g) || [1]).length) + ',1fr)">' + tabsH + '</div></nav></div>';
     try { (i ? app.preview.tools : app.preview.home)(fr.querySelector('main')); } catch { /* предпросмотр необязателен */ }

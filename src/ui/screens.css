@@ -726,3 +726,18 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .tview.imm .tvgrpb{position:absolute;z-index:5;top:calc(216px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
 .tview.imm:not(:has(.tvpure)) .tvgrpb{top:calc(164px + env(safe-area-inset-top,0px))}
 .tview.imm .tvgrpb svg{width:20px;height:20px}
+
+/* «Инструменты» — спокойная сетка (слово автора 21.11.2026: «страшновато»; всё на одном экране): три колонки, ровные карточки, значок в мягкой плитке
+   своего цвета, название и одна строка состояния по центру. Строки делят высоту экрана поровну (--rows задаёт tools.js), без «широких» карточек и гигантских значков */
+.tgrid.tgtop{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px;grid-template-rows:repeat(var(--rows,4),minmax(104px,1fr));grid-auto-rows:minmax(104px,1fr)!important;
+  min-height:calc(100dvh - var(--tabh,64px) - 28px - env(safe-area-inset-top,0px));margin-top:10px}
+.tgrid.tgtop .tcard2{padding:10px 6px 10px;border-radius:20px;min-height:0;align-items:center;justify-content:center;text-align:center;gap:8px;container-type:normal;
+  background:color-mix(in srgb,var(--c,var(--tint)) 7%,var(--cell));box-shadow:none}
+.tgrid.tgtop .tcard2:last-child:nth-child(odd){grid-column:auto}
+.tgrid.tgtop .tci2{width:clamp(52px,40%,68px);aspect-ratio:1;height:auto;border-radius:16px;align-items:center;justify-content:center;background:color-mix(in srgb,var(--c,var(--tint)) 14%,var(--cell))}
+.tgrid.tgtop .tci2 svg{width:56%;height:56%}
+.tgrid.tgtop .tcb{--nfs:15px;width:100%;height:auto;align-items:center;gap:2px}
+.tgrid.tgtop .tcn2{font-size:var(--nfs);font-weight:650;line-height:1.15;-webkit-line-clamp:2;text-align:center}
+.tgrid.tgtop .tcs2{font-size:12px;line-height:15px;min-height:15px;max-width:100%;text-align:center}
+.tgrid.tgtop .tcard2.tpage .tci2{background:color-mix(in srgb,var(--tint) 16%,var(--cell))}
+.szfr{overflow:hidden}
