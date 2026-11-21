@@ -200,3 +200,11 @@
 .pane[data-fit="1"] .mv,.pane[data-fit="2"] .mv{justify-content:center}
 .pane.pane[data-fit="1"] .mv.mv .mwheel.mwheel,.pane.pane[data-fit="2"] .mv.mv .mwheel.mwheel{width:min(100cqw - 8px,100cqh - 8px)!important;height:min(100cqw - 8px,100cqh - 8px)!important;max-width:none;max-height:none;flex:none}
 .pane[data-fit="1"] .vs .mtile,.pane[data-fit="1"] .vs [data-hold],.pane[data-fit="2"] .vs .mtile,.pane[data-fit="2"] .vs [data-hold]{display:none}
+
+/* Пустоты нет (слово автора 21.11.2026): в портретном окне полоса кнопок — у нижнего края, под большим пальцем, циферблат — в середине
+   оставшегося места, а не кнопки под циферблатом посреди пустого поля */
+@container (max-aspect-ratio: 5/4){
+  .mv:is(.full,.half){justify-content:flex-start}
+  .mv:is(.full,.half)>.mwheel{margin-block:auto}
+  .mv:is(.full,.half)>.mside{margin-top:auto}
+}
