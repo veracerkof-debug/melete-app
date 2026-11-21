@@ -1,6 +1,6 @@
 // Единый AudioContext: общий выход через компрессор, реверберация (свёртка со сгенерированным импульсом).
 // Создаётся лениво — браузер разрешает звук только после жеста пользователя.
-import { spaceOf, latencyFor, verbLight, verbAlgo } from './perf.js';
+import { spaceOf, latencyFor, verbLight, verbAlgo, desktopApp } from './perf.js';
 import { makeSpace, loadReverbWorklet, SPACES, SPACE_DEF } from './spaces.js';
 export { SPACES, SPACE_DEF };
 import { loadAirWorklet } from './airsound.js';
@@ -29,11 +29,17 @@ export const setOutKind = (k) => { outKind = k; try { localStorage.setItem(OUT_K
 export const ctxOutKind = () => ctxKind; // каким был выход, когда создавался контекст (null — ещё не создан)
 export const currentOutKind = () => outKind || 'phone'; // выход сейчас: 'bt' | 'wired' | 'phone' (задержка — latency.js)
 
+// Компьютер (Tauri, WebView2), режим «Средняя»: 'balanced' даёт буфер 10 мс, и поток звука в тишине показывал 94–99 % нагрузки
+// (отчёт 21.11.2026: захлёбывание арпеджиатора и глайдера). 20 мс — вдвое реже обращения системы к потоку, задержка от клавиши
+// всё ещё мала (на «Низкой» остаётся 'interactive', на «Надёжной» — 'playback'). Не проверено на компьютере автора.
+export const DESK_BAL_HINT = 0.02;
+const desktopHint = (mode) => (mode === 'bal' && desktopApp() ? DESK_BAL_HINT : null);
+
 export function getContext(mode = 'bal') {
   if (!ctx) {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!C) return null;
-    const hint = outKind === 'bt' ? BT_LATENCY : LATENCY[latencyFor(mode)] || 'balanced';
+    const hint = outKind === 'bt' ? BT_LATENCY : desktopHint(latencyFor(mode)) || LATENCY[latencyFor(mode)] || 'balanced';
     try { ctx = new C({ latencyHint: hint }); } catch { ctx = new C(); }
     ctxKind = outKind || 'phone';
     loadAirWorklet(ctx); // движок воздушных голосов (airsound.js) — грузится сразу, ноты до готовности идут узлами

@@ -512,8 +512,14 @@ function meterUpdate(e) {
   }
   if (e.samples && m.spec) drawSpec(e.samples, e.rate || M.rate);
 }
-// Спектр: логарифмическая шкала 40 Гц…16 кГц, столбики или линия, сглаживание по времени
+// Цвета спектра — один раз на отрисовку экрана (getComputedStyle каждый кадр вызывал пересчёт стилей: подвисания диктофона, отчёт 21.11.2026)
+let specCol = null, specAt = 0;
+const specColors = () => specCol || (specCol = (() => { const cs = getComputedStyle(host); return { tint: cs.getPropertyValue('--tint').trim() || '#9C7242', l3: cs.getPropertyValue('--l3').trim() || '#ccc' }; })());
+// Спектр: логарифмическая шкала 40 Гц…16 кГц, столбики или линия, сглаживание по времени; не чаще ~30 кадров в секунду
 function drawSpec(x, rate) {
+  const now = performance.now();
+  if (now - specAt < 30) return;
+  specAt = now;
   const cv = host && host.querySelector('#vc-spec');
   if (!cv) return;
   const m = st().meter, dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
@@ -529,7 +535,7 @@ function drawSpec(x, rate) {
   }
   const a = { fast: 0.7, mid: 0.4, slow: 0.18 }[m.smooth] || 0.4;
   if (!M.spec || M.spec.length !== NB) M.spec = bands; else for (let b = 0; b < NB; b++) M.spec[b] = bands[b] > M.spec[b] ? bands[b] : M.spec[b] + (bands[b] - M.spec[b]) * a;
-  const g = cv.getContext('2d'), cs = getComputedStyle(host), tint = cs.getPropertyValue('--tint').trim() || '#9C7242', l3 = cs.getPropertyValue('--l3').trim() || '#ccc';
+  const g = cv.getContext('2d'), { tint, l3 } = specColors();
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const y = (d) => H - (Math.max(0, Math.min(1, (d + 90) / 90)) * (H - 2));
   // сетка: 100 Гц, 1 кГц, 10 кГц
@@ -928,6 +934,7 @@ function keptHTML() {
 
 function render() {
   if (!host) return;
+  specCol = null; // тема или экран могли смениться — цвета спектра прочитать заново
   host.innerHTML = '<div class="voice ' + size + (big() ? ' big' : '') + '">' + html() + '</div>';
   // вход до записи слушается только в ожидании и в большом окне (ошибка — до явного нажатия)
   if (S.phase === 'idle' && big() && st().live && !L && !S.err) liveStart();
