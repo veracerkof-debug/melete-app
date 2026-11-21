@@ -55,7 +55,7 @@
   "earlier": "Layer 10 ms earlier",
   "later": "Layer 10 ms later",
   "shiftReset": "Layer shift, ms; tap — reset",
-  "help.5": "Reels and tracks: drag — shift the layer, tap — layer window (bounds, fine shift, sound), ‹ › — by a millisecond (hold — faster).",
+  "help.5": "Drag a layer to shift it; tap — layer window; ‹ › — 1 ms steps.",
   "layerEdit": "Layer {n}: bounds, shift, sound",
   "editHint": "Loop window: drag the middle — shift, the corners — trim.",
   "earlier1": "Layer 1 ms earlier",
@@ -120,7 +120,7 @@
     "{n} parts"
   ],
   "untitled": "Untitled",
-  "help.6": "Parts view: “+” adds drums, notes, chords, playing an instrument or a library recording; tap a row to switch it on/off from the next bar, hold to edit.",
+  "help.6": "“Parts” view: “+” — drums, notes, chords, playing or recording.",
   "play.title": "Play into the loop",
   "play.hint": "The loop is playing. “Record a cycle” — from the next cycle the instrument sound becomes a layer, the notes a part next to it (off).",
   "cap.go": "Record a cycle",

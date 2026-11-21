@@ -86,8 +86,9 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hintPop) { closeHint(); e.stopPropagation(); } }, true);
 }
 let hintId = 0;
-export function foldHints(root) {
+export function foldHints(root, drop = false) {
   const mk = (host, html) => {
+    if (drop) return;
     let b = host.querySelector(':scope > .hq');
     if (b) { b._hint += '<br>' + html; return; }
     b = document.createElement('button');
@@ -99,6 +100,7 @@ export function foldHints(root) {
   // Длинное пояснение под названием строки (не однострочная подпись с «…») — «?» сразу после названия
   root.querySelectorAll('.cell .bksub').forEach((h) => {
     if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 40 || getComputedStyle(h).whiteSpace === 'nowrap' || h.closest('.hintpop')) return;
+    if (drop) { h.hidden = true; return; }
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'hq hqi'; b.textContent = '?';
     b.setAttribute('aria-label', t('ui.hint')); b.dataset.hid = 'h' + (++hintId); b._hint = h.innerHTML;
@@ -106,7 +108,7 @@ export function foldHints(root) {
     h.parentNode.insertBefore(b, h); h.hidden = true;
   });
   root.querySelectorAll('.ftr, .segcap, .lphint, .hintx').forEach((h) => {
-    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop')) return;
+    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop') || h.classList.contains('keep') || h.style.color) return; // .keep и цветные (ошибки) — остаются
     let host = null;
     if (h.classList.contains('segcap')) host = h.parentElement && h.parentElement.querySelector(':scope > .segttl');
     else {
@@ -115,6 +117,7 @@ export function foldHints(root) {
       const hd = p && p.previousElementSibling;
       host = hd && hd.classList.contains('hdr') ? hd : p && p.classList.contains('hdr') ? p : null;
     }
+    if (!host && drop) { h.hidden = true; return; }
     if (!host) { // нет названия рядом — сам кружок вместо абзаца
       const row = document.createElement('div'); row.className = 'hqrow' + (h.classList.contains('lphint') || h.classList.contains('hintx') ? ' c' : ''); h.parentNode.insertBefore(row, h); host = row;
     }
@@ -123,7 +126,7 @@ export function foldHints(root) {
   });
 }
 
-export function sheet(render, init, { onClose } = {}) {
+export function sheet(render, init, { onClose, hints } = {}) {
   if (!layer) {
     layer = document.createElement('div');
     layer.id = 'sheetLayer';
@@ -141,7 +144,7 @@ export function sheet(render, init, { onClose } = {}) {
     update() {
       const y = el.scrollTop;
       el.innerHTML = '<div class="grab"></div>' + withText(render); // настройки — с текстом и в «Минимале» без текста
-      foldHints(el);
+      foldHints(el, hints === 'drop');
       el.scrollTop = y;
     },
     close() {

@@ -53,7 +53,7 @@
   "earlier": "Qatlam 10 ms oldinga",
   "later": "Qatlam 10 ms keyinga",
   "shiftReset": "Qatlam siljishi, ms; bosish — nolga",
-  "help.5": "Gʻaltaklar va yoʻlaklar: barmoq bilan surish — qatlam siljishi, bosish — qatlam oynasi (chegaralar, aniq siljish, tovush), ‹ › — millisekundlab (ushlab turish — tezroq).",
+  "help.5": "Qatlamni surish — siljitish; bosish — qatlam oynasi; ‹ › — 1 ms.",
   "layerEdit": "Qatlam {n}: chegaralar, siljish, tovush",
   "editHint": "Halqa oynasi: oʻrtasidan surish — siljish, burchaklaridan — kesish.",
   "earlier1": "Qatlam 1 ms oldinga",
@@ -117,7 +117,7 @@
     "{n} partiya"
   ],
   "untitled": "Nomsiz",
-  "help.6": "«Partiyalar» koʻrinishi: «+» — zarblar, notalar, akkordlar, asbobda chalish yoki mediatekadan yozuv; qatorga bosish — keyingi taktdan yoqish/oʻchirish, ushlab turish — tahrirlash.",
+  "help.6": "«Partiyalar»: «+» — zarb, nota, akkord, ijro yoki yozuv.",
   "play.title": "Halqaga chalish",
   "play.hint": "Halqa chalmoqda. «Doirani yozish» — keyingi doira boshidan asbob ovozi qatlam boʻlib, notalar — yonida partiya boʻlib (oʻchiq) yoziladi.",
   "cap.go": "Doirani yozish",

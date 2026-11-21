@@ -198,20 +198,17 @@ function meHTML(app) {
 function weekHTML(app) {
   const st = app.store.state.settings, WD = weekdays();
   // расписание занятий — единственное место для дней и времени, наверху (слово автора 11.11.2026; screens/plan.js)
+  // Порядок по смыслу (слово автора 21.11.2026): расписание → занятие → учёт времени → перерывы → экран → функции; пояснений нет
   return '<div class="large">' + t('week.title') + '</div>' + planHTML(app) +
-    '<div class="group" style="margin-top:22px"><div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div></div>' +
-    '<p class="ftr">' + t('feat.toolsOnly.hint') + '</p>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
-    '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div></div>' +
-    '<p class="ftr">' + t('week.autoHint') + '</p>' +
-    '<div class="hdr">' + t('brk.title') + '</div><div class="group"><div class="cellcol">' + seg('brk', [['0', t('brk.off')], ['45', '45'], ['50', '50'], ['60', '60'], ['90', '90']], String(st.breakMin === 0 ? 0 : +st.breakMin || 50), t('brk.title')) +
-    '<div class="segcap">' + t('brk.hint') + '</div></div></div>' +
-    '<div class="hdr">' + t('calm.title') + '</div><div class="group"><div class="cellcol">' + seg('calm', [['0', t('brk.off')], ['30', '30'], ['45', '45'], ['60', '60'], ['120', '120']], String(st.calmView === false ? 0 : +st.calmSec || 45), t('calm.title')) + '<div class="segcap">' + t('calm.hint') + '</div></div></div>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('solid.title') + '</span>' + psw('solidView', st.solidView !== false, t('solid.title')) + '</div></div><p class="ftr">' + t('solid.hint') + '</p>' +
-    '<div class="hdr">' + t('track.title') + '</div><div class="group"><div class="cellcol">' + seg('track', [['normal', t('track.mode.normal')], ['strict', t('track.mode.strict')]], trackMode(st), t('track.title')) +
-    '<div class="segcap">' + t('track.hint.' + trackMode(st)) + '</div></div></div><p class="ftr">' + t('track.hint') + '</p>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
-    '<p class="ftr">' + t('presence.hint') + '</p>' +
+    '<div class="hdr">' + t('week.sessHdr') + '</div><div class="group">' +
+    '<div class="cell"><span class="grow">' + t('week.autoTrack') + '</span>' + psw('autoTrack', st.autoTrack !== false, t('week.autoTrack')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('week.showClock') + '</span>' + psw('showClock', st.showClock !== false, t('week.showClock')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('feat.toolsOnly') + '</span>' + psw('toolsOnly', !!st.toolsOnly, t('feat.toolsOnly')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('solid.title') + '</span>' + psw('solidView', st.solidView !== false, t('solid.title')) + '</div></div>' +
+    '<div class="hdr">' + t('track.title') + '</div><div class="group"><div class="cellcol">' + seg('track', [['normal', t('track.mode.normal')], ['strict', t('track.mode.strict')]], trackMode(st), t('track.title')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('presence.title') + '</span>' + psw('micPresence', !!st.micPresence, t('presence.title')) + '</div></div>' +
+    '<div class="hdr">' + t('brk.title') + '</div><div class="group"><div class="cellcol">' + seg('brk', [['0', t('brk.off')], ['45', '45'], ['50', '50'], ['60', '60'], ['90', '90']], String(st.breakMin === 0 ? 0 : +st.breakMin || 50), t('brk.title')) + '</div></div>' +
+    '<div class="hdr">' + t('calm.title') + '</div><div class="group"><div class="cellcol">' + seg('calm', [['0', t('brk.off')], ['30', '30'], ['45', '45'], ['60', '60'], ['120', '120']], String(st.calmView === false ? 0 : +st.calmSec || 45), t('calm.title')) + '</div></div>' +
     // в режиме «Только инструменты» функции ядра (ударный режим, значок) и так выключены — переключатели не нужны
     (st.toolsOnly ? '' : '<div class="hdr">' + t('feat.core') + '</div><div class="group">' + CORE_FEATURES.map((k) => featRow(st, k, k === 'mastery' ? STONE_IC : k === 'quote' ? QUOTE_IC : FLAME, k === 'mastery' ? '#646493' : k === 'quote' ? '#5E7E6A' : '#9C7242', t('feat.' + k), t('feat.about.' + k))).join('') + '</div>');
 }
@@ -701,7 +698,7 @@ export function createPanel(app, onChange) {
     if (lastPage && lastPage !== page && !desk) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
     layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
     lastPage = page;
-    closeHint(); foldHints(layer);
+    closeHint(); foldHints(layer, true); // настройки приложения — без поясняющих текстов вовсе (слово автора 21.11.2026): объяснения — в инструкциях инструментов
     if (page === 'look') mountSizePreview(app, layer);
     if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»

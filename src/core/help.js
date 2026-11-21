@@ -9,6 +9,7 @@ import { t, getLang, isBare, hasMascot } from '../i18n/index.js';
 import { mascotSVG } from '../ui/mascot.js';
 import { esc, leave } from '../ui/index.js';
 import { moduleName } from './modules.js';
+import { BASIC, GUIDE, glyph } from './guides.js';
 
 const AUTO = true; // сама, пока не отмечено «Больше не показывать»; выключить все — «Инструкции» в профиле (settings.helpOff)
 const queue = [];
@@ -53,6 +54,7 @@ export function tourOf(tp) {
 export function helpOf(x) {
   if (!x) return null;
   const tp = x.core ? x : x.sizes ? modTopic(x) : x;
+  if (BASIC.includes(tp.id) && !tp.core) return null; // метроном, тюнер, таймер, спектр — без инструкций (слово автора 21.11.2026)
   if (tp.core) {
     const k = (s) => { const v = t('hc.' + tp.core + '.' + s); return v === 'hc.' + tp.core + '.' + s ? null : v; };
     const what = k('what');
@@ -123,7 +125,9 @@ function next() {
   d.className = 'ask helpask';
   d.innerHTML = '<div class="alert helpcard" role="alertdialog" aria-label="' + esc(tp.name) + '"><div class="ab">' +
     '<div class="hchead"><span class="hcic" style="background:' + tp.color + ';color:' + (tp.on || '#fff') + '">' + tp.icon + '</span><h3>' + esc(tp.name) + '</h3></div>' +
-    '<p class="hcwhat">' + esc(h.what) + '</p><ul class="hclist">' + h.items.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
+    '<p class="hcwhat">' + esc(h.what) + '</p>' +
+    // шаги карточками со значками (инфографика), цвет — семьи инструмента
+    '<div class="hcsteps" style="--hc:' + tp.color + '">' + h.items.map((x, i) => '<div class="hcstep"><span class="hcsi">' + glyph((GUIDE[tp.core || tp.id] || [])[i]) + '<i>' + (i + 1) + '</i></span><span class="hcst">' + esc(x) + '</span></div>').join('') + '</div>' +
     // совет — от лица маскота (лицо и имя); без маскота — просто «Совет»
     (h.tip ? '<p class="hctip">' + (hasMascot() ? '<span class="hcm">' + mascotSVG('wink', { size: 28 }) + '<b>' + esc(t('mascot.says')) + '</b></span>' : '<b>' + t('help.tip') + '</b> ') + esc(h.tip) + '</p>' : '') +
     '<label class="hcnever"><input type="checkbox" data-k="never"' + (off ? ' checked' : '') + '><span>' + t('help.never') + '</span></label></div>' +

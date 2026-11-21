@@ -4,6 +4,7 @@ import { isDesk } from '../ui/desk.js';
 import { keyLabel } from './qwerty.js';
 import { getLang, makeT, makeTn, fmtNum, t as coreT, CORE_DICTS as coreDicts } from '../i18n/index.js';
 import { ui } from '../ui/index.js';
+import { BASIC } from './guides.js';
 import { createToolView, toolViewMs, toolViewVisibility, saveToolView, recordToolTime, trackMode, countsWhileHidden, FREE_TAGS, freeTagName } from './session.js';
 import { overlapMs, mergeSegs } from './stopwatch.js';
 import { fmtDur } from './format.js';
@@ -249,7 +250,8 @@ export function makeCtx(app, mod) {
       s.updatedAt = app.store.now();
       app.store.save();
     },
-    ui,
+    // базовые инструменты (метроном, тюнер…) — без поясняющих текстов в шторках вовсе (слово автора 21.11.2026)
+    ui: BASIC.includes(mod.id) ? { ...ui, sheet: (r, i, o = {}) => ui.sheet(r, i, { ...o, hints: 'drop' }) } : ui,
   };
 }
 

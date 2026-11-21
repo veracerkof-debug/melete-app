@@ -113,3 +113,12 @@ html.pip .tview, html.pip .session { inset: 0 !important; border-radius: 0 !impo
 .latsub{display:block;font-size:13px;color:var(--l2);margin-top:2px;line-height:1.35}
 .latrun{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px 16px;text-align:center}
 .latrun i{font-style:normal;font-size:56px;font-weight:600;line-height:1}
+
+/* Инструкция-инфографика: шаги карточками со значком и номером (слово автора 21.11.2026), цвет --hc — семьи инструмента, любая палитра */
+.hcsteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 4px}
+.hcstep{background:color-mix(in srgb,var(--hc,var(--tint)) 10%,var(--cell));border-radius:16px;padding:10px 10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hc,var(--tint)) 18%,transparent)}
+.hcstep:last-child:nth-child(odd){grid-column:span 2}
+.hcsi{position:relative;width:40px;height:40px;border-radius:13px;background:color-mix(in srgb,var(--hc,var(--tint)) 16%,var(--cell));display:flex;align-items:center;justify-content:center}
+.hcsi svg{width:24px;height:24px;fill:none;stroke:var(--hc,var(--tint));stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.hcsi i{position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--hc,var(--tint));color:var(--on-tint,white);font:700 11px/18px var(--font);font-style:normal;text-align:center}
+.hcst{font-size:13px;line-height:1.35;color:var(--ink)}

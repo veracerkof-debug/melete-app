@@ -72,7 +72,7 @@
   "mode.grid": "View: grid",
   "latch.off": "Play",
   "latch.on": "Hold",
-  "help.3": "Keys — one octave on all layers: “Play” sounds while held, “Hold” toggles on tap.",
+  "help.3": "Keys — one octave: “Play” while held, “Hold” toggles.",
   "mode.circle": "View: circle of fifths",
   "circle": "Circle of fifths",
   "circle.key": "Key {k}",
