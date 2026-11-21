@@ -76,8 +76,8 @@ function idleStatus(app, root, todo) {
 function hiddenSheet(app, rerender) {
   const st = app.store.state.settings;
   ui.sheet(() => { const T = toolsTab(st); return ui.snav(t('tools.hiddenTitle')) + '<div class="group">' + [...T.off].map((id) => { const m = moduleById(id);
-    if (!m) { const p = pageCard(id); return '<div class="cell"><span class="ticon" style="--tc:var(--tint)">' + p.icon + '</span><span class="grow">' + esc(p.name) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }
-    return '<div class="cell"><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:#5F8568">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
+    if (!m) { const p = pageCard(id); return '<div class="cell"><span class="ticon" style="--tc:var(--tint)">' + p.icon + '</span><span class="grow">' + esc(p.name) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:var(--ok)">' + IC.plus + '</button></div>'; }
+    return '<div class="cell"><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span><button class="ic sm plain" data-tback="' + id + '" aria-label="' + esc(t('tools.back')) + '" style="color:var(--ok)">' + IC.plus + '</button></div>'; }).join('') + '</div>'; },
   (el, sh) => el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tback]');
     if (!b) return;

@@ -11,7 +11,7 @@ test('теория: аккорд и гамма на хроматическом �
   await expect(cr.locator('.cr-n.on')).toHaveCount(3);
   await expect(cr.locator('.cr-arc')).toHaveCount(2);
   await cr.locator('[data-cpc="3"]').click(); // нота аккорда — звук, без ошибок
-  await melete.tools({ theory: { sec: 'scales', scale: { pc: 0, type: 'major' } } }); await melete.free('F', ['theory']);
+  await melete.tools({ theory: { sec: 'scales', scMore: true, scale: { pc: 0, type: 'major' } } }); await melete.free('F', ['theory']);
   const sr = page.locator('.srwrap .chroma');
   await expect(sr).toHaveCount(1, { timeout: 15_000 });
   await expect(sr.locator('.cr-n.on')).toHaveCount(7);

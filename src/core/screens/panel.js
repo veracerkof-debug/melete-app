@@ -613,11 +613,11 @@ function tabsHTML(app) {
     (on ? '<span class="rgrip" aria-hidden="true">' + GRIP_IC + '</span>' +
       (vis.length > 1 && !FIXED_TABS.includes(k) ? (mod(k) ? '<button class="ic sm plain" data-tabun="' + k + '" aria-label="' + esc(t('tabs.toTools') + ': ' + nameOf(k)) + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-tabmv="off" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.off', { name: nameOf(k) })) + '" style="color:var(--red)">' + IC.minus + '</button>') : '')
-      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: nameOf(k) })) + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
+      : '<button class="ic sm plain" data-tabmv="on" data-tab-id="' + k + '" aria-label="' + esc(t('tabs.on', { name: nameOf(k) })) + '" style="color:var(--ok)">' + IC.plus + '</button>') + '</div>';
   // любой включённый инструмент — вниз одним касанием (решение автора 28.10.2026)
   const cand = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id) && !mod(m.id) && !CHURCH_MODULES.includes(m.id));
   const candRow = (m) => '<div class="cell"><span class="ticon" style="--tc:' + (m.color || 'var(--tint)') + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
-    '<button class="ic sm plain" data-tabmk="' + m.id + '" aria-label="' + esc(t('hold.makeTab') + ': ' + moduleName(m)) + '" style="color:#5F8568"' + (vis.length >= TABS_MAX ? ' disabled' : '') + '>' + IC.plus + '</button></div>';
+    '<button class="ic sm plain" data-tabmk="' + m.id + '" aria-label="' + esc(t('hold.makeTab') + ': ' + moduleName(m)) + '" style="color:var(--ok)"' + (vis.length >= TABS_MAX ? ' disabled' : '') + '>' + IC.plus + '</button></div>';
   return '<div class="large">' + t('tabs.title') + '</div>' +
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +

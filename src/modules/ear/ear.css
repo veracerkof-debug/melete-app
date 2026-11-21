@@ -122,3 +122,23 @@
 .pane[data-fit="1"] .ehome .ecard,.pane[data-fit="2"] .ehome .ecard{padding:8px 12px;flex-direction:row;gap:10px;min-height:52px}
 .pane[data-fit="1"] .ehome .eds,.pane[data-fit="1"] .ehome .edic,.pane[data-fit="2"] .ehome .eds,.pane[data-fit="2"] .ehome .edic{display:none}
 .pane[data-fit="1"] .ehome .edgrid>*,.pane[data-fit="2"] .ehome .edgrid>*{grid-column:auto!important}
+
+/* «Начать занятие»: уровень 1–10 и большая кнопка; упражнения — компактные карточки (всё на одном экране, слово автора 21.11.2026) */
+.elv{background:var(--cell);border-radius:20px;padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:none}
+.elvr{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.elvr .ic{font-size:24px;font-weight:700;color:var(--l2)}
+.elvt{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.elvt b{font-size:17px;font-weight:700}
+.elvt span{font-size:13px}
+.elvdots{display:flex;gap:5px;justify-content:center}
+.elvdots i{width:20px;height:4px;border-radius:2px;background:var(--fill2)}
+.elvdots i.past{background:color-mix(in srgb,var(--mod,var(--tint)) 45%,var(--fill2))}
+.elvdots i.on{background:var(--mod,var(--tint))}
+.elgo{min-height:52px;font-size:17px;background:color-mix(in srgb,var(--mod,var(--tint)) 78%,black)!important;color:white!important}
+.edgrid{grid-auto-rows:minmax(56px,auto);flex:none;gap:8px}
+.edcard{flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 10px;gap:10px;min-height:56px}
+.edcard .edic{position:static;width:34px;height:34px;border-radius:11px;flex:none}
+.edcard .edic svg{width:20px;height:20px}
+.edcard .edr{position:relative;margin-left:auto;width:32px;height:32px;flex:none}
+.edcard .edn{margin:0;font-size:15px}
+.edcard .eds{display:none}

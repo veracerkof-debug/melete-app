@@ -205,3 +205,15 @@
 .pane[data-fit="1"] .cgrid.qg{display:flex;overflow-x:auto;scrollbar-width:none;flex:none;gap:6px}
 .pane[data-fit="1"] .cgrid.qg .cbtn{flex:none;min-width:64px;min-height:44px}
 .tsub{margin:6px 0 2px}
+/* круг уменьшается, пока помещается всё первое: круг, лад, ступени, действия */
+.cwrap.f .ctrl4:has(>:nth-child(5)){grid-template-columns:repeat(5,1fr)}
+.cwrap.f .ctrl4 .ic{width:48px;height:48px}
+.cwrap.f:not(.cb) .csvg{height:min(100cqw - 20px,calc(100cqh - 340px));flex:none}
+.cwrap.f:not(.cb) .csvg svg{height:100%;width:auto;max-width:100%}
+.swrap .ctrl4 .ic.txt{font-size:14px;font-weight:700}
+.swrap .crwrap{height:min(100cqw - 40px,calc(100cqh - 372px));width:auto;aspect-ratio:1;margin-inline:auto}
+/* аккорд: ноты уже подписаны на круге — плитки с нотами лишние (первый экран без прокрутки) */
+.pane.full .swrap:has(.crwrap)>.scnotes{display:none}
+.swrap .crwrap svg{height:100%;width:auto;max-width:100%}
+.igrid2.f{grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(64px,1fr);flex:1!important;margin-top:8px}
+.swrap .crwrap{height:min(100cqw - 40px,calc(100cqh - 410px))}

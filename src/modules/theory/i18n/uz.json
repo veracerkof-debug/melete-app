@@ -1,4 +1,10 @@
 {
+  "fretTitle": "Gryfdagi aplikatura",
+  "fretBtn": "Gryf",
+  "schemeTitle": "Gamma tuzilishi",
+  "schemeBtn": "Sxema",
+  "modesTitle": "Kvinta doirasidagi ladlar",
+  "modesShort": "Ladlar",
   "name": "Nazariya",
   "sec.circle": "Doira",
   "sec.scales": "Gammalar",

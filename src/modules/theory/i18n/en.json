@@ -1,4 +1,10 @@
 {
+  "fretTitle": "Fretboard shape",
+  "fretBtn": "Fret",
+  "schemeTitle": "How the scale works",
+  "schemeBtn": "Scheme",
+  "modesTitle": "Modes on the circle",
+  "modesShort": "Modes",
   "name": "Theory",
   "sec.circle": "Circle",
   "sec.scales": "Scales",

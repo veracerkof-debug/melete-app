@@ -17,6 +17,7 @@ import { swipe } from '../../ui/gestures.js';
 import { yin, refinePitch, createPitchSmoother } from '../../audio/pitch.js';
 import { noiseBuf } from '../../audio/waves.js';
 import { EAR_COURSE, lessonConf, lessonN } from './course.js';
+import { LEVEL_COUNT, applyLevel, clampLevel } from '../../music/earlevels.js';
 import { normalizeProg, findLesson, chapterOf, nextLesson, dueReviews, recordLesson, recordReview, placementPlan, applyPlacement } from '../../music/course.js';
 import { courseHTML, lessonBarHTML, resultHTML, modeSeg } from '../../ui/course.js';
 
@@ -393,7 +394,14 @@ function homeHTML() {
   // неделя: ответы, точность и столбики по дням — без цели на день и без серий
   const days = weekDays(), w = weekOf(E, days), mx = Math.max(1, ...days.map((k) => (E.days[k] || { t: 0 }).t));
   const bars = '<div class="ewbars" aria-hidden="true">' + days.map((k) => { const d = E.days[k] || { c: 0, t: 0 }; return '<i style="--h:' + (d.t / mx) + ';--q:' + (d.t ? d.c / d.t : 0) + '"></i>'; }).join('') + '</div>';
-  return '<div class="ewrap ehome">' + top + '<div class="edash"><div class="edtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.t + ' <small class="l2">' + tn('answersN', w.t) +
+  // «Начать занятие»: выбор из 10 уровней (earlevels.js) и сразу нужное упражнение (слово автора 21.11.2026)
+  const lv = clampLevel(e.lv10 || 1);
+  const start = '<div class="elv"><div class="elvr"><button class="ic sm plain" data-x="elv" data-d="-1" aria-label="' + t('lv10.prev') + '"' + (lv <= 1 ? ' disabled' : '') + '>‹</button>' +
+    '<div class="elvt"><b>' + t('lv10.title', { n: lv, max: LEVEL_COUNT }) + '</b><span class="l2">' + t('lv10.' + lv) + '</span></div>' +
+    '<button class="ic sm plain" data-x="elv" data-d="1" aria-label="' + t('lv10.next') + '"' + (lv >= LEVEL_COUNT ? ' disabled' : '') + '>›</button></div>' +
+    '<div class="elvdots" aria-hidden="true">' + Array.from({ length: LEVEL_COUNT }, (_, i) => '<i' + (i + 1 === lv ? ' class="on"' : i + 1 < lv ? ' class="past"' : '') + '></i>').join('') + '</div>' +
+    '<button class="btn fill block elgo" data-x="elstart">' + t('lv10.start') + '</button></div>';
+  return '<div class="ewrap ehome">' + top + start + '<div class="edash"><div class="edtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.t + ' <small class="l2">' + tn('answersN', w.t) +
     '</small></div>' + (w.t ? '<div class="l2" style="font-size:14px">' + t('accWeek', { p: Math.round((w.c / w.t) * 100) }) + '</div>' : '') + '</div>' + bars +
     '<div class="edbtns">' + ui.icb('data-x="estats"', I.stats, t('statsBtn'), 'sm') + '</div></div>' +
     '<div class="edgrid">' + DRILLS.map(([id]) => {
@@ -586,7 +594,7 @@ function statsSheet() {
     return '<div class="card"><div class="ch"><span>' + t('sec.' + sec) + '</span><span>' + t('st.weak') + '</span></div>' + arr.map(({ k, v }) => {
       const p = Math.round((v.c / v.t) * 100);
       return '<div class="hrow"><span class="n">' + esc(sec === 'pt' ? k : label(sec, k)) + '</span><span class="hb"><i style="width:' + p + '%;background:' +
-        (p >= 80 ? '#34C759' : p >= 50 ? 'var(--tint)' : '#FF3B30') + '"></i></span><span class="num l2" style="font-size:13px">' + p + '% · ' + v.t + '</span></div>';
+        (p >= 80 ? 'var(--ok)' : p >= 50 ? 'var(--tint)' : 'var(--red)') + '"></i></span><span class="num l2" style="font-size:13px">' + p + '% · ' + v.t + '</span></div>';
     }).join('') + '</div>';
   };
   const conf = Object.entries(E.ntc || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -632,6 +640,8 @@ function ntLearn() {
 function act(a, el) {
   const e = EC(), sec = e.sec;
   switch (a) {
+    case 'elv': e.lv10 = clampLevel((e.lv10 || 1) + +el.dataset.d); ctx.store.save(); render(); break;
+    case 'elstart': { const id = applyLevel(e, e.lv10 || 1); e.sec = id; ctx.store.save(); clearTimers(); if (id !== 'pt') micStop(); render(); break; }
     case 'esec': e.sec = el.dataset.v; ctx.store.save(); clearTimers(); if (e.sec !== 'pt') micStop(); render(); break;
     case 'eplay': if (!EAR.q[sec]) gen(sec); play(sec); break;
     case 'eans': answer(sec, el.dataset.v); render(); break;

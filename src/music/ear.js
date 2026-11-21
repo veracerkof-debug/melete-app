@@ -5,7 +5,9 @@ import { MAJI, NAT_MIN } from './notes.js';
 import { SCALES } from './theory.js';
 
 // Упражнения: id и цвет; названия — i18n sec.<id>
-export const DRILLS = [['iv', '#34C759'], ['ch', '#007AFF'], ['sc', '#5856D6'], ['dg', '#FF9500'], ['nt', '#AF52DE'], ['dc', '#FF2D55'], ['pt', '#30B0C7']];
+// Цвет упражнений — один, цвет семьи «Учёба» (--mod у окна модуля; docs/color-system.md), а не радуга
+const C = 'var(--mod, #5F8568)';
+export const DRILLS = [['iv', C], ['ch', C], ['sc', C], ['dg', C], ['nt', C], ['dc', C], ['pt', C]];
 export const DRILL_IDS = DRILLS.map((d) => d[0]);
 
 // Интервалы: полутоны (названия — i18n ivs.<n>, iv.<n> модуля «Теория»-подобные, свои у тренажёра)

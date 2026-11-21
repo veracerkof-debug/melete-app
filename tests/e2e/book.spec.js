@@ -57,7 +57,7 @@ test('учебник: оглавление, глава, схемы, термин
 
 test('учебник: ссылка из раздела «Гаммы» ведёт в главу', async ({ page, melete, errors }) => {
   await melete.open();
-  await open(melete, page, 'scales');
+  await open(melete, page, 'scales', { scMore: true }); // схема и ссылка на учебник — по кнопке «Схема» (первый экран без прокрутки)
   await page.locator('.pane .bklink').click();
   await page.waitForSelector('.book .bkhead', { timeout: 15_000 });
   await expect(page.locator('.book .bkhead h2')).toHaveText('Гаммы и лады');

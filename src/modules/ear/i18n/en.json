@@ -1,4 +1,18 @@
 {
+  "lv10.prev": "Lower level",
+  "lv10.next": "Higher level",
+  "lv10.title": "Level {n} of {max}",
+  "lv10.start": "Start practice",
+  "lv10.1": "Octave and fifth",
+  "lv10.2": "Fourth and thirds",
+  "lv10.3": "Major and minor",
+  "lv10.4": "Wider intervals",
+  "lv10.5": "Seventh chords and more",
+  "lv10.6": "Degrees 1–3–5",
+  "lv10.7": "Scales",
+  "lv10.8": "Degree chords",
+  "lv10.9": "All chords",
+  "lv10.10": "Degree chains",
   "name": "Ear training",
   "statusToday": [
     "Today {n} answer · {p}%",

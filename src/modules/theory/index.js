@@ -129,7 +129,7 @@ function keysHTML() {
       '<button data-x="kcplay" data-k="a" data-i="' + i + '">' + ui.esc(c.name) + '</button><button class="b" data-x="kcplay" data-k="b" data-i="' + i + '">' + ui.esc(B[i].name) + '</button></div>').join('') + '</div>' +
     '<div class="hdr">' + t('kc.yours') + '</div><input class="inp left kcinp" data-kctext value="' + ui.esc(k.text) + '" placeholder="G C D Em" aria-label="' + ui.esc(t('kc.yours')) + '" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
     '<div class="kcout num" id="kcout">' + res(k.text) + '</div>' +
-    '<div class="hdr">' + t('kc.capo', { key: keyLabel(to) }) + '</div><div class="group">' + capo.map((c) => '<div class="cell"><span class="grow">' + (c.capo ? ctx.tn('kc.fret', c.capo) : t('kc.noCapo')) + '</span><b>' + ui.esc(t('kc.shape', { shape: c.shape })) + '</b></div>').join('') + '</div>' + bookLink('mod') + '</div>';
+    (KC().capoOpen ? '<div class="hdr">' + t('kc.capo', { key: keyLabel(to) }) + '</div>' : '<button class="cell act kccapo" data-x="kccapo">' + t('kc.capo', { key: keyLabel(to) }) + ' ▾</button>') + (KC().capoOpen ? '<div class="group">' : '<div class="group" hidden>') + capo.map((c) => '<div class="cell"><span class="grow">' + (c.capo ? ctx.tn('kc.fret', c.capo) : t('kc.noCapo')) + '</span><b>' + ui.esc(t('kc.shape', { shape: c.shape })) + '</b></div>').join('') + '</div>' + bookLink('mod') + '</div>';
 }
 
 function circleHTML() {
@@ -155,7 +155,9 @@ function circleHTML() {
   return '<div class="cwrap f"><div class="csvg">' + circleSVG(k) + '</div><div class="prow" style="margin:8px 0 4px;justify-content:center">' + modes + '</div>' + cgrid +
     '<p class="ftr">' + (k.signs.length ? k.signs.join(' ') : t('noSignsCap')) + ' · ' + t('rel', { key: rel }) + (th.minor ? ' · ' + t('harmV', { note: k.notes[4] }) : '') + '</p>' +
     '<div class="ctrl4">' + icb('data-x="kscale"', I.play, t('playScale')) + icb('data-x="kdrone"', I.drone, t('droneTonic')) + icb('data-x="kpiano"', I.piano, t('pianoHl')) +
-    icb('data-x="kscales"', I.scales, t('openScales')) + '</div>' + modesCircleHTML() + bookLink('key') + '</div>';
+    icb('data-x="kscales"', I.scales, t('openScales')) + '<button class="ic txt' + (th.showModes ? ' act' : '') + '" data-x="kmodes" aria-pressed="' + !!th.showModes + '" aria-label="' + t('modesTitle') + '">' + t('modesShort') + '</button></div>' +
+    // «Лады на квинтовом круге» и ссылка на учебник — по кнопке (слово автора 21.11.2026: первый экран — круг, ступени и действия, без прокрутки)
+    (th.showModes ? modesCircleHTML() + bookLink('key') : '') + '</div>';
 }
 
 /* ---------- гаммы ---------- */
@@ -177,11 +179,12 @@ function scalesHTML() {
   }
   const head = '<div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="sroot" data-v="' + i + '" aria-pressed="' + (sc.pc === i) + '">' + enh(i) + '</button>').join('') +
     '</div><div class="hscroll">' + SCALE_TYPES.map((x) => '<button class="pill" data-x="stype" data-v="' + x + '" aria-pressed="' + (sc.type === x) + '">' + scaleName(x) + '</button>').join('') + '</div>';
-  const acts = '<div class="ctrl4">' + play + icb('data-x="sdrone"', I.drone, t('droneTonic')) + icb('data-x="spiano"', I.piano, t('onPiano')) + '<span></span></div>';
+  const acts = '<div class="ctrl4">' + play + icb('data-x="sdrone"', I.drone, t('droneTonic')) + icb('data-x="spiano"', I.piano, t('onPiano')) +
+    '<button class="ic txt' + (th.scMore ? ' act' : '') + '" data-x="smore" aria-pressed="' + !!th.scMore + '" aria-label="' + t('schemeTitle') + '">' + t('schemeBtn') + '</button></div>';
   const tog = '<div class="vtog"><div class="seg" style="width:auto"><button data-x="tview" data-v="fret" aria-pressed="' + (vw === 'fret') + '">' + t('fret') +
     '</button><button data-x="tview" data-v="keys" aria-pressed="' + (vw === 'keys') + '">' + t('keys') + '</button></div></div>';
   return '<div class="swrap">' + head + '<div class="ch2"><b>' + ui.esc(title) + '</b><span class="num l2">' + k.steps.map(stepTxt).join(' ') + '</span></div>' + notes + tog +
-    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + schemeHTML(sc) + bookLink('scales') + '</div>';
+    (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 15) : '<div style="margin-top:8px">' + kbHTML(60, 15, new Set(k.pcs), k.rootPc) + '</div>') + acts + (th.scMore ? schemeHTML(sc) + bookLink('scales') : '') + '</div>'; // схема, лестница лада и текст — по кнопке (первый экран без прокрутки)
 }
 
 /* ---------- как устроена гамма: круг из 12 нот, повороты лада, лестница, семья ---------- */
@@ -274,8 +277,9 @@ function chordsHTML() {
   }
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (k.pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
     '<div class="hscroll">' + CHORDS.map((c) => '<button class="pill" data-x="ctype" data-v="' + c[0] + '" aria-pressed="' + (c[0] === k.id) + '" aria-label="' + ui.esc(t('chord.' + c[0])) + '">' + (c[1] || 'maj') + '</button>').join('') + '</div>' +
-    '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + chordCircle(k, desc) + fretHTML(new Set(k.pcs), k.pc, 15) +
-    '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) + '</div>' + bookLink('chords') + '</div>';
+    '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + chordCircle(k, desc) + (TH().chMore ? fretHTML(new Set(k.pcs), k.pc, 15) : '') +
+    '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) +
+    '<button class="ic txt' + (TH().chMore ? ' act' : '') + '" data-x="cmore" aria-pressed="' + !!TH().chMore + '" aria-label="' + t('fretTitle') + '">' + t('fretBtn') + '</button></div>' + (TH().chMore ? bookLink('chords') : '') + '</div>'; // гриф и ссылка — по кнопке (без прокрутки)
 }
 
 // Аккорд на хроматическом круге: фигура, шаги дугами («+4», «+3»), формула «4 + 3 = мажорное трезвучие»; касание
@@ -299,10 +303,9 @@ function intervalsHTML() {
     return '<div class="swrap h2"><div class="shead2">' + rootc + '<span class="l2" style="font-size:13px">' + t('tapToHear') + '</span></div><div class="igrid2">' +
       list.map((i) => '<button class="ib2" data-x="iplay" data-i="' + i + '"><b>' + t('ivs.' + i) + '</b><span>' + nt(i) + '</span><small>' + t('iv.' + i) + '</small></button>').join('') + '</div></div>';
   }
+  // полный экран: двенадцать интервалов плитками, без прокрутки (слово автора 21.11.2026)
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
-    '<div class="group" style="margin-top:6px">' + INTERVALS.map((iv, i) => '<button class="cell" data-x="iplay" data-i="' + i + '"><span class="fnb fS" style="width:34px">' + t('ivs.' + i) +
-      '</span><span class="grow">' + t('iv.' + i) + '</span><span class="val num">' + t('ivSemis', { n: iv[0], a: root, b: nt(i) }) + '</span></button>').join('') + '</div>' +
-    '<p class="ftr">' + t('ivFtr') + '</p>' + bookLink('iv') + '</div>';
+    '<div class="igrid2 f">' + list.map((i) => '<button class="ib2" data-x="iplay" data-i="' + i + '"><b>' + t('ivs.' + i) + '</b><span>' + nt(i) + '</span><small>' + t('iv.' + i) + '</small></button>').join('') + '</div></div>';
 }
 
 /* ---------- определитель: аккорд и гамма по нотам, лады как одна семья ---------- */
@@ -489,6 +492,10 @@ function act(a, el) {
     case 'cmopen': th.scale = { pc: th.pc, type: CMODES.includes(th.cmode) ? th.cmode : 'dorian' }; th.sec = 'scales'; save(); break;
     case 'key': th.pc = +el.dataset.pc; th.minor = el.dataset.minor === '1'; save(); break;
     case 'sevt': th.sev = !th.sev; save(); break;
+    case 'kmodes': th.showModes = !th.showModes; save(); break;
+    case 'smore': th.scMore = !th.scMore; save(); break;
+    case 'cmore': th.chMore = !th.chMore; save(); break;
+    case 'kccapo': KC().capoOpen = true; save(); break;
     case 'kprev': case 'knext': th.pc = circleStep(th.pc, th.minor, a === 'knext' ? 1 : -1); save(); break;
     case 'kmodet': th.minor = !th.minor; save(); break;
     case 'chord': A.playChord(keyInfo(th.pc, th.minor, th.sev).chords[+el.dataset.i].midis); break;

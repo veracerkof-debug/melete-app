@@ -1,4 +1,10 @@
 {
+  "fretTitle": "Аппликатура на грифе",
+  "fretBtn": "Гриф",
+  "schemeTitle": "Как устроена гамма",
+  "schemeBtn": "Схема",
+  "modesTitle": "Лады на квинтовом круге",
+  "modesShort": "Лады",
   "name": "Теория",
   "sec.circle": "Круг",
   "sec.scales": "Гаммы",

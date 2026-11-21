@@ -637,7 +637,7 @@ function statsSheet() {
       return '<div class="hrow"><span class="n">' + t('d.' + id) + '</span><span class="hb"><i style="width:' + p + '%;background:' + (p >= 80 ? '#34C759' : p >= 50 ? 'var(--tint)' : '#FF3B30') + '"></i></span><span class="num l2" style="font-size:13px">' + p + '% · ' + s.t + '</span></div>';
     }).join('') + '</div>' +
     (weak.cells.length || weak.beats.length ? '<div class="card"><div class="ch"><span>' + t('st.weak') + '</span><span></span></div>' +
-      weak.cells.map((x) => '<div class="hrow"><span class="n ryweak">' + (CELLS[x.id] ? scoreSVG(cellNotation(x.id), { clef: null, line: true, up: true, unit: 11, label: '' }) : '') + '</span><span class="hb"><i style="width:' + Math.round(x.p * 100) + '%;background:#FF3B30"></i></span><span class="num l2" style="font-size:13px">' + Math.round(x.p * 100) + '%</span></div>').join('') +
+      weak.cells.map((x) => '<div class="hrow"><span class="n ryweak">' + (CELLS[x.id] ? scoreSVG(cellNotation(x.id), { clef: null, line: true, up: true, unit: 11, label: '' }) : '') + '</span><span class="hb"><i style="width:' + Math.round(x.p * 100) + '%;background:var(--red)"></i></span><span class="num l2" style="font-size:13px">' + Math.round(x.p * 100) + '%</span></div>').join('') +
       weak.beats.map((x) => '<div class="hrow"><span class="n">' + t('st.beat', { n: x.beat + 1 }) + '</span><span class="l2" style="font-size:14px">' + t(x.ms < 0 ? 'rush' : 'drag', { ms: Math.abs(x.ms) }) + '</span></div>').join('') + '</div>' : '') +
     '<p class="ftr">' + t('st.ftr') + '</p>');
 }
