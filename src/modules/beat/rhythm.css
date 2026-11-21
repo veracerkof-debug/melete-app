@@ -132,3 +132,25 @@
 .pane[data-fit="1"] .ryhome .rygrid>*,.pane[data-fit="2"] .ryhome .rygrid>*{grid-column:auto!important}
 .pane[data-fit="1"] .ryhome .rycard,.pane[data-fit="2"] .ryhome .rycard{flex-direction:row;justify-content:flex-start;text-align:left;gap:10px}
 .pane[data-fit="1"] .ryhome .ryic,.pane[data-fit="2"] .ryhome .ryic{position:static;width:34px;height:34px;flex:none}
+
+/* «Начать занятие»: уровень 1–10 и большая кнопка (как у «Слуха»); упражнения — компактные карточки, всё на одном экране (слово автора 21.11.2026) */
+.elv{background:var(--cell);border-radius:20px;padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;flex:none}
+.elvr{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.elvr .ic{font-size:24px;font-weight:700;color:var(--l2)}
+.elvt{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.elvt b{font-size:17px;font-weight:700}
+.elvt span{font-size:13px}
+.elvdots{display:flex;gap:5px;justify-content:center}
+.elvdots i{width:20px;height:4px;border-radius:2px;background:var(--fill2)}
+.elvdots i.past{background:color-mix(in srgb,var(--mod,var(--tint)) 45%,var(--fill2))}
+.elvdots i.on{background:var(--mod,var(--tint))}
+.elgo{min-height:52px;font-size:17px;background:color-mix(in srgb,var(--mod,var(--tint)) 78%,black)!important;color:white!important}
+.rygrid{grid-auto-rows:minmax(56px,auto);flex:none;gap:8px}
+.rycardd{flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 10px;gap:10px;min-height:56px}
+.rycardd .ryic{position:static;width:34px;height:34px;border-radius:11px;flex:none}
+.rycardd .ryic svg{width:20px;height:20px}
+.rycardd .rypct{position:static;margin-left:auto}
+.rycardd .ryn{font-size:15px}
+.rycardd .rys{display:none}
+.rydash{padding:10px 16px}
+.ryhome{gap:10px}

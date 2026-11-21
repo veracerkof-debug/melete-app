@@ -1,4 +1,18 @@
 {
+  "lv10.prev": "Lower level",
+  "lv10.next": "Higher level",
+  "lv10.title": "Level {n} of {max}",
+  "lv10.start": "Start practice",
+  "lv10.1": "Quarter-note echo",
+  "lv10.2": "Adding eighths",
+  "lv10.3": "Sight-reading, two bars",
+  "lv10.4": "Dictation",
+  "lv10.5": "Waltz and syncopation",
+  "lv10.6": "Sixteenths",
+  "lv10.7": "Harder dictation",
+  "lv10.8": "Six eighths",
+  "lv10.9": "Four bars, triplets",
+  "lv10.10": "Polyrhythm",
   "name": "Rhythm",
   "about": "Echo, sight-reading, dictation, steady tempo, polyrhythm",
   "statusWeek": [

@@ -15,6 +15,7 @@ import { createClaps } from '../../audio/claps.js';
 import { after, cancel } from '../../audio/clock.js';
 import { swipe } from '../../ui/gestures.js';
 import { BEAT_COURSE, lessonConf, lessonN } from './course.js';
+import { RLEVEL_COUNT, applyRLevel, clampRLevel } from '../../music/rhythmlevels.js';
 import { normalizeProg, findLesson, chapterOf, nextLesson, dueReviews, recordLesson, recordReview, placementPlan, applyPlacement, PASS } from '../../music/course.js';
 import { courseHTML, lessonBarHTML, resultHTML, modeSeg } from '../../ui/course.js';
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
@@ -33,7 +34,9 @@ const DICON = {
   pulse: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8" stroke-dasharray="2 2"/><path d="M3 18h18"/></svg>',
   poly: '<svg viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/><circle cx="4" cy="8" r="1.4"/><circle cx="12" cy="8" r="1.4"/><circle cx="20" cy="8" r="1.4"/><circle cx="4" cy="16" r="1.4"/><circle cx="9.3" cy="16" r="1.4"/><circle cx="14.7" cy="16" r="1.4"/><circle cx="20" cy="16" r="1.4"/></svg>',
 };
-const DCOLOR = { echo: '#D2693C', read: '#567198', dict: '#866B9D', pulse: '#3E8C8C', poly: '#A75750' };
+// цвет упражнений — один, семьи «Учёба» (--mod окна; docs/color-system.md), а не радуга
+const DC = 'var(--mod, #5F8568)';
+const DCOLOR = { echo: DC, read: DC, dict: DC, pulse: DC, poly: DC };
 const I = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   ear: '<svg viewBox="0 0 24 24" class="f"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -469,7 +472,14 @@ function homeHTML() {
   const top = '<div class="ryhtop">' + modeSeg(t, view) + '</div>';
   if (view === 'course') return '<div class="rywrap ryhome">' + top + courseHTML({ course: BEAT_COURSE, p: prog(), t, esc, title: lname, chTitle: cname, now: Date.now() }) + '</div>';
   const lv = e.custom && e.custom.length ? t('lvCustom') : t('lv.' + e.level);
-  return '<div class="rywrap ryhome">' + top + '<div class="rydash"><div class="rydtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.n + ' <small class="l2">' +
+  // «Начать занятие» — 10 уровней (rhythmlevels.js, слово автора 21.11.2026)
+  const rl = clampRLevel(e.lv10 || 1);
+  const start = '<div class="elv"><div class="elvr"><button class="ic sm plain" data-x="rlv" data-d="-1" aria-label="' + t('lv10.prev') + '"' + (rl <= 1 ? ' disabled' : '') + '>‹</button>' +
+    '<div class="elvt"><b>' + t('lv10.title', { n: rl, max: RLEVEL_COUNT }) + '</b><span class="l2">' + t('lv10.' + rl) + '</span></div>' +
+    '<button class="ic sm plain" data-x="rlv" data-d="1" aria-label="' + t('lv10.next') + '"' + (rl >= RLEVEL_COUNT ? ' disabled' : '') + '>›</button></div>' +
+    '<div class="elvdots" aria-hidden="true">' + Array.from({ length: RLEVEL_COUNT }, (_, i) => '<i' + (i + 1 === rl ? ' class="on"' : i + 1 < rl ? ' class="past"' : '') + '></i>').join('') + '</div>' +
+    '<button class="btn fill block elgo" data-x="rlstart">' + t('lv10.start') + '</button></div>';
+  return '<div class="rywrap ryhome">' + top + start + '<div class="rydash"><div class="rydtxt"><div class="l2" style="font-size:14px">' + t('week') + '</div><div class="big num">' + w.n + ' <small class="l2">' +
     ctx.tn('exN', w.n) + '</small></div><div class="l2" style="font-size:14px">' + (w.n ? t('weekAcc', { p: Math.round(w.acc * 100), ms: w.abs }) : t('noRuns')) + '</div></div>' +
     '<div class="rydbtns">' + ui.icb('data-x="stats"', I.stats, t('statsBtn'), 'sm') + ui.icb('data-x="set"', ui.icons.gear, t('settings'), 'sm') + '</div></div>' +
     '<button class="ryconf" data-x="set"><span>' + esc(lv) + '</span><span class="num">' + e.meter + '</span><span class="num">♩ = ' + e.bpm + '</span><span>' + t('strict.' + e.strict) + '</span></button>' +
@@ -678,6 +688,8 @@ function tempoSheet() {
 function act(a, el) {
   const e = EC();
   switch (a) {
+    case 'rlv': e.lv10 = clampRLevel((e.lv10 || 1) + +el.dataset.d); ctx.store.save(); render(); break;
+    case 'rlstart': { stopRun(); e.drill = applyRLevel(e, e.lv10 || 1); ctx.store.save(); fresh(); render(); break; }
     case 'drill': stopRun(); e.drill = el.dataset.v; ctx.store.save(); fresh(); render(); break;
     case 'lnext': advance(); break;
     case 'lgo': startLesson(el.dataset.v); break;

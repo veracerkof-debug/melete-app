@@ -1,4 +1,18 @@
 {
+  "lv10.prev": "Pastroq daraja",
+  "lv10.next": "Yuqoriroq daraja",
+  "lv10.title": "{n}-daraja / {max}",
+  "lv10.start": "Mashgʻulotni boshlash",
+  "lv10.1": "Choraklar aks-sadosi",
+  "lv10.2": "Sakkizlik qoʻshiladi",
+  "lv10.3": "Varaqdan, ikki taktda",
+  "lv10.4": "Diktant",
+  "lv10.5": "Vals va sinkopalar",
+  "lv10.6": "Oʻn oltilik",
+  "lv10.7": "Murakkabroq diktant",
+  "lv10.8": "Oltita sakkizlik",
+  "lv10.9": "Toʻrt takt, triollar",
+  "lv10.10": "Poliritm",
   "name": "Ritm",
   "about": "Takrorlash, varaqdan oʻqish, diktant, temp, poliritm",
   "statusWeek": [
