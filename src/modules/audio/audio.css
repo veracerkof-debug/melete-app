@@ -63,7 +63,7 @@
 .mltxt b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mltxt small{font-size:12px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .mlrow.cur .mltxt b{color:var(--tint-text)}
-.mlart{width:48px;height:48px;border-radius:10px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,hsl(var(--h) 70% 58%),hsl(calc(var(--h) + 40) 75% 48%));color:#fff;overflow:hidden}
+.mlart{width:48px;height:48px;border-radius:10px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,color-mix(in srgb,var(--tint) 82%,white),var(--tint));color:#fff;overflow:hidden} /* один цвет — акцент темы, а не «радуга» по названию (слово автора 21.11.2026) */
 .mlart svg{width:80%;height:80%;stroke:rgba(255,255,255,.92);fill:none;stroke-width:1.2;stroke-linecap:round}
 .mlart.sm{width:40px;height:40px;border-radius:8px}
 .mlart.big{width:64px;height:64px;border-radius:14px}
@@ -98,7 +98,7 @@
 .vprog{fill:none;stroke:var(--tint);stroke-width:3;stroke-linecap:round}
 .vrec{position:absolute;inset:7%;border-radius:50%;background:radial-gradient(circle,#2a2a2e 0 33%,#141416 34% 100%);box-shadow:0 10px 26px rgba(0,0,0,.35);overflow:hidden;animation:vspin var(--spd,1.8s) linear infinite;animation-play-state:paused}
 .vgr{position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.05) 0 1px,transparent 1px 3px),conic-gradient(from 30deg,transparent 0 40deg,rgba(255,255,255,.1) 60deg,transparent 80deg 220deg,rgba(255,255,255,.07) 240deg,transparent 260deg)}
-.vlab{position:absolute;inset:33%;border-radius:50%;background:radial-gradient(circle at 35% 30%,hsl(var(--h) 75% 62%),hsl(calc(var(--h) + 40) 70% 42%));display:flex;align-items:center;justify-content:center;padding:6%;text-align:center}
+.vlab{position:absolute;inset:33%;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--tint) 78%,white),color-mix(in srgb,var(--tint) 86%,black));display:flex;align-items:center;justify-content:center;padding:6%;text-align:center}
 .vlab b{font-size:clamp(7px,2.4cqmin,12px);color:#fff;font-weight:700;line-height:1.15;overflow:hidden;max-height:2.4em}
 .vhole{position:absolute;left:50%;top:50%;width:3.5%;height:3.5%;margin:-1.75% 0 0 -1.75%;border-radius:50%;background:var(--bg)}
 .varm{position:absolute;right:3%;top:2%;width:6%;height:52%;transform-origin:50% 6%;transform:rotate(-6deg);transition:transform .6s cubic-bezier(.3,.7,.3,1);background:linear-gradient(180deg,var(--l2),var(--l3));border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.25)}

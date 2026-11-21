@@ -313,3 +313,8 @@ html:has(.session),html:has(.session) body{overscroll-behavior-x:none}
 .pane.pfull>.pfbtn{right:calc(6px + var(--cp,0px));top:calc(env(safe-area-inset-top,0px) + 6px + var(--cp,0px))}
 .shd{padding-inline:var(--cp,0px)}
 .sdock{padding-inline:var(--cp,0px)}
+
+/* Верхняя полоса без панельности (слово автора 21.11.2026: «слишком много панелей, всё должно быть одним цветом»): кнопки без своей заливки,
+   отклик — на нажатие; единственная залитая — «Завершить» (акцент темы) */
+.shd .ic:not(.done),.shd .sstage{background:none}
+.shd .ic:not(.done):active,.shd .sstage:active{background:var(--fill)}

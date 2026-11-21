@@ -716,3 +716,6 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 /* Скруглённые углы экрана: верхняя и нижняя полосы отодвигают крайние кнопки от углов (--cp, corner.js) */
 .topbar{padding-inline:var(--cp,0px)}
 .tabbar .in{padding-inline:var(--cp,0px)}
+/* Шапка окна инструмента — тоже без заливки кнопок (как «Минимал»), отклик — на нажатие */
+.tvhd .ic:not(.on):not(.act):not(.done){background:none}
+.tvhd .ic:not(.on):not(.act):not(.done):active{background:var(--fill)}
