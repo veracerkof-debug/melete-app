@@ -10,6 +10,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M8 20.5v-7.8a1.4 1.4 0 0 
 
 export default {
   id: 'theremin',
+  group: 'glider', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 36,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

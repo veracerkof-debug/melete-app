@@ -9,6 +9,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><
 
 export default {
   id: 'theory',
+  group: 'theory', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 50,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

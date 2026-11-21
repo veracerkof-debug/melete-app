@@ -9,6 +9,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4 9.5 4 12 6c2
 
 export default {
   id: 'book',
+  group: 'theory', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 52, // сразу после «Теории»
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

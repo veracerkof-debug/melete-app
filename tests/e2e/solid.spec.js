@@ -3,7 +3,7 @@ import { test, expect } from './melete.js';
 
 const group = (page) => page.evaluate(() => document.querySelector('.session .pane')?.dataset.group || null);
 const pills = (page) => page.evaluate(() => [...document.querySelectorAll('#tpills .tb')].map((b) => b.dataset.pill));
-const NONE = ['glider', 'theremin', 'drone', 'looper', 'studio'], EDGE = ['piano', 'notes', 'beat', 'show'];
+const NONE = ['glider', 'theremin', 'drone', 'looper', 'studio', 'ear'], EDGE = ['piano', 'notes', 'beat', 'show'];
 
 test('монолит: окна без рамок, карточек и подложек; граница — тонкая линия', async ({ page, melete, errors }) => {
   await melete.open();
@@ -103,7 +103,7 @@ test('листание: в глайдере (nav none) жест не работ�
 });
 
 test('листание: в пианино (nav edge) — только широкое смахивание от края до края', async ({ page, melete, errors }) => {
-  await melete.open();
+  await melete.open({ settings: { dockOrder: ['metro', 'tuner', 'piano', 'notes', 'drone', 'voice', 'audio', 'theory'] } }); // после пианино — «Ноты» (nav edge): объединённые инструменты не листаются
   await melete.free('F', ['piano', 'metro', 'tuner']);
   expect(await group(page)).toBe('piano');
   const order = await pills(page);

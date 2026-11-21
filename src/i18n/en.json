@@ -1,4 +1,8 @@
 {
+  "group.ear": "Trainer",
+  "group.studio": "Studio",
+  "group.theory": "Theory",
+  "group.glider": "Glider",
   "app.title": "Melete",
   "lib.cats.work": "Work",
   "lib.cats.church": "Church",

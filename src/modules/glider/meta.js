@@ -9,6 +9,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M3 17c3 0 4-10 9-10s6 6 9
 
 export default {
   id: 'glider',
+  group: 'glider', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 35,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

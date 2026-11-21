@@ -1,3 +1,4 @@
+import { MERGE } from './mergemap.js';
 // Рабочее пространство сессии: раскладка окон и что в каком окне. Логика без DOM.
 // Раскладка: 'F' — весь экран, иначе две буквы — верхняя и нижняя половины: H — половина, Q — две четверти,
 // S — две полосы. В окне — инструмент; метроном, тюнер, пианино и пэды — каждый в своём окне
@@ -84,8 +85,9 @@ export function settle(w, minOf) {
 
 // Окна — только включённые инструменты (all), без повторов; не хватает — добавить
 export function fixWS(w, all, a, minOf = null) {
-  if (a && a.type === 'tool') { w.layout = 'F'; w.panes = [a.tool]; w.focus = 0; return w; }
-  w.panes = w.panes.map((x) => (SPLIT[x] ? (w.sub && w.sub[x]) || SPLIT[x] : LEGACY[x] || x)).filter((x, i, arr) => all.includes(x) && arr.indexOf(x) === i);
+  const grp = (x) => { const g = MERGE[x]; if (!g) return x; (w.sub ||= {})[g] = x; return g; }; // отдел объединённого инструмента → группа с этим отделом
+  if (a && a.type === 'tool') { w.layout = 'F'; w.panes = [grp(a.tool)]; w.focus = 0; return w; }
+  w.panes = w.panes.map((x) => grp(SPLIT[x] ? (w.sub && w.sub[x]) || SPLIT[x] : LEGACY[x] || x)).filter((x, i, arr) => all.includes(x) && arr.indexOf(x) === i);
   all.forEach((x) => { if (!w.panes.includes(x)) w.panes.push(x); });
   const n = lsizes(w.layout).length;
   while (w.panes.length < n) w.panes.push(all[0]);

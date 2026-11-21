@@ -9,6 +9,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 2.6 5.9"/
 
 export default {
   id: 'looper',
+  group: 'studio', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 46,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

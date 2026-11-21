@@ -9,6 +9,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M7 9.5a5 5 0 0 1 10 0c0 3
 
 export default {
   id: 'ear',
+  group: 'ear', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 60,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

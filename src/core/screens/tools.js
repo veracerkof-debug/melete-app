@@ -13,6 +13,7 @@ import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { spread, NOSPREAD } from '../../ui/gestures.js';
 import { bareScope } from '../../i18n/index.js';
+import { isAbsorbed, groupMembers, toolLabel, repOf } from '../groups.js';
 
 const NOSPREAD_IDS = ['piano', 'glider']; // двумя пальцами там играют — окном управляют кнопки
 
@@ -23,7 +24,7 @@ export const renderTools = (app, root) => bareScope(() => renderToolsNow(app, ro
 // убранные остаются включёнными (быстрый доступ, сессия) — вернуть кнопкой внизу вкладки
 export function toolsTab(st) {
   const extra = tabModsInTools(st); // «Студия», «Библия», убранные с нижней панели, — здесь
-  const all = pagesInTools(st).concat(modules.filter((m) => (!m.tab || extra.includes(m.id)) && !m.inner && isOn(st, m.id) && !(st.tabMods || []).includes(m.id)).map((m) => m.id)), tt = st.toolsTab || {}; // ставшие вкладками — не здесь; страницы ядра, убранные снизу, — здесь
+  const all = pagesInTools(st).concat(modules.filter((m) => (!m.tab || extra.includes(m.id)) && !m.inner && isOn(st, m.id) && !isAbsorbed(st, m) && !(st.tabMods || []).includes(m.id)).map((m) => m.id)), tt = st.toolsTab || {}; // ставшие вкладками — не здесь; страницы ядра, убранные снизу, — здесь
   const order = (tt.order || []).filter((id) => all.includes(id));
   all.forEach((id) => { if (!order.includes(id)) order.push(id); });
   const off = new Set((tt.off || []).filter((id) => all.includes(id)));
@@ -44,7 +45,7 @@ function renderToolsNow(app, root) {
     if (st.uiStyle !== 'mono' && !NO_STATUS.includes(m.id)) { try { s2 = m.status ? m.status(makeCtx(app, m)) : ''; } catch { /* статус необязателен */ } } // «Минимал» — без строк состояния
     if (heavyStub(m)) s2 = t('heavy.short');
     return '<button class="tcard2" data-open-tool="' + m.id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '">' + badge(m.id) + '<span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' +
-      esc(moduleName(m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
+      esc(toolLabel(st, m)) + '</span><span class="tcs2">' + esc(s2) + '</span></span></button>';
   }).join('') + '</div>' +
     (T.off.size ? '<div class="group" style="margin-top:16px"><button class="cell act" data-tools-hidden>' + esc(t('tools.hidden', { n: T.off.size })) + '</button></div>' : '') +
     ''; // подсказок нет: удержание — правка (arrange.js)
@@ -94,16 +95,22 @@ function openToolViewNow(app, id, onClose) {
   // кнопка «Полный экран» — только у пианино и глайдера (там щипок занят игрой); у остальных — жест «развести два пальца»
   const pureBtn = NEEDS_FULL_BTN.has(mod.id) ? ui.icb('data-tv="pure"', EXPAND, t('tools.pure'), 'sm' + (mod.immersive ? ' tvpure' : '')) : '';
   const layer = document.createElement('div');
+  // объединённый инструмент (groups.js): общее имя в шапке и переключатель отделов под ней
+  const gm = groupMembers(app.store.state.settings, mod), grouped = gm.length > 1, title = grouped ? toolLabel(app.store.state.settings, mod) : name;
+  // в окне без шапки (immersive: глайдер) — круглая кнопка «к соседнему отделу» в колонке слева; в обычном — переключатель под шапкой
+  const nextM = grouped ? gm[(gm.findIndex((m) => m.id === mod.id) + 1) % gm.length] : null;
+  const grp = !grouped ? '' : mod.immersive ? ui.icb('data-tv-grp="' + nextM.id + '"', nextM.icon, moduleName(nextM), 'sm tvgrpb')
+    : '<div class="tvgrp seg" role="group" aria-label="' + esc(title) + '">' + gm.map((m) => '<button data-tv-grp="' + m.id + '" aria-pressed="' + (m.id === mod.id) + '">' + esc(moduleName(m)) + '</button>').join('') + '</div>';
   // запись — во всех инструментах (звук приложения, по желанию микрофон; у терменвокса — и видео)
   const rec = canRecord() && mod.record !== false;
   // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
   layer.innerHTML = mod.immersive
     ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
       ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm tvhelp') + pureBtn + (rec ? recButtonHTML('tvrecf') : '') +
-      '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
-    : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(name) + '"><div class="tvhd">' +
-      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(name) + '</div>' + (rec ? recButtonHTML() : '') + pureBtn + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
-      '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
+      grp + '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
+    : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="tvhd">' +
+      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(title) + '</div>' + (rec ? recButtonHTML() : '') + pureBtn + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
+      grp + '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   let track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id), trackSec = 0;
   // главы («Слух и ритм»): время — под именем главы; прежний отрезок сохраняется
@@ -139,7 +146,7 @@ function openToolViewNow(app, id, onClose) {
   };
   layer.pureExit = () => (pure ? (setPure(false), true) : false);
 
-  const close = (next) => {
+  const close = (next, quiet) => {
     if (pure) setPure(false);
     app.openTool = null;
     document.removeEventListener('keydown', onKey);
@@ -150,15 +157,18 @@ function openToolViewNow(app, id, onClose) {
     setTimeout(() => layer.remove(), 280);
     const sec = trackSec + track.stop();
     app.retrack = null;
-    if (sec) ui.toast(t('tools.recorded', { tool: name, dur: fmtDur(sec) }));
+    if (sec && !quiet) ui.toast(t('tools.recorded', { tool: name, dur: fmtDur(sec) }));
     if (next) openToolView(app, next, onClose);
     else if (onClose) onClose();
   };
   // Переход из модуля в другой инструмент: это окно закрывается, открывается новое
   app.openTool = (id) => { if (moduleById(id)) close(id); };
+  const inGroup = (id) => gm.some((m) => m.id === id);
   const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('#sheetLayer .scrim')) { if (pure) setPure(false); else close(); } };
   document.addEventListener('keydown', onKey);
   layer.addEventListener('click', (e) => {
+    const gb = e.target.closest('[data-tv-grp]');
+    if (gb) { if (gb.dataset.tvGrp !== mod.id && inGroup(gb.dataset.tvGrp)) close(gb.dataset.tvGrp, true); return; } // другой отдел — без «записано» на каждом переключении
     if (e.target.closest('[data-tv="close"]')) close();
     else if (e.target.closest('[data-tv="help"]')) showHelp(app, mod, layer.querySelector('.tvhost'));
     else if (e.target.closest('[data-tv="pure"]')) setPure(true);

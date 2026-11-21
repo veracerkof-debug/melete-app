@@ -6,7 +6,7 @@ test('слух и ритм: снова два инструмента; места
   expect((await melete.settings()).quick).toEqual(['metro', 'ear', 'beat']);
   await melete.tab('tools');
   await expect(page.locator('.tgrid [data-open-tool="ear"]')).toHaveCount(1);
-  await expect(page.locator('.tgrid [data-open-tool="beat"]')).toHaveCount(1);
+  await expect(page.locator('.tgrid [data-open-tool="beat"]')).toHaveCount(0); // отдел «Ритм» — внутри плитки «Тренажёр» (groups.js)
   await expect(page.locator('.tgrid [data-open-tool="train"]')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

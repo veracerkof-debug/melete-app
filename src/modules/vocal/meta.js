@@ -10,6 +10,7 @@ export const ICON = '<svg viewBox="0 0 24 24"><path d="M12.5 20.5v-3h1.8a1.5 1.5
 
 export default {
   id: 'vocal',
+  group: 'ear', // объединены в один инструмент (слово автора 21.11.2026, docs/tool-merge.md)
   order: 97,
   name: { ru: ru.name, uz: uz.name, en: en.name, el: el.name },
   i18n: { ru, uz, en, el },

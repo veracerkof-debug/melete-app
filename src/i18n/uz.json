@@ -1,4 +1,8 @@
 {
+  "group.ear": "Trenajyor",
+  "group.studio": "Studiya",
+  "group.theory": "Nazariya",
+  "group.glider": "Glayder",
   "app.title": "Melete",
   "lib.cats.work": "Ish",
   "lib.cats.church": "Cherkov",

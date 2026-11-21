@@ -719,3 +719,10 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 /* Шапка окна инструмента — тоже без заливки кнопок (как «Минимал»), отклик — на нажатие */
 .tvhd .ic:not(.on):not(.act):not(.done){background:none}
 .tvhd .ic:not(.on):not(.act):not(.done):active{background:var(--fill)}
+
+/* Объединённый инструмент: переключатель отделов под шапкой окна (groups.js) */
+.tvgrp{margin:4px 12px 2px;width:auto;flex:none}
+.tvgrp button{min-height:36px;font-size:14px}
+.tview.imm .tvgrpb{position:absolute;z-index:5;top:calc(216px + env(safe-area-inset-top,0px));left:calc(8px + env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--cell) 80%,transparent)!important}
+.tview.imm:not(:has(.tvpure)) .tvgrpb{top:calc(164px + env(safe-area-inset-top,0px))}
+.tview.imm .tvgrpb svg{width:20px;height:20px}

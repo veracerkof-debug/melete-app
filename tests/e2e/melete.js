@@ -49,6 +49,14 @@ export function helpers(page) {
       await page.reload();
       await page.waitForTimeout(900);
     },
+    // Открыть инструмент из вкладки «Инструменты»; отдел объединённого инструмента (beat, vocal, looper, book, theremin) — через плитку группы и переключатель
+    async openTool(id) {
+      const REP = { beat: 'ear', vocal: 'ear', looper: 'studio', book: 'theory', theremin: 'glider' };
+      await h.tab('tools');
+      const rep = REP[id] || id;
+      await page.click('.tgrid [data-open-tool="' + rep + '"]'); await page.waitForTimeout(700);
+      if (rep !== id) { await page.click('[data-tv-grp="' + id + '"]'); await page.waitForTimeout(900); }
+    },
     // Свободная сессия с окнами: layout — F | HH | QQ | SS, panes — идентификаторы модулей
     async free(layout, panes) {
       await h.tools({ wsMap: { free: { layout, panes, focus: 0, sub: {}, ratio: 0.5 } } });

@@ -4,8 +4,7 @@ import { test, expect } from './melete.js';
 
 const open = async (page, melete, conf) => {
   await melete.open({ tools: { beat: { bpm: 200, ...conf } } });
-  await melete.tab('tools');
-  await melete.click('[data-open-tool="beat"]'); await page.waitForTimeout(700);
+  await melete.openTool('beat');
   await page.waitForSelector('.rywrap', { timeout: 10_000 });
 };
 

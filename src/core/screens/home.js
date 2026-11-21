@@ -24,6 +24,7 @@ function pomoBtn(app) {
   return '<button class="hpomo' + (on ? ' on' : '') + '" data-act="pomo" aria-label="' + esc(t('ses.pomo')) + '">' + m.icon + (on ? '<span class="num">' + Math.ceil(po.rem() / 60) + '</span>' : '') + '</button>';
 }
 import { moduleName } from '../modules.js';
+import { isAbsorbed, repOf, toolLabel } from '../groups.js';
 import { topbar, weekdays, relDay, PLAY, IC, tabIds, TAB_MODULES, isPage, pageName, TAB_ICONS } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
@@ -43,7 +44,17 @@ import { showHelp } from '../help.js';
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
 const QUICK_MAX = 8;
 
-const quickList = (st) => (st.quick || QUICK_DEF).filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner && !(st.tabMods || []).includes(id));
+// Объединённые инструменты (groups.js): старый id отдела («beat») в списке заменяется представителем группы («ear»), повторов нет
+const quickList = (st) => {
+  const out = [];
+  (st.quick || QUICK_DEF).forEach((id) => {
+    let m = moduleById(id);
+    if (!m) return;
+    if (isAbsorbed(st, m)) m = repOf(st, m);
+    if (isOn(st, m.id) && !m.tab && !m.inner && !(st.tabMods || []).includes(m.id) && !out.includes(m.id)) out.push(m.id);
+  });
+  return out;
+};
 
 export function streakPill(app, extra = '') {
   const st = app.store.state.settings;
@@ -241,7 +252,7 @@ export function homeHTML(app) {
   const q = quickList(st);
   P.quick = '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>' +
     '<div class="qgrid">' + (q.length
-    ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(moduleName(m)) + '</span></button>'; }).join('')
+    ? q.map((id) => { const m = moduleById(id); return '<button class="qbtn" data-open-tool="' + id + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span><span class="qn">' + esc(toolLabel(st, m)) + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit"><span class="qic">' + IC.plus + '</span><span class="qn">' + t('home.add') + '</span></button>') + '</div>';
   P.review = plain ? '' : reviewHTML(app, false);
   P.events = nextEventsHTML(app);
@@ -319,13 +330,13 @@ export function quickEdit(app, rerender) {
   const st = app.store.state.settings, sel = () => (st.quick || QUICK_DEF).slice();
   const row = (id, on, i) => {
     const m = moduleById(id);
-    return '<div class="cell"' + (on ? ' data-q-row="' + id + '"' : '') + '><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
+    return '<div class="cell"' + (on ? ' data-q-row="' + id + '"' : '') + '><span class="ticon" style="--tc:' + m.color + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(toolLabel(st, m)) + '</span>' +
       (on ? (i > 0 ? '<button class="ic sm plain" data-qu="' + id + '" aria-label="' + t('quick.up') + '">' + IC.up + '</button>' : '') +
         '<button class="ic sm plain" data-qr="' + id + '" aria-label="' + t('quick.remove') + '" style="color:var(--red)">' + IC.minus + '</button>'
         : '<button class="ic sm plain" data-qa="' + id + '" aria-label="' + t('quick.add') + '" style="color:#5F8568">' + IC.plus + '</button>') + '</div>';
   };
   const body = () => {
-    const q = sel().filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner), rest = modules.filter((m) => !m.tab && !m.inner).map((m) => m.id).filter((id) => isOn(st, id) && !q.includes(id));
+    const q = sel().filter((id) => isOn(st, id) && moduleById(id) && !moduleById(id).tab && !moduleById(id).inner), rest = modules.filter((m) => !m.tab && !m.inner && !isAbsorbed(st, m)).map((m) => m.id).filter((id) => isOn(st, id) && !q.includes(id));
     return snav(t('home.quick')) + '<div class="hdr" style="margin-top:4px">' + t('quick.onHome', { n: q.length, max: QUICK_MAX }) + '</div><div class="group">' +
       (q.length ? q.map((id, i) => row(id, true, i)).join('') : '<div class="cell l2">' + t('quick.empty') + '</div>') + '</div>' +
       (rest.length ? '<div class="hdr">' + t('quick.canAdd') + '</div><div class="group">' + rest.map((id) => row(id, false)).join('') + '</div>' : '') +

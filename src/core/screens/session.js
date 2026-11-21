@@ -5,6 +5,7 @@
 // жесты DRG, finish, checkIdle, pchipHTML, pomoPanel, rotCheck).
 import '../../ui/session.css';
 import { STUDY_IDS } from '../study.js';
+import { GROUP_MEMBERS } from '../mergemap.js';
 import { t } from '../../i18n/index.js';
 import { esc, icb, sheet, snav, toast, leave, icons } from '../../ui/index.js';
 import { isDesk } from '../../ui/desk.js';
@@ -669,7 +670,8 @@ export function createSessionScreen(app) {
     const a = app.active, now = Date.now(), dt = studyAt ? Math.min(2000, now - studyAt) : 0;
     studyAt = now;
     if (!a || a.pausedAt || !w || document.visibilityState !== 'visible' || !dt) return;
-    visible(w).forEach((id) => { if (STUDY_IDS.includes(id)) { a.study = a.study || {}; a.study[id] = (a.study[id] || 0) + dt; } });
+    // окно объединённого инструмента («Тренажёр») — время идёт тому отделу, который сейчас показан («Слух», «Ритм»…)
+    visible(w).forEach((g) => { const id = GROUP_MEMBERS[g] && w.sub && GROUP_MEMBERS[g].includes(w.sub[g]) ? w.sub[g] : g; if (STUDY_IDS.includes(id)) { a.study = a.study || {}; a.study[id] = (a.study[id] || 0) + dt; } });
   }
   // «Перерыв?» — тихая полоска сверху: без звука, метроном не останавливает; помодоро ведёт свои перерывы
   let brkEnd = 0;

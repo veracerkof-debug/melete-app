@@ -34,8 +34,7 @@ test('слух: урок до итога, прогресс сохраняетс�
 
 test('ритм: урок-диктант до итога', async ({ page, melete, errors }) => {
   await melete.open({ tools: { beat: { view: 'course' } } });
-  await melete.tab('tools');
-  await melete.click('[data-open-tool="beat"]'); await page.waitForTimeout(700);
+  await melete.openTool('beat');
   await page.waitForSelector('.crs', { timeout: 10_000 });
   await melete.click('[data-x="lgo"][data-v="r6"]');
   for (let k = 0; k < 4; k++) {
