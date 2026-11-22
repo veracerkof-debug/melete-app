@@ -100,7 +100,7 @@
 .sgbpm.on{background:color-mix(in srgb,var(--tint) 34%,transparent);border-color:var(--tint)}
 .sgbpm small{text-transform:uppercase}
 .sgic.tapb{width:auto;min-width:52px;padding:0 10px;font-size:13px;letter-spacing:.04em}
-.sgkeys{flex:none;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:6px 12px 0}
+.sgkeys{flex:none;display:grid;grid-template-columns:repeat(12,1fr);gap:var(--sp-1);padding:var(--sp-1) 12px 0}
 .sgkey{min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,transparent);border:1.5px solid color-mix(in srgb,var(--ink) 14%,transparent);font-size:15px;font-weight:600;touch-action:none;user-select:none;-webkit-user-select:none}
 .sgkey.on{background:color-mix(in srgb,var(--tint) 30%,transparent);border-color:var(--tint);color:var(--tint)}
 .sgbanks{display:flex;gap:6px;padding:0 0 6px;overflow-x:auto}
@@ -129,17 +129,17 @@
 /* верх экрана: слева — слова, аккорды или табы; справа — список песен (текущая по центру; влево-вправо — песня, вверх-вниз — прокрутка) */
 .sgmain{flex:1 1 auto;min-height:0;display:flex;gap:var(--sp-2);padding:0 var(--sp-2)}
 .sgmain>.sgtext{flex:1 1 0;min-width:0;padding-left:var(--sp-3);padding-right:var(--sp-2)}
-.sgsongs{position:relative;flex:0 0 38%;min-width:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.sgsongs{position:relative;flex:0 0 34%;min-width:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none}
 .sgsongs::-webkit-scrollbar{display:none}
-.sgsong{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:var(--hit);padding:0 var(--sp-2) 0 var(--sp-1);text-align:left;font-size:var(--fs-4);opacity:.55}
-.sgsong i{flex:none;font-style:normal;font-size:var(--fs-1);min-width:2em;text-align:center}
+.sgsong{display:flex;align-items:center;gap:var(--sp-1);width:100%;height:var(--hit-min);padding:0 var(--sp-1);text-align:left;font-size:var(--fs-3);line-height:1.2;opacity:.55}
+.sgsong i{flex:none;font-style:normal;font-size:var(--fs-1);min-width:1.6em;text-align:center}
 .sgst{flex:1;min-width:0;display:flex;flex-direction:column}
 .sgst b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sgst small{font-size:var(--fs-1);color:color-mix(in srgb,var(--ink) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sgsong.cur{opacity:1;color:var(--tint);background:color-mix(in srgb,var(--tint) 14%,transparent);border-radius:var(--r-2)}
 .sgsong.cur .sgst b{font-weight:700}
 .sgsong.cur .sgst small{color:inherit}
-.sgsong:first-child{margin-top:var(--sp-6)}.sgsong:last-child{margin-bottom:var(--sp-6)}
+.sgsong:first-child{margin-top:var(--sp-5)}.sgsong:last-child{margin-bottom:var(--sp-5)}
 /* громкости: общая и по источникам — крутилки рядом с ▶, тянуть вверх-вниз */
 .sgknobs{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:center;padding:0 var(--sp-1)}
 .sgkn{display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);min-width:0}
@@ -152,7 +152,28 @@
 @media (orientation:landscape) and (max-height:520px){.sgknobs{flex-wrap:wrap;gap:var(--sp-1)}}
 /* фон (пэд) — внутри панели «Звуки» */
 .sgbg{display:flex;padding:0 0 2px}
-.sgpads .sgkeys{padding:6px 0 8px}
+.sgpads .sgkeys{padding:0 0 var(--sp-2)}
+.sgpads .sgkey{min-height:var(--hit);padding:0;border-radius:var(--r-2);font-size:var(--fs-3)}
 .sgbar{align-items:center}
 .sgbar .sgbtn.main{flex:0 0 88px;min-height:72px}
 @media (orientation:landscape) and (max-height:520px){.sgbar .sgbtn.main{flex:1}}
+/* плеер на сцене: всегда на виду — ▶, полоса перемотки (коснуться или вести — на середину, на конец), выбор записи */
+.sgplayer{flex:none;display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-3) var(--sp-1)}
+.sgplseek{position:relative;flex:1;min-width:0;height:var(--hit);border-radius:var(--r-3);background:color-mix(in srgb,var(--ink) 7%,transparent);overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);padding:0 var(--sp-3);touch-action:none;font-size:var(--fs-3)}
+.sgplseek i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--tint) 35%,transparent);pointer-events:none}
+.sgplseek span{position:relative;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+.sgplseek em{position:relative;flex:none;font-style:normal;font-size:var(--fs-2);color:var(--l2);pointer-events:none}
+@media (orientation:landscape) and (max-height:520px){.sgplayer{grid-column:1}}
+/* компактнее (слово автора 22.11.2026): плеер тоньше, метроном и пэды звуков меньше, переключатели банков — мелкие */
+.sgplayer{gap:var(--sp-1);padding:0 var(--sp-3)}
+.sgplayer .sgic{width:var(--hit-min);height:var(--hit-min)}
+.sgplseek{height:var(--hit-min);border-radius:var(--r-2);padding:0 var(--sp-2)}
+.sgtempo{padding-top:var(--sp-1)}
+.sgtempo .sgic{width:var(--hit-min);height:var(--hit-min)}
+.sgbpm{min-width:96px;height:var(--hit-min);border-radius:var(--r-2)}
+.sgbpm b{font-size:var(--fs-7)}
+.sgbpm small{font-size:var(--fs-1)}
+.sgpad{min-height:48px;border-radius:var(--r-2)}
+.sgpgrid{gap:var(--sp-1)}
+.sgbanks{gap:var(--sp-1);padding-bottom:var(--sp-1)}
+.sgbanks .sgchip{min-height:28px;padding:0 var(--sp-2);font-size:var(--fs-2);border-radius:var(--r-2)}

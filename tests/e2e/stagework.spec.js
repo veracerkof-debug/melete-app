@@ -69,8 +69,9 @@ test('сцена без песен: метроном одной кнопкой, 
   await expect(page.locator('.stage')).toHaveCount(1);
   expect(await melete.text('.sghead b')).toBeTruthy();
   // плеер: шторка открывается, в «Уровнях» есть своя строка
-  await page.click('[data-sgt="player"]'); await expect(page.locator('.sheet')).toBeVisible(); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.click('[data-sgt="mix"]'); await expect(page.locator('.sheet [data-sgmix="player"]')).toHaveCount(1); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await expect(page.locator('.sgplayer')).toBeVisible(); await expect(page.locator('[data-sgplseek]')).toBeVisible();
+  await page.click('[data-sgpl="pick"]'); await expect(page.locator('.sheet')).toBeVisible(); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await expect(page.locator('[data-sgt="mix"], [data-sgt="view"], [data-sgt="pad"]')).toHaveCount(0); // кнопок «Уровни», «Список», «Пэд» больше нет
   // клавиши пэда видны сразу; касание — звучит, повторное по той же — стоп
   await expect(page.locator('.sgkey')).toHaveCount(12);
   const tap = async (sel) => { await page.locator(sel).dispatchEvent('pointerdown', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.locator(sel).dispatchEvent('pointerup', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.waitForTimeout(300); };
@@ -137,5 +138,38 @@ test('сцена: крутилки громкости по источникам 
   await expect(page.locator('.sgbpm.on')).toHaveCount(1);
   await swipeUp(); await page.waitForTimeout(400);
   await expect(page.locator('.sgbpm.on')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+function wavBytes(sec = 8, sr = 8000) {
+  const n = sec * sr, b = new Uint8Array(44 + n * 2), v = new DataView(b.buffer), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(i / 8) * 3000), true);
+  return [...b];
+}
+
+test('сцена: плеер запоминает запись и всегда готов — ▶ играет, касание полосы перематывает', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.evaluate(async (bytes) => {
+    const app = window.__melete; await app.files.ready;
+    await app.files.add({ id: 'plx', name: 'Фоновое пианино.wav', type: 'audio/wav', kind: 'audio', blob: new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }), dur: 8, created: Date.now() });
+    localStorage.setItem('melete.stage.player', 'plx');
+  }, wavBytes());
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(1000);
+  await expect(page.locator('.sgplseek span')).toHaveText('Фоновое пианино.wav'); // запись готова без выбора
+  await page.click('[data-sgpl="pp"]'); await page.waitForTimeout(1200);
+  await expect(page.locator('[data-sgpl="pp"]')).toHaveAttribute('aria-pressed', 'true');
+  // касание середины полосы — перемотка на середину
+  const bar = page.locator('[data-sgplseek]'), bb = await bar.boundingBox();
+  await page.mouse.click(bb.x + bb.width * 0.5, bb.y + bb.height / 2); await page.waitForTimeout(400);
+  const w = await page.evaluate(() => parseFloat(document.querySelector('.sgplseek i').style.width));
+  expect(w).toBeGreaterThan(40); expect(w).toBeLessThan(70);
+  await page.click('[data-sgpl="pp"]'); await page.waitForTimeout(300);
+  await expect(page.locator('[data-sgpl="pp"]')).toHaveAttribute('aria-pressed', 'false');
   expect(errors).toEqual([]);
 });

@@ -221,16 +221,44 @@ export function openStage(app, evId, i = 0) {
   // Свободный плеер (слово автора 22.11.2026: фоновое пианино и всякое такое): любая запись медиатеки, независимо от песни и минусовки;
   // играет, пока не остановят или не выйдут со сцены; громкость — «Плеер» в «Уровнях» (и общая громкость сцены)
   const plStop = () => { const p = S.pl; S.pl = null; if (p) { try { p.el.pause(); } catch { /* */ } try { URL.revokeObjectURL(p.url); } catch { /* */ } } };
-  const plPlay = (r) => safe('player', () => {
+  const PLK = 'melete.stage.player'; // выбранная запись плеера помнится: на сцене он всегда готов — касание ▶ и играет
+  const plLoad = (r, go = false) => safe('player', () => {
     if (!r || !r.blob) return;
     plStop();
     const url = URL.createObjectURL(r.blob), el = new Audio(url);
     el.volume = Math.max(0, Math.min(1, effVal('player') / 100));
     el.onended = () => { if (S.pl && S.pl.el === el) { S.pl.ended = true; render(); } };
-    el.onerror = () => { logErr('stage', 'player ' + (r.name || '')); toast(t('stage.err', { what: t('stage.player') })); };
+    el.onerror = () => { logErr('stage', 'player ' + (r.name || '')); if (go || el.dataset.tried) toast(t('stage.err', { what: t('stage.player') })); }; // при открытии сцены молчим — скажет при ▶
     S.pl = { el, url, id: r.id, name: r.name || '' };
-    const pr = el.play(); if (pr && pr.catch) pr.catch((e) => logErr('stage', e));
+    try { localStorage.setItem(PLK, r.id); } catch { /* */ }
+    if (go) { const pr = el.play(); if (pr && pr.catch) pr.catch((e) => logErr('stage', e)); }
   });
+  const plPlay = (r) => plLoad(r, true);
+  const plToggle = () => {
+    if (!S.pl || !S.pl.el) { plSheet(); return; } // записи ещё нет — выбрать
+    const el = S.pl.el;
+    if (!audio.unlock()) { toast(t('stage.noAudio')); return; }
+    if (!el.paused && !S.pl.ended) { el.pause(); return; }
+    if (S.pl.ended || (el.duration > 0 && el.currentTime >= el.duration - 0.05)) { el.currentTime = 0; S.pl.ended = false; }
+    el.dataset.tried = '1';
+    const pr = el.play(); if (pr && pr.catch) pr.catch((e) => { logErr('stage', e); toast(t('stage.err', { what: t('stage.player') })); });
+  };
+  const plSeekTo = (frac) => { const el = S.pl && S.pl.el; if (el && el.duration > 0) { el.currentTime = Math.max(0, Math.min(1, frac)) * el.duration; if (S.pl) S.pl.ended = false; } };
+  const plHTML = () => {
+    const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
+    return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '"><button class="sgic" data-sgpl="pp" aria-pressed="' + playing + '" aria-label="' + esc(t(playing ? 'stage.plPause' : 'stage.plPlay')) + '">' + (playing ? '❚❚' : I.play) + '</button>' +
+      '<div class="sgplseek" data-sgplseek role="slider" aria-label="' + esc(t('stage.seek')) + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + (d ? Math.round(el.currentTime / d * 1000) / 10 : 0) + '%"></i><span>' + esc(S.pl ? S.pl.name : t('stage.plPick')) + '</span><em class="num">' + (el ? fmtDur(el.currentTime || 0) + (d ? ' / ' + fmtDur(d) : '') : '') + '</em></div>' +
+      '<button class="sgic txt" data-sgpl="pick" aria-label="' + esc(t('stage.player')) + '">♫</button></div>';
+  };
+  const plPaint = () => {
+    const bar = S.el && S.el.querySelector('.sgplseek'), el = S.pl && S.pl.el; if (!bar || !el) return;
+    const d = el.duration > 0 ? el.duration : 0;
+    bar.firstChild.style.width = (d ? Math.round(el.currentTime / d * 1000) / 10 : 0) + '%';
+    bar.querySelector('em').textContent = fmtDur(el.currentTime || 0) + (d ? ' / ' + fmtDur(d) : '');
+    const pp = S.el.querySelector('[data-sgpl="pp"]'), on = !el.paused && !S.pl.ended;
+    if (pp && pp.getAttribute('aria-pressed') !== String(on)) { pp.setAttribute('aria-pressed', String(on)); pp.innerHTML = on ? '❚❚' : I.play; }
+  };
+  { const sid = (() => { try { return localStorage.getItem(PLK); } catch { return null; } })(), r = sid && app.files ? app.files.get(sid) : null; if (r) plLoad(r, false); }
   const plSheet = () => {
     const files = audioFiles(app);
     const body = () => snav(t('stage.player')) + (files.length ? '<div class="group">' + files.map((r) => '<button class="cell" data-plf="' + esc(r.id) + '"><span class="grow">' + esc(r.name || '') + '</span>' + (S.pl && S.pl.id === r.id ? (S.pl.el.paused ? '❚❚' : '♪') : '') + '</button>').join('') + '</div>' : '<p class="ftr">' + esc(t('stage.plEmpty')) + '</p>') +
@@ -241,7 +269,7 @@ export function openStage(app, evId, i = 0) {
         let b;
         if ((b = e.target.closest('[data-plf]'))) { const id = b.dataset.plf; if (S.pl && S.pl.id === id) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); } else plPlay(files.find((r) => r.id === id)); sh.update(); render(); }
         else if (e.target.closest('[data-plpp]') && S.pl) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); sh.update(); render(); }
-        else if (e.target.closest('[data-plstop]')) { plStop(); sh.update(); render(); }
+        else if (e.target.closest('[data-plstop]')) { plStop(); try { localStorage.removeItem(PLK); } catch { /* */ } sh.update(); render(); }
       });
       el.addEventListener('input', (e) => { const r = e.target.closest('[data-plseek]'); if (r && S.pl && S.pl.el.duration > 0) S.pl.el.currentTime = (+r.value / 1000) * S.pl.el.duration; });
     }, { onClose: () => render() });
@@ -284,7 +312,7 @@ export function openStage(app, evId, i = 0) {
     if (S.scrollRaf) { cancelAnimationFrame(S.scrollRaf); S.scrollRaf = 0; }
     S.playing = false;
     stopClick();
-    if (S.pl) plStop();
+    if (S.pl && S.pl.el) safe('player', () => S.pl.el.pause());
     safe('pad', () => { audio.drone.stop(1.5); S.padOn = false; });
     if (S.eng) { S.eng.stopAll(0.2); S.eng.hush(1.2); S.hushed = true; }
     const tr = S.track;
@@ -547,8 +575,8 @@ export function openStage(app, evId, i = 0) {
     };
     // фон (пэд): кнопка и тональности — в той же панели, что и звуки
     const x = item(), pad = droneOn(), pc = keyPc(), free = !x;
-    const bg = '<div class="sgbg"><button class="sgchip' + (pad ? ' on' : '') + '" data-sgt="pad" aria-pressed="' + pad + '">' + esc(t('stage.pad') + (pad || free ? ' ' + NOTES[pc] : x.it.key ? ' ' + keyLabel(x.it.key) : '')) + '</button></div>' +
-      (pad || free ? '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>' : '');
+    // фон (дрон): весь ряд тональностей в одну линию, всегда на экране; касание — вкл на этой тональности, ещё раз — выкл
+    const bg = '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>';
     return '<div class="sgpads">' + bg + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
       '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
       (b.pads.some((p) => p && p.synth) ? '<div class="sgfx"><label><span>' + esc(t('stage.space')) + '</span><input type="range" class="sgrng" data-fx="space" min="0" max="100" value="' + Math.round(S.space * 100) + '" aria-label="' + esc(t('stage.space')) + '"></label>' +
@@ -581,6 +609,7 @@ export function openStage(app, evId, i = 0) {
         return '<button class="sgsong' + (j === S.i ? ' cur' : '') + '" role="listitem" data-sgreel="' + j + '"' + (j === S.i ? ' aria-current="true"' : '') + '><i class="num">' + (j + 1) + '</i><span class="sgst"><b>' + esc(sg.title) + '</b>' + (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span></button>'; }).join('') + '</div>') +
       '</div>' +
       (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') +
+      plHTML() +
       // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
       '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
         '<button class="sgic txt" data-sgbpm="-1" aria-label="' + esc(t('stage.bpm') + ' −1') + '">−</button>' +
@@ -588,7 +617,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
       '<div class="sgchips">' + 
-        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('player', !!(S.pl && S.pl.el && !S.pl.el.paused && !S.pl.ended), '♫ ' + (S.pl && S.pl.name ? S.pl.name : t('stage.player'))) + chip('mix', false, t('stage.mix')) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('view', S.view === 'list', t('stage.listView')) +
+        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
       padsHTML() +
       '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
@@ -648,6 +677,7 @@ export function openStage(app, evId, i = 0) {
     } else if ((b = e.target.closest('[data-sgt]'))) toggle(b.dataset.sgt);
     else if ((b = e.target.closest('[data-sgbank]'))) { sd().bank = b.dataset.sgbank; S.bank = b.dataset.sgbank; app.saveDevice(); render(); }
     else if ((b = e.target.closest('[data-sgtab]'))) { S.scoreId = b.dataset.sgtab; S.scoreKind = null; render(); }
+    else if ((b = e.target.closest('[data-sgpl]'))) { if (b.dataset.sgpl === 'pp') { plToggle(); plPaint(); } else plSheet(); }
     else if ((b = e.target.closest('[data-sgreel]'))) { const j = +b.dataset.sgreel; if (j !== S.i) goTo(j); }
     else if ((b = e.target.closest('[data-sgrow]'))) rowTap(+b.dataset.sgrow);
     else if ((b = e.target.closest('[data-sgbpm]'))) setBpm(curBpm() + +b.dataset.sgbpm);
@@ -686,6 +716,7 @@ export function openStage(app, evId, i = 0) {
 
   const close = (silent = false) => {
     stop();
+    clearInterval(S.plT);
     plStop();
     if (S.eng) { S.eng.dispose(); S.eng = null; }
     if (S.score) { S.score.destroy(); S.score = null; }
@@ -764,7 +795,7 @@ export function openStage(app, evId, i = 0) {
   S.el.addEventListener('scroll', onUserScroll, true);
   onHold(S.el, '.sgsongs, .sghead', (el) => stageMenu(el));
   // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
-  const NOGEST = '.sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
+  const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
   let vg = null;
   S.el.addEventListener('pointerdown', (e) => {
     vg = null;
@@ -781,6 +812,19 @@ export function openStage(app, evId, i = 0) {
     toggleProgram();
   });
   S.el.addEventListener('pointercancel', () => { vg = null; });
+  // перемотка плеера: коснуться или вести по полосе — на середину, на конец
+  S.el.addEventListener('pointerdown', (e) => {
+    const bar = e.target.closest && e.target.closest('[data-sgplseek]');
+    if (!bar || S.locked || !S.pl) return;
+    e.preventDefault();
+    const at = (ev) => { const r = bar.getBoundingClientRect(); plSeekTo((ev.clientX - r.left) / r.width); plPaint(); };
+    const id = e.pointerId; at(e);
+    try { bar.setPointerCapture(id); } catch { /* */ }
+    const mv = (ev) => { if (ev.pointerId === id) at(ev); };
+    const up = (ev) => { if (ev.pointerId !== id) return; bar.removeEventListener('pointermove', mv); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up); };
+    bar.addEventListener('pointermove', mv); bar.addEventListener('pointerup', up); bar.addEventListener('pointercancel', up);
+  });
+  S.plT = setInterval(plPaint, 250);
   // крутилки громкости
   S.el.addEventListener('pointerdown', (e) => {
     const kn = e.target.closest && e.target.closest('[data-sgkn]');
