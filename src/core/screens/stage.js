@@ -202,6 +202,22 @@ export function openStage(app, evId, i = 0) {
       });
     });
   };
+  // Крутилки громкости на экране сцены (слово автора 22.11.2026): общая, метроном, пэд (дрон), драм-пэды и звуки, медиа (минусовка и плеер).
+  // Те же четыре уровня, что в «Уровнях», плюс множитель «общая»; узлы звука не трогаем — только параметры
+  const KNOBS = ['all', 'metro', 'pad', 'sounds', 'media'];
+  const knobVal = (k) => (k === 'all' ? allVal() : k === 'media' ? mixVal('track') : mixVal(k));
+  const knobSet = (k, v) => {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    const m = mixSet();
+    if (k === 'all') { m.all = v; MIXES.forEach(([x]) => mixApply(x)); }
+    else if (k === 'media') { m.track = v; m.player = v; mixApply('track'); mixApply('player'); }
+    else { m[k] = v; mixApply(k); }
+    return v;
+  };
+  const RING = 'M9.98 34.02A17 17 0 1 1 34.02 34.02';
+  const knobHTML = (k) => { const v = knobVal(k), lb = esc(t('stage.k.' + k)); return '<div class="sgkn"><div class="sgknob" data-sgkn="' + k + '" role="slider" tabindex="0" aria-label="' + lb + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '">' +
+    '<svg viewBox="0 0 44 44" aria-hidden="true"><path class="kt" pathLength="100" stroke-dasharray="99 100" d="' + RING + '"/><path class="kv" pathLength="100" stroke-dasharray="' + v * 0.99 + ' 100" d="' + RING + '"/></svg><b>' + v + '</b></div><span>' + lb + '</span></div>'; };
+  const paintKnob = (kn, v) => { kn.setAttribute('aria-valuenow', v); kn.querySelector('.kv').setAttribute('stroke-dasharray', v * 0.99 + ' 100'); kn.querySelector('b').textContent = v; };
   // Свободный плеер (слово автора 22.11.2026: фоновое пианино и всякое такое): любая запись медиатеки, независимо от песни и минусовки;
   // играет, пока не остановят или не выйдут со сцены; громкость — «Плеер» в «Уровнях» (и общая громкость сцены)
   const plStop = () => { const p = S.pl; S.pl = null; if (p) { try { p.el.pause(); } catch { /* */ } try { URL.revokeObjectURL(p.url); } catch { /* */ } } };
@@ -298,6 +314,28 @@ export function openStage(app, evId, i = 0) {
     if (!audio.unlock()) { toast(t('stage.noAudio')); return; }
     if (audio.metro.running) stopClick(); else { const x = item(); startClick({ bpm: curBpm() }, x ? x.s : null); }
     render();
+  };
+  // Жест вверх/вниз по экрану — включить или выключить «программу»: если что-то звучит — всё стоп (запомнить, что было); если тишина —
+  // то, что прописано в песне (клик, пэд, минусовка), иначе то, что было включено в последний раз, иначе метроном
+  const anyOn = () => !!(audio.metro.running || audio.drone.on || S.track || (S.pl && S.pl.el && !S.pl.el.paused));
+  const toggleProgram = () => {
+    if (!audio.unlock()) { toast(t('stage.noAudio')); return; }
+    if (anyOn()) {
+      S.last = { metro: !!audio.metro.running, pad: !!audio.drone.on, track: !!S.track, player: !!(S.pl && S.pl.el && !S.pl.el.paused) };
+      stop({ keepPad: false });
+      if (S.pl && S.pl.el) safe('player', () => S.pl.el.pause());
+      render(); return;
+    }
+    const x = item(), l = S.last;
+    if (x && (x.it.click || x.it.pad || x.it.track)) { play(); return; }
+    if (l && (l.metro || l.pad || l.track || l.player)) {
+      if (l.metro) startClick({ bpm: curBpm() }, x ? x.s : null);
+      if (l.pad) { if (x && x.it.key) startPad(x.it); else { const d = app.device.drone; d.pc = keyPc(); safe('pad', () => { audio.drone.start(); S.padOn = true; }); } }
+      if (l.track && x && x.it.track) startTrack(x.it);
+      if (l.player && S.pl && S.pl.el) safe('player', () => S.pl.el.play().catch(() => {}));
+      render(); return;
+    }
+    toggleMetro();
   };
   // Пэд-подложка по тональности: те же жесты, что в инструменте «Пэды / дрон» (касание — вкл/выкл, ведение по клавише — созвучие)
   const NOTES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'], CSUF = { maj: '', min: 'm', dim: '°', sus42: 'sus', hmin: '♭' };
@@ -533,14 +571,15 @@ export function openStage(app, evId, i = 0) {
       '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
       '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      // список программы под шапкой — у музыканта и лидера перед глазами: номер, название, тональность, темп, короткий комментарий.
-      // Текущий по центру; смахнуть влево-вправо — номер вперёд-назад, вверх-вниз — прокрутка длинного списка
-      (free ? '' : '<div class="sgsongs" role="list" aria-label="' + esc(t('stage.list')) + '">' + L.map((sg, j) => { const ii = evObj ? itemOf(evObj, sg, audioFiles(app)) : null;
-        return '<button class="sgsong' + (j === S.i ? ' cur' : '') + '" role="listitem" data-sgreel="' + j + '"' + (j === S.i ? ' aria-current="true"' : '') + '><i class="num">' + (j + 1) + '</i><b>' + esc(sg.title) + '</b>' +
-          (ii && ii.key ? '<em>' + esc(keyLabel(ii.key) + (ii.capo ? ' c' + ii.capo : '')) + '</em>' : '') + (ii && ii.bpm ? '<em>' + ii.bpm + '</em>' : '') + (ii && ii.note ? '<small>' + esc(ii.note) + '</small>' : '') + '</button>'; }).join('') + '</div>') +
+      // слева вверху — слова, аккорды или табы; справа вверху — список песен (текущая по центру; смахнуть влево-вправо — песня, вверх-вниз — прокрутка)
+      '<div class="sgmain">' +
       (S.view === 'tab' && !free ? '<div class="sgtext sgscorebox">' + scoreHTML() + '</div>' : S.view === 'list' || free ? (free && S.view !== 'list' ? '<div class="sgtext"><div class="sgbig free">' + esc(t('stage.freeHint')) + '<br><button class="btn" data-sg="list">' + esc(t('stage.pickSongs')) + '</button></div></div>' : '<div class="sgtext">' + listHTML(L) + '</div>') :
         '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? (it.scroll ? '<i class="sgprog" aria-hidden="true"><i></i></i>' : '') + '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
           '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>') +
+      (free || S.view === 'list' ? '' : '<div class="sgsongs" role="list" aria-label="' + esc(t('stage.list')) + '">' + L.map((sg, j) => { const ii = evObj ? itemOf(evObj, sg, audioFiles(app)) : null;
+        const meta = ii ? [ii.key ? keyLabel(ii.key) + (ii.capo ? ' c' + ii.capo : '') : '', ii.bpm ? ii.bpm + ' bpm' : '', ii.note || ''].filter(Boolean).join(' · ') : '';
+        return '<button class="sgsong' + (j === S.i ? ' cur' : '') + '" role="listitem" data-sgreel="' + j + '"' + (j === S.i ? ' aria-current="true"' : '') + '><i class="num">' + (j + 1) + '</i><span class="sgst"><b>' + esc(sg.title) + '</b>' + (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span></button>'; }).join('') + '</div>') +
+      '</div>' +
       (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') +
       // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
       '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
@@ -554,8 +593,9 @@ export function openStage(app, evId, i = 0) {
       padsHTML() +
       '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
         '<button class="sgbtn main' + (S.playing ? ' on' : '') + '" data-sg="play" aria-label="' + esc(t(S.playing ? 'stage.stop' : 'stage.play')) + '">' + (S.playing ? I.stop : I.play) + '</button>') +
-      // общая громкость сцены: тонкая линия с крупной зоной касания (44 px), всегда рядом с ▶
-      '<label class="sgvol" aria-label="' + esc(t('stage.vol')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6"/></svg><input type="range" class="sgall" data-sgall min="0" max="100" value="' + allVal() + '" aria-label="' + esc(t('stage.vol')) + '"></label></div>' +      (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
+      // громкости по отдельности и общая — всегда на экране: тянуть вверх-вниз (140 px — весь ход)
+      '<div class="sgknobs" role="group" aria-label="' + esc(t('stage.vol')) + '">' + KNOBS.map((k) => knobHTML(k)).join('') + '</div></div>' +
+      (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
     const ls = S.el.querySelector('.sgsongs');
     if (ls) { const cu = ls.querySelector('.cur'); ls.scrollTop = cu && lsI !== S.i ? cu.offsetTop - (ls.clientHeight - cu.offsetHeight) / 2 : lsTop; if (cu && lsTop === 0 && lsI == null) ls.scrollTop = cu.offsetTop - (ls.clientHeight - cu.offsetHeight) / 2; }
@@ -723,6 +763,35 @@ export function openStage(app, evId, i = 0) {
   addEventListener('keydown', onKey);
   S.el.addEventListener('scroll', onUserScroll, true);
   onHold(S.el, '.sgsongs, .sghead', (el) => stageMenu(el));
+  // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
+  const NOGEST = '.sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
+  let vg = null;
+  S.el.addEventListener('pointerdown', (e) => {
+    vg = null;
+    if (S.locked || e.pointerType === 'mouse' || !e.isPrimary || e.target.closest(NOGEST)) return;
+    const tx = e.target.closest('.sgtext');
+    if (tx && tx.scrollHeight - tx.clientHeight > 4) return;
+    vg = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+  });
+  S.el.addEventListener('pointerup', (e) => {
+    const g = vg; vg = null;
+    if (!g || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (performance.now() - g.t > 600 || Math.abs(dy) < 120 || Math.abs(dy) < Math.abs(dx) * 2.2) return;
+    toggleProgram();
+  });
+  S.el.addEventListener('pointercancel', () => { vg = null; });
+  // крутилки громкости
+  S.el.addEventListener('pointerdown', (e) => {
+    const kn = e.target.closest && e.target.closest('[data-sgkn]');
+    if (!kn || S.locked) return;
+    e.preventDefault();
+    const k = kn.dataset.sgkn, y0 = e.clientY, v0 = knobVal(k), id = e.pointerId;
+    try { kn.setPointerCapture(id); } catch { /* */ }
+    const mv = (ev) => { if (ev.pointerId === id) paintKnob(kn, knobSet(k, v0 + ((y0 - ev.clientY) / 140) * 100)); };
+    const up = (ev) => { if (ev.pointerId !== id) return; kn.removeEventListener('pointermove', mv); kn.removeEventListener('pointerup', up); kn.removeEventListener('pointercancel', up); app.store.save(); };
+    kn.addEventListener('pointermove', mv); kn.addEventListener('pointerup', up); kn.addEventListener('pointercancel', up);
+  });
   swipe(S.el, { min: 40, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !!e.target.closest('.sgsongs') });
   onHold(S.el, '.sgrow', (el) => { const j = +el.dataset.sgrow, sg = list()[j]; if (sg) holdMenu(el, [
     { icon: I.play, label: t('stage.tap.play'), run: () => { if (j !== S.i) goTo(j); S.view = 'text'; sset('view', 'text'); render(); play(); } },
@@ -735,7 +804,8 @@ export function openStage(app, evId, i = 0) {
   // щипок по тексту — размер шрифта (как A− и A+)
   const offG = [pinch(S.el, { min: 4, max: 25, ok: (e) => !!e.target.closest('.sgscore') && !!S.score, get: () => Math.round(S.score.scale * 10),
       set: (v, live) => { S.score.setScale(v / 10); if (!live) sset('scoreScale', S.score.scale); } }),
-    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys, .sgall, .sgsongs') }),
+    // весь экран: влево-вправо — песня вперёд-назад (кроме игровых зон: пэды, клавиши, крутилки, темп, перемотка, список — у него свой жест)
+    swipe(S.el, { min: 90, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest(NOGEST) }),
     pinch(S.el, { min: 14, max: 64, ok: (e) => !!e.target.closest('.sgtext'), get: () => S.fs,
       set: (v, live) => { S.fs = v; fit(); if (!live) try { sessionStorage.setItem('melete.stage.fs', v); } catch { /* */ } } })];
   S.i = Math.max(0, Math.min(list().length - 1, i));

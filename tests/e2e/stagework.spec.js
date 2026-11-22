@@ -111,3 +111,31 @@ test('сцена: панель табов — файл песни рисуетс
   await expect(page.locator('.sgscore')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('сцена: крутилки громкости по источникам и жест вверх-вниз по экрану — программа вкл/выкл', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  await expect(page.locator('.sgkn')).toHaveCount(5); // общая, клик, пэд, драм, медиа
+  // крутилка «Драм»: тянуть вверх-вниз меняет значение
+  const kn = page.locator('[data-sgkn="sounds"]'), before = +(await kn.getAttribute('aria-valuenow'));
+  const bb = await kn.boundingBox();
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down();
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2 + 40, { steps: 4 }); await page.mouse.up();
+  expect(+(await kn.getAttribute('aria-valuenow'))).toBeLessThan(before);
+  // жест вверх по экрану: метроном включился; ещё раз — выключился
+  const swipeUp = () => page.evaluate(() => {
+    const el = document.querySelector('.sgbig') || document.querySelector('.sgtext'), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const ev = (type, cy) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 9, isPrimary: true, pointerType: 'touch', clientX: x, clientY: cy }));
+    ev('pointerdown', y); ev('pointermove', y - 80); ev('pointerup', y - 160);
+  });
+  await swipeUp(); await page.waitForTimeout(400);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(1);
+  await swipeUp(); await page.waitForTimeout(400);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

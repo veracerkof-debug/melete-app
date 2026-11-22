@@ -35,7 +35,6 @@
 @media (orientation:landscape) and (max-height:520px){
   .stage{display:grid;grid-template-columns:1fr 132px;grid-template-rows:auto 1fr auto}
   .sgtop{grid-column:1/-1}
-  .sgtext{grid-column:1}
   .sgchips{grid-column:1;padding-top:2px}
   .sgbar{grid-column:2;grid-row:2/4;flex-direction:column;padding:0 10px 10px 0}
   .sgbtn{min-height:0}
@@ -91,7 +90,7 @@
   .stage.pads .sgpads{grid-column:2;grid-row:2/6;overflow:auto;padding-top:0}
   .stage.pads .sgbar{grid-column:3;grid-row:2/6}
   .stage.pads .sgpad{min-height:56px}
-  .sgseek,.sgtempo,.sgsongs{grid-column:1}
+  .sgseek,.sgtempo,.sgmain{grid-column:1}
   .stage:not(.pads) .sgtempo,.stage:not(.pads) .sgseek{grid-column:1}
 }
 .stage.night .sgtempo .sgic,.stage.night .sgseek{display:none}
@@ -127,24 +126,33 @@
 .sgscoretxt{margin:0;padding:10px;font:600 14px/1.35 ui-monospace,Menlo,Consolas,monospace;white-space:pre;overflow:auto}
 .sgscoremsg{padding:18px 12px;color:rgba(244,241,234,.7);text-align:center}
 .stage.night .sgsurfhost{filter:invert(1) hue-rotate(180deg)}
-/* список программы под шапкой: мелко, но в одну строку на номер — название, тональность, темп, комментарий; текущий по центру */
-.sgsongs{position:relative;flex:none;height:72px;margin:0 var(--sp-2) var(--sp-1);overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:rgba(255,255,255,.04)}
+/* верх экрана: слева — слова, аккорды или табы; справа — список песен (текущая по центру; влево-вправо — песня, вверх-вниз — прокрутка) */
+.sgmain{flex:1 1 auto;min-height:0;display:flex;gap:var(--sp-2);padding:0 var(--sp-2)}
+.sgmain>.sgtext{flex:1 1 0;min-width:0;padding-left:var(--sp-3);padding-right:var(--sp-2)}
+.sgsongs{position:relative;flex:0 0 38%;min-width:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:rgba(255,255,255,.04)}
 .sgsongs::-webkit-scrollbar{display:none}
-.sgsong{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:24px;padding:0 var(--sp-3) 0 var(--sp-1);text-align:left;font-size:var(--fs-3);opacity:.55}
+.sgsong{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:var(--hit);padding:0 var(--sp-2) 0 var(--sp-1);text-align:left;font-size:var(--fs-4);opacity:.55}
 .sgsong i{flex:none;font-style:normal;font-size:var(--fs-1);min-width:2em;text-align:center}
-.sgsong b{flex:0 1 auto;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgsong em{flex:none;font-style:normal;font-size:var(--fs-2);font-variant-numeric:tabular-nums;color:rgba(244,241,234,.75)}
-.sgsong small{flex:1 1 0;min-width:0;font-size:var(--fs-1);color:rgba(244,241,234,.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.sgst{flex:1;min-width:0;display:flex;flex-direction:column}
+.sgst b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgst small{font-size:var(--fs-1);color:rgba(244,241,234,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sgsong.cur{opacity:1;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:var(--r-2)}
-.sgsong.cur b{font-weight:700}
-.sgsong.cur em,.sgsong.cur small{color:inherit}
-.sgsong:first-child{margin-top:24px}.sgsong:last-child{margin-bottom:24px}
-/* громкость сцены рядом с ▶: линия тонкая, зона касания 44 px, края не используются (не спорят с «Назад») */
-.sgvol{flex:1.4;display:flex;align-items:center;gap:var(--sp-2);min-width:0;padding:0 var(--sp-2) 0 var(--sp-3);border-radius:var(--r-4);background:rgba(255,255,255,.05)}
-.sgvol svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;opacity:.7}
-.sgall{flex:1;min-width:0;width:100%;height:56px;margin:0;background:transparent;accent-color:var(--gold);touch-action:none}
-.sgbar .sgbtn.main{flex:1}
-@media (orientation:landscape) and (max-height:520px){.sgvol{flex:none;min-height:56px}}
+.sgsong.cur .sgst b{font-weight:700}
+.sgsong.cur .sgst small{color:inherit}
+.sgsong:first-child{margin-top:var(--sp-6)}.sgsong:last-child{margin-bottom:var(--sp-6)}
+/* громкости: общая и по источникам — крутилки рядом с ▶, тянуть вверх-вниз */
+.sgknobs{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:center;padding:0 var(--sp-1)}
+.sgkn{display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);min-width:0}
+.sgkn span{font-size:var(--fs-1);color:rgba(244,241,234,.7);white-space:nowrap}
+.sgknob{position:relative;width:var(--hit);height:var(--hit);display:grid;place-items:center;touch-action:none;cursor:ns-resize}
+.sgknob svg{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke-width:4;stroke-linecap:round}
+.sgknob .kt{stroke:rgba(255,255,255,.14)}
+.sgknob .kv{stroke:var(--gold)}
+.sgknob b{font-size:var(--fs-3);font-variant-numeric:tabular-nums;font-weight:600}
+@media (orientation:landscape) and (max-height:520px){.sgknobs{flex-wrap:wrap;gap:var(--sp-1)}}
 /* фон (пэд) — внутри панели «Звуки» */
 .sgbg{display:flex;padding:0 0 2px}
 .sgpads .sgkeys{padding:6px 0 8px}
+.sgbar{align-items:center}
+.sgbar .sgbtn.main{flex:0 0 88px;min-height:72px}
+@media (orientation:landscape) and (max-height:520px){.sgbar .sgbtn.main{flex:1}}
