@@ -40,6 +40,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          # свой ключ под образ windows-2022: кэш target/ от сборок на Visual Studio 18 несёт CMakeCache с чужим генератором — cmake падает
+          prefix-key: win2022-v1
 
       - name: Зависимости
         run: npm ci
