@@ -63,7 +63,7 @@ export function quantize(p) {
     const t = Math.max(0, q(r.t / spb));
     let e = r.dq ? t + r.dq : q((r.t + r.d) / spb);
     if (e <= t) e = t + step;
-    out.push({ t: r6(t), d: r6(e - t), m: r.m, v: r.v == null ? 0.8 : r.v, i });
+    out.push({ t: r6(t), d: r6(e - t), m: r.m, v: r.v == null ? 0.8 : r.v, i, ...(r.tech ? { tech: r.tech } : {}) });
   });
   out.sort((a, b) => a.t - b.t || a.m - b.m);
   const res = [];
@@ -130,6 +130,20 @@ export function delBars(p, b0, b1) {
   p.raw = p.raw.filter((r) => r.t < s0 - 1e-6 || r.t >= s1 - 1e-6).map((r) => (r.t >= s1 - 1e-6 ? { ...r, t: r.t - sh } : r));
   return p;
 }
+// Копировать такты [b0, b1] (включительно) → { bars, raw } со временем от начала первого такта
+export function copyBars(p, b0, b1) {
+  const spb = spbOf(p), s0 = b0 * p.num * spb, s1 = (b1 + 1) * p.num * spb;
+  return { bars: b1 - b0 + 1, raw: p.raw.filter((r) => r.t >= s0 - 1e-6 && r.t < s1 - 1e-6).map((r) => ({ ...r, t: r.t - s0 })) };
+}
+// Вставить скопированное перед тактом bar: всё с него сдвигается вправо на длину куска
+export function pasteBars(p, bar, clip) {
+  const spb = spbOf(p), s0 = bar * p.num * spb, sh = clip.bars * p.num * spb;
+  p.raw = p.raw.map((r) => (r.t >= s0 - 1e-6 ? { ...r, t: r.t + sh } : r));
+  p.raw.push(...clip.raw.map((r) => ({ ...r, t: r.t + s0 })));
+  p.raw.sort((a, b) => a.t - b.t);
+  if (p.minBars) p.minBars = Math.min(200, p.minBars + clip.bars);
+  return p;
+}
 // Перезапись с такта: всё с такта bar — прочь (новая игра встанет с него)
 export function cutFrom(p, bar) {
   const s0 = bar * p.num * spbOf(p);
@@ -180,7 +194,7 @@ export function partXML(p, { title = '', label = title } = {}) {
   const segs = [];
   notes.forEach((n, k) => {
     let s = Math.round(n.t * DIV), e = Math.min(end, Math.round((n.t + n.d) * DIV));
-    while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * DIV), cont: x < e, tf: tab[k] }); s = x; }
+    while (s < e) { const b1 = (Math.floor(s / barDiv) + 1) * barDiv, x = Math.min(e, b1); segs.push({ s, e: x, m: n.m, from: s > Math.round(n.t * DIV), cont: x < e, tf: tab[k], tech: n.tech }); s = x; }
   });
   segs.sort((a, b) => a.s - b.s || a.m - b.m);
   const avg = segs.length ? segs.reduce((a, n) => a + n.m, 0) / segs.length : 60;
@@ -207,7 +221,7 @@ export function partXML(p, { title = '', label = title } = {}) {
       parts.forEach(([d, type, trip], k) => group.forEach((n, j) => {
         const stop = k > 0 || n.from, start = k < parts.length - 1 || n.cont;
         x += '<note>' + (j ? '<chord/>' : '') + pitch(n.m) + '<duration>' + d + '</duration>' + (stop ? '<tie type="stop"/>' : '') + (start ? '<tie type="start"/>' : '') + '<voice>1</voice><type>' + type + '</type>' + tm(trip) +
-          (stop || start || n.tf ? '<notations>' + (stop ? '<tied type="stop"/>' : '') + (start ? '<tied type="start"/>' : '') + (n.tf ? '<technical><string>' + n.tf.s + '</string><fret>' + n.tf.f + '</fret></technical>' : '') + '</notations>' : '') + '</note>';
+          (stop || start || n.tf || (n.tech === 'b' && !stop) ? '<notations>' + (stop ? '<tied type="stop"/>' : '') + (start ? '<tied type="start"/>' : '') + (n.tf || (n.tech === 'b' && !stop) ? '<technical>' + (n.tf ? '<string>' + n.tf.s + '</string><fret>' + n.tf.f + '</fret>' : '') + (n.tech === 'b' && !stop ? '<bend><bend-alter>2</bend-alter></bend>' : '') + '</technical>' : '') + '</notations>' : '') + '</note>';
       }));
       at = e;
     }

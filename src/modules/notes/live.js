@@ -9,8 +9,9 @@
 import { getContext } from '../../audio/context.js';
 import { clickVoice, clickNoise } from '../../audio/metronome.js';
 import { createMicNotes } from '../../audio/notein.js';
+import { jpegsToPdf } from '../../music/pdfwriter.js';
 import { every, cancel } from '../../audio/clock.js';
-import { newPart, quantize, gridOf, GRIDS, INSTS, guessTempo, autoGrid, partXML, partEvents, partSong, tabOf, barsOf,
+import { copyBars, pasteBars, newPart, quantize, gridOf, GRIDS, INSTS, guessTempo, autoGrid, partXML, partEvents, partSong, tabOf, barsOf,
   setPitch, setLen, setFret, delNote, addNote, delBars, cutFrom, insertAt, setTempo } from '../../music/livescore.js';
 import { writeMidi } from '../../music/midi.js';
 import { projectFromSong } from '../../music/project.js';
@@ -309,13 +310,14 @@ export function createLive(env) {
       '<div class="vrow tight">' + icb('data-x="lvlen" data-d="-1"', ICON.left, t('live.shorter')) + '<b class="num lvv">' + (n ? FR(n.d) : '') + '</b>' + icb('data-x="lvlen" data-d="1"', ICON.right, t('live.longer')) + '</div>' +
       (p.tuning && tf ? '<div class="vrow tight">' + icb('data-x="lvstr" data-d="1"', ICON.up, t('live.strUp')) + '<b class="num lvv">' + esc(t('live.sf', { s: tf.s, f: tf.f })) + '</b>' + icb('data-x="lvstr" data-d="-1"', ICON.down, t('live.strDown')) + '</div>' : '') +
       icb('data-x="lvdel"', ICON.trash, t('delete')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) +
+      '<button class="chip lvchip' + (L.sel.tech === 'b' ? ' on' : '') + '" data-x="lvbend" aria-pressed="' + (L.sel.tech === 'b') + '" aria-label="' + esc(t('live.bend')) + '">' + esc(t('live.bend')) + '</button>' +
       '<div class="vrow tight lvdurs" role="group" aria-label="' + esc(t('live.dur')) + '">' + DURS.map(([b, l]) => '<button class="chip lvchip' + (n && Math.abs(n.d - b) < 1e-6 ? ' on' : '') + '" data-x="lvdur" data-b="' + b + '" aria-label="' + esc(t('live.dur') + ' ' + l) + '">' + l + '</button>').join('') + '</div></div>';
   }
   function barsBar() {
     const b = L.bars, b1 = b.b1 == null ? b.b0 : b.b1;
     return '<div class="lvbar2" role="toolbar">' + icb('data-x="lvbars0"', ICON.close, t('live.done')) +
       '<span class="lvv grow">' + esc(b.b0 === b1 ? t('live.bar1', { a: b.b0 + 1 }) : t('live.barsN', { a: b.b0 + 1, b: b1 + 1 })) + '</span>' +
-      '<button class="btn sm" data-x="lvbdel">' + esc(t('delete')) + '</button><button class="btn sm fill" data-x="lvrerec">' + esc(t('live.rerec', { n: b.b0 + 1 })) + '</button>' + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + '</div>';
+      '<button class="btn sm" data-x="lvbcopy">' + esc(t('live.copy')) + '</button>' + (L.clip ? '<button class="btn sm" data-x="lvbpaste">' + esc(t('live.paste')) + '</button>' : '') + '<button class="btn sm" data-x="lvbdel">' + esc(t('delete')) + '</button><button class="btn sm fill" data-x="lvrerec">' + esc(t('live.rerec', { n: b.b0 + 1 })) + '</button>' + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + '</div>';
   }
   function mainBar() {
     const cf = defaults(), p = L.part, rec = L.phase === 'rec' || L.phase === 'count';
@@ -420,16 +422,48 @@ export function createLive(env) {
       el.addEventListener('input', (e) => { if (e.target.id === 'lvstr') { p.str = +e.target.value; el.querySelector('#lvstrv').textContent = Math.round(p.str * 100) + '%'; save(); } });
     });
   }
+  // PDF для печати: страницы A4 из SVG alphaTab (шрифт нот вшивается в картинку), системы целиком, без разрезов посередине
+  async function pdfBytes() {
+    const root = env.AT.el && env.AT.el.querySelector('.at-surface'), svgs = root ? [...root.querySelectorAll('svg')] : [];
+    if (!svgs.length) throw new Error('нет отрисованных нот');
+    let font = '';
+    try { const b = await (await fetch(env.fontUrl)).blob(); font = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.readAsDataURL(b); }); } catch { /* без шрифта ноты не нарисуются — ошибка ниже */ }
+    const W = 1240, H = 1754, M = 70; // A4 при 150 dpi
+    const items = svgs.map((el) => ({ el, r: el.getBoundingClientRect() })).sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
+    const k = (W - 2 * M) / Math.max(1, ...items.map((x) => x.r.width));
+    const pages = []; let cv = null, g = null, y = M;
+    const fresh2 = () => { cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); y = M; };
+    const flush = async () => { const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92)); pages.push({ w: W, h: H, u8: new Uint8Array(await blob.arrayBuffer()) }); };
+    const toImg = (el, r) => new Promise((res, rej) => {
+      const c = el.cloneNode(true); c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.setAttribute('width', Math.ceil(r.width)); c.setAttribute('height', Math.ceil(r.height));
+      // ноты — глифы шрифта по правилу страницы «.at-surface.at .at»: клону правило не достаётся, переносим вычисленный стиль (семья, размер)
+      // на каждый .at и встраиваем сам шрифт (картинка из SVG своих шрифтов не видит)
+      const live = [...el.querySelectorAll('.at')];
+      [...c.querySelectorAll('.at')].forEach((n, i) => { const cs = live[i] && getComputedStyle(live[i]); n.setAttribute('style', (n.getAttribute('style') || '') + ';font-family:alphaTab;font-style:normal;font-weight:normal;line-height:1' + (cs ? ';font-size:' + cs.fontSize : '')); });
+      if (font) { const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = '@font-face{font-family:"alphaTab";src:url(data:font/woff2;base64,' + font + ') format("woff2")}'; c.insertBefore(st, c.firstChild); }
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(c)], { type: 'image/svg+xml;charset=utf-8' }));
+      const im = new Image(); im.onload = () => { URL.revokeObjectURL(url); res(im); }; im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('svg')); }; im.src = url;
+    });
+    for (const it of items) {
+      const h = it.r.height * k;
+      if (!cv) fresh2(); else if (y + h > H - M) { await flush(); fresh2(); }
+      g.drawImage(await toImg(it.el, it.r), M, y, it.r.width * k, h); y += h;
+    }
+    await flush();
+    return jpegsToPdf(pages);
+  }
   function shareSheet() {
     const { ui } = C(), p = L.part, name = (L.rec && L.rec.name) || t('live.title');
-    ui.sheet(() => ui.snav(t('live.export')) + '<div class="group"><button class="cell act" data-k="gp">Guitar Pro (.gp)</button><button class="cell act" data-k="xml">MusicXML</button><button class="cell act" data-k="mid">MIDI</button>' +
+    ui.sheet(() => ui.snav(t('live.export')) + '<div class="group"><button class="cell act" data-k="gp">Guitar Pro (.gp)</button><button class="cell act" data-k="pdf">PDF</button><button class="cell act" data-k="xml">MusicXML</button><button class="cell act" data-k="mid">MIDI</button>' +
       (C().hasTool('looper') ? '<button class="cell act" data-k="studio">' + esc(t('toStudio')) + '</button>' : '') + '</div><p class="ftr">' + esc(t('live.exportFtr')) + '</p>',
     (el, sh) => el.addEventListener('click', async (e) => {
       const k = e.target.closest('[data-k]');
       if (!k) return;
       sh.close();
       const fn = name.replace(/[\\/:*?"<>|]/g, '-');
-      if (k.dataset.k === 'gp') {
+      if (k.dataset.k === 'pdf') {
+        try { C().sendFile(await pdfBytes(), fn + '.pdf', fn, 'application/pdf'); } catch (er) { C().logErr(er); C().ui.toast(t('live.pdfFail')); }
+      } else if (k.dataset.k === 'gp') {
         // Guitar Pro 7 (.gp): партия → MusicXML → партитура alphaTab → экспортёр alphaTab (читается в Guitar Pro, TuxGuitar и др.)
         try {
           const at = await env.loadLib(), st0 = new at.Settings();
@@ -475,6 +509,7 @@ export function createLive(env) {
         draw(); env.render(); return true;
       }
       case 'lvbaradd': { const q = L.part; if (q) edit((x) => { x.minBars = Math.min(200, barsOf(x) + 1); }); return true; }
+      case 'lvbend': { const i = p.raw.indexOf(L.sel); if (i >= 0) edit((q) => { if (q.raw[i].tech === 'b') delete q.raw[i].tech; else q.raw[i].tech = 'b'; }); return true; } // бенд на тон (MusicXML → alphaTab)
       case 'lvdur': { const i = L.part.raw.indexOf(L.sel); if (i >= 0) edit((q) => setLen(q, i, +el.dataset.b)); return true; }
       case 'lvrec': start(); return true;
       case 'lvstop': stop(); return true;
@@ -498,6 +533,8 @@ export function createLive(env) {
       }
       case 'lvbars': L.sel = null; L.restAt = null; L.bars = { b0: 0, b1: null }; markBars(); env.render(); C().ui.toast(t('live.barsPick')); return true;
       case 'lvbars0': L.bars = null; markBars(); env.render(); return true;
+      case 'lvbcopy': { const b = L.bars, b1 = b.b1 == null ? b.b0 : b.b1; L.clip = copyBars(p, b.b0, b1); C().ui.toast(t('live.copied', { n: L.clip.bars })); env.render(); return true; }
+      case 'lvbpaste': { const b = L.bars, b1 = b.b1 == null ? b.b0 : b.b1, clip = L.clip; if (!clip) return true; L.bars = null; markBars(); edit((q) => pasteBars(q, b1 + 1, clip)); return true; } // вставить после выбранных тактов
       case 'lvbdel': { const b = L.bars, b1 = (b.b1 == null ? b.b0 : b.b1) + 1; L.bars = null; markBars(); edit((q) => delBars(q, b.b0, b1)); return true; }
       case 'lvrerec': { const b0 = L.bars.b0; L.bars = null; markBars(); start(b0); return true; }
     }

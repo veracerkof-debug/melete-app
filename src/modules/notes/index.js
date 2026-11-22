@@ -789,7 +789,7 @@ export default {
   mount(el, c, sz = 'full') {
     onHold(el, '[data-x="ncapo"]', () => { const s = curSong(); if (s && s.capo) { updCur({ capo: 0 }); render(); c.ui.toast(c.t('capo.none')); } });
     host = el; ctx = c; size = sz;
-    if (!live) live = createLive({ get ctx() { return ctx; }, st, esc, icb, I, AT, loadLib, ensureApi, render, host: () => host,
+    if (!live) live = createLive({ get ctx() { return ctx; }, st, esc, icb, I, AT, loadLib, ensureApi, render, fontUrl: BRAVURA, host: () => host,
       setProf: (at) => { if (AT.api) { AT.api.settings.display.staveProfile = prof(at); AT.api.settings.notation.elements.set(at.NotationElement.GuitarTuning, false); AT.api.updateSettings(); } },
       playBtns: () => '<button class="ic sm" id="atplay" data-x="atplay" aria-label="' + ctx.t('playTab') + '">' + (ATP.playing ? I.pause : I.play) + '</button>' });
     input = document.createElement('input');
