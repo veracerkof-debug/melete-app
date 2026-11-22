@@ -617,7 +617,7 @@ function helpHTML(app) {
     (never[id] ? '<span class="psub">' + t('help.never') + '</span>' : '') + '</span>' + CHEV + '</button>';
   const core = CORE_TOPICS.filter((k) => !st.toolsOnly || ['folder', 'share', 'owndata'].includes(k)).map((k) => { const tp = coreTopic(k); return row('core:' + k, tp.icon, tp.color, tp.name, tp.id); });
   const mods = modules.filter((m) => !m.tab && helpOf(m) && (!CHURCH_MODULES.includes(m.id) || st.church)).map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), m.id));
-  return '<div class="large">' + t('page.help') + '</div><p class="sub" style="margin:0 4px 12px">' + t('help.listHint') + '</p>' +
+  return '<div class="large">' + t('page.help') + '</div>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('help.offTitle') + '</span>' + psw('helpOn', !st.helpOff, t('help.offTitle')) + '</div></div><p class="ftr">' + t('help.offHint') + '</p>' +
     '<div class="hdr">' + t('help.listCore') + '</div><div class="group">' + core.join('') + '</div>' +
     '<div class="hdr">' + t('help.listTools') + '</div><div class="group">' + mods.join('') + '</div>' +
@@ -633,7 +633,7 @@ function featHTML(app) {
     (help ? '<button class="ic sm" data-help="' + id + '" aria-label="' + esc(t('help.open') + ': ' + name) + '">' + icons.help + '</button>' : '') +
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
-  return '<div class="large">' + t('feat.title') + '</div><p class="sub" style="margin:0 4px 12px">' + t('feat.hint') + '</p>' +
+  return '<div class="large">' + t('feat.title') + '</div>' +
     // церковный режим: Библия и чтения дня
     '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
 '</div>' +
@@ -753,6 +753,9 @@ export function createPanel(app, onChange) {
     }
     const sub = page !== 'root', y = layer.scrollTop;
     const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML };
+    // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
+    const TIGHT = { week: 1, feat: 1, tabs: 1, help: 1 };
+    for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);

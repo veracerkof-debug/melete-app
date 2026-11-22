@@ -4,7 +4,7 @@
 // (продвинутый вид). Срезы (низа и верха) ходят только по частоте. Кривая — eqResponse (fx.js), без звука.
 import { eqResponse, logFreqs, freqAt, posOf, G_MAX, Q_MIN, Q_MAX, BANDS_MAX, normalizeBand } from '../audio/fx.js';
 
-export const BAND_COLORS = { highpass: '#8D8D93', lowshelf: '#C98A3A', peaking: '#5F8568', highshelf: '#5B86B8', lowpass: '#8D8D93' };
+export const BAND_COLORS = { highpass: '#8D8D93', lowshelf: '#C98A3A', peaking: 'var(--ok)', highshelf: '#5B86B8', lowpass: '#8D8D93' };
 const R = 9, HIT = 24, PAD = { l: 6, r: 6, t: 10, b: 18 };
 
 // cv — <canvas>; get() → полосы (массив, правится на месте); simple — частоты закреплены;
@@ -23,7 +23,7 @@ export function eqCanvas(cv, { get, simple = false, onChange = () => {}, onSelec
     if (!r.width) return;
     w = r.width; h = r.height;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    const g = cv.getContext('2d'), bands = get(), ink = css('--ink', '#111'), l2 = css('--l2', '#888'), tint = css('--tint', '#5F8568');
+    const g = cv.getContext('2d'), bands = get(), ink = css('--ink', '#111'), l2 = css('--l2', '#888'), tint = css('--tint', '#946B3E');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
     // сетка: частоты и уровни
@@ -43,7 +43,7 @@ export function eqCanvas(cv, { get, simple = false, onChange = () => {}, onSelec
     g.fillStyle = tint; g.globalAlpha = 0.14; g.fill(); g.globalAlpha = 1;
     // точки полос
     bands.forEach((b, i) => {
-      const x = f2x(b.f), y = handleY(b), on = b.on !== false, c = BAND_COLORS[b.type] || tint;
+      const x = f2x(b.f), y = handleY(b), on = b.on !== false, c = BAND_COLORS[b.type] || tint; if (c.startsWith('var(')) c = css(c.slice(4, -1), tint);
       g.beginPath(); g.arc(x, y, i === sel ? R + 3 : R, 0, Math.PI * 2);
       g.fillStyle = on ? c : css('--fill', '#ddd'); g.fill();
       g.lineWidth = i === sel ? 3 : 1.5; g.strokeStyle = on ? '#fff' : l2; g.stroke();

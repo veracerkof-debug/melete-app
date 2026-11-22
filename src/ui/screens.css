@@ -777,8 +777,8 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .dsdisk{margin-top:10px;background:var(--cell);border-radius:16px;padding:14px}.dshead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;margin-bottom:10px}.dshead b{font-size:14px;color:var(--l2);font-weight:600}
 .dsbar{display:block;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--tint) var(--f),var(--fill) var(--f))}
 /* План недели — гистограмма по дням (core/screens/plan.js: wkBars) */
-.wkinfo{background:var(--cell);border-radius:16px;padding:14px;margin-top:10px}.wkhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:15px}.wkhead b{font-size:15px;color:var(--l2);font-weight:600}
-.wkbars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:96px;margin-top:12px;align-items:end}
+.wkinfo{background:var(--cell);border-radius:16px;padding:12px 14px;margin-top:10px}.wkhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:15px}.wkhead b{font-size:15px;color:var(--l2);font-weight:600}
+.wkbars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:68px;margin-top:8px;align-items:end}
 .wkc{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%}.wkc i{display:block;width:100%;max-width:34px;height:calc((100% - 22px) * var(--h) / 100);border-radius:8px 8px 4px 4px;background:var(--tint);min-height:0;transition:height .3s}
 .wkc i.z{height:4px;background:var(--fill2)}.wkc span{font-size:12px;color:var(--l2);line-height:1}.wkc.today span{color:var(--ink);font-weight:700}
 /* Звук: режимы карточками с двумя шкалами (panel.js: cardSeg) */
@@ -792,3 +792,10 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .tbprev{display:flex;justify-content:space-around;gap:4px;background:var(--cell);border-radius:20px;padding:10px 6px;margin:4px 0 10px;box-shadow:0 2px 14px rgba(0,0,0,.08)}
 .tbp{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}.tbp i{display:block;width:26px;height:26px}.tbp i svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tbp b{font-size:11px;font-weight:600;color:var(--l2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Плотные списки настроек (panel.js: TIGHT): строка ниже, подпись в одну строку; цель касания остаётся ≥ 44 px */
+.group.tight .cell{min-height:44px;padding-top:6px;padding-bottom:6px}
+.group.tight .cell .grow{min-width:0}
+.group.tight .cell .st,.group.tight .cell .psub{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
+.group.tight .cell .ticon{width:26px;height:26px}.group.tight .cell .ticon svg{width:22px;height:22px}
+.hdr.featcat{margin-top:18px}
