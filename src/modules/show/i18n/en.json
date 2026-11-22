@@ -219,5 +219,13 @@
   "pick.list": "Show program",
   "pick.restored": "Number put back in the program",
   "bed.more": "Bed settings",
-  "desk.vol": "Volume"
+  "desk.vol": "Volume",
+  "num.keyHdr": "Recording key and tempo",
+  "num.keyOf": "Recording key",
+  "num.mode": "Mode",
+  "num.maj": "Major",
+  "num.min": "Minor",
+  "num.bpm": "Tempo, bpm",
+  "num.bpmIs": "Detected: {n}",
+  "num.bpmUnknown": "Tempo not detected yet"
 }

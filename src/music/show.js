@@ -89,6 +89,10 @@ export function normalizeNumber(n) {
   o.fadeOut = clamp(o.fadeOut, 0, 60, 0);
   o.cues = (Array.isArray(o.cues) ? o.cues : []).filter((c) => c && Number.isFinite(+c.t)).map((c) => ({ id: c.id || uid('c'), t: Math.max(0, +c.t), text: String(c.text || '').slice(0, 200) })).sort((a, b) => a.t - b.t);
   o.done = !!o.done;
+  // своя правка записи: тональность (0–11, null — как определено), лад и темп — сильнее автоматического разбора
+  o.keyPc = Number.isFinite(+o.keyPc) && o.keyPc !== null && o.keyPc !== '' ? ((Math.round(+o.keyPc) % 12) + 12) % 12 : null;
+  o.minor = !!o.minor;
+  o.bpm = Number.isFinite(+o.bpm) && +o.bpm >= 20 && +o.bpm <= 300 ? Math.round(+o.bpm) : null;
   // фон номера: null — не менять то, что звучит; иначе при запуске номера: пэд вкл/выкл и шум (id из S.noises, '' — без шума)
   // padLevel и noiseLevel — свои громкости пэда и шума у этого номера (null — общие со страницы «Фон»)
   const lv = (v) => (v == null || v === '' || !Number.isFinite(+v) ? null : clamp(v, 0, 100, 0));

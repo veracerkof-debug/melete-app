@@ -125,12 +125,19 @@ async function queueAna() {
   } finally { anaBusy = false; }
 }
 // Тональность (со сдвигом номера) и темп номера — для списка и подсказки перехода
-const numKey = (n) => { const f = n && n.kind === 'track' ? fileOf(n.file) : null; return anaOk(f) ? keyName(f.ana.pc + n.shift, f.ana.minor) : ''; };
-const numBpm = (n) => { const f = n && n.kind === 'track' ? fileOf(n.file) : null; return f && f.ana && f.ana.bpm ? Math.round(f.ana.bpm) : 0; };
+// Своя правка номера (тональность записи, темп) сильнее определённого автоматически
+const effAna = (n) => {
+  const f = n && n.kind === 'track' ? fileOf(n.file) : null, a = f && f.ana ? f.ana : null;
+  const pc = n && n.keyPc != null ? n.keyPc : a && a.pc != null ? a.pc : null;
+  if (pc == null && !(n && n.bpm) && !(a && a.bpm)) return null;
+  return { ...(a || {}), pc, minor: n && n.keyPc != null ? !!n.minor : !!(a && a.minor), bpm: n && n.bpm ? n.bpm : a && a.bpm ? a.bpm : null };
+};
+const numKey = (n) => { const a = effAna(n); return a && a.pc != null ? keyName(a.pc + n.shift, a.minor) : ''; };
+const numBpm = (n) => { const a = effAna(n); return a && a.bpm ? Math.round(a.bpm) : 0; };
 // Поправка нормализации номера (дБ): до общей цели; нет измерения или выключено — 0
 const normDb = (n) => { const m = n && n.kind === 'track' ? loudOf(n.file) : null; return S.norm.on && m ? normGainDb(m.lufs, m.peak, S.norm.target) : 0; };
 
-const anaOf = (n) => { const f = n && n.kind === 'track' ? fileOf(n.file) : null; return f && f.ana ? f.ana : null; };
+const anaOf = (n) => effAna(n);
 const bedTonic = (n) => M.tonicFor(S, n, anaOf(n), bed ? bed.state.tonic : 0);
 const noiseRec = (id) => S.noises.find((x) => x.id === id) || null;
 const nPadLevel = (n) => (n && n.bed && n.bed.padLevel != null ? n.bed.padLevel : S.bed.pad.level);
@@ -200,7 +207,7 @@ function padsHTML() {
     '';
 }
 function numHTML(n, i) {
-  const f = fileOf(n.file), a = f && f.ana;
+  const f = fileOf(n.file), a = effAna(n);
   const meta = [
     n.kind === 'track' ? (f ? esc(f.name) : esc(t('num.noFile'))) : esc(t('num.noTrack')),
     n.kind === 'track' && a && a.pc != null ? '<i>' + esc(keyName(a.pc + n.shift, a.minor)) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') + '</i>' : '',
@@ -273,7 +280,7 @@ async function glideTo(n) {
 let pickRow = null;
 const pickById = (id) => { const e = cur(); return e ? e.numbers.find((x) => x.id === id) || null : null; };
 function deskHTML() {
-  const e = cur(), n = M.currentNumber(S), nx = M.nextNumber(S), idx = e && n ? e.numbers.indexOf(n) + 1 : 0, f = n && fileOf(n.file), a = f && f.ana;
+  const e = cur(), n = M.currentNumber(S), nx = M.nextNumber(S), idx = e && n ? e.numbers.indexOf(n) + 1 : 0, f = n && fileOf(n.file), a = effAna(n);
   const sub = n ? [t('desk.of', { n: idx, m: e.numbers.length }), a && a.pc != null && n.kind === 'track' ? keyName(a.pc + n.shift, a.minor) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') : ''].filter(Boolean).join(' · ') : '';
   const evl = e ? '<button class="evt shevt" data-x="evpick">' + esc(e.title || t('event.untitled', { n: S.events.filter((x) => !x.deleted).indexOf(e) + 1 })) + '<small>' + esc(evSub(e)) + '</small></button>' : '<button class="shadd" data-x="evnew">+ ' + esc(t('event.new')) + '</button>';
   return '<div class="shdesk">' + evl + pickHTML() + '<div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' +
@@ -795,6 +802,10 @@ function numSheet(n) {
       '<div class="cellcol"><span>' + esc(t('num.dur')) + '</span><input class="shfield" data-f="dur" inputmode="decimal" placeholder="3:30" value="' + (n.dur ? M.mmss(n.dur) : '') + '" aria-label="' + esc(t('num.dur')) + '"></div></div>' +
     '<div class="group" style="margin-top:12px">' + row(t('num.kind'), ctx.ui.seg('nkind', M.NUM_KINDS.map((v) => [v, t('num.kind.' + v)]), n.kind, t('num.kind'))) +
       (n.kind === 'track' ? '<button class="cell" data-x="pick"><span class="grow">' + esc(t('num.file')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(f() ? f().name : t('num.noFile')) + '</span></span><span class="val">' + esc(t('pad.pick')) + '</span></button>' : '') + '</div>' +
+    (n.kind === 'track' ? '<div class="hdr">' + esc(t('num.keyHdr')) + '</div><div class="group"><div class="cellcol"><span>' + esc(t('num.keyOf')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(a() && a().pc != null ? t('num.keyIs', { k: keyName(a().pc, a().minor) }) : t('num.keyUnknown')) + '</span></span>' +
+        '<div class="shchips tight hscroll" style="margin-top:8px"><button class="shchip' + (n.keyPc == null ? ' on' : '') + '" data-nkey="">' + esc(t('bed.tonicAuto')) + '</button>' + M.TONIC_NAMES.map((x, i) => '<button class="shchip' + (n.keyPc === i ? ' on' : '') + '" data-nkey="' + i + '" aria-pressed="' + (n.keyPc === i) + '">' + esc(x) + '</button>').join('') + '</div></div>' +
+        (n.keyPc != null ? row(t('num.mode'), ctx.ui.seg('nminor', [['maj', t('num.maj')], ['min', t('num.min')]], n.minor ? 'min' : 'maj', t('num.mode'))) : '') +
+        '<div class="cellcol"><span>' + esc(t('num.bpm')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(a() && a().bpm ? t('num.bpmIs', { n: Math.round(a().bpm) }) : t('num.bpmUnknown')) + '</span></span><input class="shfield" data-f="bpm" inputmode="numeric" placeholder="' + esc(t('bed.tonicAuto')) + '" value="' + (n.bpm || '') + '" aria-label="' + esc(t('num.bpm')) + '"></div></div>' : '') +
     (n.kind === 'track' ? '<p class="ftr keep" id="shloud" style="margin-top:12px">' + esc(loudLine()) + '</p>' : '') +
     (n.kind === 'track' ? '<div class="group sgroup" style="margin-top:12px">' + slider('shift', t('num.shift'), n.shift, -12, 12, 1, (n.shift > 0 ? '+' : n.shift < 0 ? '−' : '') + Math.abs(n.shift)) + slider('level', t('num.level'), n.level, 0, 100, 1, lvTxt(n.level)) + slider('fadeIn', t('num.fadeIn'), n.fadeIn, 0, 30, 0.5, secTxt(n.fadeIn)) + slider('fadeOut', t('num.fadeOut'), n.fadeOut, 0, 30, 0.5, secTxt(n.fadeOut)) + '</div><p class="ftr" id="shkey">' + esc(keyLine()) + '</p>' : '') +
     '<div class="hdr">' + esc(t('num.bed')) + '</div><div class="group">' + row(t('num.bed'), ctx.ui.seg('nbed', [['keep', t('num.bed.keep')], ['set', t('num.bed.set')]], n.bed ? 'set' : 'keep', t('num.bed'))) +
@@ -810,6 +821,8 @@ function numSheet(n) {
     el.addEventListener('click', async (ev) => {
       const g = (s) => ev.target.closest(s); let b;
       if ((b = g('[data-seg="nbed"] [data-v]'))) { n.bed = b.dataset.v === 'set' ? { pad: S.bed.pad.on, noise: S.bed.noise.cur || '' } : null; touch(); sh.update(); return; }
+      if ((b = g('[data-nkey]'))) { n.keyPc = b.dataset.nkey === '' ? null : +b.dataset.nkey; touch(); if (S.cur === n.id && bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n)); sh.update(); return; }
+      if ((b = g('[data-seg="nminor"] [data-v]'))) { n.minor = b.dataset.v === 'min'; touch(); sh.update(); return; }
       if ((b = g('[data-nnoise]'))) { if (n.bed) n.bed.noise = b.dataset.nnoise; touch(); sh.update(); return; }
       if (g('[data-x="run"]')) { sh.close(); S.page = 'desk'; save(); await startNumber(n); return; }
       if ((b = g('[data-seg="nkind"] [data-v]'))) { n.kind = b.dataset.v; Object.assign(n, M.normalizeNumber(n)); touch(); sh.update(); }
@@ -837,6 +850,7 @@ function numSheet(n) {
       const f = ev.target.dataset.f;
       if (ev.target.dataset.sw === 'ndone') { n.done = ev.target.checked; touch(); return; }
       if (ev.target.dataset.sw === 'nbpad') { if (n.bed) n.bed.pad = ev.target.checked; touch(); return; }
+      if (f === 'bpm') { const v = Math.round(+ev.target.value.replace(',', '.')); n.bpm = Number.isFinite(v) && v >= 20 && v <= 300 ? v : null; touch(); sh.update(); return; }
       if (f === 'at') { const v = ev.target.value.trim() ? M.parseHhmm(ev.target.value) : null; n.at = v; sh.update(); touch(); }
       else if (f === 'dur') { const v = ev.target.value.trim() ? M.parseTime(ev.target.value) : 0; n.dur = v == null ? n.dur : v; sh.update(); touch(); }
       else if (ev.target.matches('[data-ct]')) { const c = n.cues.find((x) => x.id === ev.target.closest('[data-cue]').dataset.cue), v = M.parseTime(ev.target.value); if (c && v != null) { c.t = v; n.cues.sort((x, y) => x.t - y.t); } sh.update(); touch(); }

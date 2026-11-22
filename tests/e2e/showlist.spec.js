@@ -43,3 +43,23 @@ test('пульт: единый список, плавный переход же�
   await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/pads.png' : 'test-results/pads.png' });
   expect(errors).toEqual([]);
 });
+
+test('пульт: тональность и темп номера правятся вручную и видны в списке', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click(T + '[data-x="progsheet"]'); await page.click('.sheet [data-x="numnew"]');
+  await page.fill('.sheet [data-f="title"]', 'Песня');
+  await page.click('.sheet [data-seg="nkind"] [data-v="track"]');
+  await page.click('.sheet [data-nkey="7"]'); // G
+  await page.click('.sheet [data-seg="nminor"] [data-v="min"]');
+  await page.fill('.sheet [data-f="bpm"]', '96'); await page.press('.sheet [data-f="bpm"]', 'Tab');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await expect(page.locator(T + '.shpick em').first()).toContainText('G');
+  await expect(page.locator(T + '.shpick[data-pick]')).toContainText('96');
+  expect(errors).toEqual([]);
+});

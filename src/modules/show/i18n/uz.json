@@ -219,5 +219,13 @@
   "pick.list": "Chiqish dasturi",
   "pick.restored": "Raqam dasturga qaytarildi",
   "bed.more": "Fon sozlamalari",
-  "desk.vol": "Ovoz"
+  "desk.vol": "Ovoz",
+  "num.keyHdr": "Yozuv tonalligi va temp",
+  "num.keyOf": "Yozuv tonalligi",
+  "num.mode": "Lad",
+  "num.maj": "Major",
+  "num.min": "Minor",
+  "num.bpm": "Temp, bpm",
+  "num.bpmIs": "Aniqlandi: {n}",
+  "num.bpmUnknown": "Temp hali aniqlanmadi"
 }
