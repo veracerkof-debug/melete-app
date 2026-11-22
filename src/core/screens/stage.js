@@ -360,7 +360,7 @@ export function openStage(app, evId, i = 0) {
       render(); return;
     }
     const x = item(), l = S.last;
-    if (x && (x.it.click || x.it.pad || x.it.track)) { play(); return; }
+    if (x && ((x.it.click && x.it.bpm) || (x.it.pad && x.it.key) || x.it.track)) { play(); return; } // то, что реально прописано; иначе — последнее включённое или метроном
     if (l && (l.metro || l.pad || l.track || l.player)) {
       if (l.metro) startClick({ bpm: curBpm() }, x ? x.s : null);
       if (l.pad) { if (x && x.it.key) startPad(x.it); else { const d = app.device.drone; d.pc = keyPc(); safe('pad', () => { audio.drone.start(); S.padOn = true; }); } }
@@ -526,6 +526,7 @@ export function openStage(app, evId, i = 0) {
     else if (k === 'tab') { S.view = S.view === 'tab' ? 'text' : 'tab'; sset('view', S.view); S.scoreKind = S.score && S.score.id === S.scoreId ? S.scoreKind : null; }
     else if (k === 'mix') { mixSheet(); return; }
     else if (k === 'player') { plSheet(); return; }
+    else if (k === 'pads') { padsSheet(); return; }
     else if (k === 'view') { S.view = S.view === 'list' ? 'text' : 'list'; sset('view', S.view); }
     render();
   };
@@ -570,6 +571,31 @@ export function openStage(app, evId, i = 0) {
         (it.note ? '<small>' + esc(it.note) + '</small>' : '') + '</span><span class="sgm">' + esc([it.key ? keyLabel(it.key) : '', it.bpm ? it.bpm : ''].filter(Boolean).join(' · ')) + '</span></button>';
     }).join('') + '</div>';
   };
+  const stagePadList = () => {
+    const ids = app.store.state.settings.stagePads;
+    if (!Array.isArray(ids) || !ids.length) return null;
+    const all = sd().banks.flatMap((b) => b.pads.filter(Boolean)), L = ids.map((id) => all.find((p) => p.id === id)).filter((p) => p && (p.file || p.synth));
+    return L.length ? L : null;
+  };
+  // Какие пэды показывать на сцене: отмечать в любых банках, до 12, порядок — как отмечены
+  const padsSheet = () => {
+    const PADMAX = 12, cur = () => (Array.isArray(app.store.state.settings.stagePads) ? app.store.state.settings.stagePads : []);
+    const nm = (x, i) => x.name || (x.preset === 'drums' ? t('stage.drums') : t('stage.bankN', { n: i + 1 }));
+    const body = () => snav(t('stage.padsEdit')) + '<p class="ftr" style="margin-top:0">' + esc(t('stage.padsHint')) + '</p>' +
+      sd().banks.filter((b) => !b.pinned).map((b, i) => '<div class="hdr">' + esc(nm(b, i)) + '</div><div class="group">' + b.pads.filter((p) => p && (p.file || p.synth)).map((p) => {
+        const f = p.file && app.files ? app.files.get(p.file) : null, name = p.name || (p.synth ? t('stage.p.' + p.synth) : f ? f.name : ''), on = cur().includes(p.id);
+        return '<button class="cell" data-spad="' + esc(p.id) + '" role="checkbox" aria-checked="' + on + '"><span class="grow">' + esc(name) + '</span>' + (on ? icons.check : '') + '</button>';
+      }).join('') + '</div>').join('') +
+      '<div class="group" style="margin-top:16px"><button class="cell act center" data-spall>' + esc(t('stage.padsAll')) + '</button></div>';
+    sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+      const st = app.store.state.settings, b = e.target.closest('[data-spad]');
+      if (b) {
+        const id = b.dataset.spad, l = cur().slice(), i = l.indexOf(id);
+        if (i >= 0) l.splice(i, 1); else if (l.length >= PADMAX) { toast(t('stage.padsMax')); return; } else l.push(id);
+        st.stagePads = l; app.store.save(); sh.update();
+      } else if (e.target.closest('[data-spall]')) { st.stagePads = null; app.store.save(); sh.update(); }
+    }), { onClose: () => render() });
+  };
   const padsHTML = () => {
     const sdo = sd(), banks = sdo.banks.filter((b) => !b.pinned), b = bank();
     const nm = (x, i) => x.name || (x.preset === 'drums' ? t('stage.drums') : t('stage.bankN', { n: i + 1 }));
@@ -582,6 +608,9 @@ export function openStage(app, evId, i = 0) {
     const x = item(), pad = droneOn(), pc = keyPc(), free = !x;
     // фон (дрон): весь ряд тональностей в одну линию, всегда на экране; касание — вкл на этой тональности, ещё раз — выкл
     const bg = '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>';
+    // свой список пэдов на сцене (settings.stagePads — id по порядку): вместо банков — только отмеченные; правка — «✎ Пэды»
+    const custom = stagePadList();
+    if (custom) return '<div class="sgpads">' + bg + '<div class="sgpgrid" style="--c:' + Math.min(4, custom.length) + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + custom.map(cell).join('') + '</div></div>';
     return '<div class="sgpads">' + bg + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
       '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
       (b.pads.some((p) => p && p.synth) ? '<div class="sgfx"><label><span>' + esc(t('stage.space')) + '</span><input type="range" class="sgrng" data-fx="space" min="0" max="100" value="' + Math.round(S.space * 100) + '" aria-label="' + esc(t('stage.space')) + '"></label>' +
@@ -622,7 +651,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
       '<div class="sgchips">' + 
-        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) +
+        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('pads', false, '✎ ' + t('stage.pads')) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
       padsHTML() +
       '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :

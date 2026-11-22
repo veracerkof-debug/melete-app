@@ -100,7 +100,7 @@
 .sgbpm.on{background:color-mix(in srgb,var(--tint) 34%,transparent);border-color:var(--tint)}
 .sgbpm small{text-transform:uppercase}
 .sgic.tapb{width:auto;min-width:52px;padding:0 10px;font-size:13px;letter-spacing:.04em}
-.sgkeys{flex:none;display:grid;grid-template-columns:repeat(12,1fr);gap:var(--sp-1);padding:var(--sp-1) 12px 0}
+.sgkeys{flex:none;display:grid;grid-template-columns:repeat(6,1fr);gap:var(--sp-2);padding:var(--sp-1) 12px 0}
 .sgkey{min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,transparent);border:1.5px solid color-mix(in srgb,var(--ink) 14%,transparent);font-size:15px;font-weight:600;touch-action:none;user-select:none;-webkit-user-select:none}
 .sgkey.on{background:color-mix(in srgb,var(--tint) 30%,transparent);border-color:var(--tint);color:var(--tint)}
 .sgbanks{display:flex;gap:6px;padding:0 0 6px;overflow-x:auto}
@@ -153,7 +153,7 @@
 /* фон (пэд) — внутри панели «Звуки» */
 .sgbg{display:flex;padding:0 0 2px}
 .sgpads .sgkeys{padding:0 0 var(--sp-2)}
-.sgpads .sgkey{min-height:var(--hit);padding:0;border-radius:var(--r-2);font-size:var(--fs-3)}
+.sgpads .sgkey{min-height:56px;padding:0;border-radius:var(--r-3);font-size:var(--fs-6)}
 .sgbar{align-items:center}
 .sgbar .sgbtn.main{flex:0 0 88px;min-height:72px}
 @media (orientation:landscape) and (max-height:520px){.sgbar .sgbtn.main{flex:1}}
@@ -177,3 +177,10 @@
 .sgpgrid{gap:var(--sp-1)}
 .sgbanks{gap:var(--sp-1);padding-bottom:var(--sp-1)}
 .sgbanks .sgchip{min-height:28px;padding:0 var(--sp-2);font-size:var(--fs-2);border-radius:var(--r-2)}
+/* пэды звуков меньше; тональности фона крупнее (слово автора 22.11.2026) */
+.sgpad{min-height:40px}
+.sgpad b{font-size:var(--fs-1)}
+.sgpgrid{gap:var(--sp-1)}
+/* жесты на весь экран: касание не уходит браузеру на прокрутку (иначе приходит pointercancel и смахивание не срабатывает); текст прокручивается только вверх-вниз */
+.stage{touch-action:none}
+.sgtext{touch-action:pan-y}
