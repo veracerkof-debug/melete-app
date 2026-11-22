@@ -1,34 +1,34 @@
 /* Сцена (src/core/screens/stage.js): всегда тёмная — в зале темно; крупный текст, три большие кнопки внизу */
-.stage{position:fixed;inset:0;z-index:45;background:#0E0E10;color:#F4F1EA;display:flex;flex-direction:column;
+.stage{position:fixed;inset:0;z-index:45;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);user-select:none;-webkit-user-select:none}
 .stage button{color:inherit;-webkit-tap-highlight-color:transparent}
 .sgtop{flex:none;display:flex;align-items:center;gap:6px;padding:8px 8px 6px}
 .sgtop .grow{flex:1}
-.sgic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07)}
+.sgic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--ink) 7%,transparent)}
 .sgic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .sgic.txt{font-weight:700;font-size:15px}
 .sghead{flex:1;min-width:0;display:flex;flex-direction:column;padding:0 6px}
 .sghead b{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sghead span{font-size:13px;color:rgba(244,241,234,.6);font-variant-numeric:tabular-nums}
-.sgbeat{flex:none;width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.12);margin:0 6px}
+.sghead span{font-size:13px;color:color-mix(in srgb,var(--ink) 60%,transparent);font-variant-numeric:tabular-nums}
+.sgbeat{flex:none;width:14px;height:14px;border-radius:50%;background:color-mix(in srgb,var(--ink) 12%,transparent);margin:0 6px}
 .sgbeat.on{animation:sgbeat .22s ease-out}
 .sgbeat.on.acc{animation-name:sgbeatacc}
-@keyframes sgbeat{from{background:#E8C27A;transform:scale(1.25)}to{background:rgba(255,255,255,.12);transform:none}}
-@keyframes sgbeatacc{from{background:#F28C6B;transform:scale(1.5)}to{background:rgba(255,255,255,.12);transform:none}}
+@keyframes sgbeat{from{background:var(--tint);transform:scale(1.25)}to{background:color-mix(in srgb,var(--ink) 12%,transparent);transform:none}}
+@keyframes sgbeatacc{from{background:var(--red);transform:scale(1.5)}to{background:color-mix(in srgb,var(--ink) 12%,transparent);transform:none}}
 .sgtext{flex:1 1 auto;min-height:0;overflow:auto;padding:6px 18px 18px;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
 .sgtext .lyr{white-space:pre;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;line-height:1.5;overflow:visible}
-.sgtext .chd{color:#E8C27A;font-weight:700}
+.sgtext .chd{color:var(--tint-text);font-weight:700}
 .sgbig{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:1.6em;font-weight:700;gap:8px}
-.sgbig small{font-size:.5em;font-weight:400;color:rgba(244,241,234,.6)}
+.sgbig small{font-size:.5em;font-weight:400;color:color-mix(in srgb,var(--ink) 60%,transparent)}
 .sgchips{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px}
-.sgchip{min-height:40px;padding:0 14px;border-radius:20px;background:rgba(255,255,255,.07);font-size:15px;font-weight:600;color:rgba(244,241,234,.7);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sgchip.on{background:#E8C27A;color:#1A1712}
-.sgnext{margin-left:auto;font-size:14px;color:rgba(244,241,234,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50vw}
+.sgchip{min-height:40px;padding:0 14px;border-radius:20px;background:color-mix(in srgb,var(--ink) 7%,transparent);font-size:15px;font-weight:600;color:color-mix(in srgb,var(--ink) 70%,transparent);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sgchip.on{background:var(--tint);color:var(--on-tint)}
+.sgnext{margin-left:auto;font-size:14px;color:color-mix(in srgb,var(--ink) 55%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50vw}
 .sgbar{flex:none;display:flex;gap:10px;padding:6px 12px 14px}
-.sgbtn{flex:1;min-height:72px;border-radius:20px;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.sgbtn{flex:1;min-height:72px;border-radius:20px;background:color-mix(in srgb,var(--ink) 8%,transparent);display:grid;place-items:center}
 .sgbtn svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.sgbtn.main{flex:1.6;background:#E8C27A;color:#1A1712}
-.sgbtn.main.on{background:#F28C6B}
+.sgbtn.main{flex:1.6;background:var(--tint);color:var(--on-tint)}
+.sgbtn.main.on{background:var(--red)}
 .sgbtn:disabled{opacity:.3}
 .sgbtn:active{transform:scale(.97)}
 /* горизонтально — кнопки справа столбцом, текст шире */
@@ -48,42 +48,42 @@
 
 /* автопрокрутка: тонкая полоска хода у правого края текста */
 .sgtext{position:relative}
-.sgprog{position:sticky;top:0;float:right;width:3px;height:calc(100% - 4px);border-radius:2px;background:rgba(255,255,255,.08);margin-left:6px}
-.sgprog i{display:block;width:100%;height:0;border-radius:2px;background:#E8C27A;transition:height .25s linear}
+.sgprog{position:sticky;top:0;float:right;width:3px;height:calc(100% - 4px);border-radius:2px;background:color-mix(in srgb,var(--ink) 8%,transparent);margin-left:6px}
+.sgprog i{display:block;width:100%;height:0;border-radius:2px;background:var(--tint);transition:height .25s linear}
 /* «Ночь»: чёрный фон, крупнее, только три кнопки */
-.stage.night{background:#000;color:#fff}
+.stage.night{--bg:#000;--ink:#fff;--l2:#8D8D93;--l3:#48484A;--tint:#BC9361;--tint-text:#FFD97A;--on-tint:#1A0E00;--red:#B96E65;background:var(--bg);color:var(--ink)}
 .stage.night .sgtext{font-size:1.3em}
 .stage.night .sgchips,.stage.night .sgic.txt,.stage.night .sgnext{display:none}
 .stage.night .sgtext .chd{color:#FFD97A}
-.stage.night .sgbtn{background:rgba(255,255,255,.12)}
+.stage.night .sgbtn{background:color-mix(in srgb,var(--ink) 12%,transparent)}
 
 /* ---- «Сцена — один экран» (слово автора 22.11.2026): сет-лист, текст, темп, барабанные пэды с залом и эхом, минусовка, замок ---- */
 .stage{--gold:rgb(232 194 122);--coral:rgb(242 140 107)}
 .sghead{cursor:pointer}
-.sgseek{position:relative;flex:none;height:22px;margin:0 14px;border-radius:11px;background:rgba(255,255,255,.08);overflow:hidden;touch-action:manipulation}
-.sgseek i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--gold) 45%,transparent);pointer-events:none}
-.sgtime{position:absolute;right:10px;top:0;line-height:22px;font-size:12px;color:rgba(244,241,234,.8);pointer-events:none}
+.sgseek{position:relative;flex:none;height:22px;margin:0 14px;border-radius:11px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden;touch-action:manipulation}
+.sgseek i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--tint) 45%,transparent);pointer-events:none}
+.sgtime{position:absolute;right:10px;top:0;line-height:22px;font-size:12px;color:color-mix(in srgb,var(--ink) 80%,transparent);pointer-events:none}
 .sgtempo{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 10px 0}
 .sgtempo .sgic{width:48px;height:44px}
-.sgbpm{min-width:120px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--gold) 14%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
-.sgbpm b{font-size:24px;font-weight:700;color:var(--gold)}
-.sgbpm small{font-size:11px;color:rgba(244,241,234,.6);letter-spacing:.03em}
+.sgbpm{min-width:120px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--tint) 14%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.sgbpm b{font-size:24px;font-weight:700;color:var(--tint)}
+.sgbpm small{font-size:11px;color:color-mix(in srgb,var(--ink) 60%,transparent);letter-spacing:.03em}
 .sgpads{flex:none;padding:4px 10px 0}
 .sgpgrid{display:grid;grid-template-columns:repeat(var(--c,4),1fr);gap:6px;touch-action:none}
-.sgpad{position:relative;min-height:64px;border-radius:14px;background:rgba(255,255,255,.07);border:1.5px solid color-mix(in srgb,var(--pc,var(--gold)) 55%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:0 2px 7px;touch-action:none;-webkit-touch-callout:none}
-.sgpad b{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pc,var(--gold));text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.sgpad i{position:absolute;left:8px;top:5px;font-size:11px;font-style:normal;color:rgba(244,241,234,.4)}
+.sgpad{position:relative;min-height:64px;border-radius:14px;background:color-mix(in srgb,var(--ink) 7%,transparent);border:1.5px solid color-mix(in srgb,var(--pc,var(--tint)) 55%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:0 2px 7px;touch-action:none;-webkit-touch-callout:none}
+.sgpad b{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pc,var(--tint));text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sgpad i{position:absolute;left:8px;top:5px;font-size:11px;font-style:normal;color:color-mix(in srgb,var(--ink) 40%,transparent)}
 .sgpad.hit{animation:sgpadhit .28s ease-out}
-@keyframes sgpadhit{from{background:color-mix(in srgb,var(--pc,var(--gold)) 60%,transparent);transform:scale(.96)}to{background:rgba(255,255,255,.07);transform:none}}
-.p-kick,.p-kickw{--pc:var(--coral)}.p-snare,.p-rim,.p-clap{--pc:var(--gold)}.p-hat,.p-crash,.p-tom{--pc:rgba(244,241,234,.85)}
+@keyframes sgpadhit{from{background:color-mix(in srgb,var(--pc,var(--tint)) 60%,transparent);transform:scale(.96)}to{background:color-mix(in srgb,var(--ink) 7%,transparent);transform:none}}
+.p-kick,.p-kickw{--pc:var(--coral)}.p-snare,.p-rim,.p-clap{--pc:var(--tint)}.p-hat,.p-crash,.p-tom{--pc:color-mix(in srgb,var(--ink) 85%,transparent)}
 .sgfx{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 4px 0}
-.sgfx label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:rgba(244,241,234,.65)}
-.sgrng{width:100%;height:28px;accent-color:var(--gold);touch-action:pan-y}
+.sgfx label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:color-mix(in srgb,var(--ink) 65%,transparent)}
+.sgrng{width:100%;height:28px;accent-color:var(--tint);touch-action:pan-y}
 /* шторка «Уровни»: подпись слева, ползунок — в оставшемся месте строки (не поверх подписи) */
 .sgroup .cell .grow{flex:0 0 auto;min-width:5.5em;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sgroup .cell .sgrng{flex:1 1 0;width:auto;min-width:0}
 .sglock{position:absolute;inset:0;z-index:5;background:rgba(0,0,0,.55);display:grid;place-items:center;touch-action:none}
-.sgunlock{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 30px;border-radius:24px;background:rgba(255,255,255,.1);font-size:15px;font-weight:600}
+.sgunlock{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 30px;border-radius:24px;background:color-mix(in srgb,var(--ink) 10%,transparent);font-size:15px;font-weight:600}
 .sgunlock svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 @media (orientation:landscape) and (max-height:520px){
   .stage.pads{grid-template-columns:1fr minmax(0,44%) 132px;grid-template-rows:auto 1fr auto auto auto}
@@ -97,26 +97,26 @@
 
 /* ---- сцена: метроном одной полосой, клавиши пэда, список, цвета падов из «Звуков» (слово автора 22.11.2026) ---- */
 .sgbpm{touch-action:none;user-select:none;-webkit-user-select:none;border:1.5px solid transparent}
-.sgbpm.on{background:color-mix(in srgb,var(--gold) 34%,transparent);border-color:var(--gold)}
+.sgbpm.on{background:color-mix(in srgb,var(--tint) 34%,transparent);border-color:var(--tint)}
 .sgbpm small{text-transform:uppercase}
 .sgic.tapb{width:auto;min-width:52px;padding:0 10px;font-size:13px;letter-spacing:.04em}
 .sgkeys{flex:none;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:6px 12px 0}
-.sgkey{min-height:42px;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);font-size:15px;font-weight:600;touch-action:none;user-select:none;-webkit-user-select:none}
-.sgkey.on{background:color-mix(in srgb,var(--gold) 30%,transparent);border-color:var(--gold);color:var(--gold)}
+.sgkey{min-height:42px;border-radius:12px;background:color-mix(in srgb,var(--ink) 7%,transparent);border:1.5px solid color-mix(in srgb,var(--ink) 14%,transparent);font-size:15px;font-weight:600;touch-action:none;user-select:none;-webkit-user-select:none}
+.sgkey.on{background:color-mix(in srgb,var(--tint) 30%,transparent);border-color:var(--tint);color:var(--tint)}
 .sgbanks{display:flex;gap:6px;padding:0 0 6px;overflow-x:auto}
 .sgpad.off{pointer-events:none;opacity:.25;border-style:dashed}
-.pc-pink{--pc:rgb(229 138 166)}.pc-amber{--pc:var(--gold)}.pc-teal{--pc:rgb(108 197 185)}.pc-green{--pc:rgb(143 209 143)}.pc-red{--pc:var(--coral)}.pc-violet{--pc:rgb(183 154 240)}.pc-blue{--pc:rgb(134 180 240)}.pc-gray{--pc:rgba(244,241,234,.85)}
-.p-kick,.p-kickw,.p-snare,.p-rim,.p-clap,.p-hat,.p-crash,.p-tom{--pc:var(--gold)}
-.p-kick,.p-kickw{--pc:var(--coral)}.p-hat,.p-crash,.p-tom{--pc:rgba(244,241,234,.85)}
+.pc-pink{--pc:rgb(229 138 166)}.pc-amber{--pc:var(--tint)}.pc-teal{--pc:rgb(108 197 185)}.pc-green{--pc:rgb(143 209 143)}.pc-red{--pc:var(--coral)}.pc-violet{--pc:rgb(183 154 240)}.pc-blue{--pc:rgb(134 180 240)}.pc-gray{--pc:color-mix(in srgb,var(--ink) 85%,transparent)}
+.p-kick,.p-kickw,.p-snare,.p-rim,.p-clap,.p-hat,.p-crash,.p-tom{--pc:var(--tint)}
+.p-kick,.p-kickw{--pc:var(--coral)}.p-hat,.p-crash,.p-tom{--pc:color-mix(in srgb,var(--ink) 85%,transparent)}
 .sglist{display:flex;flex-direction:column;gap:2px;padding:4px 0}
 .sgrow{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-radius:12px;text-align:left;touch-action:manipulation}
-.sgrow.cur{background:color-mix(in srgb,var(--gold) 20%,transparent);box-shadow:inset 3px 0 0 var(--gold)}
+.sgrow.cur{background:color-mix(in srgb,var(--tint) 20%,transparent);box-shadow:inset 3px 0 0 var(--tint)}
 .sgrow .grow{display:flex;flex-direction:column;min-width:0}
 .sgrow b{font-size:18px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgrow small{font-size:13px;color:rgba(244,241,234,.7);white-space:normal}
-.sgrow .sgm{flex:none;font-size:14px;color:var(--gold);font-variant-numeric:tabular-nums}
-.sgrow .sgn{width:22px;text-align:center;color:rgba(244,241,234,.5)}
-.sgbig.free{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:16px;color:rgba(244,241,234,.7);text-align:center}
+.sgrow small{font-size:13px;color:color-mix(in srgb,var(--ink) 70%,transparent);white-space:normal}
+.sgrow .sgm{flex:none;font-size:14px;color:var(--tint);font-variant-numeric:tabular-nums}
+.sgrow .sgn{width:22px;text-align:center;color:color-mix(in srgb,var(--ink) 50%,transparent)}
+.sgbig.free{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:16px;color:color-mix(in srgb,var(--ink) 70%,transparent);text-align:center}
 .stage.night .sgkeys{display:none}
 
 /* ---- панель табов и нот на сцене ---- */
@@ -124,30 +124,30 @@
 .sgsurfhost{background:rgb(255 255 255);color:rgb(17 17 17);border-radius:12px;padding:6px;overflow:hidden}
 .sgsurf{width:100%;touch-action:pan-y}
 .sgscoretxt{margin:0;padding:10px;font:600 14px/1.35 ui-monospace,Menlo,Consolas,monospace;white-space:pre;overflow:auto}
-.sgscoremsg{padding:18px 12px;color:rgba(244,241,234,.7);text-align:center}
+.sgscoremsg{padding:18px 12px;color:color-mix(in srgb,var(--ink) 70%,transparent);text-align:center}
 .stage.night .sgsurfhost{filter:invert(1) hue-rotate(180deg)}
 /* верх экрана: слева — слова, аккорды или табы; справа — список песен (текущая по центру; влево-вправо — песня, вверх-вниз — прокрутка) */
 .sgmain{flex:1 1 auto;min-height:0;display:flex;gap:var(--sp-2);padding:0 var(--sp-2)}
 .sgmain>.sgtext{flex:1 1 0;min-width:0;padding-left:var(--sp-3);padding-right:var(--sp-2)}
-.sgsongs{position:relative;flex:0 0 38%;min-width:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:rgba(255,255,255,.04)}
+.sgsongs{position:relative;flex:0 0 38%;min-width:0;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:color-mix(in srgb,var(--ink) 4%,transparent)}
 .sgsongs::-webkit-scrollbar{display:none}
 .sgsong{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:var(--hit);padding:0 var(--sp-2) 0 var(--sp-1);text-align:left;font-size:var(--fs-4);opacity:.55}
 .sgsong i{flex:none;font-style:normal;font-size:var(--fs-1);min-width:2em;text-align:center}
 .sgst{flex:1;min-width:0;display:flex;flex-direction:column}
 .sgst b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgst small{font-size:var(--fs-1);color:rgba(244,241,234,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgsong.cur{opacity:1;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:var(--r-2)}
+.sgst small{font-size:var(--fs-1);color:color-mix(in srgb,var(--ink) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgsong.cur{opacity:1;color:var(--tint);background:color-mix(in srgb,var(--tint) 14%,transparent);border-radius:var(--r-2)}
 .sgsong.cur .sgst b{font-weight:700}
 .sgsong.cur .sgst small{color:inherit}
 .sgsong:first-child{margin-top:var(--sp-6)}.sgsong:last-child{margin-bottom:var(--sp-6)}
 /* громкости: общая и по источникам — крутилки рядом с ▶, тянуть вверх-вниз */
 .sgknobs{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:center;padding:0 var(--sp-1)}
 .sgkn{display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);min-width:0}
-.sgkn span{font-size:var(--fs-1);color:rgba(244,241,234,.7);white-space:nowrap}
+.sgkn span{font-size:var(--fs-1);color:color-mix(in srgb,var(--ink) 70%,transparent);white-space:nowrap}
 .sgknob{position:relative;width:var(--hit);height:var(--hit);display:grid;place-items:center;touch-action:none;cursor:ns-resize}
 .sgknob svg{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke-width:4;stroke-linecap:round}
-.sgknob .kt{stroke:rgba(255,255,255,.14)}
-.sgknob .kv{stroke:var(--gold)}
+.sgknob .kt{stroke:color-mix(in srgb,var(--ink) 14%,transparent)}
+.sgknob .kv{stroke:var(--tint)}
 .sgknob b{font-size:var(--fs-3);font-variant-numeric:tabular-nums;font-weight:600}
 @media (orientation:landscape) and (max-height:520px){.sgknobs{flex-wrap:wrap;gap:var(--sp-1)}}
 /* фон (пэд) — внутри панели «Звуки» */
