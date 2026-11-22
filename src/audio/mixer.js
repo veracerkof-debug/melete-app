@@ -41,9 +41,12 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   let saveTm = 0;
   const saveLater = () => { clearTimeout(saveTm); saveTm = setTimeout(() => onChange(mx), 250); }; // правка эффектов — десятки раз в секунду при ведении точки
 
+  // Местные уровни режима (сцена): только в памяти, в device.mix не пишутся — закрылся режим или упало приложение, общая громкость цела
+  const ov = {};
   const value = (bus) => {
     const k = mixKey(bus);
     if (mx.mute[k]) return 0;
+    if (ov[k] != null) return ov[k];
     const v = mx[k];
     return v == null ? 1 : v;
   };
@@ -58,6 +61,9 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   let metroPan = null;
   const mixer = {
     state: mx,
+    // Громкость шины только для режима: override('drone', 0.6); null — снять и вернуться к общей. Выключение звука сильнее
+    override(bus, v) { const k = mixKey(bus); if (v == null) delete ov[k]; else ov[k] = Math.max(0, Math.min(MIX_MAX, +v || 0)); apply(); },
+    overridden: (bus) => ov[mixKey(bus)] != null,
     // Панорама клика метронома: −1 — только левое ухо (лупер, «клик в левом ухе»), 0 — середина
     setMetroPan(v) { mixer.bus('metro'); if (metroPan) metroPan.pan.setTargetAtTime(Math.max(-1, Math.min(1, +v || 0)), metroPan.context.currentTime, 0.02); },
     value,

@@ -156,6 +156,40 @@ export function openStage(app, evId, i = 0) {
   // Движок создаётся при первом касании, узлы — один раз (ошибка не ломает остальное)
   const sd = () => { const o = app.device.show || (app.device.show = {}); if (!o.banks || !o.drumsSeeded) Object.assign(o, SM.normalizeShow(o)); return o; };
   const bank = () => SM.bankOf(sd(), S.bank || undefined);
+  // Свои уровни сцены (слово автора 22.11.2026): метроном, пэд, звуки, минусовка — только на сцене, общая громкость приложения не меняется.
+  // Метроном и пэд — через местный уровень шины (mixer.override: только в памяти, на выходе из сцены снимается); звуки — выход их движка; минусовка — её элемент
+  const MIXES = [['metro', 'metro'], ['pad', 'drone'], ['sounds', null], ['track', null]];
+  const mixSet = () => app.store.state.settings.stageMix || (app.store.state.settings.stageMix = {});
+  const mixVal = (k) => {
+    const m = mixSet();
+    if (m[k] != null) return m[k];
+    if (k === 'metro' || k === 'pad') return Math.round((audio.mixer.value(k === 'pad' ? 'drone' : 'metro') || 0) * 100);
+    if (k === 'sounds') return 85;
+    const v = audio.mixer && audio.mixer.elementVolume ? audio.mixer.elementVolume('media') : 1;
+    return Math.round((Number.isFinite(v) ? v : 1) * 100);
+  };
+  const mixApply = (k) => safe('mix', () => {
+    const v = mixVal(k), bus = (MIXES.find((x) => x[0] === k) || [])[1];
+    if (bus) audio.mixer.override(bus, v / 100);
+    else if (k === 'sounds') { if (S.eng) S.eng.setLevel(v); }
+    else if (S.track) S.track.volume = Math.max(0, Math.min(1, v / 100));
+  });
+  const mixSheet = () => {
+    sheet(() => snav(t('stage.mix')) + '<div class="group sgroup">' + MIXES.map(([k]) => '<label class="cell"><span class="grow">' + esc(t('stage.mix.' + k)) + '</span><input type="range" class="sgrng" data-sgmix="' + k + '" min="0" max="100" value="' + mixVal(k) + '" aria-label="' + esc(t('stage.mix.' + k)) + '"></label>').join('') + '</div>' +
+      '<p class="ftr">' + esc(t('stage.mixHint')) + '</p><div class="group"><button class="cell act center" data-sgmixreset>' + esc(t('stage.mixReset')) + '</button></div>',
+    (el, sh) => {
+      el.addEventListener('input', (e) => { const r = e.target.closest('[data-sgmix]'); if (!r) return; mixSet()[r.dataset.sgmix] = +r.value; mixApply(r.dataset.sgmix); });
+      el.addEventListener('change', () => app.store.save());
+      el.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-sgmixreset]')) return;
+        app.store.state.settings.stageMix = {}; app.store.save();
+        MIXES.forEach(([k, bus]) => { if (bus) audio.mixer.override(bus, null); }); // снова общая громкость приложения
+        if (S.eng) S.eng.setLevel(mixVal('sounds'));
+        if (S.track) S.track.volume = Math.max(0, Math.min(1, mixVal('track') / 100));
+        sh.update();
+      });
+    });
+  };
   const ensureEng = () => {
     if (S.eng) return S.eng;
     if (!audio.unlock()) { toast(t('stage.noAudio')); return null; }
@@ -163,6 +197,7 @@ export function openStage(app, evId, i = 0) {
       const c = getContext(audio.mixer.state.mode), out = audio.mixer.bus('drone');
       if (!c || !out) return null;
       S.eng = createShowPads({ dest: out, getBlob: (id) => { const f = app.files && app.files.get(id); return f ? f.blob : null; }, drumFx: () => ({ bpm: curBpm, space: S.space, echo: S.echo }) });
+      S.eng.setLevel(mixVal('sounds'));
       return S.eng;
     });
   };
@@ -269,7 +304,7 @@ export function openStage(app, evId, i = 0) {
     S.url = URL.createObjectURL(r.blob);
     const el = new Audio(S.url);
     const v = audio.mixer && audio.mixer.elementVolume ? audio.mixer.elementVolume('media') : 1;
-    el.volume = Number.isFinite(v) ? v : 1;
+    el.volume = mixSet().track != null ? Math.max(0, Math.min(1, mixSet().track / 100)) : Number.isFinite(v) ? v : 1;
     el.onended = () => { if (S.track === el) { S.playing = false; stopClick(); render(); } };
     el.onerror = () => { logErr('stage', 'track ' + (r.name || '')); toast(t('stage.err', { what: t('stage.track') })); };
     S.track = el;
@@ -375,6 +410,7 @@ export function openStage(app, evId, i = 0) {
     }
     else if (k === 'track') { if (!x) return; if (S.track) stopTrack(); else if (x.it.track) startTrack(x.it); }
     else if (k === 'pads') { S.showPads = !S.showPads; sset('pads', S.showPads ? '1' : '0'); }
+    else if (k === 'mix') { mixSheet(); return; }
     else if (k === 'view') { S.view = S.view === 'list' ? 'text' : 'list'; sset('view', S.view); }
     render();
   };
@@ -430,7 +466,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
       '<div class="sgchips">' + chip('pad', pad, t('stage.pad') + (pad || free ? ' ' + NOTES[pc] : it && it.key ? ' ' + keyLabel(it.key) : '')) +
-        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('pads', S.showPads, t('stage.sounds')) + chip('view', S.view === 'list', t('stage.listView')) +
+        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('pads', S.showPads, t('stage.sounds')) + chip('mix', false, t('stage.mix')) + chip('view', S.view === 'list', t('stage.listView')) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
       (pad || free ? '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>' : '') +
       (S.showPads ? padsHTML() : '') +
@@ -524,6 +560,7 @@ export function openStage(app, evId, i = 0) {
     if (S.offBeat) S.offBeat();
     // всё, что сцена меняла, — как было
     audio.metro.cfg = metro0;
+    MIXES.forEach(([, bus]) => { if (bus) safe('mix', () => audio.mixer.override(bus, null)); }); // общая громкость приложения — как была
     Object.assign(app.device.drone, drone0);
     removeEventListener('resize', onResize);
     removeEventListener('keydown', onKey);
@@ -585,6 +622,7 @@ export function openStage(app, evId, i = 0) {
   S.unOut = bindOutput(app, S.el); // вывод на другое устройство (dev): та же шторка, что в сессии
   document.body.appendChild(S.el);
   document.documentElement.classList.add('onstage');
+  MIXES.forEach(([k, bus]) => { if (bus && mixSet()[k] != null) mixApply(k); }); // свои уровни сцены — на время сцены
   S.offBeat = audio.metro.onBeat(beat);
   addEventListener('resize', onResize);
   addEventListener('keydown', onKey);

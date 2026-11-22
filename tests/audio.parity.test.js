@@ -148,6 +148,20 @@ describe('звук: синтезатор, пэды, микшер, настрой
     m.toggleMute('media');
     expect(m.value('media')).toBe(0);
   });
+  it('местный уровень режима (сцена): не пишется в device.mix, снимается, mute сильнее', () => {
+    const mx = normalizeMix({ metro: 0.8, mute: {} });
+    const m = createMixer(mx);
+    m.override('metro', 0.3);
+    expect(m.value('metro')).toBe(0.3);
+    expect(mx.metro).toBe(0.8); // общая громкость цела
+    m.override('metro', 9);
+    expect(m.value('metro')).toBe(1.5);
+    m.toggleMute('metro');
+    expect(m.value('metro')).toBe(0);
+    m.toggleMute('metro');
+    m.override('metro', null);
+    expect(m.value('metro')).toBe(0.8);
+  });
   it('метроном по умолчанию в данных', () => {
     expect(blank().settings.metro).toEqual(METRO_DEF);
   });

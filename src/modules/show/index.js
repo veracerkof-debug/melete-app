@@ -213,7 +213,8 @@ const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(lab
 function deskHTML() {
   const e = cur(), n = M.currentNumber(S), nx = M.nextNumber(S), idx = e && n ? e.numbers.indexOf(n) + 1 : 0, f = n && fileOf(n.file), a = f && f.ana;
   const sub = n ? [t('desk.of', { n: idx, m: e.numbers.length }), a && a.pc != null && n.kind === 'track' ? keyName(a.pc + n.shift, a.minor) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') : ''].filter(Boolean).join(' · ') : '';
-  return '<div class="shdesk"><div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' +
+  const evl = e ? '<button class="evt shevt" data-x="evpick">' + esc(e.title || t('event.untitled', { n: S.events.filter((x) => !x.deleted).indexOf(e) + 1 })) + '<small>' + esc(evSub(e)) + '</small></button>' : '<button class="shadd" data-x="evnew">+ ' + esc(t('event.new')) + '</button>';
+  return '<div class="shdesk">' + evl + '<div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' +
     (n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>'
       : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
     '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
@@ -268,7 +269,7 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') + '<button class="shchip" data-x="bedsheet">' + esc(t('page.bed')) + '</button>' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
-    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : cur() ? deskHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   if (ctx.output) ctx.output.refresh(host);

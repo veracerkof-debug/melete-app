@@ -121,7 +121,7 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   await page.click(T + '[data-page="pads"]'); await page.click(T + '[data-x="bedsheet"]');
   await expect(page.locator('.sheet .shbedp')).toBeVisible();
   // шум: свой файл, касание включает (наплыв), повторное — убирает
-  await page.click(T + '[data-x="noiseadd"]');
+  await page.click('.sheet [data-x="noiseadd"]');
   await page.setInputFiles('.sheet input[type="file"]', { name: 'hall.wav', mimeType: 'audio/wav', buffer: wav(3) });
   await expect(page.locator('.sheet .shnoise')).toContainText('hall', { timeout: 8000 });
   await page.click('.sheet .shnoise');
