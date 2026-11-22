@@ -114,6 +114,9 @@ export const NEWS = [
   { n: 38, d: '2026-11-22', ru: ['Студия: панель «Рисунки» — готовые ударные, басы, клавиши, пэды и последовательности аккордов; бас и клавиши сами играют по аккордам проекта', 'Студия: аккорды проекта видны над линейкой тактов'],
     en: ['Studio: a “Patterns” panel — ready-made drums, basslines, keys, pads and chord progressions; bass and keys follow the project chords', 'Studio: project chords are shown above the bar ruler'],
     uz: ['Studiya: «Naqshlar» paneli — tayyor zarb, bas, klavish, pad va akkordlar ketma-ketligi; bas va klavishlar loyiha akkordlari bo‘yicha chaladi', 'Studiya: loyiha akkordlari taktlar chizg‘ichi ustida ko‘rinadi'] },
+  { n: 39, d: '2026-11-22', ru: ['Ноты: ввод нот на стане — клавиши только из нот тональности, диез и бемоль смахиванием, октава вбок, длительности значками; курсор на стане'],
+    en: ['Scores: note input on the staff — keys only from the key’s notes, swipe for sharp and flat, sideways for octave, note-shaped durations; a cursor on the staff'],
+    uz: ['Notalar: nota qatorida nota kiritish — faqat tonallik notalari, diyez va bemol — surish bilan, oktava — yonga; davomiylik nota belgilari bilan; kursor nota qatorida'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

@@ -115,7 +115,7 @@ trainRange`. Без диапазона распевки не открывают�
 
 **Табы, ноты и текст** (`modules/notes/`). Табулатуры и ноты — alphaTab (Guitar Pro, MusicXML, alphaTex), PDF — pdf.js
 (`pdf.js`), определение формата файла — `sniff.js`. `live.js` — партия «с игры»: сыгранное, сетка, правка, MusicXML
-(`music/livescore.js`, ноты с микрофона — `audio/notein.js`).
+(`music/livescore.js`, ноты с микрофона — `audio/notein.js`). Ввод нот на стане — режим `L.inp` в `live.js` (панель `inpBar` и жесты `bindKeys`, курсор `markCursor` по `boundsLookup` alphaTab (после `postRenderFinished`); логика — чистый `music/noteinput.js` над `raw` партии: клавиши тональности `scaleKeys`, нота `enterPitch`, пауза, лига, шаг назад, знак, окно октавы `base`).
 
 ## Как сделать свой
 

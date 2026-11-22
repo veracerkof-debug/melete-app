@@ -187,5 +187,19 @@
   "live.emptyMidi": "● records from a MIDI keyboard or an app instrument in a neighbouring session window.",
   "live.micDenied": "No microphone access",
   "live.micNA": "Microphone unavailable",
-  "noAudio": "Audio unavailable"
+  "noAudio": "Audio unavailable",
+  "live.in": "Note input",
+  "live.in.state": "Note input · {d} · bar {b} · beat {n}",
+  "live.in.hint": "Tap — note. Up — sharp, down — flat, sideways — octave",
+  "live.in.rest": "rest",
+  "live.in.tie": "tie",
+  "live.in.back": "Step back",
+  "live.in.dur": "Duration",
+  "live.in.dot": "Dot",
+  "live.in.flat": "Flat",
+  "live.in.sharp": "Sharp",
+  "live.in.octDown": "Octave down",
+  "live.in.octUp": "Octave up",
+  "live.in.oct": "octave {o}",
+  "live.in.keys": "Scale keys"
 }

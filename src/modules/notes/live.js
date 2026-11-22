@@ -16,6 +16,7 @@ import { copyBars, pasteBars, newPart, quantize, gridOf, GRIDS, INSTS, guessTemp
 import { writeMidi } from '../../music/midi.js';
 import { projectFromSong } from '../../music/project.js';
 import { parseN, mName } from '../../music/notes.js';
+import { newInput, enterPitch as inEnter, rest as inRest, tie as inTie, back as inBack, moveTo as inMove, posOf as inPos, durBeats, scaleKeys, startBase, octaveOf } from '../../music/noteinput.js';
 
 const TUNS = {
   guitar: ['E2 A2 D3 G3 B3 E4', 'D2 A2 D3 G3 B3 E4', 'E♭2 A♭2 D♭3 G♭3 B♭3 E♭4', 'D2 G2 C3 F3 A3 D4', 'D2 A2 D3 G3 A3 D4', 'D2 G2 D3 G3 B3 D4', 'B1 E2 A2 D3 G3 B3 E4'],
@@ -37,6 +38,8 @@ const ICON = {
   trash: '<svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="M20 6H9l-6 6 6 6h11z"/><path d="M13 10l4 4M17 10l-4 4"/></svg>',
 };
 const FR = (b) => { // доли → доля целой: 1/8, 3/8, 1/4…
   const x = b / 4, den = [1, 2, 4, 8, 16, 32, 3, 6, 12, 24, 48].find((d) => Math.abs(x * d - Math.round(x * d)) < 1e-6) || 48, n = Math.round(x * den);
@@ -45,7 +48,7 @@ const FR = (b) => { // доли → доля целой: 1/8, 3/8, 1/4…
 };
 
 export function createLive(env) {
-  const L = { part: null, rec: null, phase: 'idle', sel: null, bars: null, undo: [], live: null, pitch: null, pend: null, saveT: 0 };
+  const L = { part: null, rec: null, phase: 'idle', sel: null, bars: null, undo: [], live: null, pitch: null, pend: null, saveT: 0, inp: null, pingN: 0, drawQ: 0 };
   const C = () => env.ctx;
   const cfg = () => { const s = env.st(); return (s.live ??= {}); };
   const esc = (s) => env.esc(s);
@@ -129,7 +132,8 @@ export function createLive(env) {
     const sel = L.sel ? L.part.raw.indexOf(L.sel) : -1;
     L.part.raw = JSON.parse(s);
     L.sel = sel >= 0 ? L.part.raw[sel] || null : null;
-    draw(); save(); env.render();
+    if (L.inp) { const ns = quantize(L.part); L.inp.beat = ns.reduce((a, n) => Math.max(a, n.t + n.d), 0); L.inp.prev = ns.length ? ns[ns.length - 1].m : null; } // ввод: курсор — за последней нотой
+    draw(); save(); env.render(); markBars();
   }
 
   /* ---------- запись ---------- */
@@ -265,6 +269,7 @@ export function createLive(env) {
   function pick(beat, note) {
     if (!L.part || L.phase === 'rec' || L.phase === 'count') return;
     const x = beat.absolutePlaybackStart / 960 * (L.part.den / 4), bar = beat.voice.bar.index;
+    if (L.inp) { inMove(L.part, L.inp, x); markBars(); env.render(); return; } // ввод нот: касание по стану — курсор сюда
     if (L.bars) { // выбор тактов: второе касание — последний такт
       if (L.bars.b1 == null) { const a = L.bars.b0; L.bars = { b0: Math.min(a, bar), b1: Math.max(a, bar) }; } else L.bars = { b0: bar, b1: null };
       markBars(); env.render();
@@ -284,9 +289,11 @@ export function createLive(env) {
   function markBars() {
     const AT = env.AT, el = AT.el;
     if (!el) return;
-    el.querySelectorAll('.lvbar').forEach((x) => x.remove());
+    el.querySelectorAll('.lvbar,.lvcur').forEach((x) => x.remove());
     const lk = AT.api && AT.api.renderer && AT.api.renderer.boundsLookup;
-    if (!L.bars || !lk) return;
+    if (!lk) return;
+    if (L.inp && L.part && L.phase === 'edit') markCursor(el, lk);
+    if (!L.bars) return;
     const b1 = L.bars.b1 == null ? L.bars.b0 : L.bars.b1;
     (lk.staffSystems || []).forEach((sys) => (sys.bars || []).forEach((mb) => {
       if (mb.index < L.bars.b0 || mb.index > b1) return;
@@ -295,6 +302,24 @@ export function createLive(env) {
       Object.assign(d.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
       el.appendChild(d);
     }));
+  }
+  // Ввод нот: курсор — линия у места следующей ноты и лёгкая подсветка такта; стан доскролливается до него
+  function markCursor(el, lk) {
+    try {
+      const p = L.part, bar = Math.floor(L.inp.beat / p.num + 1e-6), tick = L.inp.beat * 960 * (4 / p.den);
+      (lk.staffSystems || []).forEach((sys) => (sys.bars || []).forEach((mb) => {
+        if (mb.index !== bar) return;
+        const r = mb.realBounds || mb.visualBounds, bb = (mb.bars || [])[0], bts = bb ? bb.beats || [] : [];
+        const f = bts.find((q) => Math.abs(q.beat.absolutePlaybackStart - tick) < 2) || bts.find((q) => q.beat.absolutePlaybackStart > tick);
+        const soft = document.createElement('i'); soft.className = 'lvbar lvsoft';
+        Object.assign(soft.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+        const cur = document.createElement('i'); cur.className = 'lvcur';
+        const x = f ? (f.realBounds || f.visualBounds).x : r.x + r.w - 3;
+        Object.assign(cur.style, { left: x - 1 + 'px', top: r.y + 'px', height: r.h + 'px' });
+        el.appendChild(soft); el.appendChild(cur);
+        if (cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }));
+    } catch (e) { /* курсор — подсказка, стан и без него работает */ }
   }
 
   /* ---------- разметка ---------- */
@@ -313,6 +338,54 @@ export function createLive(env) {
       '<button class="chip lvchip' + (L.sel.tech === 'b' ? ' on' : '') + '" data-x="lvbend" aria-pressed="' + (L.sel.tech === 'b') + '" aria-label="' + esc(t('live.bend')) + '">' + esc(t('live.bend')) + '</button>' +
       '<div class="vrow tight lvdurs" role="group" aria-label="' + esc(t('live.dur')) + '">' + DURS.map(([b, l]) => '<button class="chip lvchip' + (n && Math.abs(n.d - b) < 1e-6 ? ' on' : '') + '" data-x="lvdur" data-b="' + b + '" aria-label="' + esc(t('live.dur') + ' ' + l) + '">' + l + '</button>').join('') + '</div></div>';
   }
+  // Ввод нот (под станом, две полосы жестов): длительности значками · пауза, лига, шаг назад · клавиши только из нот тональности
+  // (смахнуть вверх — диез, вниз — бемоль, вбок по полосе — октава); ♭ ♯ и ‹ › — для тех, кто жест не знает
+  const GL = { // значки длительностей: целая, половинная, четверть, восьмая, шестнадцатая
+    4: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="6" ry="4.2" fill="none"/></svg>',
+    2: '<svg viewBox="0 0 24 24"><ellipse cx="10" cy="17" rx="4.6" ry="3.4" fill="none"/><path d="M14.4 16.2V4"/></svg>',
+    1: '<svg viewBox="0 0 24 24"><ellipse cx="10" cy="17" rx="4.6" ry="3.4" fill="currentColor"/><path d="M14.4 16.2V4"/></svg>',
+    0.5: '<svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4.4" ry="3.2" fill="currentColor"/><path d="M13.2 16.8V4c0 4 5 4.5 5 9"/></svg>',
+    0.25: '<svg viewBox="0 0 24 24"><ellipse cx="9" cy="18" rx="4.4" ry="3.2" fill="currentColor"/><path d="M13.2 17.3V3.5M13.2 4c0 4 5 4.5 5 8M13.2 9c0 4 5 4.5 5 8"/></svg>',
+  };
+  const IC = { rest: '<svg viewBox="0 0 24 24"><path d="M9 4l5 5-4 4 5 5-3 2"/></svg>', tie: '<svg viewBox="0 0 24 24"><path d="M4 9c3 9 13 9 16 0"/></svg>', ok: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' };
+  function inpBar() {
+    const p = L.part, I = L.inp, pos = inPos(p, I), ks = scaleKeys(p, I.base), dl = DURS.find(([b]) => b === I.dur)[1] + (I.dot ? '.' : '');
+    const k = (a, label, aria, cls = '', extra = '') => '<button class="lvk ' + cls + '" data-x="' + a + '"' + extra + ' aria-label="' + esc(aria) + '">' + label + '</button>';
+    const accTxt = I.acc === 1 ? ' ♯' : I.acc === -1 ? ' ♭' : '';
+    return '<div class="lvkp" role="group" aria-label="' + esc(t('live.in')) + '">' +
+      '<div class="lvst"><b>' + esc(t('live.in.state', { d: dl, b: pos.bar, n: pos.beat })) + '</b><span>' + esc(t('live.in.oct', { o: octaveOf(I.base) })) + accTxt + '</span></div>' +
+      '<div class="lvkr">' + DURS.map(([b]) => k('lvindur', GL[b], t('live.in.dur') + ' ' + FR(b), 'dr' + (I.dur === b ? ' on' : ''), ' data-b="' + b + '" aria-pressed="' + (I.dur === b) + '"')).join('') +
+      k('lvindot', '•', t('live.in.dot'), 'dr' + (I.dot ? ' on' : ''), ' aria-pressed="' + I.dot + '"') + '</div>' +
+      '<div class="lvkr">' + k('lvinoct', '‹', t('live.in.octDown'), 'edge', ' data-d="-1"') +
+      '<div class="lvkeys" role="group" aria-label="' + esc(t('live.in.keys')) + '">' + ks.map((x, i) => '<button class="lvkey' + (x.tonic ? ' tn' : '') + '" data-k="' + i + '" aria-label="' + esc(x.label + octaveOf(x.m)) + '"><b>' + esc(x.label) + '</b><small>' + x.deg + '</small></button>').join('') + '</div>' +
+      k('lvinoct', '›', t('live.in.octUp'), 'edge', ' data-d="1"') + '</div>' +
+      '<div class="lvkr">' + k('lvinacc', '♭', t('live.in.flat'), 'sm' + (I.acc === -1 ? ' on' : ''), ' data-a="-1" aria-pressed="' + (I.acc === -1) + '"') + k('lvinacc', '♯', t('live.in.sharp'), 'sm' + (I.acc === 1 ? ' on' : ''), ' data-a="1" aria-pressed="' + (I.acc === 1) + '"') +
+      k('lvinrest', IC.rest, t('live.in.rest'), 'ico') + k('lvintie', IC.tie, t('live.in.tie'), 'ico') + k('lvinback', ICON.back, t('live.in.back'), 'ico') + k('lvinend', IC.ok, t('live.done'), 'fill ico') + '</div></div>';
+  }
+  // Жесты полосы клавиш: касание — нота; вверх — диез, вниз — бемоль (на эту ноту); вбок по полосе — октава
+  let keysHost = null;
+  function bindKeys() {
+    const h = env.host && env.host();
+    if (!h || h === keysHost) return;
+    keysHost = h;
+    let g = null;
+    h.addEventListener('pointerdown', (e) => { const b = e.target.closest && e.target.closest('.lvkey'); if (!b || !L.inp) return; g = { id: e.pointerId, x: e.clientX, y: e.clientY, k: +b.dataset.k, el: b }; b.classList.add('dn'); });
+    h.addEventListener('pointermove', (e) => { if (!g || e.pointerId !== g.id) return; const dy = e.clientY - g.y, dx = e.clientX - g.x; g.el.dataset.sw = Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? '♯' : '♭') : ''; });
+    const end = (e, ok) => {
+      if (!g || e.pointerId !== g.id) return;
+      const s = g; g = null; s.el.classList.remove('dn'); delete s.el.dataset.sw;
+      if (!ok || !L.inp || !L.part) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.2) { L.inp.base = Math.max(24, Math.min(84, L.inp.base + (dx < 0 ? 12 : -12))); env.render(); try { navigator.vibrate && navigator.vibrate(8); } catch { /* */ } return; }
+      const key = scaleKeys(L.part, L.inp.base)[s.k];
+      if (!key) return;
+      if (Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx)) L.inp.acc = dy < 0 ? 1 : -1;
+      const m = inEdit((q, I) => inEnter(q, I, key.m));
+      ping(m, durBeats(L.inp) || 1);
+    };
+    h.addEventListener('pointerup', (e) => end(e, true));
+    h.addEventListener('pointercancel', (e) => end(e, false));
+  }
   function barsBar() {
     const b = L.bars, b1 = b.b1 == null ? b.b0 : b.b1;
     return '<div class="lvbar2" role="toolbar">' + icb('data-x="lvbars0"', ICON.close, t('live.done')) +
@@ -330,7 +403,7 @@ export function createLive(env) {
     const bpm = p ? Math.round(p.bpm) : cf.bpm, has = p && p.raw.length;
     return '<div class="lvbar2">' + big + (has ? env.playBtns() : '') +
       '<button class="chip lvchip" data-x="lvset" aria-label="' + esc(t('live.settings')) + '">' + (cf.metro || has ? '♩ ' + bpm : esc(t('live.free'))) + '</button>' +
-      (has || (p && p.minBars) ? '<span class="sgrow"></span>' + '<button class="btn sm" data-x="lvbaradd">' + esc(t('live.barAdd')) + '</button>' + icb('data-x="lvbars"', ICON.bars, t('live.bars')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + icb('data-x="lvshare"', ICON.share, t('live.export')) : '<span class="l2 lvhint">' + esc(t('live.src.' + cf.src)) + '</span>') + '</div>';
+      (has || (p && p.minBars) ? '<span class="sgrow"></span>' + icb('data-x="lvinput"', ICON.pen, t('live.in')) + '<button class="btn sm" data-x="lvbaradd">' + esc(t('live.barAdd')) + '</button>' + icb('data-x="lvbars"', ICON.bars, t('live.bars')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + icb('data-x="lvshare"', ICON.share, t('live.export')) : '<span class="l2 lvhint">' + esc(t('live.src.' + cf.src)) + '</span>') + '</div>';
   }
 
   function body() {
@@ -342,7 +415,7 @@ export function createLive(env) {
     const empty = !p || (!p.raw.length && !p.minBars && L.phase !== 'rec' && L.phase !== 'count');
     const surf = empty ? '<div class="lvempty"><p>' + esc(t(defaults().src === 'mic' ? 'live.emptyMic' : 'live.emptyMidi')) + '</p><button class="btn" data-x="lvblank" style="margin-top:14px;min-height:48px">' + esc(t('live.blank')) + '</button></div>'
       : '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + C().ui.loader('beat', '') + '</div>' : '') + '</div>';
-    const bar = L.sel && L.phase === 'edit' ? noteBar() : L.bars && L.phase === 'edit' ? barsBar() : mainBar();
+    const bar = L.inp && L.phase === 'edit' ? (setTimeout(bindKeys, 0), inpBar()) : L.sel && L.phase === 'edit' ? noteBar() : L.bars && L.phase === 'edit' ? barsBar() : mainBar();
     return '<div class="lvwrap">' + head + surf + bar + '</div>';
   }
 
@@ -499,12 +572,32 @@ export function createLive(env) {
     else edit((q) => setPitch(q, i, r.m + d));
   }
 
+  // Ввод нот: правка модели сразу, отрисовка стана — с короткой задержкой (быстрый набор не перерисовывает стан на каждую ноту)
+  function inEdit(fn) {
+    L.undo.push(JSON.stringify(L.part.raw));
+    if (L.undo.length > 40) L.undo.shift();
+    const r = fn(L.part, L.inp);
+    clearTimeout(L.drawQ); L.drawQ = setTimeout(() => draw(), 220);
+    save();
+    env.render(); markBars();
+    return r;
+  }
+  function ping(m, beats) { // слышно, что поставили
+    if (m == null) return;
+    try {
+      const syn = C().audio.synth, id = 'lvin' + (++L.pingN);
+      if (C().audio.unlock) C().audio.unlock();
+      syn.on(Math.round(m), id, { bus: 'piano', vel: 0.8 });
+      setTimeout(() => syn.off(id), Math.max(160, Math.min(700, beats * 60 / L.part.bpm * 1000)));
+    } catch (e) { /* без звука — нота всё равно на стане */ }
+  }
+
   function act(a, el) {
     const p = L.part;
     switch (a) {
-      case 'lvnew': L.part = null; L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'idle'; L.phase = 'idle'; L.sel = null; L.bars = null; env.render(); return true;
+      case 'lvnew': L.inp = null; L.part = null; L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'idle'; L.phase = 'idle'; L.sel = null; L.bars = null; env.render(); return true;
       case 'lvblank': { // писать с нуля: пустая партия на 4 такта — нота ставится касанием паузы
-        L.part = fresh(); L.part.minBars = 4; L.phase = 'edit'; L.sel = null; L.bars = null; L.restAt = null; L.undo = [];
+        L.part = fresh(); L.part.minBars = 4; L.phase = 'edit'; L.sel = null; L.bars = null; L.restAt = null; L.undo = []; L.inp = newInput(0, L.part); // с нуля — сразу клавиатура ввода
         L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'loading';
         draw(); env.render(); return true;
       }
@@ -518,6 +611,19 @@ export function createLive(env) {
       case 'lvshare': shareSheet(); return true;
       case 'lvprof': { const s = env.st(); s.liveProf = s.liveProf === 'score' ? 'both' : s.liveProf === 'tab' ? 'score' : 'tab'; C().store.save(); draw(); env.render(); return true; }
       case 'lvundo': undo(); return true;
+      case 'lvinput': { // ввод нот: курсор — за последней нотой
+        const ns = quantize(p);
+        L.sel = null; L.bars = null; L.restAt = null; L.inp = newInput(ns.reduce((a, n) => Math.max(a, n.t + n.d), 0), p); L.inp.prev = ns.length ? ns[ns.length - 1].m : null; if (L.inp.prev != null) L.inp.base = startBase(p, L.inp.prev);
+        env.render(); markBars(); C().ui.toast(t('live.in.hint')); return true;
+      }
+      case 'lvinend': L.inp = null; markBars(); env.render(); return true;
+      case 'lvinrest': inEdit((q, I) => inRest(q, I)); return true;
+      case 'lvintie': inEdit((q, I) => inTie(q, I)); return true;
+      case 'lvinback': inEdit((q, I) => inBack(q, I)); return true;
+      case 'lvindur': L.inp.dur = +el.dataset.b; env.render(); return true;
+      case 'lvindot': L.inp.dot = !L.inp.dot; env.render(); return true;
+      case 'lvinacc': L.inp.acc = L.inp.acc === +el.dataset.a ? null : +el.dataset.a; env.render(); return true;
+      case 'lvinoct': L.inp.base = Math.max(24, Math.min(84, L.inp.base + 12 * +el.dataset.d)); env.render(); return true;
       case 'lvdesel': L.sel = null; L.restAt = null; env.render(); return true;
       case 'lvpitch': nudgePitch(+el.dataset.d); return true;
       case 'lvlen': nudgeLen(+el.dataset.d); return true;
@@ -549,7 +655,7 @@ export function createLive(env) {
     // файл партии из «Табов» — в правку
     open(rec) {
       if (L.live) return;
-      L.rec = rec; L.part = rec.live ? JSON.parse(JSON.stringify(rec.live)) : fresh(); L.phase = 'edit'; L.sel = null; L.bars = null; L.undo = [];
+      L.rec = rec; L.part = rec.live ? JSON.parse(JSON.stringify(rec.live)) : fresh(); L.phase = 'edit'; L.inp = null; L.sel = null; L.bars = null; L.undo = [];
       env.AT.cur = rec; env.AT.state = 'loading';
       env.render();
       draw();

@@ -13,6 +13,8 @@ test('табы с нуля: пустая партия, нота в паузу, �
   await melete.click('[data-x="lvblank"]');
   await page.waitForFunction(() => document.querySelectorAll('.atsurf text, .atsurf svg').length > 0, null, { timeout: 20_000 });
   await page.waitForTimeout(1500);
+  await expect(page.locator('.lvkp')).toHaveCount(1); // с нуля — сразу клавиатура ввода нот
+  await melete.click('[data-x="lvinend"]'); await page.waitForTimeout(400); // «Готово» — обычная правка касанием
   await expect(page.locator('[data-x="lvbaradd"]')).toHaveCount(1);
   // касание по первому такту — пауза выбрана, «добавить ноту»
   const box = await page.locator('.atsurf').boundingBox();
@@ -99,4 +101,42 @@ test('табы: выгрузка в PDF и Guitar Pro', async ({ page, melete, e
   const gp = await get('gp');
   expect(gp.buf.subarray(0, 2).toString()).toBe('PK');
   expect(errors).toEqual([]);
+});
+
+// Ввод нот на стане (слово автора 22.11.2026): клавиши тональности, значки длительностей, жесты знака и октавы, пауза, лига, шаг назад
+test('ввод нот: клавиши тональности, жесты, длительность, пауза, шаг назад', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await melete.open();
+  await melete.tools({ notes: { live: { src: 'midi', metro: false, inst: 'keys' } }, wsMap: { free: { layout: 'HH', panes: ['notes', 'piano'], focus: 0, sub: {}, ratio: 0.72 } } });
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await page.waitForSelector('.session .pane', { timeout: 10_000 });
+  await page.waitForTimeout(1200);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  await melete.click('[data-x="lvnew"]'); await page.waitForTimeout(300);
+  await melete.click('[data-x="lvblank"]');
+  await expect(page.locator('.lvkp')).toHaveCount(1);
+  await expect(page.locator('.lvkey')).toHaveCount(8);
+  await expect(page.locator('[data-x="lvindur"]')).toHaveCount(5);
+  const key = (i) => page.locator('.lvkey[data-k="' + i + '"]');
+  const swipe = async (loc, dx, dy) => { await loc.waitFor(); await page.waitForTimeout(250); const b = await loc.boundingBox(), x = b.x + b.width / 2, y = b.y + b.height / 2; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 3 }); await page.mouse.move(x + dx, y + dy, { steps: 3 }); await page.mouse.up(); await page.waitForTimeout(150); };
+  for (const i of [0, 2, 4]) await key(i).click();            // до ми соль четвертными
+  await page.click('[data-x="lvindur"][data-b="0.5"]');        // восьмые
+  await swipe(key(6), 0, -40);                                   // си вверх — диез
+  await swipe(key(1), 0, 40);                                    // ре вниз — бемоль
+  for (let k = 0; k < 3 && !/октава 5/.test(await page.locator('.lvst').innerText()); k++) await swipe(key(7), -90, 0); // вбок по полосе — октава выше
+  await expect(page.locator('.lvst')).toContainText('октава 5');
+  await key(0).click();
+  await page.click('[data-x="lvinrest"]');
+  await page.click('[data-x="lvinrest"]');
+  await page.click('[data-x="lvinback"]');                       // стёрлась не нота — курсор назад на длительность
+  await page.waitForFunction(() => document.querySelectorAll('.atsurf text, .atsurf svg').length > 0, null, { timeout: 20_000 });
+  await page.waitForTimeout(1500);
+  await expect(page.locator('.lvcur')).toHaveCount(1);          // курсор на стане
+  const part = async () => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('practice-audio'); r.onsuccess = () => { const q = r.result.transaction('tracks', 'readonly').objectStore('tracks').getAll(); q.onsuccess = () => res((q.result.find((x) => x.live) || {}).live || null); }; }));
+  await page.waitForTimeout(900);
+  const p1 = await part();
+  expect(p1 && p1.raw.map((r) => r.m)).toEqual([60, 64, 67, 72, 61, 72]); // до ми соль · си♯ · ре♭ · до октавой выше
+  await page.click('[data-x="lvinend"]'); await page.waitForTimeout(300);
+  await expect(page.locator('.lvkp')).toHaveCount(0);
+  expect(errors.filter((e) => !/ResizeObserver/.test(String(e)))).toEqual([]);
 });

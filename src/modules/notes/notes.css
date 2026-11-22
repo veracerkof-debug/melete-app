@@ -70,3 +70,25 @@
 .lvchip{min-height:36px}
 .lvbar{position:absolute;background:color-mix(in srgb,var(--tint) 18%,transparent);border-radius:6px;pointer-events:none;z-index:2}
 @media (prefers-reduced-motion:reduce){.lvrec.on{animation:none}}
+
+/* ввод нот на стане: курсор и две полосы под станом (live.js) — длительности значками, клавиши только из нот тональности, знаки и октава жестом */
+.lvcur{position:absolute;width:3px;border-radius:2px;background:var(--tint);pointer-events:none;z-index:3}
+.lvbar.lvsoft{background:color-mix(in srgb,var(--tint) 9%,transparent)}
+.lvkp{display:flex;flex-direction:column;gap:6px;padding:6px 0 2px;flex:none;user-select:none;-webkit-user-select:none}
+.lvst{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--tint-text);padding:0 4px;white-space:nowrap}
+.lvst b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.lvkr{display:flex;gap:6px}
+.lvk{flex:1;min-width:0;min-height:44px;padding:0 4px;border-radius:12px;background:var(--cell);color:var(--ink);font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.lvk svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lvk.sm{flex:.7;font-size:18px}
+.lvk.edge{flex:none;width:30px;padding:0;font-size:22px;color:var(--l2);background:none}
+.lvk.on{background:color-mix(in srgb,var(--tint) 22%,var(--cell));color:var(--tint-text);box-shadow:inset 0 0 0 1.5px var(--tint)}
+.lvk.fill{background:var(--tint);color:var(--on-tint)}
+.lvkeys{flex:1;min-width:0;display:flex;gap:4px;touch-action:none}
+.lvkey{position:relative;flex:1;min-width:0;min-height:68px;border-radius:12px;background:var(--cell);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:none}
+.lvkey b{font-size:16px;font-weight:700}
+.lvkey small{font-size:11px;color:var(--l2)}
+.lvkey.tn{background:color-mix(in srgb,var(--tint) 16%,var(--cell))}
+.lvkey.dn{background:color-mix(in srgb,var(--tint) 30%,var(--cell))}
+.lvkey[data-sw]:not([data-sw=""])::before{content:attr(data-sw);position:absolute;top:2px;font-size:13px;font-weight:700;color:var(--tint-text)}
+.lvk:active{filter:brightness(.94)}

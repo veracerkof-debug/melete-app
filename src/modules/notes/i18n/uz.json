@@ -186,5 +186,19 @@
   "live.emptyMidi": "● — MIDI klaviatura yoki mashgʻulotdagi qoʻshni oynadagi asbobdan yozish.",
   "live.micDenied": "Mikrofonga ruxsat yoʻq",
   "live.micNA": "Mikrofon mavjud emas",
-  "noAudio": "Ovoz mavjud emas"
+  "noAudio": "Ovoz mavjud emas",
+  "live.in": "Nota kiritish",
+  "live.in.state": "Nota kiritish · {d} · takt {b} · zarb {n}",
+  "live.in.hint": "Bosish — nota. Tepaga — diyez, pastga — bemol, yonga — oktava",
+  "live.in.rest": "pauza",
+  "live.in.tie": "liga",
+  "live.in.back": "Orqaga",
+  "live.in.dur": "Davomiylik",
+  "live.in.dot": "Nuqta",
+  "live.in.flat": "Bemol",
+  "live.in.sharp": "Diyez",
+  "live.in.octDown": "Oktava pastga",
+  "live.in.octUp": "Oktava tepaga",
+  "live.in.oct": "oktava {o}",
+  "live.in.keys": "Tonallik klavishlari"
 }
