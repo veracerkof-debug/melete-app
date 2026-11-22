@@ -92,3 +92,47 @@
 .lvkey.dn{background:color-mix(in srgb,var(--tint) 30%,var(--cell))}
 .lvkey[data-sw]:not([data-sw=""])::before{content:attr(data-sw);position:absolute;top:2px;font-size:13px;font-weight:700;color:var(--tint-text)}
 .lvk:active{filter:brightness(.94)}
+
+/* ввод нот: пианино, буквы, гриф, строка видов (слово автора 22.11.2026) */
+.lvst{align-items:center;touch-action:none}
+.lvch{display:flex;gap:4px;flex:none}
+.lvch .lvchip{min-height:32px;padding:0 9px;font-size:12px}
+.lvch .lvchip[style*="--on"]{background:color-mix(in srgb,var(--tint) 22%,var(--cell));color:var(--tint-text);box-shadow:inset 0 0 0 1.5px var(--tint)}
+.lvpick{gap:3px}.lvpick .lvk{min-height:36px;font-size:13px;padding:0}
+.lvpiano{position:relative;height:76px;border-radius:10px;overflow:hidden;touch-action:none;background:var(--cell)}
+.lvpiano.abc{height:76px}
+.lvpk{position:absolute;top:0;bottom:0;box-sizing:border-box;border:0;border-right:1px solid color-mix(in srgb,var(--ink) 14%,transparent);background:white;color:black;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;touch-action:none}
+.lvpk b{font-size:14px;font-weight:700;pointer-events:none}.lvpk sub{font-size:10px;font-weight:600;color:var(--l2);vertical-align:baseline;margin-left:1px}
+.lvpiano.abc .lvpk b{font-size:20px}
+.lvpk.tn{background:color-mix(in srgb,var(--tint) 18%,white)}
+.lvpk.bk{bottom:38%;background:black;border-radius:0 0 6px 6px;border:0;z-index:2}
+.lvpk.dn{background:color-mix(in srgb,var(--tint) 40%,white)}.lvpk.bk.dn{background:var(--tint)}
+.lvpk[data-sw]:not([data-sw=""])::before,.lvfc[data-sw]:not([data-sw=""])::before{content:attr(data-sw);position:absolute;top:3px;left:0;right:0;text-align:center;font-size:15px;font-weight:700;color:var(--tint-text);z-index:3;pointer-events:none}
+.lvpk.bk[data-sw]:not([data-sw=""])::before{color:white}
+.lvkey sub{font-size:10px;color:var(--l2)}
+.lvfret{display:grid;grid-template-columns:28px repeat(7,1fr);grid-template-rows:18px;grid-auto-rows:27px;gap:1px;touch-action:none}
+.lvfret .lvfh{min-height:0;height:18px;font-size:11px;color:var(--l2);background:none;position:relative;padding:0}
+.lvfret .lvfh.dot{color:var(--tint-text);font-weight:700}
+.lvfs{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--l2)}
+.lvfc{position:relative;display:flex;align-items:center;justify-content:center;background:var(--cell);border-radius:6px;color:var(--l2);font-size:13px;touch-action:none}
+.lvfc i{position:absolute;left:0;right:0;top:50%;height:1.5px;background:color-mix(in srgb,var(--ink) 30%,transparent);z-index:0}
+.lvfc b{position:relative;z-index:1;font-weight:500;background:var(--cell);padding:0 4px;border-radius:4px}
+.lvfc.op{border-radius:6px 2px 2px 6px}
+.lvfc.dn b,.lvfc.dn{background:color-mix(in srgb,var(--tint) 30%,var(--cell))}
+.lvfc.on b{background:var(--tint);color:var(--on-tint);font-weight:700}
+.lvfc[data-sw]:not([data-sw=""]) b{opacity:.3}
+/* ввод: панель компактна (половина окна — стан остаётся, под ним не меньше 110 px, иначе панель прокручивается); на весь экран — просторнее */
+.pane .lvwrap:has(.lvkp){overflow-y:auto}
+.pane .lvwrap:has(.lvkp) .atwrap{flex:1 0 110px}
+.lvkp{gap:4px}.lvkp .lvk{min-height:40px}.lvfc{font-size:12px}
+:is(.tview.pure,.pfull) .notes-root .lvpiano{height:112px}
+:is(.tview.pure,.pfull) .notes-root .lvpiano.abc{height:84px}
+:is(.tview.pure,.pfull) .notes-root .lvfret{grid-auto-rows:36px;gap:2px}
+:is(.tview.pure,.pfull) .notes-root .lvkp{gap:6px}
+:is(.tview.pure,.pfull) .notes-root .lvkp .lvk{min-height:44px}
+:is(.tview.pure,.pfull) .notes-root .lvfc{font-size:14px}
+.lvch .lvchip{padding:0 7px}
+.lvch .lvdone{background:var(--tint);color:var(--on-tint);min-width:40px;padding:0}
+.lvch .lvdone svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pane .lvwrap:has(.lvkp) .atwrap{flex:1 0 84px}
+.lvfret{grid-auto-rows:25px}

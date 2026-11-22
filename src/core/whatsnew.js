@@ -117,6 +117,9 @@ export const NEWS = [
   { n: 39, d: '2026-11-22', ru: ['Ноты: ввод нот на стане — клавиши только из нот тональности, диез и бемоль смахиванием, октава вбок, длительности значками; курсор на стане'],
     en: ['Scores: note input on the staff — keys only from the key’s notes, swipe for sharp and flat, sideways for octave, note-shaped durations; a cursor on the staff'],
     uz: ['Notalar: nota qatorida nota kiritish — faqat tonallik notalari, diyez va bemol — surish bilan, oktava — yonga; davomiylik nota belgilari bilan; kursor nota qatorida'] },
+  { n: 40, d: '2026-11-22', ru: ['Ноты и табы: «Писать ноты и табы» — главный вход; пианино с октавой жестом вверх/вниз и диезом/бемолем вправо/влево, окно клавиш с любой ноты, виды «ступени» и «буквы»', 'Табы пишутся как ноты: гриф «струны × лады», касание — нота, «Аккорд» для созвучий; запись с инструмента — дополнительная кнопка'],
+    en: ['Scores and tabs: “Write notes and tabs” is now the main entry; a piano with octave by swiping up/down and sharp/flat by swiping right/left, keys starting from any note, “degrees” and “letters” views', 'Tabs are written like notes: a string × fret board, tap to enter a note, “Chord” for chords; recording from an instrument is a secondary button'],
+    uz: ['Nota va tablar: «Nota va tablarni yozish» — asosiy kirish; pianino: oktava — tepaga/pastga, diyez/bemol — o‘ngga/chapga surish bilan, klavishlar istalgan notadan, «pog‘ona» va «harf» ko‘rinishlari', 'Tablar nota kabi yoziladi: «torlar × ladlar» gryfi, bosish — nota, akkordlar uchun «Akkord»; asbobdan yozish — qo‘shimcha tugma'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

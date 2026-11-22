@@ -444,13 +444,13 @@ function tabsBody() {
   if (!AT.cur || AT.state === 'error' || isDaw(AT.cur)) {
     const mine = song ? all.filter((x) => inSong(x, song.id)) : [];
     const rest = all.filter((x) => !mine.includes(x));
-    return '<div class="tablist tpin">' + (all.length
+    return '<div class="tablist tpin"><button class="btn fill" data-x="lvblank" style="width:100%;min-height:52px;margin:4px 0 6px;font-size:16px">' + I.pen.replace('<svg', '<svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;vertical-align:-4px"') + ' ' + t('live.write') + '</button><p class="l2" style="font-size:12px;text-align:center;margin:0 0 6px">' + t('live.writeSub') + '</p>' + (all.length
       ? (mine.length ? '<div class="hdr" style="margin-top:4px">' + t('thisSong') + '</div><div class="group">' + mine.map(tabRow).join('') + '</div>' : '') +
         (rest.length ? '<div class="hdr">' + t(mine.length ? 'others' : 'allTabs') + '</div><div class="group">' + rest.map(tabRow).join('') + '</div>' : '')
       : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('uploadHint') + '</p>') +
       '<div class="vrow" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button>' +
       '<button class="btn sm" data-x="tpaste">' + I.pen.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"') + ' ' + t('pasteTab') + '</button>' +
-      '<button class="btn sm" data-x="lvnew">' + I.rec + ' ' + t('live.new') + '</button></div>' +
+      '<button class="btn sm" data-x="lvnew">' + I.rec + ' ' + t('live.recFrom') + '</button></div>' +
       (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr keep" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
   }
   if (AT.state === 'text') { // текст без строк струн — как есть
@@ -563,7 +563,7 @@ function render() {
 function tabSheet() {
   const { t, ui } = ctx;
   const daw = st().sec === 'midi';
-  ui.sheet(() => ui.snav(t(daw ? 'sec.midi' : 'tabFiles')) + '<div class="group">' + (daw ? daws().map(dawRow) : tabs().map(tabRow)).join('') + '<button class="cell act" data-x="tadd">' + t(daw ? 'uploadDaw' : 'uploadTab') + '</button>' + (daw ? '' : '<button class="cell act" data-x="lvnew">' + t('live.new') + '</button>') + '</div>',
+  ui.sheet(() => ui.snav(t(daw ? 'sec.midi' : 'tabFiles')) + '<div class="group">' + (daw ? daws().map(dawRow) : tabs().map(tabRow)).join('') + '<button class="cell act" data-x="tadd">' + t(daw ? 'uploadDaw' : 'uploadTab') + '</button>' + (daw ? '' : '<button class="cell act" data-x="lvblank">' + t('live.write') + '</button><button class="cell act" data-x="lvnew">' + t('live.recFrom') + '</button>') + '</div>',
     (el, sh) => el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-x]');
       if (!b) return;

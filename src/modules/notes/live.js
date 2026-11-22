@@ -15,8 +15,9 @@ import { copyBars, pasteBars, newPart, quantize, gridOf, GRIDS, INSTS, guessTemp
   setPitch, setLen, setFret, delNote, addNote, delBars, cutFrom, insertAt, setTempo } from '../../music/livescore.js';
 import { writeMidi } from '../../music/midi.js';
 import { projectFromSong } from '../../music/project.js';
-import { parseN, mName } from '../../music/notes.js';
-import { newInput, enterPitch as inEnter, rest as inRest, tie as inTie, back as inBack, moveTo as inMove, posOf as inPos, durBeats, scaleKeys, startBase, octaveOf } from '../../music/noteinput.js';
+import { parseN, mName, SH, FL } from '../../music/notes.js';
+import { newInput, enterPitch as inEnter, enterFret as inFret, atCursor as inAt, pianoKeys, shiftBase, baseAtPc, shiftFret, FRET_WIN, KB_VIEWS,
+  rest as inRest, tie as inTie, back as inBack, moveTo as inMove, posOf as inPos, durBeats, scaleKeys, startBase, octaveOf } from '../../music/noteinput.js';
 
 const TUNS = {
   guitar: ['E2 A2 D3 G3 B3 E4', 'D2 A2 D3 G3 B3 E4', 'E♭2 A♭2 D♭3 G♭3 B♭3 E♭4', 'D2 G2 C3 F3 A3 D4', 'D2 A2 D3 G3 A3 D4', 'D2 G2 D3 G3 B3 D4', 'B1 E2 A2 D3 G3 B3 E4'],
@@ -41,6 +42,7 @@ const ICON = {
   pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
   back: '<svg viewBox="0 0 24 24"><path d="M20 6H9l-6 6 6 6h11z"/><path d="M13 10l4 4M17 10l-4 4"/></svg>',
 };
+const FIFTHSFLAT = (k) => [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5][k.minor ? (k.pc + 3) % 12 : k.pc] < 0; // тональность с бемолями — названия бемолями
 const FR = (b) => { // доли → доля целой: 1/8, 3/8, 1/4…
   const x = b / 4, den = [1, 2, 4, 8, 16, 32, 3, 6, 12, 24, 48].find((d) => Math.abs(x * d - Math.round(x * d)) < 1e-6) || 48, n = Math.round(x * den);
   const g = (a, c) => (c ? g(c, a % c) : a), k = g(n, den);
@@ -347,40 +349,103 @@ export function createLive(env) {
     0.5: '<svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4.4" ry="3.2" fill="currentColor"/><path d="M13.2 16.8V4c0 4 5 4.5 5 9"/></svg>',
     0.25: '<svg viewBox="0 0 24 24"><ellipse cx="9" cy="18" rx="4.4" ry="3.2" fill="currentColor"/><path d="M13.2 17.3V3.5M13.2 4c0 4 5 4.5 5 8M13.2 9c0 4 5 4.5 5 8"/></svg>',
   };
-  const IC = { rest: '<svg viewBox="0 0 24 24"><path d="M9 4l5 5-4 4 5 5-3 2"/></svg>', tie: '<svg viewBox="0 0 24 24"><path d="M4 9c3 9 13 9 16 0"/></svg>', ok: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' };
+  const IC = { next: '<svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg>', rest: '<svg viewBox="0 0 24 24"><path d="M9 4l5 5-4 4 5 5-3 2"/></svg>', tie: '<svg viewBox="0 0 24 24"><path d="M4 9c3 9 13 9 16 0"/></svg>', ok: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' };
+  const FRET_DOTS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+  // Новый ввод: вид клавиш, режим (гриф у струнных) и «аккорд» — как выбрано в прошлый раз
+  const mkInput = (beat) => { const c = cfg(), p = L.part; return newInput(beat, p, { kb: c.inKb, mode: c.inMode || (p && p.tuning ? 'fret' : 'keys'), stack: c.inStack }); };
   function inpBar() {
-    const p = L.part, I = L.inp, pos = inPos(p, I), ks = scaleKeys(p, I.base), dl = DURS.find(([b]) => b === I.dur)[1] + (I.dot ? '.' : '');
+    const p = L.part, I = L.inp, pos = inPos(p, I), dl = DURS.find(([b]) => b === I.dur)[1] + (I.dot ? '.' : ''), fret = I.mode === 'fret' && !!p.tuning;
     const k = (a, label, aria, cls = '', extra = '') => '<button class="lvk ' + cls + '" data-x="' + a + '"' + extra + ' aria-label="' + esc(aria) + '">' + label + '</button>';
+    const chip = (a, label, aria, on, extra = '') => '<button class="chip lvchip" data-x="' + a + '"' + extra + ' aria-label="' + esc(aria) + '"' + (on == null ? '' : ' aria-pressed="' + on + '"') + (on ? ' style="--on:1"' : '') + '>' + label + '</button>';
     const accTxt = I.acc === 1 ? ' ♯' : I.acc === -1 ? ' ♭' : '';
-    return '<div class="lvkp" role="group" aria-label="' + esc(t('live.in')) + '">' +
-      '<div class="lvst"><b>' + esc(t('live.in.state', { d: dl, b: pos.bar, n: pos.beat })) + '</b><span>' + esc(t('live.in.oct', { o: octaveOf(I.base) })) + accTxt + '</span></div>' +
-      '<div class="lvkr">' + DURS.map(([b]) => k('lvindur', GL[b], t('live.in.dur') + ' ' + FR(b), 'dr' + (I.dur === b ? ' on' : ''), ' data-b="' + b + '" aria-pressed="' + (I.dur === b) + '"')).join('') +
-      k('lvindot', '•', t('live.in.dot'), 'dr' + (I.dot ? ' on' : ''), ' aria-pressed="' + I.dot + '"') + '</div>' +
-      '<div class="lvkr">' + k('lvinoct', '‹', t('live.in.octDown'), 'edge', ' data-d="-1"') +
-      '<div class="lvkeys" role="group" aria-label="' + esc(t('live.in.keys')) + '">' + ks.map((x, i) => '<button class="lvkey' + (x.tonic ? ' tn' : '') + '" data-k="' + i + '" aria-label="' + esc(x.label + octaveOf(x.m)) + '"><b>' + esc(x.label) + '</b><small>' + x.deg + '</small></button>').join('') + '</div>' +
-      k('lvinoct', '›', t('live.in.octUp'), 'edge', ' data-d="1"') + '</div>' +
-      '<div class="lvkr">' + k('lvinacc', '♭', t('live.in.flat'), 'sm' + (I.acc === -1 ? ' on' : ''), ' data-a="-1" aria-pressed="' + (I.acc === -1) + '"') + k('lvinacc', '♯', t('live.in.sharp'), 'sm' + (I.acc === 1 ? ' on' : ''), ' data-a="1" aria-pressed="' + (I.acc === 1) + '"') +
-      k('lvinrest', IC.rest, t('live.in.rest'), 'ico') + k('lvintie', IC.tie, t('live.in.tie'), 'ico') + k('lvinback', ICON.back, t('live.in.back'), 'ico') + k('lvinend', IC.ok, t('live.done'), 'fill ico') + '</div></div>';
+    const names = (p.key && FIFTHSFLAT(p.key)) ? FL : SH;
+    // верх: где курсор · вид (клавиши / гриф) · вид клавиш · аккорд · с какой ноты окно
+    const top = '<div class="lvst"><b>' + esc(t('live.in.state', { d: dl, b: pos.bar, n: pos.beat })) + accTxt + '</b><span class="lvch">' +
+      (p.tuning ? chip('lvinmode', esc(t('live.in.mode.' + (fret ? 'fret' : 'keys'))), t('live.in.mode'), null) : '') +
+      (fret ? '' : chip('lvinkb', esc(t('live.in.kb.' + I.kb)), t('live.in.kb'), null)) +
+      chip('lvinstack', esc(t('live.in.stack')), t('live.in.stackHint'), !!I.stack) +
+      (fret || I.kb === 'deg' ? '' : chip('lvinpick', esc(names[I.base % 12] + octaveOf(I.base)), t('live.in.start'), !!I.pick)) +
+      '<button class="chip lvchip lvdone" data-x="lvinend" aria-label="' + esc(t('live.done')) + '">' + IC.ok + '</button></span></div>';
+    const pick = !fret && I.pick && I.kb !== 'deg' ? '<div class="lvkr lvpick" role="group" aria-label="' + esc(t('live.in.start')) + '">' + names.map((n, pc) => '<button class="lvk sm' + (I.base % 12 === pc ? ' on' : '') + '" data-x="lvinpc" data-pc="' + pc + '" aria-label="' + esc(n) + '">' + esc(n) + '</button>').join('') + '</div>' : '';
+    const durs = '<div class="lvkr">' + DURS.map(([b]) => k('lvindur', GL[b], t('live.in.dur') + ' ' + FR(b), 'dr' + (I.dur === b ? ' on' : ''), ' data-b="' + b + '" aria-pressed="' + (I.dur === b) + '"')).join('') +
+      k('lvindot', '•', t('live.in.dot'), 'dr' + (I.dot ? ' on' : ''), ' aria-pressed="' + I.dot + '"') + '</div>';
+    const acts = '<div class="lvkr">' + (fret ? '' : k('lvinacc', '♭', t('live.in.flat'), 'sm' + (I.acc === -1 ? ' on' : ''), ' data-a="-1" aria-pressed="' + (I.acc === -1) + '"') + k('lvinacc', '♯', t('live.in.sharp'), 'sm' + (I.acc === 1 ? ' on' : ''), ' data-a="1" aria-pressed="' + (I.acc === 1) + '"')) +
+      k('lvinrest', IC.rest, t('live.in.rest'), 'ico') + (I.stack ? k('lvinnext', IC.next, t('live.in.next'), 'ico') : k('lvintie', IC.tie, t('live.in.tie'), 'ico')) + k('lvinback', ICON.back, t('live.in.back'), 'ico') + '</div>';
+    return '<div class="lvkp" role="group" aria-label="' + esc(t('live.in')) + '">' + top + pick + durs + (fret ? fretGrid() : keyStrip(names)) + acts + '</div>';
   }
-  // Жесты полосы клавиш: касание — нота; вверх — диез, вниз — бемоль (на эту ноту); вбок по полосе — октава
+  // Клавиши: пианино (белые и чёрные, подпись октавы у «до»), ступени тональности или только буквы; окно — с любой ноты
+  function keyStrip(names) {
+    const p = L.part, I = L.inp;
+    if (I.kb === 'deg') {
+      const base = startBase(p, I.base);
+      return '<div class="lvkeys" role="group" aria-label="' + esc(t('live.in.keys')) + '">' + scaleKeys(p, base).map((x) => '<button class="lvkey' + (x.tonic ? ' tn' : '') + '" data-m="' + x.m + '" aria-label="' + esc(x.label + octaveOf(x.m)) + '"><b>' + esc(x.label) + (x.tonic && x.m % 12 === (p.key ? p.key.pc : 0) && x.deg === 1 ? '<sub>' + octaveOf(x.m) + '</sub>' : '') + '</b><small>' + x.deg + '</small></button>').join('') + '</div>';
+    }
+    const ks = pianoKeys(p, I.base, 8, { blacks: I.kb === 'piano' });
+    const W = 8, pc = (x) => (x / W * 100).toFixed(3) + '%';
+    return '<div class="lvpiano ' + I.kb + '" role="group" aria-label="' + esc(t('live.in.keys')) + '">' + ks.sort((a, b) => a.black - b.black).map((x) =>
+      '<button class="lvpk' + (x.black ? ' bk' : '') + (x.tonic ? ' tn' : '') + '" data-m="' + x.m + '" style="left:' + pc(Math.max(0, x.x)) + ';width:' + pc(Math.min(W, x.x + x.w) - Math.max(0, x.x)) + '" aria-label="' + esc(x.label + x.oct) + '">' +
+      (x.black ? '' : '<b>' + esc(x.label) + (x.c ? '<sub>' + x.oct + '</sub>' : '') + '</b>') + '</button>').join('') + '</div>';
+  }
+  // Гриф: струны сверху вниз (тонкая — вверху, как в табах) × лады окна; касание ставит ноту, смахнуть вбок — другие лады
+  function fretGrid() {
+    const p = L.part, I = L.inp, n = p.tuning.length, cap = p.capo || 0, at = inAt(p, I), names = (p.key && FIFTHSFLAT(p.key)) ? FL : SH;
+    const cols = Array.from({ length: FRET_WIN }, (_, j) => I.f0 + j);
+    let h = '<div class="lvfret" style="--n:' + n + '" role="group" aria-label="' + esc(t('live.in.fretboard')) + '"><span class="lvfh"></span>' +
+      cols.map((f) => '<button class="lvfh' + (FRET_DOTS.includes(f) ? ' dot' : '') + '" data-x="lvinf0" data-f="' + f + '" aria-label="' + esc(t('live.in.fret', { f })) + '">' + f + '</button>').join('');
+    for (let s = 1; s <= n; s++) {
+      const open = p.tuning[n - s] + cap;
+      h += '<span class="lvfs">' + esc(names[((open % 12) + 12) % 12]) + '</span>' + cols.map((f) => {
+        const on = at.some((x) => x.s === s && x.f === f);
+        return '<button class="lvfc' + (on ? ' on' : '') + (f === 0 ? ' op' : '') + '" data-s="' + s + '" data-f="' + f + '" aria-label="' + esc(t('live.sf', { s, f })) + '"' + (on ? ' aria-pressed="true"' : '') + '><i></i><b>' + f + '</b></button>';
+      }).join('');
+    }
+    return h + '</div>';
+  }
+  // Жесты клавиш: касание — нота; вверх/вниз — октава (окно сдвигается, надпись у «до»); вправо — диез, влево — бемоль (на эту ноту).
+  // Гриф: касание — нота; вбок — другие лады. Верхняя строка: вбок — окно клавиш по полутону
   let keysHost = null;
   function bindKeys() {
     const h = env.host && env.host();
     if (!h || h === keysHost) return;
     keysHost = h;
     let g = null;
-    h.addEventListener('pointerdown', (e) => { const b = e.target.closest && e.target.closest('.lvkey'); if (!b || !L.inp) return; g = { id: e.pointerId, x: e.clientX, y: e.clientY, k: +b.dataset.k, el: b }; b.classList.add('dn'); });
-    h.addEventListener('pointermove', (e) => { if (!g || e.pointerId !== g.id) return; const dy = e.clientY - g.y, dx = e.clientX - g.x; g.el.dataset.sw = Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? '♯' : '♭') : ''; });
+    const buzz = () => { try { navigator.vibrate && navigator.vibrate(8); } catch { /* */ } };
+    h.addEventListener('pointerdown', (e) => {
+      if (!L.inp) return;
+      const tg = e.target.closest && e.target.closest('.lvpk, .lvkey, .lvfc, .lvfret, .lvst');
+      if (!tg) return;
+      const cell = e.target.closest('.lvpk, .lvkey, .lvfc');
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, el: cell, area: tg.classList.contains('lvst') ? 'st' : tg.closest('.lvfret') ? 'fret' : 'keys', ax: e.clientX, sh: 0, moved: false };
+      if (cell) cell.classList.add('dn');
+    });
+    h.addEventListener('pointermove', (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const dy = e.clientY - g.y, dx = e.clientX - g.x;
+      if (g.area === 'st' && L.inp) { // строка состояния: тянуть вбок — окно клавиш по полутону
+        const stp = Math.trunc((e.clientX - g.ax) / 18);
+        if (stp) { g.ax += stp * 18; g.moved = true; shiftBase(L.inp, -stp); env.render(); }
+        return;
+      }
+      if (!g.el) return;
+      if (g.area === 'fret') { g.el.dataset.sw = Math.abs(dx) > 26 ? '↔' : ''; return; }
+      g.el.dataset.sw = Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? '↑' : '↓') : Math.abs(dx) > 26 ? (dx > 0 ? '♯' : '♭') : '';
+    });
     const end = (e, ok) => {
       if (!g || e.pointerId !== g.id) return;
-      const s = g; g = null; s.el.classList.remove('dn'); delete s.el.dataset.sw;
-      if (!ok || !L.inp || !L.part) return;
-      const dx = e.clientX - s.x, dy = e.clientY - s.y;
-      if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.2) { L.inp.base = Math.max(24, Math.min(84, L.inp.base + (dx < 0 ? 12 : -12))); env.render(); try { navigator.vibrate && navigator.vibrate(8); } catch { /* */ } return; }
-      const key = scaleKeys(L.part, L.inp.base)[s.k];
-      if (!key) return;
-      if (Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx)) L.inp.acc = dy < 0 ? 1 : -1;
-      const m = inEdit((q, I) => inEnter(q, I, key.m));
+      const s = g; g = null;
+      if (s.el) { s.el.classList.remove('dn'); delete s.el.dataset.sw; }
+      if (!ok || !L.inp || !L.part || s.moved || s.area === 'st') return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y, I = L.inp;
+      if (s.area === 'fret') {
+        if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy)) { shiftFret(I, dx < 0 ? 3 : -3); env.render(); buzz(); return; }
+        if (!s.el || !s.el.dataset.s) return;
+        const m = inEdit((q, X) => inFret(q, X, +s.el.dataset.s, +s.el.dataset.f));
+        ping(m, durBeats(I) || 1); return;
+      }
+      if (!s.el) return;
+      if (Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2) { shiftBase(I, dy < 0 ? 12 : -12); env.render(); buzz(); return; } // вверх — октава выше
+      if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) I.acc = dx > 0 ? 1 : -1; // вправо — диез, влево — бемоль
+      const m = inEdit((q, X) => inEnter(q, X, +s.el.dataset.m));
       ping(m, durBeats(L.inp) || 1);
     };
     h.addEventListener('pointerup', (e) => end(e, true));
@@ -597,7 +662,7 @@ export function createLive(env) {
     switch (a) {
       case 'lvnew': L.inp = null; L.part = null; L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'idle'; L.phase = 'idle'; L.sel = null; L.bars = null; env.render(); return true;
       case 'lvblank': { // писать с нуля: пустая партия на 4 такта — нота ставится касанием паузы
-        L.part = fresh(); L.part.minBars = 4; L.phase = 'edit'; L.sel = null; L.bars = null; L.restAt = null; L.undo = []; L.inp = newInput(0, L.part); // с нуля — сразу клавиатура ввода
+        L.part = fresh(); L.part.minBars = 4; L.phase = 'edit'; L.sel = null; L.bars = null; L.restAt = null; L.undo = []; L.inp = mkInput(0); // с нуля — сразу клавиатура ввода
         L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'loading';
         draw(); env.render(); return true;
       }
@@ -613,7 +678,7 @@ export function createLive(env) {
       case 'lvundo': undo(); return true;
       case 'lvinput': { // ввод нот: курсор — за последней нотой
         const ns = quantize(p);
-        L.sel = null; L.bars = null; L.restAt = null; L.inp = newInput(ns.reduce((a, n) => Math.max(a, n.t + n.d), 0), p); L.inp.prev = ns.length ? ns[ns.length - 1].m : null; if (L.inp.prev != null) L.inp.base = startBase(p, L.inp.prev);
+        L.sel = null; L.bars = null; L.restAt = null; L.inp = mkInput(ns.reduce((a, n) => Math.max(a, n.t + n.d), 0)); L.inp.prev = ns.length ? ns[ns.length - 1].m : null; if (L.inp.prev != null) L.inp.base = startBase(p, L.inp.prev);
         env.render(); markBars(); C().ui.toast(t('live.in.hint')); return true;
       }
       case 'lvinend': L.inp = null; markBars(); env.render(); return true;
@@ -623,7 +688,13 @@ export function createLive(env) {
       case 'lvindur': L.inp.dur = +el.dataset.b; env.render(); return true;
       case 'lvindot': L.inp.dot = !L.inp.dot; env.render(); return true;
       case 'lvinacc': L.inp.acc = L.inp.acc === +el.dataset.a ? null : +el.dataset.a; env.render(); return true;
-      case 'lvinoct': L.inp.base = Math.max(24, Math.min(84, L.inp.base + 12 * +el.dataset.d)); env.render(); return true;
+      case 'lvinmode': { const c = cfg(); L.inp.mode = c.inMode = L.inp.mode === 'fret' ? 'keys' : 'fret'; C().store.save(); env.render(); return true; }
+      case 'lvinkb': { const c = cfg(); L.inp.kb = c.inKb = KB_VIEWS[(KB_VIEWS.indexOf(L.inp.kb) + 1) % KB_VIEWS.length]; C().store.save(); env.render(); return true; }
+      case 'lvinstack': { const c = cfg(); L.inp.stack = c.inStack = !L.inp.stack; C().store.save(); env.render(); if (L.inp.stack) C().ui.toast(t('live.in.stackHint')); return true; }
+      case 'lvinnext': inEdit((q, I) => inRest(q, I)); return true;
+      case 'lvinpick': L.inp.pick = !L.inp.pick; env.render(); return true;
+      case 'lvinpc': baseAtPc(L.inp, +el.dataset.pc); L.inp.pick = false; env.render(); return true;
+      case 'lvinf0': L.inp.f0 = Math.max(0, Math.min(24 - FRET_WIN + 1, +el.dataset.f)); env.render(); return true;
       case 'lvdesel': L.sel = null; L.restAt = null; env.render(); return true;
       case 'lvpitch': nudgePitch(+el.dataset.d); return true;
       case 'lvlen': nudgeLen(+el.dataset.d); return true;

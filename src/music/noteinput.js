@@ -2,15 +2,19 @@
 // A…G, пауза, залигованное продолжение, шаг назад, длительность, диез/бемоль, октава, шаг по тональности. Чистые функции над партией
 // livescore.js (`raw` — источник правды; ввод кладёт ноты ровно на сетку: время — в долях, длина — dq). Без DOM (tests/noteinput.test.js).
 import { NAT, MAJI, NAT_MIN, SH, FL } from './notes.js';
-import { GRIDS, gridOf, quantize, barsOf, addNote, setPitch } from './livescore.js';
+import { GRIDS, gridOf, quantize, barsOf, addNote, setPitch, setFret, tabOf } from './livescore.js';
 
 // Длительности: доли-четверти → подпись; точка — ×1,5
 export const NOTE_DURS = [[4, '1'], [2, '1/2'], [1, '1/4'], [0.5, '1/8'], [0.25, '1/16']];
 const SHARPS = 'FCGDAEB', FLATS = 'BEADGCF', FIFTHS = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5];
 const EPS = 1e-6;
 
-// base — MIDI тоники у левого края полосы клавиш (окно в одну октаву; сдвигается на октаву жестом)
-export const newInput = (beat = 0, p = null) => ({ beat, dur: 1, dot: false, acc: null, oct: 0, prev: null, base: p ? startBase(p, startPitch(p)) : 60 });
+// base — MIDI-нота у левого края клавиш (любая: с до, с соль, с фа-диеза; окно сдвигается жестом вверх/вниз на октаву);
+// kb — вид клавиш: piano (пианино), deg (ступени тональности), abc (буквы); mode — keys (клавиши) или fret (гриф: струны × лады);
+// stack — «аккорд»: нота встаёт на курсор, курсор стоит (следующая — на ту же долю); f0 — первый видимый лад грифа
+export const KB_VIEWS = ['piano', 'deg', 'abc'];
+export const newInput = (beat = 0, p = null, o = {}) => ({ beat, dur: 1, dot: false, acc: null, oct: 0, prev: null, base: p ? startBase(p, startPitch(p)) : 60,
+  kb: KB_VIEWS.includes(o.kb) ? o.kb : 'piano', mode: o.mode === 'fret' && p && p.tuning ? 'fret' : 'keys', stack: !!o.stack, f0: 0 });
 export const durBeats = (inp) => inp.dur * (inp.dot ? 1.5 : 1);
 
 // Знаки при ключе: сколько диезов/бемолей в тональности партии
@@ -51,16 +55,55 @@ export function enter(p, inp, letter) {
 }
 // Нота высотой m (клавиша полосы тональности; знак нажатой ♭/♯ — к ней) → в партию на курсор; курсор вперёд
 export function enterPitch(p, inp, m) { return put(p, inp, Math.max(21, Math.min(108, m + (inp.acc || 0)))); }
-function put(p, inp, m) {
+// Нота с грифа: струна s (с тонкой, 1…) и лад f (от капо) → высота по строю; струна и лад запоминаются (на табах — как нажато)
+export function enterFret(p, inp, s, f) {
+  if (!p.tuning) return null;
+  const idx = p.tuning.length - s;
+  if (idx < 0 || idx >= p.tuning.length) return null;
+  return put(p, inp, p.tuning[idx] + (p.capo || 0) + Math.max(0, Math.min(24, f)), { s, f: Math.max(0, Math.min(24, f)) });
+}
+function put(p, inp, m, fr = null) {
   const d = durBeats(inp);
   ensureGrid(p, d); ensureGrid(p, inp.beat);
   const t0 = inp.beat * spb(p);
-  p.raw = p.raw.filter((r) => Math.abs(r.t - t0) > 1e-4); // новая нота встаёт на место прежней на этой доле
+  // новая нота встаёт на место прежней на этой доле; в режиме «аккорд» — только на место той же высоты или той же струны
+  p.raw = p.raw.filter((r) => Math.abs(r.t - t0) > 1e-4 || (inp.stack && (fr ? r.s !== fr.s && r.m !== m : r.m !== m)));
   addNote(p, inp.beat, m, d);
-  inp.beat += d; inp.prev = m; inp.acc = null; inp.oct = 0;
+  if (fr) { const i = p.raw.findIndex((r) => Math.abs(r.t - t0) < 1e-4 && r.m === m); if (i >= 0) setFret(p, i, fr.s, fr.f); }
+  if (!inp.stack) inp.beat += d;
+  inp.prev = m; inp.acc = null; inp.oct = 0;
   ensureBars(p, inp.beat);
   return m;
 }
+// Ноты, звучащие на курсоре (аккорд, который набирается): [{ s, f }] — для подсветки на грифе
+export function atCursor(p, inp) {
+  const ns = quantize(p), tf = tabOf(p, ns);
+  return ns.map((n, k) => ({ n, f: tf[k] })).filter((x) => Math.abs(x.n.t - inp.beat) < 1e-4).map((x) => ({ m: x.n.m, s: x.f ? x.f.s : null, f: x.f ? x.f.f : null }));
+}
+// Клавиши «пианино» от ноты base: белые и чёрные в настоящей раскладке; x и w — в долях белой клавиши от левого края окна;
+// видимы те, что хоть частью попадают в окно шириной whites (чёрную начальную ноту окно показывает с её края)
+const WIDX = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6], BLACK = [1, 3, 6, 8, 10];
+const whiteIdx = (m) => 7 * Math.floor(m / 12) + WIDX[((m % 12) + 12) % 12];
+export function pianoKeys(p, base, whites = 8, { blacks = true } = {}) {
+  const k = p.key || { pc: 0, minor: false }, names = FIFTHS[k.minor ? (k.pc + 3) % 12 : k.pc] < 0 ? FL : SH;
+  const isB = (m) => BLACK.includes(((m % 12) + 12) % 12);
+  const x0 = isB(base) ? whiteIdx(base + 1) - 0.3 : whiteIdx(base), out = [];
+  for (let m = base - 1; m <= base + whites * 2; m++) {
+    const b = isB(m);
+    if (b && !blacks) continue;
+    const x = (b ? whiteIdx(m + 1) - 0.3 : whiteIdx(m)) - x0, w = b ? 0.6 : 1;
+    if (Math.min(x + w, whites) - Math.max(x, 0) < w * 0.6) continue; // чёрная узкая полоска у края — не клавиша
+    out.push({ m, black: b, x, w, label: names[((m % 12) + 12) % 12], oct: octaveOf(m), c: ((m % 12) + 12) % 12 === 0, tonic: ((m % 12) + 12) % 12 === k.pc });
+  }
+  return out;
+}
+// Сдвиг окна клавиш: на semis полутонов (октава — 12); в пределах рояля
+export const shiftBase = (inp, semis) => { inp.base = Math.max(24, Math.min(96, inp.base + semis)); return inp.base; };
+// Окно с ноты данного названия (0…11) — в той же октаве, что и сейчас
+export const baseAtPc = (inp, pc) => { inp.base = Math.max(24, Math.min(96, 12 * Math.floor(inp.base / 12) + pc)); return inp.base; };
+// Первый видимый лад грифа (окно в 7 ладов)
+export const FRET_WIN = 7;
+export const shiftFret = (inp, d) => { inp.f0 = Math.max(0, Math.min(24 - FRET_WIN + 1, inp.f0 + d)); return inp.f0; };
 // Клавиши полосы: ступени тональности от base (тоники) до октавы — ни одной «чужой» ноты; знаки — жестом
 export function scaleKeys(p, base) {
   const k = p.key || { pc: 0, minor: false }, sc = k.minor ? NAT_MIN : MAJI, names = [FIFTHS[k.minor ? (k.pc + 3) % 12 : k.pc] < 0 ? FL : SH][0];
@@ -84,6 +127,10 @@ export function tie(p, inp) {
 }
 // Шаг назад: нота, оканчивающаяся на курсоре, убирается и курсор встаёт на её начало; иначе курсор на длительность назад
 export function back(p, inp) {
+  if (inp.stack) { // «аккорд»: курсор стоит — уходит последняя нота на курсоре
+    const at = quantize(p).filter((x) => Math.abs(x.t - inp.beat) < 1e-4);
+    if (at.length) { p.raw.splice(at[at.length - 1].i, 1); return true; }
+  }
   const n = endingAt(p, inp.beat);
   if (n) { p.raw.splice(n.i, 1); inp.beat = n.t; inp.prev = null; const l = lastBefore(p, inp.beat); if (l) inp.prev = l.m; return true; }
   inp.beat = Math.max(0, inp.beat - durBeats(inp));

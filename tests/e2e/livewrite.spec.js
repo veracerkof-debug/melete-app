@@ -103,40 +103,77 @@ test('табы: выгрузка в PDF и Guitar Pro', async ({ page, melete, e
   expect(errors).toEqual([]);
 });
 
-// Ввод нот на стане (слово автора 22.11.2026): клавиши тональности, значки длительностей, жесты знака и октавы, пауза, лига, шаг назад
-test('ввод нот: клавиши тональности, жесты, длительность, пауза, шаг назад', async ({ page, melete, errors }) => {
-  test.setTimeout(120_000);
+// Ввод нот на стане (слово автора 22.11.2026): пианино, октава — вверх/вниз, диез и бемоль — вправо/влево, окно с любой ноты, длительности, пауза, шаг назад
+async function openWrite(page, melete, inst) {
   await melete.open();
-  await melete.tools({ notes: { live: { src: 'midi', metro: false, inst: 'keys' } }, wsMap: { free: { layout: 'HH', panes: ['notes', 'piano'], focus: 0, sub: {}, ratio: 0.72 } } });
+  await melete.tools({ notes: { live: { src: 'midi', metro: false, inst } }, wsMap: { free: { layout: 'HH', panes: ['notes', 'piano'], focus: 0, sub: {}, ratio: 0.72 } } });
   await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
   await page.waitForSelector('.session .pane', { timeout: 10_000 });
   await page.waitForTimeout(1200);
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
-  await melete.click('[data-x="lvnew"]'); await page.waitForTimeout(300);
-  await melete.click('[data-x="lvblank"]');
+  await melete.click('[data-x="lvblank"]'); // главная кнопка списка — «Писать ноты и табы»
   await expect(page.locator('.lvkp')).toHaveCount(1);
-  await expect(page.locator('.lvkey')).toHaveCount(8);
+}
+const savedPart = (page) => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('practice-audio'); r.onsuccess = () => { const q = r.result.transaction('tracks', 'readonly').objectStore('tracks').getAll(); q.onsuccess = () => res((q.result.find((x) => x.live) || {}).live || null); }; }));
+const swipeAt = async (page, loc, dx, dy) => { await loc.waitFor(); await page.waitForTimeout(250); const b = await loc.boundingBox(), x = b.x + b.width / 2, y = b.y + b.height * 0.85; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 3 }); await page.mouse.move(x + dx, y + dy, { steps: 3 }); await page.mouse.up(); await page.waitForTimeout(150); };
+const tapAt = async (page, loc) => { await loc.waitFor(); await page.waitForTimeout(150); const b = await loc.boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height * 0.85); await page.waitForTimeout(100); };
+
+test('ввод нот: пианино, октава вверх/вниз, диез вправо, бемоль влево, длительность, пауза, шаг назад', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await openWrite(page, melete, 'keys');
+  await expect(page.locator('.lvpiano .lvpk:not(.bk)')).toHaveCount(8);
+  await expect(page.locator('.lvpiano .lvpk.bk').first()).toBeVisible(); // чёрные клавиши
   await expect(page.locator('[data-x="lvindur"]')).toHaveCount(5);
-  const key = (i) => page.locator('.lvkey[data-k="' + i + '"]');
-  const swipe = async (loc, dx, dy) => { await loc.waitFor(); await page.waitForTimeout(250); const b = await loc.boundingBox(), x = b.x + b.width / 2, y = b.y + b.height / 2; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 3 }); await page.mouse.move(x + dx, y + dy, { steps: 3 }); await page.mouse.up(); await page.waitForTimeout(150); };
-  for (const i of [0, 2, 4]) await key(i).click();            // до ми соль четвертными
-  await page.click('[data-x="lvindur"][data-b="0.5"]');        // восьмые
-  await swipe(key(6), 0, -40);                                   // си вверх — диез
-  await swipe(key(1), 0, 40);                                    // ре вниз — бемоль
-  for (let k = 0; k < 3 && !/октава 5/.test(await page.locator('.lvst').innerText()); k++) await swipe(key(7), -90, 0); // вбок по полосе — октава выше
-  await expect(page.locator('.lvst')).toContainText('октава 5');
-  await key(0).click();
-  await page.click('[data-x="lvinrest"]');
-  await page.click('[data-x="lvinrest"]');
-  await page.click('[data-x="lvinback"]');                       // стёрлась не нота — курсор назад на длительность
+  const key = (m) => page.locator('.lvpk[data-m="' + m + '"]');
+  for (const m of [60, 64, 67]) await tapAt(page, key(m)); // до ми соль четвертными
+  await page.click('[data-x="lvindur"][data-b="0.5"]');     // восьмые
+  await swipeAt(page, key(71), 50, 0);                       // си вправо — диез (до)
+  await swipeAt(page, key(62), -50, 0);                      // ре влево — бемоль
+  await expect(page.locator('.lvpk[data-m="60"] sub')).toHaveText('4'); // подпись октавы у «до»
+  await swipeAt(page, key(64), 0, -60);                      // вверх — октава выше (нота не ставится)
+  await expect(page.locator('.lvpk[data-m="72"] sub')).toHaveText('5');
+  await tapAt(page, key(72));
+  await page.click('[data-x="lvinrest"]'); await page.click('[data-x="lvinrest"]'); await page.click('[data-x="lvinback"]');
   await page.waitForFunction(() => document.querySelectorAll('.atsurf text, .atsurf svg').length > 0, null, { timeout: 20_000 });
   await page.waitForTimeout(1500);
-  await expect(page.locator('.lvcur')).toHaveCount(1);          // курсор на стане
-  const part = async () => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('practice-audio'); r.onsuccess = () => { const q = r.result.transaction('tracks', 'readonly').objectStore('tracks').getAll(); q.onsuccess = () => res((q.result.find((x) => x.live) || {}).live || null); }; }));
+  await expect(page.locator('.lvcur')).toHaveCount(1);       // курсор на стане
   await page.waitForTimeout(900);
-  const p1 = await part();
+  const p1 = await savedPart(page);
   expect(p1 && p1.raw.map((r) => r.m)).toEqual([60, 64, 67, 72, 61, 72]); // до ми соль · си♯ · ре♭ · до октавой выше
+  // окно клавиш с любой ноты: с соль и с фа-диеза
+  await page.click('[data-x="lvinpick"]');
+  await page.click('[data-x="lvinpc"][data-pc="7"]');
+  await expect(page.locator('.lvpiano .lvpk:not(.bk)').first()).toHaveAttribute('data-m', '79'); // октава 5 → соль5
+  await page.click('[data-x="lvinpick"]'); await page.click('[data-x="lvinpc"][data-pc="6"]');
+  await expect(page.locator('.lvpiano .lvpk.bk').first()).toHaveAttribute('data-m', '78');
+  // вид клавиш: ступени и буквы
+  await page.click('[data-x="lvinkb"]'); await expect(page.locator('.lvkey')).toHaveCount(8);
+  await page.click('[data-x="lvinkb"]'); await expect(page.locator('.lvpiano.abc .lvpk')).not.toHaveCount(0);
+  await expect(page.locator('.lvpiano.abc .lvpk.bk')).toHaveCount(0);
   await page.click('[data-x="lvinend"]'); await page.waitForTimeout(300);
   await expect(page.locator('.lvkp')).toHaveCount(0);
+  expect(errors.filter((e) => !/ResizeObserver/.test(String(e)))).toEqual([]);
+});
+
+// Табы нотами: гриф «струны × лады», касание — нота на курсор, аккорд, окно ладов
+test('ввод табов: гриф, аккорд, лады вбок', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await openWrite(page, melete, 'guitar');
+  await expect(page.locator('.lvfret')).toHaveCount(1);        // у гитары сразу гриф
+  await expect(page.locator('.lvfc')).toHaveCount(6 * 7);
+  const cell = (s, f) => page.locator('.lvfc[data-s="' + s + '"][data-f="' + f + '"]');
+  await tapAt(page, cell(1, 3));                                // соль на тонкой E
+  await page.click('[data-x="lvinstack"]');                    // аккорд: курсор стоит
+  await tapAt(page, cell(6, 0)); await tapAt(page, cell(5, 2));
+  await expect(page.locator('.lvfc.on')).toHaveCount(2);
+  await page.click('[data-x="lvinnext"]');                     // дальше — к следующей доле
+  await swipeAt(page, page.locator('.lvfc[data-f="3"]').first(), -90, 0); // вбок — другие лады
+  await expect(page.locator('.lvfret .lvfc').first()).toHaveAttribute('data-f', '3');
+  await page.click('[data-x="lvinmode"]');                     // переключить на клавиши
+  await expect(page.locator('.lvpiano')).toHaveCount(1);
+  await page.click('[data-x="lvinmode"]');
+  await page.waitForTimeout(1200);
+  const p1 = await savedPart(page);
+  expect(p1 && p1.raw.map((r) => [r.m, r.s, r.f])).toEqual([[67, 1, 3], [40, 6, 0], [47, 5, 2]]);
   expect(errors.filter((e) => !/ResizeObserver/.test(String(e)))).toEqual([]);
 });

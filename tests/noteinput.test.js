@@ -94,3 +94,85 @@ describe('полоса клавиш тональности', () => {
     expect(notes(g)).toEqual([[0, 1, 61]]); expect(inp.acc).toBe(null);
   });
 });
+
+import { enterPitch, enterFret, atCursor, pianoKeys, shiftBase, baseAtPc, shiftFret, KB_VIEWS } from '../src/music/noteinput.js';
+
+describe('пианино и окно клавиш', () => {
+  it('белые и чёрные в настоящей раскладке, окно с любой ноты', () => {
+    const p = part();
+    const ks = pianoKeys(p, 60, 8);
+    expect(ks.filter((k) => !k.black).map((k) => k.m)).toEqual([60, 62, 64, 65, 67, 69, 71, 72]);
+    expect(ks.filter((k) => k.black).map((k) => k.m)).toEqual([61, 63, 66, 68, 70]);
+    expect(ks.find((k) => k.m === 60)).toMatchObject({ x: 0, label: 'C', oct: 4, c: true });
+    const g = pianoKeys(p, 67, 8).filter((k) => !k.black).map((k) => k.m);
+    expect(g[0]).toBe(67);
+    const fs = pianoKeys(p, 66, 8); // с фа-диеза: чёрная клавиша у левого края
+    expect(fs.find((k) => k.m === 66)).toMatchObject({ black: true });
+    expect(fs.find((k) => k.m === 66).x).toBeLessThanOrEqual(0.01);
+  });
+  it('названия по тональности: бемоли в фа мажоре, диезы в соль мажоре', () => {
+    expect(pianoKeys(part({ key: { pc: 5, minor: false } }), 60).find((k) => k.m === 70).label).toBe('B♭');
+    expect(pianoKeys(part({ key: { pc: 7, minor: false } }), 60).find((k) => k.m === 66).label).toBe('F♯');
+  });
+  it('без чёрных — только белые; сдвиг и начало с ноты', () => {
+    expect(pianoKeys(part(), 60, 8, { blacks: false }).every((k) => !k.black)).toBe(true);
+    const i = newInput(0, part());
+    i.base = 60; expect(shiftBase(i, 12)).toBe(72); expect(shiftBase(i, -100)).toBe(24); expect(shiftBase(i, 500)).toBe(96);
+    i.base = 60; expect(baseAtPc(i, 7)).toBe(67); expect(baseAtPc(i, 6)).toBe(66);
+  });
+  it('виды клавиш и режим из настроек', () => {
+    expect(KB_VIEWS).toEqual(['piano', 'deg', 'abc']);
+    expect(newInput(0, part()).kb).toBe('piano');
+    expect(newInput(0, part(), { kb: 'abc', stack: true })).toMatchObject({ kb: 'abc', stack: true, mode: 'keys' });
+    expect(newInput(0, part(), { mode: 'fret' }).mode).toBe('keys'); // без строя грифа нет
+    expect(newInput(0, newPart({ inst: 'guitar' }), { mode: 'fret' }).mode).toBe('fret');
+  });
+});
+
+describe('гриф: ввод струной и ладом', () => {
+  const guitar = () => newPart({ inst: 'guitar' });
+  it('ладом — высота по строю, струна и лад запоминаются', () => {
+    const p = guitar(), i = newInput(0, p, { mode: 'fret' });
+    expect(enterFret(p, i, 1, 3)).toBe(67); // G на тонкой E
+    expect(enterFret(p, i, 6, 0)).toBe(40);
+    expect(p.raw.map((r) => [r.m, r.s, r.f])).toEqual([[67, 1, 3], [40, 6, 0]]);
+    expect(i.beat).toBe(2);
+  });
+  it('капо сдвигает высоту; лады вне 0…24 и струны вне строя — нет', () => {
+    const p = guitar(); p.capo = 2; const i = newInput(0, p);
+    expect(enterFret(p, i, 6, 0)).toBe(42);
+    expect(enterFret(p, i, 7, 0)).toBe(null);
+    expect(enterFret(p, i, 1, 99)).toBe(64 + 2 + 24);
+  });
+  it('аккорд: курсор стоит, разные струны копятся, та же струна заменяется', () => {
+    const p = guitar(), i = newInput(0, p); i.stack = true;
+    enterFret(p, i, 6, 0); enterFret(p, i, 5, 2); enterFret(p, i, 4, 2);
+    expect(i.beat).toBe(0);
+    expect(p.raw.length).toBe(3);
+    enterFret(p, i, 5, 3); // та же струна — заменяет
+    expect(p.raw.length).toBe(3);
+    expect(atCursor(p, i).map((x) => [x.s, x.f]).sort()).toEqual([[4, 2], [5, 3], [6, 0]]);
+    rest(p, i); expect(i.beat).toBe(1);
+  });
+  it('аккорд на клавишах: разные высоты копятся; шаг назад убирает последнюю', () => {
+    const p = part(), i = newInput(0, p); i.stack = true;
+    enterPitch(p, i, 60); enterPitch(p, i, 64); enterPitch(p, i, 67);
+    expect(notes(p).map((n) => n[2]).sort()).toEqual([60, 64, 67]);
+    expect(back(p, i)).toBe(true);
+    expect(p.raw.length).toBe(2);
+  });
+  it('без аккорда нота на той же доле заменяет прежнюю', () => {
+    const p = part(), i = newInput(0, p);
+    enterPitch(p, i, 60); moveTo(p, i, 0); enterPitch(p, i, 62);
+    expect(notes(p)).toEqual([[0, 1, 62]]);
+  });
+  it('окно ладов — в пределах грифа', () => {
+    const i = newInput(0, guitar());
+    expect(shiftFret(i, -3)).toBe(0); expect(shiftFret(i, 3)).toBe(3); expect(shiftFret(i, 99)).toBe(18);
+  });
+  it('MusicXML с табами содержит струну и лад', () => {
+    const p = guitar(), i = newInput(0, p); enterFret(p, i, 2, 5);
+    const x = partXML(p, { title: 't' });
+    expect(x).toMatch(/<string>2<\/string>/); expect(x).toMatch(/<fret>5<\/fret>/);
+  });
+});
