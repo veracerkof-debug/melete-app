@@ -19,7 +19,7 @@ const burst = (c, out, t, { hp = 0, lp = 20000, peak = 0.5, dec = 0.1, q = 0.5 }
   s.start(t); s.stop(t + dec * 2 + 0.05);
 };
 
-// Удар: lane — 'kick' | 'snare' | 'hat' | 'ohat' | 'clap'; v — сила 0…1; at — время контекста
+// Удар: lane — 'kick' | 'snare' | 'hat' | 'ohat' | 'clap' | 'rim' | 'tom' | 'crash'; v — сила 0…1; at — время контекста
 export function drumHit(c, out, lane, at, v = 0.8) {
   const t = Math.max(at, c.currentTime), k = 0.3 + 0.7 * v;
   if (lane === 'kick') {
@@ -37,6 +37,21 @@ export function drumHit(c, out, lane, at, v = 0.8) {
     burst(c, out, t, { hp: 1500, peak: 0.6 * k, dec: 0.16, q: 0.3 });
   } else if (lane === 'hat') burst(c, out, t, { hp: 6500, peak: 0.35 * k, dec: 0.045 });
   else if (lane === 'ohat') burst(c, out, t, { hp: 5500, peak: 0.32 * k, dec: 0.28 });
-  else if (lane === 'clap') [0, 0.012, 0.026].forEach((dt, i) => burst(c, out, t + dt, { hp: 1000, lp: 7000, peak: (i === 2 ? 0.55 : 0.3) * k, dec: i === 2 ? 0.14 : 0.02, q: 1.2 }));
+  else if (lane === 'rim') { // «рим»: сухой щелчок обода — короткий тон и всплеск шума
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.025);
+    env(c, g, t, 0.5 * k, 0.05);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.15);
+    burst(c, out, t, { hp: 2200, peak: 0.4 * k, dec: 0.035, q: 1.5 });
+  } else if (lane === 'tom') { // том: синус со скатом высоты, длиннее бочки
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(92, t + 0.14);
+    env(c, g, t, 0.95 * k, 0.4);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.7);
+    burst(c, out, t, { lp: 1400, peak: 0.2 * k, dec: 0.025 });
+  } else if (lane === 'crash') { // крэш: два слоя шума, длинный хвост
+    burst(c, out, t, { hp: 3200, peak: 0.42 * k, dec: 1.3, q: 0.3 });
+    burst(c, out, t, { hp: 7000, peak: 0.3 * k, dec: 0.8, q: 0.3 });
+  } else if (lane === 'clap') [0, 0.012, 0.026].forEach((dt, i) => burst(c, out, t + dt, { hp: 1000, lp: 7000, peak: (i === 2 ? 0.55 : 0.3) * k, dec: i === 2 ? 0.14 : 0.02, q: 1.2 }));
 }
 export { noiseBuf };

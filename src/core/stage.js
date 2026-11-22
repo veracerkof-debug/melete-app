@@ -97,3 +97,28 @@ export function chordsAbove(txt) {
     return ch.trimEnd() + '\n' + tx;
   }).join('\n');
 }
+
+/* ---------- рабочая сцена (без события) и темп ---------- */
+// «Сцена» открывается и без события — как рабочий инструмент (слово автора 22.11.2026): сет-лист хранится в настройках,
+// у песен те же настройки пункта (ev.stage), что и у события.
+export const WORK = '_work';
+export function workEvent(settings) {
+  const w = settings.stageWork || (settings.stageWork = { id: WORK, songs: [], stage: {} });
+  w.id = WORK; w.songs = Array.isArray(w.songs) ? w.songs : []; w.stage = w.stage || {};
+  return w;
+}
+// Состав сет-листа рабочей сцены: песня есть → убрать, нет → добавить в конец; несуществующие id отбрасываются
+export function toggleWorkSong(w, id, songById) {
+  const i = w.songs.indexOf(id);
+  if (i >= 0) w.songs.splice(i, 1); else if (songById(id)) w.songs.push(id);
+  w.songs = w.songs.filter((x) => songById(x));
+  return w.songs.includes(id);
+}
+// Темп «по касанию»: метки времени (мс) последних касаний → bpm по среднему интервалу; пауза дольше 2,5 с начинает счёт заново;
+// меньше двух касаний — null. Возвращает { bpm, times } — times хранить для следующего касания
+export function tapTempo(times, now) {
+  const t = (times.length && now - times[times.length - 1] > 2500 ? [] : times.slice(-5)).concat(now);
+  if (t.length < 2) return { bpm: null, times: t };
+  const iv = (t[t.length - 1] - t[0]) / (t.length - 1);
+  return { bpm: clampBpm(60000 / iv), times: t };
+}

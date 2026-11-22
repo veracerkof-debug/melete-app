@@ -56,3 +56,38 @@
 .stage.night .sgchips,.stage.night .sgic.txt,.stage.night .sgnext{display:none}
 .stage.night .sgtext .chd{color:#FFD97A}
 .stage.night .sgbtn{background:rgba(255,255,255,.12)}
+
+/* ---- «Сцена — один экран» (слово автора 22.11.2026): сет-лист, текст, темп, барабанные пэды с залом и эхом, минусовка, замок ---- */
+.stage{--gold:rgb(232 194 122);--coral:rgb(242 140 107)}
+.sghead{cursor:pointer}
+.sgseek{position:relative;flex:none;height:22px;margin:0 14px;border-radius:11px;background:rgba(255,255,255,.08);overflow:hidden;touch-action:manipulation}
+.sgseek i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--gold) 45%,transparent);pointer-events:none}
+.sgtime{position:absolute;right:10px;top:0;line-height:22px;font-size:12px;color:rgba(244,241,234,.8);pointer-events:none}
+.sgtempo{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 10px 0}
+.sgtempo .sgic{width:48px;height:44px}
+.sgbpm{min-width:120px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--gold) 14%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.sgbpm b{font-size:24px;font-weight:700;color:var(--gold)}
+.sgbpm small{font-size:11px;color:rgba(244,241,234,.6);letter-spacing:.03em}
+.sgpads{flex:none;padding:4px 10px 0}
+.sgpgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;touch-action:none}
+.sgpad{position:relative;min-height:64px;border-radius:14px;background:rgba(255,255,255,.07);border:1.5px solid color-mix(in srgb,var(--pc,var(--gold)) 55%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:0 2px 7px;touch-action:none;-webkit-touch-callout:none}
+.sgpad b{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pc,var(--gold));text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sgpad i{position:absolute;left:8px;top:5px;font-size:11px;font-style:normal;color:rgba(244,241,234,.4)}
+.sgpad.hit{animation:sgpadhit .28s ease-out}
+@keyframes sgpadhit{from{background:color-mix(in srgb,var(--pc,var(--gold)) 60%,transparent);transform:scale(.96)}to{background:rgba(255,255,255,.07);transform:none}}
+.p-kick,.p-kickw{--pc:var(--coral)}.p-snare,.p-rim,.p-clap{--pc:var(--gold)}.p-hat,.p-crash,.p-tom{--pc:rgba(244,241,234,.85)}
+.sgfx{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px 4px 0}
+.sgfx label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:rgba(244,241,234,.65)}
+.sgrng{width:100%;height:28px;accent-color:var(--gold);touch-action:pan-y}
+.sglock{position:absolute;inset:0;z-index:5;background:rgba(0,0,0,.55);display:grid;place-items:center;touch-action:none}
+.sgunlock{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 30px;border-radius:24px;background:rgba(255,255,255,.1);font-size:15px;font-weight:600}
+.sgunlock svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+@media (orientation:landscape) and (max-height:520px){
+  .stage.pads{grid-template-columns:1fr minmax(0,44%) 132px;grid-template-rows:auto 1fr auto auto auto}
+  .stage.pads .sgpads{grid-column:2;grid-row:2/6;overflow:auto;padding-top:0}
+  .stage.pads .sgbar{grid-column:3;grid-row:2/6}
+  .stage.pads .sgpad{min-height:56px}
+  .sgseek,.sgtempo{grid-column:1}
+  .stage:not(.pads) .sgtempo,.stage:not(.pads) .sgseek{grid-column:1}
+}
+.stage.night .sgtempo .sgic,.stage.night .sgseek{display:none}

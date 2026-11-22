@@ -87,3 +87,33 @@ describe('сцена: размер текста', () => {
     expect(stageFont(Array(60).fill('строка').join('\n'), 1000, 500, 40, 1.5)).toBe(16);
   });
 });
+
+// Рабочая сцена, темп по касанию, барабанные пэды (слово автора 22.11.2026)
+import { workEvent, toggleWorkSong, tapTempo, WORK } from '../src/core/stage.js';
+import { echoTime, PADS } from '../src/audio/stagepads.js';
+describe('рабочая сцена и пэды', () => {
+  it('рабочий «событие»: хранится в настройках, песни добавляются и убираются, лишнее отбрасывается', () => {
+    const st = {}, songs = { a: { id: 'a' }, b: { id: 'b' } }, by = (id) => songs[id];
+    const w = workEvent(st);
+    expect(w.id).toBe(WORK); expect(st.stageWork).toBe(w);
+    expect(toggleWorkSong(w, 'a', by)).toBe(true); toggleWorkSong(w, 'b', by);
+    expect(w.songs).toEqual(['a', 'b']);
+    expect(toggleWorkSong(w, 'a', by)).toBe(false); expect(w.songs).toEqual(['b']);
+    expect(toggleWorkSong(w, 'нет', by)).toBe(false); expect(w.songs).toEqual(['b']);
+    w.songs.push('удалена'); toggleWorkSong(w, 'b', by); expect(w.songs).toEqual([]);
+  });
+  it('темп по касанию: интервал → bpm, пауза начинает заново', () => {
+    let r = tapTempo([], 0); expect(r.bpm).toBeNull();
+    r = tapTempo(r.times, 500); expect(r.bpm).toBe(120);
+    r = tapTempo(r.times, 1000); r = tapTempo(r.times, 1500); expect(r.bpm).toBe(120);
+    r = tapTempo(r.times, 6000); expect(r.bpm).toBeNull(); // пауза > 2,5 с — счёт заново
+    r = tapTempo(r.times, 6667); expect(r.bpm).toBeGreaterThan(85); expect(r.bpm).toBeLessThan(95); // 667 мс ≈ 90 bpm
+  });
+  it('эхо — пунктирная восьмая от темпа, в пределах 0,12…1,2 с; у пэдов осмысленные посылы', () => {
+    expect(echoTime(120)).toBeCloseTo(0.375, 3); expect(echoTime(60)).toBeCloseTo(0.75, 3);
+    expect(echoTime(20)).toBe(1.2); expect(echoTime(400)).toBe(0.12); expect(echoTime(0)).toBeCloseTo(0.5, 2);
+    expect(PADS).toHaveLength(8);
+    expect(PADS.find((p) => p.id === 'kick').room).toBeLessThan(PADS.find((p) => p.id === 'kickw').room); // сухая бочка и «мокрая»
+    expect(new Set(PADS.map((p) => p.id)).size).toBe(8);
+  });
+});
