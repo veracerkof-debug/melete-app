@@ -559,7 +559,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .qrframe{position:absolute;inset:18%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
 /* Учёба на главной (screens/study.js): строка на инструмент — часы за неделю из цели */
 .hstudy{background:var(--cell);border-radius:18px;padding:10px 12px 6px}
-.qgrid + .hstudy,.hstudy + .hstudy{margin-top:12px}
+.hblk + .hblk > .hstudy:first-child{margin-top:12px} /* блоки главной — каждый в своей <section class="hblk">, соседние селекторы между ними не работают */
 .hsrow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;color:var(--ink)}
 .hsrow + .hsrow{border-top:1px solid var(--sep)}
 .hsic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--fill);flex:none}

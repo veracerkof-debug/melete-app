@@ -36,3 +36,15 @@ test('«Мои занятия»: вокал, расписание на сего�
   await expect(e.locator('.hsv')).toContainText('за неделю');
   void errors;
 });
+
+// Отступ между «Быстрым доступом» и карточкой учёбы (отчёт автора, сборка 317): блоки главной лежат в разных <section>,
+// сосед-селектор между ними не работал, карточка прилипала к плиткам.
+test('главная: между быстрым доступом и учёбой есть зазор', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { study: { goals: { ear: 60 } } } });
+  const gap = await page.evaluate(() => {
+    const q = document.querySelector('.qgrid').getBoundingClientRect(), s = document.querySelector('.hstudy').getBoundingClientRect();
+    return s.top - q.bottom;
+  });
+  expect(gap).toBeGreaterThanOrEqual(10);
+  void errors;
+});
