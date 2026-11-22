@@ -15,3 +15,27 @@ test('капо', async ({ page, melete, errors }) => {
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).songs[0].capo || 0)).toBe(0);
   expect(errors).toEqual([]);
 });
+
+// Ступени в тексте песни (слово автора 22.11.2026): три вида, подсветка при наборе, непонятое — красным
+test('ступени: вид «аккорд и ступень», редактор подсвечивает римские цифры и опечатки', async ({ page, melete, errors }) => {
+  const songs = [{ id: 's1', title: 'Песня', key: 'C', notes: 'I   V   vi  IIII\nСвя[IV]той [Vv] [x2]\n', created: Date.now() }];
+  await melete.open({ songs, tools: { notes: { sec: 'text', textPick: { id: 's1', sess: null } } } });
+  await melete.free('F', ['notes']);
+  await expect(page.locator('.lyr .chd.bad')).toHaveCount(2); // IIII и [Vv]
+  await expect(page.locator('.lyr .chd:not(.bad)').first()).toHaveText('C');
+  // три вида по кругу: аккорды → ступени → вместе
+  await melete.click('[data-x="nview"]'); await page.waitForTimeout(300);
+  await expect(page.locator('.lyr .chd:not(.bad)').first()).toHaveText('I');
+  await melete.click('[data-x="nview"]'); await page.waitForTimeout(300);
+  await expect(page.locator('.lyr .chd.both').first()).toContainText('CI');
+  // редактор: подсветка под текстом и счётчик непонятого
+  await melete.click('[data-x="nedit"]'); await page.waitForTimeout(500);
+  await expect(page.locator('#lhl mark.c').first()).toBeVisible();
+  await expect(page.locator('#lhl mark.x')).toHaveCount(2);
+  await expect(page.locator('#lbad')).toBeVisible();
+  await page.fill('#lta', 'I IV\nа [vi] [Vv]'); await page.waitForTimeout(200);
+  await expect(page.locator('#lhl mark.c')).toHaveCount(3);
+  await expect(page.locator('#lhl mark.x')).toHaveCount(1);
+  if (process.env.ED_SHOTS) await page.screenshot({ path: process.env.ED_SHOTS + '/deg.png' });
+  expect(errors).toEqual([]);
+});

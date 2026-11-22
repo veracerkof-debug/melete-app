@@ -49,7 +49,7 @@
   "cancel": "Cancel",
   "save": "Save",
   "textPh": "Am        F\nA line of the song...\n\nor inline: [Am]A line [F]of the song",
-  "textHint": "Lines made only of chords are highlighted and transposed. You can also write chords inline in square brackets: [Am].",
+  "textHint": "Lines made only of chords are highlighted whole. Chords inside the text go in square brackets: [Am] or as a degree [vi]. Roman numerals (I, IV, vi, ♭VII, V7) are chords relative to the song key: major in capitals, minor in lowercase. Red marks what is not recognised.",
   "notSaved": "The file won’t be kept after reload",
   "about": "Guitar Pro tabs and lyrics with chords",
   "pdf.prev": "Previous page",
@@ -316,5 +316,8 @@
   "ed.t.harm": "Harmonic",
   "ed.t.acc": "Accent",
   "ed.t.hac": "Heavy accent",
-  "ed.t.stac": "Staccato"
+  "ed.t.stac": "Staccato",
+  "deg.both": "Chord and degree",
+  "deg.toBoth": "Show chord and degree together",
+  "ed.badChords": "Not recognised: {n} — check the spelling (Roman numerals, chords in brackets)"
 }

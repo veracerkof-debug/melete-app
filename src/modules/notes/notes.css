@@ -3,6 +3,17 @@
 .trv{min-width:2.4ch;text-align:center;font-weight:700}
 .lyr{flex:1;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;line-height:1.55;padding:4px 2px;min-height:0}
 .chd{color:var(--tint-text);font-weight:700}
+.chd.both{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;vertical-align:bottom}
+.chd.both i{font-style:normal;font-weight:600;font-size:.62em;color:var(--l2)}
+.chd.bad{color:var(--red);text-decoration:underline dotted var(--red);text-underline-offset:3px} /* не распознано (слово автора 22.11.2026) */
+/* Редактор текста с подсветкой: под прозрачным по фону полем рисуется тот же текст, а распознанное — плашками */
+.hlbox{position:relative;display:block}
+.hlpre,.hlta{margin:0;padding:12px 14px;box-sizing:border-box;width:100%;font:15px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;border:0;tab-size:4}
+.hlpre{position:absolute;inset:0;overflow:hidden;color:transparent;pointer-events:none}
+.hlta{position:relative;display:block;background:transparent;color:var(--ink);resize:none;overflow:hidden;min-height:52vh;outline:none}
+.hlpre mark{border-radius:5px;color:transparent;background:color-mix(in srgb,var(--tint) 26%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--tint) 40%,transparent)}
+.hlpre mark.x{background:color-mix(in srgb,var(--red) 22%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--red) 55%,transparent)}
+.hlbad{color:var(--red)}
 .atwrap{flex:1;overflow:auto;min-height:0;background:#fff;border-radius:12px;position:relative;-webkit-overflow-scrolling:touch}
 .atsurf{min-height:100%;position:relative}
 /* Играемое место: свои полосы alphaTab скрыты, вместо них — полупрозрачная рамка вокруг цифр удара (notes/index.js: hlPlace) */

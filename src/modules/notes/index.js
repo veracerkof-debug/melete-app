@@ -8,7 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong } from '../../core/files.js';
-import { lyricsHTML, chordsIn, degreesIn } from '../../music/lyrics.js';
+import { lyricsHTML, chordsIn, degreesIn, markupHTML, badIn } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
@@ -505,7 +505,7 @@ function songKey(song) {
   const d = degreesIn(song.notes);
   return d.length ? (tonicIsMinor(d) ? { pc: 9, minor: true, sharp: null, assumed: true } : { pc: 0, minor: false, sharp: null, assumed: true }) : null;
 }
-const viewOf = () => (st().view === 'degrees' ? 'degrees' : 'chords');
+const viewOf = () => (st().view === 'degrees' ? 'degrees' : st().view === 'both' ? 'both' : 'chords'); // аккорды · ступени · аккорд и ступень вместе
 // Чей текст на экране: выбранный в библиотеке текстов (пока идёт та же сессия) или песни сессии
 function textId() {
   const sess = ctx.session && ctx.session.songId, p = st().textPick;
@@ -536,8 +536,8 @@ function textBody() {
   return '<div class="ntools">' + icb('data-x="nlib"', I.list, t('lib.title'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(song.title) + '</span></div><div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
     icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn + capoBtn +
     // вид: аккорды или ступени (римские цифры / нэшвиллская запись — в выборе тональности)
-    (key ? '<button class="trview" data-x="nview" aria-pressed="' + (viewOf() === 'degrees') + '" aria-label="' + esc(t(viewOf() === 'degrees' ? 'deg.toChords' : 'deg.toDegrees')) + '">' +
-      (viewOf() === 'degrees' ? (dstyle() === 'nash' ? '1 4 5' : 'I IV V') : 'C F G') + '</button>' : '') + '</div>' +
+    (key ? '<button class="trview" data-x="nview" aria-pressed="' + (viewOf() !== 'chords') + '" aria-label="' + esc(t(viewOf() === 'chords' ? 'deg.toDegrees' : viewOf() === 'degrees' ? 'deg.toBoth' : 'deg.toChords')) + '">' +
+      (viewOf() === 'degrees' ? (dstyle() === 'nash' ? '1 4 5' : 'I IV V') : viewOf() === 'both' ? 'C·I' : 'C F G') + '</button>' : '') + '</div>' +
     (big() ? '<div class="vrow tight">' + icb('data-x="nfs" data-d="-1"', 'A−', t('smaller'), 'sm txt') + icb('data-x="nfs" data-d="1"', 'A+', t('bigger'), 'sm txt') + icb('data-x="nedit"', I.pen, t('editText'), 'sm') + '</div>' : '') + '</div>' +
     (song.notes
       ? '<div class="lyr" style="font-size:' + (st().fs || 15) + 'px">' + lyricsHTML(song.notes, n - capo, key, { view: viewOf(), style: dstyle() }) + '</div>'
@@ -617,12 +617,12 @@ function keySheet() {
       '<small>' + (o.d > 0 ? '+' : '') + o.d + '</small></button>').join('') + '</div></div>' +
     '<p class="ftr">' + t('tr.hint') + '</p>' +
     '<div class="hdr">' + t('deg.title') + '</div><div class="group"><div class="cellcol">' +
-    ui.seg('nview', [['chords', t('deg.chords')], ['roman', t('deg.roman')], ['nash', t('deg.nash')]], viewOf() === 'chords' ? 'chords' : dstyle(), t('deg.title')) + '</div></div>' +
+    ui.seg('nview', [['chords', t('deg.chords')], ['roman', t('deg.roman')], ['nash', t('deg.nash')], ['both', t('deg.both')]], viewOf() === 'chords' ? 'chords' : viewOf() === 'both' ? 'both' : dstyle(), t('deg.title')) + '</div></div>' +
     '<p class="ftr">' + t('deg.hint') + '</p>',
   (el, sh) => el.addEventListener('click', (e) => {
     const v = e.target.closest('[data-seg="nview"] [data-v]');
     if (v) {
-      if (v.dataset.v === 'chords') st().view = 'chords'; else { st().view = 'degrees'; st().dstyle = v.dataset.v; }
+      if (v.dataset.v === 'chords' || v.dataset.v === 'both') st().view = v.dataset.v; else { st().view = 'degrees'; st().dstyle = v.dataset.v; }
       ctx.store.save(); sh.close(); render(); return;
     }
     const b = e.target.closest('[data-trd]');
@@ -643,16 +643,29 @@ function libSheet() {
   }, true));
 }
 
+// Редактор текста: под набираемым текстом рисуется подсветка — аккорды и ступени яркие, непонятое — красным (src/music/lyrics.js: markupHTML)
 function lyricsEdit() {
   const { t, ui } = ctx, song = curSong();
   if (!song) return;
   ui.sheet(() => ui.snav(t('sec.text'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="lsave">' + t('save') + '</button>' }) +
-    '<div class="group"><textarea class="ta" id="lta" style="min-height:52vh" aria-label="' + t('sec.text') + '" placeholder="' + esc(t('textPh')) + '">' + esc(song.notes) + '</textarea></div><p class="ftr">' + t('textHint') + '</p>',
-  (el, sh) => el.querySelector('#lsave').addEventListener('click', () => {
-    updCur({ notes: el.querySelector('#lta').value });
-    sh.close();
-    render();
-  }));
+    '<div class="group"><div class="hlbox" style="min-height:52vh"><pre class="hlpre" id="lhl" aria-hidden="true"></pre><textarea class="ta hlta" id="lta" spellcheck="false" aria-label="' + t('sec.text') + '" placeholder="' + esc(t('textPh')) + '">' + esc(song.notes) + '</textarea></div></div>' +
+    '<p class="ftr hlbad" id="lbad" hidden></p><p class="ftr">' + t('textHint') + '</p>',
+  (el, sh) => {
+    const ta = el.querySelector('#lta'), hl = el.querySelector('#lhl'), bad = el.querySelector('#lbad');
+    const paint = () => {
+      hl.innerHTML = markupHTML(ta.value) + '\n';
+      const n = badIn(ta.value);
+      bad.hidden = !n; bad.textContent = n ? t('ed.badChords', { n }) : '';
+      ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 0) + 'px'; hl.parentElement.style.height = ta.style.height; // поле растёт вместе с текстом, прокручивается шторка
+    };
+    ta.addEventListener('input', paint);
+    paint();
+    el.querySelector('#lsave').addEventListener('click', () => {
+      updCur({ notes: ta.value });
+      sh.close();
+      render();
+    });
+  });
 }
 
 /* ---------- действия ---------- */
@@ -745,7 +758,7 @@ function act(a, el) {
     case 'nedit': lyricsEdit(); break;
     case 'nkey': keySheet(); break;
     case 'ncapo': capoSheet(); break;
-    case 'nview': st().view = viewOf() === 'degrees' ? 'chords' : 'degrees'; ctx.store.save(); render(); break;
+    case 'nview': st().view = viewOf() === 'chords' ? 'degrees' : viewOf() === 'degrees' ? 'both' : 'chords'; ctx.store.save(); render(); break;
     case 'tadd': addFile(); break;
     case 'topen': if (x) openTab(x); break;
     case 'tdel':

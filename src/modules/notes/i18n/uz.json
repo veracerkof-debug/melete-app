@@ -315,5 +315,8 @@
   "ed.t.harm": "Harmonic",
   "ed.t.acc": "Accent",
   "ed.t.hac": "Heavy accent",
-  "ed.t.stac": "Staccato"
+  "ed.t.stac": "Staccato",
+  "deg.both": "Akkord va pogʻona",
+  "deg.toBoth": "Akkord va pogʻonani birga koʻrsatish",
+  "ed.badChords": "Tanilmadi: {n} — yozilishini tekshiring (rim raqamlari, qavsdagi akkordlar)"
 }
