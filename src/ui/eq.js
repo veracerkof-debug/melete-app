@@ -43,7 +43,7 @@ export function eqCanvas(cv, { get, simple = false, onChange = () => {}, onSelec
     g.fillStyle = tint; g.globalAlpha = 0.14; g.fill(); g.globalAlpha = 1;
     // точки полос
     bands.forEach((b, i) => {
-      const x = f2x(b.f), y = handleY(b), on = b.on !== false, c = BAND_COLORS[b.type] || tint; if (c.startsWith('var(')) c = css(c.slice(4, -1), tint);
+      const x = f2x(b.f), y = handleY(b), on = b.on !== false; let c = BAND_COLORS[b.type] || tint; if (c.startsWith('var(')) c = css(c.slice(4, -1), tint);
       g.beginPath(); g.arc(x, y, i === sel ? R + 3 : R, 0, Math.PI * 2);
       g.fillStyle = on ? c : css('--fill', '#ddd'); g.fill();
       g.lineWidth = i === sel ? 3 : 1.5; g.strokeStyle = on ? '#fff' : l2; g.stroke();
