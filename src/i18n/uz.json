@@ -2677,6 +2677,8 @@
   "songs.selCat": "Kategoriyaga",
   "songs.selDelTitle": "{n} qo'shiqni o'chirish?",
   "songs.selDelText": "Qo'shiqlar ro'yxatdan chiqadi; statistikadagi mashqlar qoladi.",
+  "snd.noBus": "Bu asbobda tovush sozlamalari yo'q",
+  "vol.hud": "Ovoz {n}%",
   "stage.vol": "Ovoz",
   "stage.mix": "Darajalar",
   "stage.mix.metro": "Metronom",

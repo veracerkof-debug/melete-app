@@ -49,6 +49,7 @@ import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
 import { createFiles } from './files.js';
+import { initVolumeGesture } from './volgesture.js';
 import { createRecorder } from './recorder.js';
 import { createJobs } from './jobs.js';
 import { packsReady } from './packs.js';
@@ -364,6 +365,7 @@ export function boot(root) {
   if (store.broken) { log('store', 'данные не прочитались при запуске — строка сохранена в practice.v1.broken', 'e'); setTimeout(() => toast(t('data.broken')), 1500); }
   initGuard(app);
   initDrop(app); // файлы, перетащенные в окно
+  initVolumeGesture(app); // общая громкость: два пальца вверх/вниз по экрану (volgesture.js)
   initWebMemory(app); // веб-версия: постоянное хранилище и работа без сети (service worker)
   initScreenOn(app); // экран не гаснет, пока приложение открыто
   // после возврата из копии — файлы демо-набора, которые добавила проверка, убрать (если набора не было)

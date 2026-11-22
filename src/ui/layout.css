@@ -3,3 +3,6 @@
 .lyb[data-lz="s"]{--lz:.8}
 .lyb[data-lz="m"]{--lz:1}
 .lyb[data-lz="l"]{--lz:1.25}
+/* подсказка общей громкости при жесте двумя пальцами */
+.volhud{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + var(--sp-5));transform:translateX(-50%);z-index:200;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-pill);background:var(--ink);color:var(--bg);font:600 var(--fs-5) var(--font);pointer-events:none;opacity:0;transition:opacity var(--t-fast, .15s)}
+.volhud.on{opacity:.92}

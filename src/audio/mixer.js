@@ -15,6 +15,7 @@ export const MIX_MAX = 1.5;
 export function normalizeMix(mx) {
   if (mx.theory == null) mx.theory = 1;
   if (!mx.mute) mx.mute = {};
+  if (!(mx.master >= 0 && mx.master <= 1)) mx.master = 1; // общая громкость (жест двумя пальцами вверх/вниз): множитель на все шины
   if (!mx.mode) mx.mode = 'smooth';
   if (!mx.v2) { mx.v2 = 1; if (mx.mode === 'bal') mx.mode = 'smooth'; } // 2026-10: надёжность важнее задержки — большой буфер по умолчанию
   // 2026-10-22: на компьютере большой буфер даёт ~0,1 с от нажатия до звука — играть с клавиатуры нельзя; процессор
@@ -46,9 +47,9 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
   const value = (bus) => {
     const k = mixKey(bus);
     if (mx.mute[k]) return 0;
-    if (ov[k] != null) return ov[k];
+    if (ov[k] != null) return ov[k] * mx.master;
     const v = mx[k];
-    return v == null ? 1 : v;
+    return (v == null ? 1 : v) * mx.master;
   };
 
   const apply = () => {
@@ -128,6 +129,10 @@ export function createMixer(mx, { onChange = () => {} } = {}) {
       return next;
     },
     fxActive: (bus) => !fxIsFlat(mixer.fx(bus)),
+
+    // Общая громкость 0…1: множитель на все шины; плавно, без щелчков (apply — setTargetAtTime); запоминается
+    master: () => mx.master,
+    setMaster(v) { mx.master = Math.max(0, Math.min(1, +v || 0)); apply(); saveLater(); },
 
     set(bus, v) {
       const k = mixKey(bus);

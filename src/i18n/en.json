@@ -2716,6 +2716,8 @@
   "songs.selCat": "To category",
   "songs.selDelTitle": "Delete {n} songs?",
   "songs.selDelText": "The songs leave the list; practice in statistics stays.",
+  "snd.noBus": "This tool has no sound settings",
+  "vol.hud": "Volume {n}%",
   "stage.vol": "Volume",
   "stage.mix": "Levels",
   "stage.mix.metro": "Metronome",
