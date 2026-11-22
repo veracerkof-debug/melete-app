@@ -127,11 +127,11 @@ export function showData(f, lang = 'ru', now = Date.now()) {
   const track = (id, i, at, o = {}) => { const n = num(i, { kind: 'track', file: f['t_' + id], at, ...o }); (N.cues[id] || []).forEach((c, k) => addCue(n, 8 + k * 17, c)); return n; };
   const numbers = [
     num(0, { kind: 'none', at: 18 * 60 + 30, bed: { pad: true, noise: nid('hall') } }),
-    track('ode', 1, 19 * 60, { bed: { pad: true, noise: '', padLevel: 45 } }),
+    track('ode', 1, 19 * 60, { keyPc: 0, bpm: 84, bed: { pad: true, noise: '', padLevel: 45 } }),
     num(2, { kind: 'none', at: 19 * 60 + 10, bed: { pad: false, noise: nid('hall'), noiseLevel: 40 } }),
     num(3, { kind: 'none', at: 19 * 60 + 30, bed: { pad: false, noise: '' } }),
-    track('jingle', 4, 19 * 60 + 50, { shift: 2, bed: { pad: true, noise: nid('rain'), padLevel: 40 } }),
-    track('twinkle', 5, 20 * 60 + 20, { level: 75 }),
+    track('jingle', 4, 19 * 60 + 50, { keyPc: 7, bpm: 120, shift: 2, bed: { pad: true, noise: nid('rain'), padLevel: 40 } }),
+    track('twinkle', 5, 20 * 60 + 20, { keyPc: 5, bpm: 100, level: 75 }),
     num(6, { kind: 'none', at: 20 * 60 + 45 }),
   ];
   const ev = newEvent({ title: N.event, start, timer: 'start', note: '', numbers });
