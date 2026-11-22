@@ -99,6 +99,7 @@ a.cell{color:inherit;text-decoration:none}
 .swk i.on b{background:var(--tint)}
 .swk i.cur{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .catbar{padding-bottom:10px}
+.group+.catbar,.demobar+.catbar{margin-top:18px} /* планы занятий (белая карточка) и категории — не вплотную (отчёт автора 22.11.2026) */
 .catp{flex:none;min-height:36px;padding:0 14px;border-radius:12px;background:var(--fill);font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .catp i{font-style:normal;font-size:12px;opacity:.6;font-weight:600}
 .catp.on{background:var(--c);color:var(--t)}
