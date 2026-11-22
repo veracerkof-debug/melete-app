@@ -50,7 +50,10 @@ export function createMidi(app) {
   }
 
   // Сообщения с клавиатуры → инструмент (и в запись, если она идёт)
-  function onBytes(bytes) {
+  // dev — имя устройства (если известно): выбрано одно устройство (settings.midiOnly) — остальные молчат
+  function onBytes(bytes, dev) {
+    const only = app.store.state.settings.midiOnly;
+    if (only && dev && dev !== only) return;
     const tg = target();
     if (!tg) return;
     const now = performance.now() / 1000;
@@ -70,7 +73,7 @@ export function createMidi(app) {
       try {
         const r = await Native.start();
         if (!inp.nativeSub) {
-          inp.nativeSub = await Native.addListener('midi', ({ data }) => onBytes(data || []));
+          inp.nativeSub = await Native.addListener('midi', ({ data, dev }) => onBytes(data || [], dev));
           await Native.addListener('devices', ({ devices }) => listDevices(devices || []));
         }
         listDevices((r && r.devices) || []);
@@ -81,7 +84,7 @@ export function createMidi(app) {
         const acc = await navigator.requestMIDIAccess();
         const hook = () => {
           const list = [];
-          acc.inputs.forEach((p) => { p.onmidimessage = (e) => onBytes(e.data); list.push(p.name || 'MIDI'); });
+          acc.inputs.forEach((p) => { p.onmidimessage = (e) => onBytes(e.data, p.name); list.push(p.name || 'MIDI'); });
           listDevices(list);
         };
         acc.onstatechange = hook;
@@ -144,6 +147,9 @@ export function createMidi(app) {
       get devices() { return inp.devices; },
       get err() { return inp.err; },
       get supported() { return !!Native || !!navigator.requestMIDIAccess; },
+      // Одно устройство из подключённых ('' — все): настройка midiOnly
+      get only() { return app.store.state.settings.midiOnly || ''; },
+      setOnly(name) { app.store.state.settings.midiOnly = name || ''; app.store.settingsChanged(); emit(); },
       async set(on) {
         const st = app.store.state.settings;
         st.midiIn = !!on;

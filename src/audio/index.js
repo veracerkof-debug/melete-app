@@ -1,7 +1,7 @@
 // Звуковой движок: единый AudioContext, шины и микшер, синтезатор, пэды, метроном, микрофон.
 // Создаётся один раз ядром; модулям отдаётся через ctx.audio (см. MODULE_SPEC.md).
 import { createLoadMeter } from './load.js';
-import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock, hold, isHeld, onHold } from './context.js';
+import { getContext, peekContext, now, midiFreq, masterNode, addTap, installUnlock, hold, isHeld, onHold, setSinkPref } from './context.js';
 import { BUSES, createMixer } from './mixer.js';
 import { createSynth, pianoPatch, pianoLayer, playChord, playSeq, presetOf } from './synth.js';
 import { createDrone } from './drone.js';
@@ -17,6 +17,7 @@ import { after } from './clock.js';
 export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro, save = () => {} }) {
   const a4 = () => device.tuner.a4 || 440;
   const mixer = createMixer(device.mix, { onChange: save });
+  if (device.mix.out) setSinkPref(device.mix.out);
   const synth = createSynth({ mixer, getPatch: () => pianoPatch(device.piano), getLayer: () => pianoLayer(device.piano), getA4: a4 });
   const drone = createDrone({ mixer, getSettings: () => device.drone, getA4: a4 });
   const metro = createMetronome({ mixer, cfg: metroCfg, onTempo, onBpmChange, onSave: saveMetro });
@@ -124,6 +125,14 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     state() { const c = peekContext(); return c ? { sr: c.sampleRate, base: Math.round((c.baseLatency || 0) * 1000), out: Math.round((c.outputLatency || 0) * 1000), st: c.state, mode: device.mix.mode, perf: device.mix.perf, engine: device.mix.engine, verb: device.mix.verb, voices: synth.voiceCount, pads: drone.sounding, metro: !!metro.running } : null; },
     mixer, synth, drone, metro, arp,
     unlock: () => !!getContext(device.mix.mode),   // вызвать на первом жесте пользователя
+    // Выход звука (слово автора 22.11.2026: «вывод в наушники и любой другой выход»): весь звук приложения на выбранное устройство,
+    // где браузер/WebView умеет AudioContext.setSinkId; метроном идёт с остальным звуком (отдельный поток дал бы задержку клика)
+    outputs: {
+      supported: () => typeof AudioContext !== 'undefined' && 'setSinkId' in AudioContext.prototype,
+      get id() { return device.mix.out || ''; },
+      async list() { try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audiooutput' && d.deviceId).map((d, i) => ({ id: d.deviceId, label: d.label || ('#' + (i + 1)) })); } catch { return []; } },
+      async set(id) { device.mix.out = id || ''; save(); return setSinkPref(id); },
+    },
     release: () => { if (isHeld()) hold(false); }, // «играть» в приложении снимает паузу из шторки (player.js)
     held: () => isHeld(),
     onHold, // fn(held) — пауза из шторки поставлена или снята: модули показывают, что звук стоит

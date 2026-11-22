@@ -133,6 +133,10 @@ export function makeCtx(app, mod) {
     auto: WEB ? null : app.auto,
     // MIDI: событие игры (src/music/midi.js) — в запись, если идёт MIDI-запись этого инструмента
     midi: {
+      // подключённые MIDI-устройства и выбор одного из них ('' — все)
+      devices: () => (app.midi && app.midi.input.devices) || [],
+      get only() { return (app.midi && app.midi.input.only) || ''; },
+      setOnly: (name) => app.midi && app.midi.input.setOnly(name),
       ev: (e) => { if (app.rec) app.rec.midiEv(mod.id, e); if (app.playTaps) app.playTaps.forEach((fn) => { try { fn(mod.id, e); } catch (err) { logErr('mod', err); } }); },
       // запись MIDI (медиатека): открыть её инструмент и проиграть в нём
       play(rec) {

@@ -220,6 +220,20 @@ function cardSeg(name, items, cur, label, gl) {
     items.map(([v, n, a, b]) => '<button type="button" class="scard" data-v="' + v + '" aria-pressed="' + (String(cur) === String(v)) + '"><span class="sct">' + esc(n) + '</span>' +
       '<span class="scg"><em>' + esc(gl[0]) + '</em><i style="--a:' + a + '%"></i></span><span class="scg"><em>' + esc(gl[1]) + '</em><i style="--a:' + b + '%"></i></span></button>').join('') + '</div>';
 }
+// Выход звука: «Авто» или любое устройство (наушники, колонка, USB-карта); весь звук приложения, метроном вместе с ним
+async function outSheet(app, done) {
+  const O = app.audio.outputs; let list = await O.list();
+  if (!list.length || list.every((d) => /^#\d+$/.test(d.label))) { try { const m = await app.audio.openMic(''); m.stop(); list = await O.list(); } catch { /* без разрешения — только «Авто» */ } }
+  const row = (id, name) => '<button class="cell act" data-od="' + esc(id) + '" aria-pressed="' + (O.id === id) + '"><span class="grow">' + esc(name) + '</span>' + (O.id === id ? '<span class="l2">✓</span>' : '') + '</button>';
+  const sh = sheet(() => snav(t('snd.out')) + '<div class="group">' + row('', t('snd.outAuto')) + list.map((d) => row(d.id, d.label)).join('') + '</div><p class="ftr">' + t('snd.outHint') + '</p>', (el) => {
+    el.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-od]'); if (!b) return;
+      const ok = await O.set(b.dataset.od);
+      if (!ok && b.dataset.od) toast(t('snd.outFail')); else done();
+      sh.close();
+    });
+  });
+}
 function soundHTML(app) {
   const st = app.store.state.settings;
   return '<div class="large">' + t('page.sound') + '</div>' +
@@ -236,6 +250,7 @@ function soundHTML(app) {
     '<div class="cellcol">' + lseg('sndverb', [['light', t('snd.verbLight')], ['conv', t('snd.verbConv')]], app.audio.mixer.verb, t('snd.verb')) + '<div class="segcap">' + t('snd.verbHint') + '</div></div>' +
     '<div class="cellcol">' + lseg('sndalgo', [['melete', 'Melete'], ['galactic', 'Galactic'], ['verbity', 'Verbity']], app.audio.mixer.verbAlgo, t('snd.algo')) + '<div class="segcap">' + t('snd.algoHint') + '</div></div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
+    (app.audio.outputs && app.audio.outputs.supported() ? '<div class="group"><button class="cell act" data-act="sndout"><span class="grow">' + t('snd.out') + '</span><span class="val l2" data-sndoutn>' + esc(app.audio.outputs.id ? t('snd.outSel') : t('snd.outAuto')) + '</span></button></div><p class="ftr">' + t('snd.outHint') + '</p>' : '') +
     '<div class="group"><div class="cell"><span class="grow">' + t('snd.load') + '</span><span class="val num" data-sndload style="color:var(--ink)">' + (app.audio.load && app.audio.load.ready ? Math.round(app.audio.load.value * 100) + ' %' : '–') + '</span></div></div>' +
     '<p class="ftr">' + t('snd.loadHint') + '</p>' +
     '';
@@ -863,6 +878,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-act="gkick"]'))) { app.guest.kick(b.dataset.k); return; }
       if ((b = g('[data-act="glead"]'))) { app.guest.lead(b.dataset.k); return; }
       if (g('[data-act="ens"]')) { app.ensemble(); return; }
+      if (g('[data-act="sndout"]')) { outSheet(app, () => render()); return; }
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }

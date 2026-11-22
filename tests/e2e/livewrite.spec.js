@@ -49,3 +49,20 @@ test('табы с микрофона: вход выбирается из спи�
   await page.click('[data-dev=""]'); await page.waitForTimeout(400);
   void errors;
 });
+
+// Выбор MIDI-устройства для записи табов (слово автора 22.11.2026)
+test('табы с MIDI: устройство выбирается, «Все» по умолчанию', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await melete.open();
+  await melete.tools({ notes: { live: { src: 'midi', metro: false, inst: 'guitar' } }, wsMap: { free: { layout: 'HH', panes: ['notes', 'piano'], focus: 0, sub: {}, ratio: 0.72 } } });
+  await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
+  await page.waitForSelector('.session .pane', { timeout: 10_000 });
+  await page.waitForTimeout(1200);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  await melete.click('[data-x="lvnew"]'); await page.waitForTimeout(300);
+  await melete.click('[data-x="lvset"]'); await page.waitForTimeout(500);
+  await page.click('[data-x="lvmidev"]'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-md=""]')).toHaveCount(1);
+  await page.click('[data-md=""]'); await page.waitForTimeout(300);
+  void errors;
+});

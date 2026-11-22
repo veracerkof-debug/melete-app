@@ -33,18 +33,22 @@ public class MidiPlugin extends Plugin {
         MidiDevice device;
         MidiOutputPort[] ports;
         String name;
+        MidiReceiver rx; // свой приёмник: в событии MIDI уходит имя устройства (выбор устройства в «Табах»)
     }
 
-    private final MidiReceiver receiver = new MidiReceiver() {
-        @Override
-        public void onSend(byte[] msg, int offset, int count, long timestamp) {
-            JSArray a = new JSArray();
-            for (int i = 0; i < count; i++) a.put(msg[offset + i] & 0xff);
-            JSObject o = new JSObject();
-            o.put("data", a);
-            notifyListeners("midi", o);
-        }
-    };
+    private MidiReceiver receiverFor(final String devName) {
+        return new MidiReceiver() {
+            @Override
+            public void onSend(byte[] msg, int offset, int count, long timestamp) {
+                JSArray a = new JSArray();
+                for (int i = 0; i < count; i++) a.put(msg[offset + i] & 0xff);
+                JSObject o = new JSObject();
+                o.put("data", a);
+                o.put("dev", devName);
+                notifyListeners("midi", o);
+            }
+        };
+    }
 
     private static String nameOf(MidiDeviceInfo info) {
         Bundle p = info.getProperties();
@@ -73,10 +77,11 @@ public class MidiPlugin extends Plugin {
             Open o = new Open();
             o.device = device;
             o.name = nameOf(info);
+            o.rx = receiverFor(o.name);
             o.ports = new MidiOutputPort[info.getOutputPortCount()];
             for (int i = 0; i < o.ports.length; i++) {
                 o.ports[i] = device.openOutputPort(i);
-                if (o.ports[i] != null) o.ports[i].connect(receiver);
+                if (o.ports[i] != null) o.ports[i].connect(o.rx);
             }
             synchronized (open) {
                 open.put(info.getId(), o);
@@ -94,7 +99,7 @@ public class MidiPlugin extends Plugin {
         for (MidiOutputPort p : o.ports) {
             if (p == null) continue;
             try {
-                p.disconnect(receiver);
+                p.disconnect(o.rx);
                 p.close();
             } catch (Exception ignored) {
             }

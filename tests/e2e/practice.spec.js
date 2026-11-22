@@ -114,23 +114,26 @@ test('сравнение дублей: две записи песни — А/Б,
   expect(errors).toEqual([]);
 });
 
-test('тихий вид: 45 с без касаний — панель уезжает, окно растёт, касание возвращает и не ставит паузу', async ({ page, melete, errors }) => {
+test('фокус: 30 с без касаний — полный экран, касание его не снимает и не ставит паузу, выход — «назад»', async ({ page, melete, errors }) => {
   await melete.open({ settings: { calmView: true } });
   await page.evaluate(() => document.querySelector('[data-act="free"]')?.click());
   await page.waitForSelector('.session', { timeout: 10_000 });
   await page.waitForTimeout(800);
   await expect(page.locator('.session.calm')).toHaveCount(0);
   const h0 = await page.evaluate(() => document.querySelector('.session .ws').getBoundingClientRect().height);
-  await page.evaluate(() => { const o = Date.now; Date.now = () => o() + 31000; });
+  await page.evaluate(() => { const o = Date.now; Date.now = () => o() + 20000; });
   await page.waitForTimeout(1500);
-  await expect(page.locator('.session.calm')).toHaveCount(0); // 30 с — ещё рано (по умолчанию 45)
+  await expect(page.locator('.session.calm')).toHaveCount(0); // 20 с — ещё рано (по умолчанию 30)
   await page.evaluate(() => { const o = Date.now; Date.now = () => o() + 15000; });
   await expect(page.locator('.session.calm')).toHaveCount(1, { timeout: 3000 });
   await page.waitForTimeout(900);
   expect(await page.evaluate(() => document.querySelector('.session .ws').getBoundingClientRect().height)).toBeGreaterThan(h0 + 40); // место панели отдано окну
-  await page.click('#stime');
-  await expect(page.locator('.session.calm')).toHaveCount(0);
+  await page.click('.session .ws .pane', { position: { x: 20, y: 20 } }); // касание по инструменту — фокус держится
+  await page.waitForTimeout(400);
+  await expect(page.locator('.session.calm')).toHaveCount(1);
   expect(await page.evaluate(() => !!window.__melete.active.pausedAt)).toBe(false);
+  await page.evaluate(() => document.querySelector('.session').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))); // «назад» (на телефоне — жест/кнопка «Назад» через back.js)
+  await expect(page.locator('.session.calm')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

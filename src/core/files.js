@@ -64,7 +64,7 @@ export function createFiles({ indexedDB = globalThis.indexedDB, onWriteFail = ()
       if (i >= 0) all[i] = rec; else all.push(rec);
       emit();
       try { await tx('readwrite', (st) => st.put(clean(rec))); return true; }
-      catch (e) { const full = isQuota(e); if (full) { rec.unsaved = true; onWriteFail(e, rec); } else { files.noDb = true; onError('add', e, rec); } return false; }
+      catch (e) { const full = isQuota(e); if (full) { rec.unsaved = true; onWriteFail(e, rec); } else { rec.unsaved = true; files.noDb = true; onError('add', e, rec); } return false; }
     },
     // Перечитать файл из базы: выбранный на Android файл (content://) часто нельзя читать с середины,
     // а сохранённая копия — обычный файл на диске; true — получилось

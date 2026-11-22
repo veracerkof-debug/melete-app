@@ -215,6 +215,7 @@ export function createSessionScreen(app) {
         '</div></div>') + '</div>';
     document.body.appendChild(layer);
     layer.pureExit = () => (pureI >= 0 ? (setPanePure(-1), true) : false);
+    layer.calmExit = () => { const q = layer.querySelector('.session'); if (q && q.classList.contains('calm')) { calmWake(true); return true; } return false; }; // «назад» — выход из фокуса
     wsEl = layer.querySelector('.ws');
     const pb = layer.querySelector('#splan');
     if (pb) { // план: смахнуть влево — следующий пункт, вправо — прошлый; касание — список пунктов
@@ -717,12 +718,22 @@ export function createSessionScreen(app) {
   // Тихий вид (слово автора 13.11.2026, «как Forest»; 21.11.2026 — панель уезжает, инструмент занимает её место): 45 с без касаний —
   // нижняя панель уезжает вниз, шапка и ручки окон гаснут, остаются крупное время и сам инструмент. Касание возвращает всё
   // и проходит дальше — по инструменту играть можно сразу. Время и выключение — «Неделя» (calmSec, calmView)
-  const calmMs = () => (+st().calmSec > 0 ? +st().calmSec : 45) * 1000; // по умолчанию 45 с, меняется в «Неделе»
+  // 22.11.2026 (слово автора): «фокус» — один инструмент на экране, 30 с без касаний → полный экран, и так до жеста «назад»
+  // (касание по инструменту его не снимает — играть можно); окно, разделённое самим человеком (несколько инструментов), — без авто-фокуса.
+  // calmStay: false в «Неделе» возвращает прежнее — касание снимает.
+  const calmMs = () => (+st().calmSec > 0 ? +st().calmSec : 30) * 1000;
+  const calmStay = () => st().calmStay !== false;
   let calmAt = 0, calmWoke = 0;
-  function calmWake() { calmAt = Date.now(); const ses = layer && layer.querySelector('.session'); if (ses && ses.classList.contains('calm')) { ses.classList.remove('calm'); calmWoke = calmAt; } }
+  function calmWake(e) {
+    const ses = layer && layer.querySelector('.session');
+    if (ses && ses.classList.contains('calm') && calmStay() && !(e === true || (e && e.key === 'Escape'))) return; // фокус держится до «назад»
+    calmAt = Date.now();
+    if (ses && ses.classList.contains('calm')) { ses.classList.remove('calm'); calmWoke = calmAt; }
+  }
   function calmTick() {
     const ses = layer && layer.querySelector('.session');
     if (!ses || ses.classList.contains('calm') || st().calmView === false || !app.active || app.active.pausedAt) return;
+    if (layer.querySelectorAll('.ws .pane').length > 1) return; // окно разделено самим человеком — не фокус, авто-полного экрана нет
     if (Date.now() - calmAt < calmMs() || document.querySelector('#sheetLayer .scrim:not(.leaving), .ask, .tour') || layer.querySelector('.sbrk')) return;
     ses.classList.add('calm');
   }

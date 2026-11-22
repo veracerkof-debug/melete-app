@@ -30,6 +30,12 @@ test('звук, маскот, вкладки: карточки, значки, м
   await expect(page.locator('[data-seg="sndmode"] .scard')).toHaveCount(3);
   await page.click('[data-seg="sndmode"] .scard[data-v="smooth"]'); await page.waitForTimeout(300);
   await expect(page.locator('[data-seg="sndmode"] .scard[data-v="smooth"][aria-pressed="true"]')).toHaveCount(1);
+  // выход звука — «Авто» и устройства (там, где WebView умеет setSinkId)
+  if (await page.locator('[data-act="sndout"]').count()) {
+    await page.click('[data-act="sndout"]'); await page.waitForTimeout(900);
+    await expect(page.locator('[data-od=""]')).toHaveCount(1);
+    await page.click('[data-od=""]'); await page.waitForTimeout(400);
+  }
   await page.locator('[data-seg="sndmode"]').scrollIntoViewIfNeeded();
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/sound.png' });
   await page.reload(); await page.waitForTimeout(800);

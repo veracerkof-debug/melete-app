@@ -639,7 +639,9 @@ function ensureEl(c) {
   // Во весь экран — со стандартными кнопками браузера; пока так, окно не перерисовываем
   AU.el.addEventListener('fullscreenchange', () => { AU.el.controls = document.fullscreenElement === AU.el; if (!AU.el.controls) render(); });
   AU.el.addEventListener('webkitendfullscreen', () => render());
-  AU.el.addEventListener('error', () => { if (AU.cur && ctx) ctx.ui.toast(ctx.t('cantPlay')); });
+  // почему не играет — по делу: файл не лёг в память (сорвалось сохранение), слишком большой для проигрывателя или просто не распознан
+  const cantWhy = (f) => (f && f.unsaved ? 'cantPlayUnsaved' : f && (f.size || (f.blob && f.blob.size) || 0) > 900 * 1048576 ? 'cantPlayBig' : 'cantPlay');
+  AU.el.addEventListener('error', () => { if (AU.cur && ctx) ctx.ui.toast(ctx.t(cantWhy(AU.cur))); });
   ['play', 'pause', 'ended'].forEach((k) => AU.el.addEventListener(k, PLAY_EV[k]));
   const vol = () => { AU.el.volume = AU.shift ? 1 : c.audio.mixer.elementVolume('media'); };
   vol();
@@ -714,7 +716,7 @@ const playEl = async () => {
     if (await routeTrack(t)) { if (at) AU.eng.currentTime = at; }
   }
   if (AU.shift && !AU.engOn) applyPitch().catch(() => {});
-  const r = pl().play().catch(() => ctx.ui.toast(ctx.t('cantPlay')));
+  const r = pl().play().catch(() => ctx.ui.toast(ctx.t(cantWhy(AU.cur))));
   soundCheck(t);
   return r;
 };

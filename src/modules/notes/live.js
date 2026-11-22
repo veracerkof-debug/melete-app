@@ -355,6 +355,7 @@ export function createLive(env) {
       const tuns = TUNS[cf.inst];
       return ui.snav(t('live.settings')) +
         '<div class="group">' + '<div class="cellcol">' + ui.seg('lvsrc', [['mic', t('live.src.mic')], ['midi', t('live.src.midi')]], cf.src, t('live.src')) + '</div></div>' +
+        (cf.src === 'midi' ? '<div class="group"><button class="cell act" data-x="lvmidev"><span class="grow">' + esc(t('live.midev')) + '</span><span class="val l2">' + esc(C().midi.only || t('live.midAll')) + '</span></button></div>' : '') +
         (cf.src === 'mic' ? '<div class="group"><button class="cell act" data-x="lvindev"><span class="grow">' + esc(t('live.indev')) + '</span><span class="val l2">' + esc(devs.find((d) => d.id === cf.micDev)?.label || t('live.devAuto')) + '</span></button></div>' : '') +
         '<div class="hdr">' + esc(t('live.inst')) + '</div><div class="group"><div class="cellcol">' + ui.seg('lvinst', Object.keys(INSTS).map((k) => [k, t('live.inst.' + k)]), cf.inst, t('live.inst')) + '</div>' +
         (tuns ? '<div class="cellcol">' + ui.seg('lvtun', tuns.map((x) => [x, x.replace(/\d/g, '')]), cf.tun, t('live.tuning')) + '</div>' +
@@ -369,7 +370,8 @@ export function createLive(env) {
       const upd = () => { C().store.save(); sh.update(); env.render(); };
       el.addEventListener('click', (e) => {
         let b;
-        if ((b = e.target.closest('[data-x="lvindev"]'))) { inDevSheet(cf, devs, upd); }
+        if ((b = e.target.closest('[data-x="lvmidev"]'))) { midDevSheet(upd); }
+        else if ((b = e.target.closest('[data-x="lvindev"]'))) { inDevSheet(cf, devs, upd); }
         else if ((b = e.target.closest('[data-seg="lvsrc"] [data-v]'))) { cf.src = b.dataset.v; if (p && !p.raw.length) p.mono = cf.src === 'mic'; upd(); }
         else if ((b = e.target.closest('[data-seg="lvinst"] [data-v]'))) { cf.inst = b.dataset.v; cf.tun = null; defaults(); if (p) applyInst(); upd(); }
         else if ((b = e.target.closest('[data-seg="lvtun"] [data-v]'))) { cf.tun = b.dataset.v; if (p) applyInst(); upd(); }
@@ -392,6 +394,14 @@ export function createLive(env) {
     const row = (id, name) => '<button class="cell act' + ((cf.micDev || '') === id ? ' on' : '') + '" data-dev="' + esc(id) + '" aria-pressed="' + ((cf.micDev || '') === id) + '"><span class="grow">' + esc(name) + '</span>' + ((cf.micDev || '') === id ? '<span class="l2">✓</span>' : '') + '</button>';
     ui.sheet(() => ui.snav(t('live.indev')) + '<div class="group">' + row('', t('live.devAuto')) + devs.map((d) => row(d.id, d.label)).join('') + '</div><p class="ftr">' + esc(t('live.indevFtr')) + '</p>', (el, sh) => {
       el.addEventListener('click', (e) => { const b = e.target.closest('[data-dev]'); if (!b) return; cf.micDev = b.dataset.dev; C().store.save(); sh.close(); done(); });
+    });
+  }
+  // MIDI-устройство для записи: «Все» или одно из подключённых (клавиатура, MIDI-гитара)
+  function midDevSheet(done) {
+    const { ui } = C(), M = C().midi;
+    const row = (name, label) => '<button class="cell act" data-md="' + esc(name) + '" aria-pressed="' + (M.only === name) + '"><span class="grow">' + esc(label) + '</span>' + (M.only === name ? '<span class="l2">✓</span>' : '') + '</button>';
+    ui.sheet(() => ui.snav(t('live.midev')) + '<div class="group">' + row('', t('live.midAll')) + M.devices().map((n) => row(n, n)).join('') + '</div><p class="ftr">' + esc(t(M.devices().length ? 'live.midevFtr' : 'live.midNone')) + '</p>', (el, sh) => {
+      el.addEventListener('click', (e) => { const b = e.target.closest('[data-md]'); if (!b) return; M.setOnly(b.dataset.md); sh.close(); done(); });
     });
   }
   function applyInst() {

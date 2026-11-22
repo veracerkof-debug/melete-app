@@ -124,3 +124,21 @@ test('выходы: плашка, несколько сразу, «как в с�
   await page.keyboard.press('Escape');
   expect(errors).toEqual([]);
 });
+
+// Альбомная ориентация (слово автора 22.11.2026): кнопки записи — слева кучкой, время — справа внизу рядом с ними
+test('диктофон: в альбомной ориентации кнопки слева, время справа внизу', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 915, height: 412 });
+  await open(page, melete);
+  await melete.click('.voice .vc-bot [data-x="rec"]');
+  await page.waitForSelector('.voice [data-x="stop"]', { timeout: 8_000 });
+  await page.waitForTimeout(900);
+  const r = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s).getBoundingClientRect(), bot = q('.voice .vc-bot'), tm = q('.voice #vc-time'), stop = q('.voice [data-x="stop"]'), more = q('.voice .vc-bot [data-x="more"]');
+    return { botTop: bot.top, tmTop: tm.top, tmBottom: tm.bottom, botBottom: bot.bottom, tmLeft: tm.left, moreRight: more.right, vw: innerWidth };
+  });
+  expect(r.tmTop).toBeGreaterThanOrEqual(r.botTop - 4); // время — в полосе кнопок
+  expect(r.tmLeft).toBeGreaterThan(r.moreRight); // правее всех кнопок
+  expect(r.moreRight).toBeLessThan(r.vw * 0.6); // кнопки — кучкой слева
+  await melete.click('.voice [data-x="stop"]');
+  void errors;
+});

@@ -185,3 +185,11 @@
 .vcr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .vcr-t b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vcr-bar{width:100%;margin:4px 0 0;min-height:28px}
+
+/* Диктофон в альбомной ориентации (слово автора 22.11.2026): кнопки сгруппированы слева, время записи — справа внизу, рядом с кнопками */
+@container (max-height: 420px) and (min-aspect-ratio: 3/2) {
+  .voice{position:relative}
+  .voice .vc-stage{position:static}
+  .voice .vc-stage .vc-time{top:auto;left:auto;right:18px;bottom:calc(6px + env(safe-area-inset-bottom,0px));text-align:right;font-size:36px;line-height:64px;z-index:2}
+  .voice .vc-bot{justify-content:flex-start;gap:18px;padding-left:16px;padding-right:210px}
+}

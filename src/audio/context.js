@@ -35,6 +35,13 @@ export const currentOutKind = () => outKind || 'phone'; // выход сейча
 export const DESK_BAL_HINT = 0.02;
 const desktopHint = (mode) => (mode === 'bal' && desktopApp() ? DESK_BAL_HINT : null);
 
+// Выход всего звука приложения: id устройства из enumerateDevices ('' — по умолчанию); применяется при создании контекста и сразу
+let sinkPref = '';
+export async function setSinkPref(id) {
+  sinkPref = id || '';
+  if (!ctx || !('setSinkId' in ctx)) return false;
+  try { await ctx.setSinkId(sinkPref); return true; } catch { return false; }
+}
 export function getContext(mode = 'bal') {
   if (!ctx) {
     const C = globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -42,6 +49,7 @@ export function getContext(mode = 'bal') {
     const hint = outKind === 'bt' ? BT_LATENCY : desktopHint(latencyFor(mode)) || LATENCY[latencyFor(mode)] || 'balanced';
     try { ctx = new C({ latencyHint: hint }); } catch { ctx = new C(); }
     ctxKind = outKind || 'phone';
+    if (sinkPref && 'setSinkId' in ctx) { try { ctx.setSinkId(sinkPref).catch(() => {}); } catch { /* устройства нет — выход по умолчанию */ } } // выбранный выход звука (Профиль → Звук)
     loadAirWorklet(ctx); // движок воздушных голосов (airsound.js) — грузится сразу, ноты до готовности идут узлами
     installClock(ctx); // часы звука для планировщиков — не засыпают при погашенном экране (clock.js)
     // Система может заморозить звук (звонок, другой проигрыватель, долго в фоне): в журнал и сразу оживить — кнопки
