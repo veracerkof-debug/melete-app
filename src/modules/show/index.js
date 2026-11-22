@@ -182,10 +182,12 @@ function padHTML(p, dock) {
 }
 // Фон — часть экрана «Звуки»: вкл/выкл, тональность, шум одной полосой; подробности — «⋯»
 function bedBarHTML() {
-  const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES;
-  return '<div class="shbedbar"><div class="shbedrow"><button class="shchip' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
-    '<div class="shchips tight hscroll">' + [['', t('bed.tonicAuto')], ...tn.map((x, i) => [String(i), x])].map(([v, l]) => { const on = (b.pad.tonic == null ? '' : String(b.pad.tonic)) === v; return '<button class="shchip' + (on ? ' on' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>'; }).join('') + '</div>' +
+  const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES, man = b.pad.tonic;
+  const key = (v, l, on, cur, cls = '') => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + cls + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
+  return '<div class="shbedbar"><div class="shbedrow"><button class="shchip bedon' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
     '<button class="shchip" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '">⋯</button></div>' +
+    '<div class="shbedkeys" role="group" aria-label="' + esc(t('bed.tonic')) + '">' + tn.map((x, i) => key(String(i), x, man === i, b.pad.on && ton === i)).join('') + '</div>' +
+    '<div class="shbedrow">' + key('', t('bed.tonicAuto'), man == null, false, ' auto') + '</div>' +
     (S.noises.length ? '<div class="shnoises hscroll">' + S.noises.map((r) => '<button class="shnoise' + (b.noise.cur === r.id ? ' on' : '') + '" data-noise="' + r.id + '" aria-pressed="' + (b.noise.cur === r.id) + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div>' : '') + '</div>';
 }
 function padsHTML() {
@@ -279,7 +281,7 @@ function deskHTML() {
       : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
     '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
     (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
-    (n ? numKnobsHTML() : '') + '<div class="shfaders">' + fader('deck', t('desk.track'), S.deckLevel) + fader('bed', t('desk.bed'), S.bedLevel) + fader('pads', t('desk.sounds'), S.level) + fader('master', t('desk.master'), S.master) + '</div>' +
+    (n ? numKnobsHTML() : '') + stripHTML() +
     '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b>' + (nx ? '<span class="shtrn">' + esc([numKey(n) && numKey(nx) ? numKey(n) + ' → ' + numKey(nx) : numKey(nx), numBpm(n) && numBpm(nx) ? numBpm(n) + ' → ' + numBpm(nx) : numBpm(nx) ? numBpm(nx) + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
@@ -330,7 +332,7 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') + '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
-    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shmv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6"/></svg><input type="range" data-mv min="0" max="100" value="' + S.master + '" aria-label="' + esc(t('desk.master')) + '"></div><div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   const pk = host.querySelector('.shpicks');
@@ -418,14 +420,12 @@ function stopAll() {
   if (S.ui.confirmStop) ctx.ui.confirm(t('stopAllAsk'), '', t('stopAll')).then((ok) => { if (ok) run(); }); else run();
 }
 function onChange(e) {
-  if (e.target.dataset && e.target.dataset.mv !== undefined) { save(); return; }
   if (e.target.dataset.sw === 'bpad') {
     S.bed.pad.on = e.target.checked; save();
     if (S.bed.pad.on) padStart(M.currentNumber(S)); else if (bed) bed.padOff(S.goFade);
   }
 }
 function onInput(e) {
-  if (e.target.dataset && e.target.dataset.mv !== undefined) { fdSet('master', +e.target.value); return; }
   const sk = e.target.dataset && e.target.dataset.s;
   if (sk && ['padlvl', 'noiselvl', 'xfade'].includes(sk)) {
     const v = +e.target.value, o = (e.target.closest('.shprog') || host).querySelector('[data-o="' + sk + '"]');
@@ -492,7 +492,6 @@ function fdSet(k, v) {
   if (!host) return;
   host.querySelectorAll('[data-fader="' + k + '"]').forEach((tr) => { tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v); });
   host.querySelectorAll('[data-knob="' + k + '"]').forEach((kn) => { kn.setAttribute('aria-valuenow', v); kn.querySelector('.kv').setAttribute('stroke-dasharray', v * 0.99 + ' 100'); kn.querySelector('b').textContent = v; });
-  if (k === 'master') host.querySelectorAll('[data-mv]').forEach((o) => { if (+o.value !== v) o.value = v; });
   host.querySelectorAll('[data-fv="' + k + '"]').forEach((o) => { o.textContent = v; });
   host.querySelectorAll('[data-fo="' + k + '"]').forEach((o) => { o.textContent = M.dbText(v) + ' ' + t('db'); });
 }

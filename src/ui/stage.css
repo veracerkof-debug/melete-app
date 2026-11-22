@@ -128,18 +128,19 @@
 .sgscoremsg{padding:18px 12px;color:rgba(244,241,234,.7);text-align:center}
 .stage.night .sgsurfhost{filter:invert(1) hue-rotate(180deg)}
 /* список программы под шапкой: мелко, но в одну строку на номер — название, тональность, темп, комментарий; текущий по центру */
-.sgsongs{position:relative;flex:none;height:72px;margin:0 8px 4px;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:12px;background:rgba(255,255,255,.04)}
+.sgsongs{position:relative;flex:none;height:72px;margin:0 var(--sp-2) var(--sp-1);overflow-y:auto;overflow-x:hidden;touch-action:pan-y;scrollbar-width:none;border-radius:var(--r-2);background:rgba(255,255,255,.04)}
 .sgsongs::-webkit-scrollbar{display:none}
-.sgsong{display:flex;align-items:center;gap:8px;width:100%;height:24px;padding:0 10px 0 6px;text-align:left;font-size:13px;opacity:.55}
-.sgsong i{flex:none;font-style:normal;font-size:11px;min-width:1.6em;text-align:center}
+.sgsong{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:24px;padding:0 var(--sp-3) 0 var(--sp-1);text-align:left;font-size:var(--fs-3);opacity:.55}
+.sgsong i{flex:none;font-style:normal;font-size:var(--fs-1);min-width:2em;text-align:center}
 .sgsong b{flex:0 1 auto;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgsong em{flex:none;font-style:normal;font-size:12px;font-variant-numeric:tabular-nums;color:rgba(244,241,234,.75)}
-.sgsong small{flex:1 1 0;min-width:0;font-size:11px;color:rgba(244,241,234,.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.sgsong.cur{opacity:1;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:8px}
+.sgsong em{flex:none;font-style:normal;font-size:var(--fs-2);font-variant-numeric:tabular-nums;color:rgba(244,241,234,.75)}
+.sgsong small{flex:1 1 0;min-width:0;font-size:var(--fs-1);color:rgba(244,241,234,.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.sgsong.cur{opacity:1;color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:var(--r-2)}
+.sgsong.cur b{font-weight:700}
 .sgsong.cur em,.sgsong.cur small{color:inherit}
 .sgsong:first-child{margin-top:24px}.sgsong:last-child{margin-bottom:24px}
 /* громкость сцены рядом с ▶: линия тонкая, зона касания 44 px, края не используются (не спорят с «Назад») */
-.sgvol{flex:1.4;display:flex;align-items:center;gap:8px;min-width:0;padding:0 6px 0 10px;border-radius:20px;background:rgba(255,255,255,.05)}
+.sgvol{flex:1.4;display:flex;align-items:center;gap:var(--sp-2);min-width:0;padding:0 var(--sp-2) 0 var(--sp-3);border-radius:var(--r-4);background:rgba(255,255,255,.05)}
 .sgvol svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;opacity:.7}
 .sgall{flex:1;min-width:0;width:100%;height:56px;margin:0;background:transparent;accent-color:var(--gold);touch-action:none}
 .sgbar .sgbtn.main{flex:1}

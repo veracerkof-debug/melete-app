@@ -68,6 +68,9 @@ test('сцена без песен: метроном одной кнопкой, 
   await page.waitForTimeout(800);
   await expect(page.locator('.stage')).toHaveCount(1);
   expect(await melete.text('.sghead b')).toBeTruthy();
+  // плеер: шторка открывается, в «Уровнях» есть своя строка
+  await page.click('[data-sgt="player"]'); await expect(page.locator('.sheet')).toBeVisible(); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click('[data-sgt="mix"]'); await expect(page.locator('.sheet [data-sgmix="player"]')).toHaveCount(1); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // клавиши пэда видны сразу; касание — звучит, повторное по той же — стоп
   await expect(page.locator('.sgkey')).toHaveCount(12);
   const tap = async (sel) => { await page.locator(sel).dispatchEvent('pointerdown', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.locator(sel).dispatchEvent('pointerup', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.waitForTimeout(300); };

@@ -35,11 +35,11 @@ test('пульт: единый список, плавный переход же�
   await expect(page.locator(T + '.shpick.done')).toHaveCount(0);
   await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/desk.png' : 'test-results/desk.png' });
   // общая громкость всегда на виду
-  await expect(page.locator(T + '[data-mv]')).toBeVisible();
+  await expect(page.locator(T + '[data-knob="master"]')).toBeVisible();
   // «Звуки»: фон там же
   await page.click(T + '[data-page="pads"]'); await page.waitForTimeout(300);
   await expect(page.locator(T + '[data-x="bedtoggle"]')).toBeVisible();
-  await expect(page.locator(T + '[data-mv]')).toBeVisible();
+  await expect(page.locator(T + '[data-knob="master"]')).toBeVisible();
   await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/pads.png' : 'test-results/pads.png' });
   expect(errors).toEqual([]);
 });

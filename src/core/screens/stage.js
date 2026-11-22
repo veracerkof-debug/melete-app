@@ -159,7 +159,7 @@ export function openStage(app, evId, i = 0) {
   const bank = () => SM.bankOf(sd(), S.bank || undefined);
   // Свои уровни сцены (слово автора 22.11.2026): метроном, пэд, звуки, минусовка — только на сцене, общая громкость приложения не меняется.
   // Метроном и пэд — через местный уровень шины (mixer.override: только в памяти, на выходе из сцены снимается); звуки — выход их движка; минусовка — её элемент
-  const MIXES = [['metro', 'metro'], ['pad', 'drone'], ['sounds', null], ['track', null]];
+  const MIXES = [['metro', 'metro'], ['pad', 'drone'], ['sounds', null], ['track', null], ['player', null]];
   const mixSet = () => app.store.state.settings.stageMix || (app.store.state.settings.stageMix = {});
   const mixVal = (k) => {
     const m = mixSet();
@@ -180,6 +180,7 @@ export function openStage(app, evId, i = 0) {
     const v = effVal(k), bus = (MIXES.find((x) => x[0] === k) || [])[1];
     if (bus) audio.mixer.override(bus, v / 100);
     else if (k === 'sounds') { if (S.eng) S.eng.setLevel(v); }
+    else if (k === 'player') { if (S.pl && S.pl.el) S.pl.el.volume = Math.max(0, Math.min(1, v / 100)); }
     else if (S.track) S.track.volume = Math.max(0, Math.min(1, v / 100));
   });
   const mixSheet = () => {
@@ -195,10 +196,39 @@ export function openStage(app, evId, i = 0) {
         S.mb = {};
         if (S.eng) S.eng.setLevel(mixVal('sounds'));
         if (S.track) S.track.volume = Math.max(0, Math.min(1, mixVal('track') / 100));
+        if (S.pl && S.pl.el) S.pl.el.volume = Math.max(0, Math.min(1, mixVal('player') / 100));
         const al = S.el && S.el.querySelector('[data-sgall]'); if (al) al.value = 100;
         sh.update();
       });
     });
+  };
+  // Свободный плеер (слово автора 22.11.2026: фоновое пианино и всякое такое): любая запись медиатеки, независимо от песни и минусовки;
+  // играет, пока не остановят или не выйдут со сцены; громкость — «Плеер» в «Уровнях» (и общая громкость сцены)
+  const plStop = () => { const p = S.pl; S.pl = null; if (p) { try { p.el.pause(); } catch { /* */ } try { URL.revokeObjectURL(p.url); } catch { /* */ } } };
+  const plPlay = (r) => safe('player', () => {
+    if (!r || !r.blob) return;
+    plStop();
+    const url = URL.createObjectURL(r.blob), el = new Audio(url);
+    el.volume = Math.max(0, Math.min(1, effVal('player') / 100));
+    el.onended = () => { if (S.pl && S.pl.el === el) { S.pl.ended = true; render(); } };
+    el.onerror = () => { logErr('stage', 'player ' + (r.name || '')); toast(t('stage.err', { what: t('stage.player') })); };
+    S.pl = { el, url, id: r.id, name: r.name || '' };
+    const pr = el.play(); if (pr && pr.catch) pr.catch((e) => logErr('stage', e));
+  });
+  const plSheet = () => {
+    const files = audioFiles(app);
+    const body = () => snav(t('stage.player')) + (files.length ? '<div class="group">' + files.map((r) => '<button class="cell" data-plf="' + esc(r.id) + '"><span class="grow">' + esc(r.name || '') + '</span>' + (S.pl && S.pl.id === r.id ? (S.pl.el.paused ? '❚❚' : '♪') : '') + '</button>').join('') + '</div>' : '<p class="ftr">' + esc(t('stage.plEmpty')) + '</p>') +
+      (S.pl ? '<div class="group"><div class="cell"><button class="btn" data-plpp>' + (S.pl.el.paused ? '▶' : '❚❚') + '</button><input type="range" class="sgrng" data-plseek min="0" max="1000" value="' + (S.pl.el.duration > 0 ? Math.round(S.pl.el.currentTime / S.pl.el.duration * 1000) : 0) + '" aria-label="' + esc(t('stage.seek')) + '"></div>' +
+        '<button class="cell act center" data-plstop>' + esc(t('stage.plOff')) + '</button></div>' : '');
+    sheet(body, (el, sh) => {
+      el.addEventListener('click', (e) => {
+        let b;
+        if ((b = e.target.closest('[data-plf]'))) { const id = b.dataset.plf; if (S.pl && S.pl.id === id) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); } else plPlay(files.find((r) => r.id === id)); sh.update(); render(); }
+        else if (e.target.closest('[data-plpp]') && S.pl) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); sh.update(); render(); }
+        else if (e.target.closest('[data-plstop]')) { plStop(); sh.update(); render(); }
+      });
+      el.addEventListener('input', (e) => { const r = e.target.closest('[data-plseek]'); if (r && S.pl && S.pl.el.duration > 0) S.pl.el.currentTime = (+r.value / 1000) * S.pl.el.duration; });
+    }, { onClose: () => render() });
   };
   const ensureEng = () => {
     if (S.eng) return S.eng;
@@ -238,6 +268,7 @@ export function openStage(app, evId, i = 0) {
     if (S.scrollRaf) { cancelAnimationFrame(S.scrollRaf); S.scrollRaf = 0; }
     S.playing = false;
     stopClick();
+    if (S.pl) plStop();
     safe('pad', () => { audio.drone.stop(1.5); S.padOn = false; });
     if (S.eng) { S.eng.stopAll(0.2); S.eng.hush(1.2); S.hushed = true; }
     const tr = S.track;
@@ -423,6 +454,7 @@ export function openStage(app, evId, i = 0) {
     else if (k === 'track') { if (!x) return; if (S.track) stopTrack(); else if (x.it.track) startTrack(x.it); }
     else if (k === 'tab') { S.view = S.view === 'tab' ? 'text' : 'tab'; sset('view', S.view); S.scoreKind = S.score && S.score.id === S.scoreId ? S.scoreKind : null; }
     else if (k === 'mix') { mixSheet(); return; }
+    else if (k === 'player') { plSheet(); return; }
     else if (k === 'view') { S.view = S.view === 'list' ? 'text' : 'list'; sset('view', S.view); }
     render();
   };
@@ -517,7 +549,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
       '<div class="sgchips">' + 
-        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('mix', false, t('stage.mix')) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('view', S.view === 'list', t('stage.listView')) +
+        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('player', !!(S.pl && S.pl.el && !S.pl.el.paused && !S.pl.ended), '♫ ' + (S.pl && S.pl.name ? S.pl.name : t('stage.player'))) + chip('mix', false, t('stage.mix')) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('view', S.view === 'list', t('stage.listView')) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
       padsHTML() +
       '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
@@ -614,6 +646,7 @@ export function openStage(app, evId, i = 0) {
 
   const close = (silent = false) => {
     stop();
+    plStop();
     if (S.eng) { S.eng.dispose(); S.eng = null; }
     if (S.score) { S.score.destroy(); S.score = null; }
     if (S.offBeat) S.offBeat();
