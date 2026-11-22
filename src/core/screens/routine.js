@@ -7,6 +7,7 @@ import { esc, sheet, snav, toast, confirm } from '../../ui/index.js';
 import { modules } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { routinesOf, routineById, saveRoutine, removeRoutine, totalMin, example, slotRoutine } from '../routine.js';
+import { familiesFor, VARIANTS, templateMin } from '../routinetemplates.js';
 
 const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
 const tools = () => modules.filter((m) => !m.tab && !m.inner && m.session !== false && m.id !== 'timer');
@@ -17,10 +18,10 @@ const sumText = (r) => t('rt.sum', { s: tn('rt.steps', r.items.length), m: total
 export function routinesHTML(app) {
   const st = app.store.state.settings, list = routinesOf(st);
   if (st.toolsOnly) return '';
-  return '<div class="hdr rthdr"><span>' + t('rt.title') + '</span><button class="link" data-act="rtNew">' + t('rt.new') + '</button></div>' +
+  return '<div class="hdr rthdr"><span>' + t('rt.title') + '</span><span class="hdrr"><button class="link" data-act="rtTpl">' + t('rt.tpl') + '</button><button class="link" data-act="rtNew">' + t('rt.new') + '</button></span></div>' +
     (list.length ? '<div class="group rtlist">' + list.map((r) => '<div class="cell rtrow"><button class="grow rtopen" data-rt="' + esc(r.id) + '"><b>' + esc(r.title || t('rt.untitled')) + '</b><span class="st l2">' + esc(sumText(r)) + '</span></button>' +
       '<button class="rtplay" data-rtgo="' + esc(r.id) + '" aria-label="' + esc(t('rt.start', { title: r.title || t('rt.untitled') })) + '">' + PLAY + '</button></div>').join('') + '</div>'
-      : '<div class="group"><div class="cellcol rtempty">' + (app.store.songs().length ? '' : '<span class="l2">' + t('rt.empty') + '</span>') + '<div class="rtex"><button class="btn sm" data-rtex="guitar">' + t('rt.ex.guitar') + '</button><button class="btn sm" data-rtex="vocal">' + t('rt.ex.vocal') + '</button></div></div></div>');
+      : '<div class="group"><div class="cellcol rtempty">' + (app.store.songs().length ? '' : '<span class="l2">' + t('rt.empty') + '</span>') + '<div class="rtex">' + familiesFor((st.profile || {}).instruments).slice(0, 3).map((f) => '<button class="btn sm" data-rtex="' + f + '">' + t('rt.fam.' + f) + '</button>').join('') + '<button class="btn sm" data-act="rtTpl">' + t('rt.tpl') + '</button></div></div></div>');
 }
 
 // Нажатия раздела; true — нажатие его
@@ -28,6 +29,7 @@ export function routinesClick(app, e, render) {
   const g = (s) => e.target.closest(s);
   let b;
   if (g('[data-act="rtNew"]')) { routineEditor(app, null, render); return true; }
+  if (g('[data-act="rtTpl"]')) { templatesSheet(app, render); return true; }
   if ((b = g('[data-rt]'))) { routineEditor(app, b.dataset.rt, render); return true; }
   if ((b = g('[data-rtgo]'))) { app.startSession('free', null, null, { routine: b.dataset.rtgo }); return true; }
   if ((b = g('[data-rtex]'))) {
@@ -37,6 +39,20 @@ export function routinesClick(app, e, render) {
     return true;
   }
   return false;
+}
+
+// Заготовки: по семействам инструментов (свои — первыми); выбранная копируется в планы и сразу открывается на правку
+export function templatesSheet(app, render) {
+  const st = app.store.state.settings, fams = familiesFor((st.profile || {}).instruments);
+  const api = sheet(() => snav(t('rt.tplTitle'), { right: '<span></span>' }) +
+    fams.map((f) => '<div class="hdr">' + esc(t('rt.fam.' + f)) + '</div><div class="group">' + VARIANTS.map((v) => '<button class="cell rtrow" data-rtex="' + f + '.' + v + '"><span class="grow"><b>' + esc(t('rt.var.' + v)) + '</b><span class="st l2">' + esc(t('rt.tplMin', { m: templateMin(f, v) })) + '</span></span></button>').join('') + '</div>').join(''),
+  (el) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rtex]'); if (!b) return;
+    const r = saveRoutine(st, example(b.dataset.rtex, t));
+    app.store.settingsChanged(); api.close(); render && render();
+    if (r) routineEditor(app, r.id, render);
+  }));
+  return api;
 }
 
 // Правка плана

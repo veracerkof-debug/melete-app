@@ -12,7 +12,7 @@ describe('routine', () => {
     const st = {};
     const r = saveRoutine(st, example('guitar', (k) => k));
     expect(routinesOf(st)).toHaveLength(1);
-    expect(r.items[0].tool).toBe('metro');
+    expect(r.items[0].tool).toBe('tuner'); // заготовка начинается с настройки
     saveRoutine(st, { ...r, title: 'B' });
     expect(routinesOf(st)).toHaveLength(1);
     expect(routinesOf(st)[0].title).toBe('B');

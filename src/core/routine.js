@@ -4,6 +4,7 @@
 // время вышло — тихий знак и «Дальше», переход вручную. В запись занятия — разбивка по пунктам (rec.plan).
 // Логика без DOM; экраны — screens/routine.js.
 import { planOf, slotsOn, minOf } from './schedule.js';
+import { templateItems } from './routinetemplates.js';
 
 let seq = 0;
 const nid = (p) => p + Date.now().toString(36) + (seq++).toString(36);
@@ -39,13 +40,11 @@ export function saveRoutine(st, r) {
 }
 export function removeRoutine(st, id) { st.routines = routinesOf(st).filter((r) => r.id !== id); }
 
-// Примеры — на языке интерфейса (t), чтобы было с чего начать
-export const EXAMPLES = {
-  guitar: [['warm', 5, 'metro', 60], ['scales', 10, 'metro', 80], ['piece', 15, 'notes', null]],
-  vocal: [['breath', 3, null, null], ['warmup', 7, 'piano', null], ['song', 10, 'audio', null]],
-};
+// Заготовки (routinetemplates.js) — копией в планы, на языке интерфейса (t). kind: «семейство.вариант» или просто «семейство» (main)
 export function example(kind, t) {
-  return cleanRoutine({ title: t('rt.ex.' + kind), items: EXAMPLES[kind].map(([k, min, tool, bpm]) => ({ title: t('rt.it.' + k), min, tool, bpm })) });
+  const [fam, variant = 'main'] = String(kind).split('.'), items = templateItems(fam, variant);
+  if (!items) return null;
+  return cleanRoutine({ title: t('rt.fam.' + fam) + ' · ' + t('rt.var.' + variant), items: items.map(([k, min, tool, bpm]) => ({ title: t('rt.it.' + k), min, tool, bpm })) });
 }
 
 // Занятие по плану: что хранится в app.active.routine. sec — секунды занятия (elapsed)

@@ -734,3 +734,4 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .catdot{width:10px;height:10px;border-radius:50%;flex:none}
 /* Расписание в настройках — компактно: прокручивается внутри, страница не растягивается (слово автора 21.11.2026) */
 #panelLayer .plan .pscroll{height:min(34vh,300px)}
+.hdrr{display:inline-flex;gap:16px;align-items:center}
