@@ -55,3 +55,19 @@ test('ступени: замена аккордов ступенями в ред
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).songs[0].notes)).toContain('VII');
   expect(errors).toEqual([]);
 });
+
+// Подсказки к «не распознано» и предложения тоники (слово автора 22.11.2026)
+test('ступени: касание «не распознано» объясняет, шторка тональности предлагает тонику', async ({ page, melete, errors }) => {
+  const songs = [{ id: 's1', title: 'Песня', notes: 'C   G   Am   F\nСвя[Cmj7]той\n', created: Date.now() }];
+  await melete.open({ songs, tools: { notes: { sec: 'text', textPick: { id: 's1', sess: null } } } });
+  await melete.free('F', ['notes']);
+  await page.waitForTimeout(3000); // приветственная плашка веб-версии уходит
+  await page.click('.lyr .chd.bad'); await page.waitForTimeout(300);
+  await expect(page.locator('.toast')).toContainText('Cmaj7');
+  await melete.click('[data-x="nkey"]'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-tonic]')).toHaveCount(4);
+  await page.click('[data-tonic="Am"]'); await page.waitForTimeout(500);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).songs[0].key)).toBe('Am');
+  await expect(page.locator('.trkey.guess')).toHaveCount(0); // тональность задана
+  expect(errors).toEqual([]);
+});

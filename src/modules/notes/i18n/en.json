@@ -317,10 +317,19 @@
   "ed.t.acc": "Accent",
   "ed.t.hac": "Heavy accent",
   "ed.t.stac": "Staccato",
-  "deg.both": "Chord and degree",
+  "deg.both": "Both",
   "deg.toBoth": "Show chord and degree together",
   "ed.badChords": "Not recognised: {n} — check the spelling (Roman numerals, chords in brackets)",
   "ed.toDeg": "Replace chords with degrees ({k})",
   "ed.toChords": "Replace degrees with chords ({k})",
-  "tr.guess": "Key guessed from the chords — tap to pick it exactly"
+  "tr.guess": "Key guessed from the chords — tap to pick it exactly",
+  "tr.tonics": "Which chord is the tonic",
+  "tr.tonicFit": "{n} of {m} chords in key",
+  "tr.tonicF": "starts on the tonic",
+  "tr.tonicL": "ends on the tonic",
+  "tr.tonicFL": "starts and ends on the tonic",
+  "tr.tonicsHint": "Your pick is saved as the song key: degrees and chords are recalculated.",
+  "tr.tonicSet": "Song key — {k}",
+  "deg.bad": "Not recognised: “{t}”. Roman numerals are I…VII (capitals — major, lowercase — minor), chords go in brackets: [Am].",
+  "deg.badFix": "Not recognised: “{t}”. Maybe “{f}”?"
 }

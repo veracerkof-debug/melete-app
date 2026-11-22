@@ -316,10 +316,19 @@
   "ed.t.acc": "Accent",
   "ed.t.hac": "Heavy accent",
   "ed.t.stac": "Staccato",
-  "deg.both": "Akkord va pogʻona",
+  "deg.both": "Birga",
   "deg.toBoth": "Akkord va pogʻonani birga koʻrsatish",
   "ed.badChords": "Tanilmadi: {n} — yozilishini tekshiring (rim raqamlari, qavsdagi akkordlar)",
   "ed.toDeg": "Akkordlarni pogʻonalarga almashtirish ({k})",
   "ed.toChords": "Pogʻonalarni akkordlarga almashtirish ({k})",
-  "tr.guess": "Tonallik akkordlardan taxmin qilindi — aniq tanlash uchun bosing"
+  "tr.guess": "Tonallik akkordlardan taxmin qilindi — aniq tanlash uchun bosing",
+  "tr.tonics": "Qaysi akkord tonika",
+  "tr.tonicFit": "{m} akkordning {n} tasi tonallikda",
+  "tr.tonicF": "tonikadan boshlanadi",
+  "tr.tonicL": "tonika bilan tugaydi",
+  "tr.tonicFL": "boshi va oxiri tonika",
+  "tr.tonicsHint": "Tanlov qoʻshiqning tonalligi sifatida saqlanadi.",
+  "tr.tonicSet": "Qoʻshiq tonalligi — {k}",
+  "deg.bad": "Tanilmadi: «{t}». Rim raqamlari I…VII, akkordlar qavsda: [Am].",
+  "deg.badFix": "Tanilmadi: «{t}». Balki «{f}»?"
 }

@@ -17,7 +17,7 @@ it('не распознано: опечатки подсвечиваются, с
   const t = 'I V IIII\nСвя[IV]той [x2] [Припев] [Vv] [Amj7] [Chorus] [Bridge] [Intro]\nI love you';
   expect(badIn(t)).toBe(3); // IIII, [Vv], [Amj7]
   const h = lyricsHTML(t, 0, C);
-  expect(h).toContain('<b class="chd bad" title="?">IIII</b>');
+  expect(h).toContain('data-bad="IIII">IIII</b>');
   expect(h).not.toContain('>x2<'); expect(h).toContain('[x2]'); expect(h).toContain('[Chorus]');
   expect(h).toContain('I love you'); // обычная строка не тронута
 });
@@ -46,4 +46,13 @@ it('замена записи насовсем: аккорды ↔ ступен�
   expect(convertText(d, C, 'chords')).toBe('C    G   Am   F\nСвя[Am]той [F]ной'); // туда и обратно — то же
   expect(convertText('Am  F   C   G\nслово', Am, 'deg')).toBe('i   VI  III VII\nслово'); // длиннее — пробелы съедены, колонки на местах
   expect(convertText('Am F', null, 'deg')).toBe('Am F'); // без тональности ничего не меняет
+});
+
+import { suggestFix } from '../src/music/lyrics.js';
+import { rankKeys } from '../src/music/transpose.js';
+it('подсказки: что имелось в виду; предложения тоники с долей аккордов в ладу', () => {
+  expect(suggestFix('Amj7')).toBe('Amaj7'); expect(suggestFix('Vv')).toBe('V'); expect(suggestFix('IIII')).toBe('III'); expect(suggestFix('qwerty')).toBeNull();
+  const r = rankKeys(['C', 'G', 'Am', 'F']);
+  expect(r[0]).toMatchObject({ pc: 0, minor: false, fit: 4, n: 4, first: true });
+  expect(r.slice(0, 4).some((x) => x.pc === 9 && x.minor && x.fit === 4)).toBe(true); // ля минор тоже предлагается: все четыре аккорда в ладу
 });

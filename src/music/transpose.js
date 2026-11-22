@@ -42,28 +42,32 @@ const isMinorQ = (q) => /^(m(?!aj)|min|-)/.test(q) || /^(dim|°|ø)/.test(q);
 
 // Определить тональность по аккордам: каждый аккорд, который входит в тональность (с нужным наклонением),
 // добавляет очко; первый и последний аккорды — вероятная тоника. В миноре V может быть мажорным.
-export function detectKey(chords) {
+export function rankKeys(chords) {
   const list = chords.map((c) => { const m = CH.exec(c); const n = m && parseNote(m[2]); return n ? { pc: n.pc, minor: isMinorQ(m[3]), acc: n.acc } : null; }).filter(Boolean);
-  if (!list.length) return null;
+  if (!list.length) return [];
   const MAJ = [[0, 0], [2, 1], [4, 1], [5, 0], [7, 0], [9, 1], [11, 1]];
   const MIN = [[0, 1], [2, 1], [3, 0], [5, 1], [7, 1], [7, 0], [8, 0], [10, 0]];
-  let best = null;
+  const sharps = list.filter((c) => c.acc > 0).length, flats = list.filter((c) => c.acc < 0).length, sharp = sharps === flats ? null : sharps > flats;
+  const out = [];
   for (let pc = 0; pc < 12; pc++) for (const minor of [false, true]) {
     const deg = minor ? MIN : MAJ;
-    let s = 0;
+    let s = 0, fit = 0;
     list.forEach((c) => {
       const iv = mod12(c.pc - pc);
-      if (deg.some(([d, q]) => d === iv && !!q === c.minor)) s += 1;
+      if (deg.some(([d, q]) => d === iv && !!q === c.minor)) { s += 1; fit++; }
       else if (deg.some(([d]) => d === iv)) s += 0.4;
     });
     const tonic = (c) => c && c.pc === pc && c.minor === minor;
     if (tonic(list[0])) s += 1.5;
     if (tonic(list[list.length - 1])) s += 1;
     s += list.filter(tonic).length * 0.3;
-    if (!best || s > best.s) best = { s, pc, minor };
+    out.push({ pc, minor, sharp, s, fit, n: list.length, first: !!tonic(list[0]), last: !!tonic(list[list.length - 1]) });
   }
-  const sharps = list.filter((c) => c.acc > 0).length, flats = list.filter((c) => c.acc < 0).length;
-  return { pc: best.pc, minor: best.minor, sharp: sharps === flats ? null : sharps > flats };
+  return out.sort((a, b) => b.s - a.s);
+}
+export function detectKey(chords) {
+  const r = rankKeys(chords)[0];
+  return r ? { pc: r.pc, minor: r.minor, sharp: r.sharp } : null;
 }
 
 // Тональность после сдвига на n полутонов; при равенстве знаков — направление написания исходной

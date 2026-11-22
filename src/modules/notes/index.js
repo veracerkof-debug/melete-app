@@ -8,9 +8,10 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong } from '../../core/files.js';
-import { lyricsHTML, chordsIn, degreesIn, markupHTML, badIn, convertText } from '../../music/lyrics.js';
+import { lyricsHTML, chordsIn, degreesIn, markupHTML, badIn, convertText, suggestFix } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
-import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
+import { detectKey, rankKeys, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
+import { keyName } from '../../core/songinfo.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
 import { pinch } from '../../ui/gestures.js';
 import { onHold } from '../../ui/hold.js';
@@ -607,6 +608,24 @@ function capoSheet() {
   (el, sh) => el.addEventListener('click', (e) => { const b = e.target.closest('[data-capo]'); if (!b) return; updCur({ capo: +b.dataset.capo }); sh.close(); render(); }));
 }
 
+// Предложения тоники (слово автора 22.11.2026): какая тональность подходит аккордам текста — четыре лучших с долей аккордов «в ладу»;
+// выбор записывает тональность в карточку песни, ступени пересчитываются
+function tonicsHTML(song, key) {
+  const { t } = ctx, chords = chordsIn(song.notes);
+  if (!chords.length) return '';
+  const top = rankKeys(chords).slice(0, 4), name = (r) => keyName(r.pc, r.minor); // как в карточке песни: C, C♯, B♭m…
+  return '<div class="hdr">' + t('tr.tonics') + '</div><div class="group"><div class="cellcol">' + top.map((r) => {
+    const nm = name(r), cur = key && key.pc === r.pc && !!key.minor === r.minor;
+    return '<button type="button" class="cell act" data-tonic="' + esc(nm) + '"' + (cur ? ' aria-current="true"' : '') + '><span class="grow" style="text-align:left"><b>' + esc(keyLabel({ pc: r.pc, minor: r.minor, sharp: r.sharp })) + '</b><span class="st l2" style="display:block;font-size:12.5px">' +
+      esc(t('tr.tonicFit', { n: r.fit, m: r.n }) + (r.first && r.last ? ' · ' + t('tr.tonicFL') : r.first ? ' · ' + t('tr.tonicF') : r.last ? ' · ' + t('tr.tonicL') : '')) + '</span></span>' + (cur ? '<span class="l2">✓</span>' : '') + '</button>';
+  }).join('') + '</div></div><p class="ftr">' + t('tr.tonicsHint') + '</p>';
+}
+// Касание «не распознано» в тексте: что не так и что, возможно, имелось в виду
+function badHint(tok) {
+  const { t } = ctx, song = curSong(), f = suggestFix(tok, song ? song.notes : '');
+  ctx.ui.toast(f ? t('deg.badFix', { t: tok, f }) : t('deg.bad', { t: tok }));
+}
+
 // Выбор тональности напрямую: 12 вариантов того же наклонения, «Исходная» — сброс сдвига
 function keySheet() {
   const { t, ui } = ctx, song = curSong(), key = song && songKey(song);
@@ -615,11 +634,13 @@ function keySheet() {
   ui.sheet(() => ui.snav(t('tr.key')) + '<p class="ftr" style="margin-top:0">' + esc(t(key.given ? 'tr.fromSong' : key.assumed ? 'tr.fromAssumed' : 'tr.fromChords', { k: keyLabel(key) })) + '</p>' +
     '<div class="group"><div class="cellcol trgrid">' + opts.map((o) => '<button type="button" class="pill num" data-trd="' + o.d + '" aria-pressed="' + (o.d === song.tr) + '">' + esc(o.label) +
       '<small>' + (o.d > 0 ? '+' : '') + o.d + '</small></button>').join('') + '</div></div>' +
-    '<p class="ftr">' + t('tr.hint') + '</p>' +
+    '<p class="ftr">' + t('tr.hint') + '</p>' + tonicsHTML(song, key) +
     '<div class="hdr">' + t('deg.title') + '</div><div class="group"><div class="cellcol">' +
     ui.seg('nview', [['chords', t('deg.chords')], ['roman', t('deg.roman')], ['nash', t('deg.nash')], ['both', t('deg.both')]], viewOf() === 'chords' ? 'chords' : viewOf() === 'both' ? 'both' : dstyle(), t('deg.title')) + '</div></div>' +
     '<p class="ftr">' + t('deg.hint') + '</p>',
   (el, sh) => el.addEventListener('click', (e) => {
+    const tn = e.target.closest('[data-tonic]');
+    if (tn) { updCur({ key: tn.dataset.tonic, tr: 0 }); sh.close(); render(); ctx.ui.toast(t('tr.tonicSet', { k: tn.dataset.tonic })); return; }
     const v = e.target.closest('[data-seg="nview"] [data-v]');
     if (v) {
       if (v.dataset.v === 'chords' || v.dataset.v === 'both') st().view = v.dataset.v; else { st().view = 'degrees'; st().dstyle = v.dataset.v; }
@@ -827,7 +848,7 @@ export default {
     input.addEventListener('change', onFile);
     if (dropped) { const fs = dropped; dropped = null; c.files.ready.then(() => { if (host) onFile({ target: { files: fs } }); }); }
     document.body.appendChild(input);
-    const click = (e) => { const x = e.target.closest('[data-x]'); if (x) act(x.dataset.x, x); };
+    const click = (e) => { const bd = e.target.closest('.chd.bad'); if (bd) { badHint(bd.dataset.bad); return; } const x = e.target.closest('[data-x]'); if (x) act(x.dataset.x, x); };
     host.addEventListener('click', click);
     offs.push(() => host.removeEventListener('click', click));
     // текст с аккордами: щипок двумя пальцами — размер шрифта (как кнопки A− и A+)

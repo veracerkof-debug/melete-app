@@ -104,7 +104,7 @@ export function lyricsHTML(txt, n, key = null, { view = 'chords', style = 'roman
     const x = degOf(c);
     return '<b class="chd both">' + esc(tr(c)) + (x ? '<i>' + esc(asDeg(x)) + '</i>' : '') + '</b>';
   };
-  const bad = (c) => '<b class="chd bad" title="?">' + esc(c) + '</b>';
+  const bad = (c) => '<b class="chd bad" role="button" tabindex="0" data-bad="' + esc(c) + '">' + esc(c) + '</b>';
   return txt.split('\n').map((line) => {
     if (isLine(line, numbers) || isLooseLine(line, numbers)) return line.replace(/\S+/g, (t) => (tokOf(t, numbers) ? b(t) : kindOf(t, numbers) === 'bad' ? bad(t) : esc(t)));
     return esc(line).replace(/\[([^\]]+)\]/g, (m, c) => (tokOf(c, numbers) ? b(c) : kindOf(c, numbers) === 'bad' ? bad(c) : m));
@@ -137,4 +137,12 @@ export function convertText(txt, key, to = 'deg') {
     }
     return line.replace(/\[([^\]]+)\]/g, (m, c) => (tokOf(c, numbers) ? '[' + conv(c) + ']' : m));
   }).join('\n');
+}
+
+// Подсказка к «не распознано»: что, скорее всего, имелось в виду (регистр, «mj» → «maj», лишние повторы), иначе null
+export function suggestFix(tok, txt = '') {
+  const numbers = !letterChords(txt), t = String(tok);
+  const tries = [/^([ivx])\1+$/i.test(t) && t !== t.toUpperCase() && t !== t.toLowerCase() ? t[0].toUpperCase() : t, t.toUpperCase(), t.toLowerCase(), t.replace(/mj/gi, 'maj'), t.replace(/(.)\1{3,}/g, '$1$1$1'), t.replace(/^([ivxIVX]+)(?=[^ivxIVX]|$)/, (m) => m.slice(0, 3)),
+    t.replace(/^([A-Ha-h])/, (m) => m.toUpperCase()), t.replace(/^([iIvVxX]+)/, (m) => (m === m.toUpperCase() ? m.toLowerCase() : m.toUpperCase()))];
+  return tries.find((x) => x !== t && (CH_RE.test(x) || parseDegree(x, { numbers }))) || null;
 }
