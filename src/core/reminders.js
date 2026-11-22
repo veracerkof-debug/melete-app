@@ -226,6 +226,18 @@ export async function rescheduleBible(remind, text, now = Date.now()) {
   } catch (e) { log('remind', 'Библия не запланировалась: ' + errText(e), 'e'); return 0; }
 }
 
+// Показать уведомление сразу (партнёр по совместному чтению что-то прислал): { title, body, extra }
+export async function notifyNow({ title, body, extra }) {
+  const { P } = await plugin();
+  if (!P) return false;
+  try {
+    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) return false;
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: BIB_CH, name: 'Melete · ' + t('church.title'), importance: 4, visibility: 1, vibration: false }).catch(() => {});
+    await P.schedule({ notifications: [{ id: 7400 + (Date.now() % 90), ...note({ title, body }), schedule: { at: new Date(Date.now() + 1000) }, channelId: BIB_CH, autoCancel: true, extra: extra || { go: 'home' } }] });
+    return true;
+  } catch (e) { log('remind', 'уведомление не показалось: ' + errText(e), 'e'); return false; }
+}
+
 // Ближайшее запланированное напоминание о практике (для строки в настройках): время или null
 export async function remindNext() {
   const { P } = await plugin();

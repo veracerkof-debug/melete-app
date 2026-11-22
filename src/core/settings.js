@@ -13,7 +13,7 @@ export const toolsOnly = (settings) => !!settings.toolsOnly;
 
 // В режиме «Только инструменты» функции ядра (ударный режим, значок мастерства) выключены
 // Модули церковного режима (settings.church) — видны только в нём
-export const CHURCH_MODULES = ['bible'];
+export const CHURCH_MODULES = ['bible', 'together'];
 export const isOn = (settings, id) => !((settings.off || {})[id]) && !(settings.toolsOnly && CORE_FEATURES.includes(id)) && !(CHURCH_MODULES.includes(id) && !settings.church);
 
 export function setFeature(store, id, on) {

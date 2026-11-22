@@ -2551,5 +2551,9 @@
   "church.remind": "Oʻqish eslatmasi",
   "church.remindAt": "Vaqt",
   "church.remindTitle": "Injil oʻqish",
-  "church.remindBody": "Oʻqish vaqti"
+  "church.remindBody": "Oʻqish vaqti",
+  "together.push.report": "{name} oʻqidi: {ref}",
+  "together.push.nudge": "{name} oʻqishni eslatmoqda",
+  "together.push.msg": "{name}: {text}",
+  "together.push.title": "Birga"
 }

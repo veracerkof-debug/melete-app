@@ -14,6 +14,7 @@ export function resolveTarget(extra, songById, moduleOk = () => true) {
     case 'tool': return e.tool && moduleOk(e.tool) ? { do: 'tool', tool: String(e.tool) } : { do: 'home' };
     case 'bible': return { do: 'bible' };
     case 'calendar': return { do: 'calendar' };
+    case 'together': return { do: 'together' };
     default: return { do: 'home' };
   }
 }
@@ -28,6 +29,7 @@ export function openTarget(app, tg) {
     } else if (tg.do === 'tool') app.startSession('tool', null, tg.tool);
     else if (tg.do === 'bible') (app.go ? app.go('bible') : app.openTool && app.openTool('bible'));
     else if (tg.do === 'calendar') app.go && app.go('calendar');
+    else if (tg.do === 'together') (app.openTool ? app.openTool('together') : app.go && app.go('tools'));
   } catch (e) { log('remind', 'касание уведомления: ' + (e && e.message), 'w'); }
 }
 // Экран занятия собирается не сразу — инструмент открываем, когда он готов

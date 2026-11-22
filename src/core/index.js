@@ -57,7 +57,8 @@ import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
 import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
-import { reschedule, rescheduleEvents, rescheduleBible } from './reminders.js';
+import { reschedule, rescheduleEvents, rescheduleBible, notifyNow } from './reminders.js';
+import { createTogether } from './together/index.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
 import { initShareIn } from './screens/share.js';
@@ -293,6 +294,13 @@ export function boot(root) {
   bibSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
+  // Совместное чтение (церковный режим): сверка при старте; новое от партнёра — тост (экран открыт) или местное уведомление
+  app.together = createTogether(app, { notify: (n) => {
+    const text = n.kind === 'report' ? t('together.push.report', { name: n.name, ref: n.ref ? refText([n.ref.b + '.' + n.ref.c]) : '' }) : n.kind === 'nudge' ? t('together.push.nudge', { name: n.name }) : t('together.push.msg', { name: n.name, text: n.text });
+    if (document.visibilityState === 'visible') toast(text);
+    else notifyNow({ title: t('together.push.title'), body: text, extra: { go: 'together' } });
+  } });
+  { const s0 = store.state.settings; if (s0.church) app.together.boot().catch(() => {}); }
   // Вспышка, фонарик и вибрация в такт метронома
   app.pulse = createPulse(app);
   // Часы перевели или они сбиты: идущая сессия и секундомер не подтверждаются; окно с проверкой по интернету

@@ -66,7 +66,7 @@ const palOf = (settings) => (paletteOf(settings) === 'own' ? ownPalette(settings
 export const TOOL_FAMILY = {
   metro: 'time', timer: 'time', tuner: 'pitch', drone: 'pitch', spectrum: 'pitch', piano: 'play', glider: 'play', theremin: 'play',
   ear: 'learn', beat: 'learn', vocal: 'learn', theory: 'learn', book: 'learn', voice: 'record', looper: 'record', studio: 'record',
-  audio: 'media', show: 'media', notes: 'paper', bible: 'paper', convert: 'util',
+  audio: 'media', show: 'media', notes: 'paper', bible: 'paper', together: 'paper', convert: 'util',
 };
 export const TOOL_HUE = {
   metro: 'orange', timer: 'orange',
@@ -74,7 +74,7 @@ export const TOOL_HUE = {
   piano: 'indigo', glider: 'indigo', theremin: 'purple',
   ear: 'green', beat: 'green', vocal: 'green', theory: 'mint', book: 'mint',
   voice: 'red', looper: 'red', studio: 'pink', audio: 'pink', show: 'pink',
-  notes: 'brown', bible: 'brown', convert: 'graphite',
+  notes: 'brown', bible: 'brown', together: 'brown', convert: 'graphite',
 };
 // Разделы списка «Модули и функции» (слово автора 21.11.2026: по категориям, интуитивно): категория — смысл, оттенок — из системы цветов; названия — i18n feat.cat.<id>
 export const CATEGORIES = ['time', 'pitch', 'play', 'learn', 'media', 'paper', 'util'];

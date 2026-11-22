@@ -180,6 +180,8 @@ export function makeCtx(app, mod) {
     league: () => { const hours = gemSec(app.store.sessions()) / 3600; return { hours, gem: gemOf(hours) }; },
     // Церковный режим: чтение Библии (src/core/reading.js: createBible)
     bible: app.bible,
+    // Совместное чтение (церковный режим): src/core/together
+    together: app.together,
     // Секундомер «сколько я играю» (ядро; второй режим «Помодоро»). commit — записать в статистику как свободную
     // практику; время, уже учтённое сессией или инструментами, не засчитывается дважды
     stopwatch: app.stopwatch && {

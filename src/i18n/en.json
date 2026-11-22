@@ -2587,5 +2587,9 @@
   "church.remind": "Reading reminder",
   "church.remindAt": "Time",
   "church.remindTitle": "Bible reading",
-  "church.remindBody": "Time to read"
+  "church.remindBody": "Time to read",
+  "together.push.report": "{name} read: {ref}",
+  "together.push.nudge": "{name} sends a reading nudge",
+  "together.push.msg": "{name}: {text}",
+  "together.push.title": "Together"
 }

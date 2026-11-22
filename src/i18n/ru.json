@@ -2609,5 +2609,9 @@
   "church.remind": "Напоминание о чтении",
   "church.remindAt": "Время",
   "church.remindTitle": "Чтение Библии",
-  "church.remindBody": "Время читать"
+  "church.remindBody": "Время читать",
+  "together.push.report": "{name} прочитал(а): {ref}",
+  "together.push.nudge": "{name} напоминает про чтение",
+  "together.push.msg": "{name}: {text}",
+  "together.push.title": "Вместе"
 }
