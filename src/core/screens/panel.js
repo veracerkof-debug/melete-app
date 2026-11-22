@@ -336,6 +336,25 @@ function paletteHTML(st) {
 
 // «Оформление» разбито по смыслу на три вкладки (слово автора 22.11.2026: сжать и разбить): вид · цвета · ещё
 let lookTab = 'view';
+// Тема и стиль — мини-экраны (слово автора 22.11.2026: настройки — картинкой, не только переключателем); выбор — тот же st.theme
+const THEME_VIEWS = {
+  system: null,
+  light: { bg: '#F3F2EE', cell: '#FFFFFF', ink: '#161514' },
+  dark: { bg: '#000000', cell: '#1C1C1E', ink: '#FFFFFF' },
+  paper: { bg: '#F4EFE6', cell: '#FBF8F2', ink: '#2B2620' },
+  oled: { bg: '#000000', cell: '#0E0E10', ink: '#FFFFFF' },
+};
+function themeCards(st) {
+  const mini = (v) => '<span class="thv" style="background:' + v.bg + '"><i class="thb" style="background:' + v.ink + '"></i><i class="thc" style="background:' + v.cell + '"><b style="background:' + v.ink + '"></b><b style="background:' + v.ink + '"></b></i><i class="thd"></i></span>';
+  const half = '<span class="thv thsys"><span style="background:' + THEME_VIEWS.light.bg + '"><i class="thb" style="background:' + THEME_VIEWS.light.ink + '"></i><i class="thc" style="background:' + THEME_VIEWS.light.cell + '"></i></span><span style="background:' + THEME_VIEWS.dark.bg + '"><i class="thb" style="background:' + THEME_VIEWS.dark.ink + '"></i><i class="thc" style="background:' + THEME_VIEWS.dark.cell + '"></i></span></span>';
+  const names = { system: t('look.auto'), light: t('look.light'), dark: t('look.dark'), paper: t('look.paper'), oled: 'OLED' };
+  const cur = st.theme || 'system', mono = st.uiStyle === 'mono';
+  const card = (k, attr) => '<button type="button" class="thcard' + (cur === k ? ' on' : '') + '" ' + attr + ' aria-pressed="' + (cur === k) + '" aria-label="' + esc(names[k]) + '">' + (THEME_VIEWS[k] ? mini(THEME_VIEWS[k]) : half) + '<span class="thn">' + esc(names[k]) + '</span></button>';
+  return '<div class="hdr">' + t('look.theme') + '</div><div class="thgrid" role="group" aria-label="' + esc(t('look.theme')) + '" data-seg="theme">' +
+    ['system', 'light', 'dark'].map((k) => card(k, 'data-v="' + k + '"')).join('') + '</div>' +
+    (mono ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="thgrid two">' + ['paper', 'oled'].map((k) => card(k, 'data-skin="' + k + '"')).join('') + '</div>');
+}
+
 function lookHTML(app) {
   const st = app.store.state.settings;
   const monoLang = st.uiStyle === 'mono' && st.monoLang !== false, isMono = st.uiStyle === 'mono';
@@ -344,14 +363,13 @@ function lookHTML(app) {
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     sizeHTML(app) +
-        '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
+    themeCards(st) +
         ('<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
     (st.uiStyle === 'mono' ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' +
       // без текста: значки, графика и цифры на рабочих экранах; настройки и диалоги — с текстом
       '<div class="group"><div class="cell"><span class="grow">' + t('mono.bare') + '</span>' + psw('monoBare', !!st.monoBare, t('mono.bare')) + '</div></div><p class="ftr">' + t('mono.bareHint') + '</p>' : '') +
-        (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
-      '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>');
+    '';
   const colorP = isMono ? '' : paletteHTML(st) +
     '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k]) =>
       '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + accentColor(st, k) + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>';
@@ -412,9 +430,25 @@ function snapsHTML() {
     esc(x.kind === 'update' ? t('snap.update') : t('snap.day')) + ' · ' + Math.max(1, Math.round((x.size || 0) / 1024)) + ' KB</span></span>' + icons.chev + '</button>').join('') + '</div><p class="ftr">' + t('snap.hint') + '</p>';
 }
 
+// Данные — картинкой: сколько занятий и песен, сколько места занято (полоса; оценка браузера или системы подгружается после показа)
+function dataSummary(app) {
+  const n = app.store.sessions().length, sg = app.store.songs().length;
+  return '<div class="dsum"><div class="dstiles num"><div class="tile"><b>' + n + '</b><span>' + t('data.sum.sessions') + '</span></div><div class="tile"><b>' + sg + '</b><span>' + t('data.sum.songs') + '</span></div></div>' +
+    '<div class="dsdisk" data-dsdisk hidden><div class="dshead"><span>' + t('data.sum.disk') + '</span><b class="num" data-dsval></b></div><i class="dsbar" data-dsbar style="--f:0%"></i></div></div>';
+}
+function fillStorage(root) {
+  const box = root.querySelector('[data-dsdisk]'); if (!box || !navigator.storage || !navigator.storage.estimate) return;
+  navigator.storage.estimate().then((e) => {
+    if (!e || !e.quota || !box.isConnected) return;
+    const mb = (b) => (b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' ' + t('data.sum.gb') : Math.max(1, Math.round(b / 1048576)) + ' ' + t('data.sum.mb'));
+    box.querySelector('[data-dsval]').textContent = t('data.sum.of', { u: mb(e.usage || 0), q: mb(e.quota) });
+    box.querySelector('[data-dsbar]').style.setProperty('--f', Math.max(1.5, Math.min(100, ((e.usage || 0) / e.quota) * 100)).toFixed(1) + '%');
+    box.hidden = false;
+  }).catch(() => { /* оценки нет — полоса не показывается */ });
+}
 function dataHTML(app) {
   const demo = demoLeft(app);
-  return '<div class="large">' + t('data.title') + '</div><div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
+  return '<div class="large">' + t('data.title') + '</div>' + dataSummary(app) + '<div class="group"><button class="cell act" data-act="export">' + t('data.export') + '</button><button class="cell act" data-act="import">' + t('data.import') + '</button></div>' +
     '<p class="ftr">' + t('data.hint') + '</p>' +
     folderHTML(app) +
     snapsHTML() +
@@ -710,7 +744,7 @@ export function createPanel(app, onChange) {
     if (page === 'look') mountSizePreview(app, layer);
     if (page === 'root' || desk) mountStones(app, layer);
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
-    if (page === 'data') { coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
+    if (page === 'data') { fillStorage(layer); coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') coreHelp(app, 'melete');
     if (page === 'notif') mountMelete(layer);
     if (page === 'week' || shown === 'week') mountPlan(layer, app);

@@ -23,6 +23,11 @@ const loc = () => (getLang() === 'uz' ? 'uz-Latn' : getLang());
 const dayTitle = (d) => { const s = new Date(d).toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 const dShort = (d) => new Date(d).toLocaleDateString(loc(), { day: 'numeric', month: 'short' });
 
+// План недели — гистограмма: высота столбика — минуты занятий дня (слово автора 22.11.2026: настройки — картинкой)
+function wkBars(p, w0, WD, today) {
+  const per = WD.map((n, i) => slotsOn(p, addDays(w0, i)).reduce((a, s) => a + durOf(s), 0)), mx = Math.max(60, ...per);
+  return '<div class="wkbars" role="img" aria-label="' + esc(t('plan.week')) + '">' + per.map((m, i) => '<div class="wkc' + (addDays(w0, i) === today ? ' today' : '') + '"><i style="--h:' + (m ? Math.max(8, Math.round((m / mx) * 100)) : 0) + '"' + (m ? '' : ' class="z"') + '></i><span>' + esc(WD[i]) + '</span></div>').join('') + '</div>';
+}
 export function planHTML(app) {
   const st = app.store.state.settings, p = planOf(st), WD = weekdays(), today = mid(Date.now());
   const w0 = addDays(sel, -weekday(sel)), off = offOn(p, sel), once = !!p.once[dateKey(sel)];
@@ -40,7 +45,7 @@ export function planHTML(app) {
   return '<div class="hdr">' + t('plan.title') + '</div><div class="plan">' + strip + head +
     '<div class="pscroll" data-noswipe><div class="pgrid' + (off ? ' isoff' : '') + '" style="height:' + 24 * PX + 'px">' + hours + now + blocks + '</div></div>' +
     '<p class="ftr">' + t('plan.hint') + '</p></div>' +
-    '<div class="group"><div class="cell"><span class="grow">' + t('plan.week') + '</span><span class="val num">' + (mins ? fmtDur(mins * 60) + ' · ' + t('plan.nDays', { n: days }) : t('plan.empty')) + '</span></div></div>' +
+    '<div class="wkinfo"><div class="wkhead"><span>' + t('plan.week') + '</span><b class="num">' + (mins ? fmtDur(mins * 60) + ' · ' + t('plan.nDays', { n: days }) : t('plan.empty')) + '</b></div>' + wkBars(p, w0, WD, today) + '</div>' +
     '<p class="ftr">' + t('plan.weekHint') + '</p>' +
     '<div class="hdr">' + t('plan.breaks') + '</div><div class="group">' + p.off.map((o) => '<div class="cell"><span class="grow"><span>' + esc(o.title || t('plan.break')) + '</span><span class="st l2" style="display:block;font-size:13px">' +
       esc(o.from === o.to ? dShort(new Date(o.from + 'T12:00').getTime()) : dShort(new Date(o.from + 'T12:00').getTime()) + ' — ' + dShort(new Date(o.to + 'T12:00').getTime())) + '</span></span><button class="ic sm plain" data-poff="' + esc(o.id) + '" aria-label="' + esc(t('plan.delBreak')) + '">×</button></div>').join('') +

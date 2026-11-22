@@ -7,7 +7,9 @@ test('оформление: вкладки вид / цвета / ещё', async 
   await melete.click('.avatar'); await page.waitForTimeout(500);
   await page.click('[data-pp="look"]'); await page.waitForTimeout(700);
   await expect(page.locator('.lktabs button')).toHaveCount(3);
-  await expect(page.locator('[data-seg="theme"]')).toHaveCount(1);
+  await expect(page.locator('.thcard[data-v]')).toHaveCount(3); // тема — мини-экранами
+  await page.click('.thcard[data-v="dark"]'); expect((await melete.settings()).theme).toBe('dark');
+  await page.click('.thcard[data-skin="paper"]'); expect((await melete.settings()).theme).toBe('paper');
   await expect(page.locator('.pals')).toHaveCount(0);
   const h0 = await page.evaluate(() => document.querySelector('.wrap[style*="padding-bottom:40px"]').scrollHeight);
   await page.click('[data-lktab="color"]'); await page.waitForTimeout(300);
