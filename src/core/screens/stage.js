@@ -850,7 +850,7 @@ export function openStage(app, evId, i = 0) {
     const g = vg; vg = null;
     if (!g || e.pointerId !== g.id) return;
     const dx = e.clientX - g.x, dy = e.clientY - g.y;
-    if (performance.now() - g.t > 600 || Math.abs(dy) < 120 || Math.abs(dy) < Math.abs(dx) * 2.2) return;
+    if (performance.now() - g.t > 700 || Math.abs(dy) < 120 || Math.abs(dy) < Math.abs(dx) * 2.2) return;
     toggleProgram();
   });
   S.el.addEventListener('pointercancel', () => { vg = null; });

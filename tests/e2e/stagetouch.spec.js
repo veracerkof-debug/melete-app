@@ -41,9 +41,9 @@ test('сцена: настоящие касания — влево-вправо 
   expect(await cur()).toBe('Вторая');
   // вверх по свободному месту (под строкой темпа, правее «Далее») — программа включилась
   const nb = await page.locator('.sgnext').boundingBox();
-  await swipe(page, { x: nb.x + nb.width / 2, y: nb.y + 40 }, { x: nb.x + nb.width / 2, y: nb.y - 140 }); await page.waitForTimeout(500);
-  await expect(page.locator('.sgbpm.on')).toHaveCount(1);
-  await swipe(page, { x: nb.x + nb.width / 2, y: nb.y - 140 }, { x: nb.x + nb.width / 2, y: nb.y + 40 }); await page.waitForTimeout(500);
-  await expect(page.locator('.sgbpm.on')).toHaveCount(0);
+  await swipe(page, { x: nb.x + nb.width / 2, y: nb.y + nb.height / 2 }, { x: nb.x + nb.width / 2, y: nb.y - 160 }, 4); await page.waitForTimeout(500);
+  await expect(page.locator('.sgbpm.on, .sgkey.on')).not.toHaveCount(0); // у песни прописан пэд в её тональности — он и включился
+  await swipe(page, { x: nb.x + nb.width / 2, y: nb.y + nb.height / 2 }, { x: nb.x + nb.width / 2, y: nb.y + 200 }, 4); await page.waitForTimeout(500);
+  await expect(page.locator('.sgbpm.on, .sgkey.on')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

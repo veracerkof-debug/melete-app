@@ -218,6 +218,7 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
       if (!p || !(p.title || p.notes)) continue;
       if (no('skipText', p)) { try { await drv.remove(path); out.cleaned++; } catch { /* уже нет */ } continue; } // копия демо-песни
       const id = api.addSong(p);
+      if (mem.texts[id]) continue; // такая песня уже связана с другим файлом — лишний файл не трогаем и песню не дублируем
       let dest = path;
       if (!d) { const name = freeName(f.name, taken(DIRS.lyrics)); dest = DIRS.lyrics + '/' + name; await writeAll(drv, dest, u8, 'text/plain'); (ls[DIRS.lyrics] ||= []).push({ name, size: f.size, mtime: now }); await drv.remove(path); out.sorted++; }
       mem.texts[id] = { path: dest, hash: '', mtime: now };
