@@ -755,3 +755,8 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 /* Расписание в настройках — компактно: прокручивается внутри, страница не растягивается (слово автора 21.11.2026) */
 #panelLayer .plan .pscroll{height:min(34vh,300px)}
 .hdrr{display:inline-flex;gap:16px;align-items:center}
+.lktabs{margin:6px 0 4px}.lktabs button{min-height:40px}
+/* длинный список «добавить» — в две колонки (страница «Вкладки»): вдвое короче, строки по-прежнему крупные */
+.group.dense2{display:grid;grid-template-columns:1fr 1fr}
+.group.dense2 .cell{min-height:52px;padding-left:10px;padding-right:6px;border-top:0!important;gap:8px}
+.group.dense2 .cell .grow{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

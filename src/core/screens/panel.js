@@ -334,31 +334,37 @@ function paletteHTML(st) {
     '<div class="segcap">' + t('ontext.hint') + '</div></div></div>';
 }
 
+// «Оформление» разбито по смыслу на три вкладки (слово автора 22.11.2026: сжать и разбить): вид · цвета · ещё
+let lookTab = 'view';
 function lookHTML(app) {
   const st = app.store.state.settings;
-  const monoLang = st.uiStyle === 'mono' && st.monoLang !== false;
-  return '<div class="large">' + t('look.title') + '</div>' + (monoLang ? '' :
+  const monoLang = st.uiStyle === 'mono' && st.monoLang !== false, isMono = st.uiStyle === 'mono';
+  const tabs = isMono ? ['view', 'more'] : ['view', 'color', 'more'], cur = tabs.includes(lookTab) ? lookTab : 'view';
+  const viewP = (monoLang ? '' :
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     sizeHTML(app) +
-    '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
-    ('<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
+        '<div class="hdr">' + t('look.theme') + '</div><div class="group"><div class="cellcol">' + seg('theme', [['system', t('look.auto')], ['light', t('look.light')], ['dark', t('look.dark')]], st.theme, t('look.theme')) + '</div></div>' +
+        ('<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
     (st.uiStyle === 'mono' ? '<div class="group" style="margin-top:10px"><div class="cell"><span class="grow">' + t('mono.lang') + '</span>' + psw('monoLang', st.monoLang !== false, t('mono.lang')) + '</div></div><p class="ftr">' + t('mono.langHint') + '</p>' +
       // без текста: значки, графика и цифры на рабочих экранах; настройки и диалоги — с текстом
       '<div class="group"><div class="cell"><span class="grow">' + t('mono.bare') + '</span>' + psw('monoBare', !!st.monoBare, t('mono.bare')) + '</div></div><p class="ftr">' + t('mono.bareHint') + '</p>' : '') +
-    // иконка приложения: Мелета, Мелетий, музыкальные значки
+        (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
+      '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>');
+  const colorP = isMono ? '' : paletteHTML(st) +
+    '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k]) =>
+      '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + accentColor(st, k) + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>';
+  const moreP =     // иконка приложения: Мелета, Мелетий, музыкальные значки
     '<div class="hdr">' + t('icon.title') + '</div><div class="icgrid" role="group" aria-label="' + esc(t('icon.title')) + '">' + APP_ICON_IDS.map((k) => '<button type="button" class="icopt' + (iconOf(st) === k ? ' on' : '') + '" data-appicon="' + k + '" aria-pressed="' + (iconOf(st) === k) + '" aria-label="' + esc(t('icon.' + k)) + '">' +
       appIconSVG(k, { size: 54 }) + '<span>' + t('icon.' + k) + '</span></button>').join('') + '</div><p class="ftr">' + t('icon.hint') + '</p>' +
-    // стихи разделов — в обоих видах, только в церковном режиме
+        // стихи разделов — в обоих видах, только в церковном режиме
     (st.church ? '<div class="group" style="margin-top:16px"><button class="cell act" data-verses>' + t('verses.title') + '</button></div><p class="ftr">' + t('verses.hint') + '</p>' : '') +
-    (st.uiStyle === 'mono' ? '' : '<div class="hdr">' + t('look.style') + '</div><div class="skins">' + [['paper', t('look.paper'), '#F4EFE6', '#2B2620'], ['oled', 'OLED', '#000', '#fff']].map(([k, n, bg, fg]) =>
-      '<button class="skin' + (st.theme === k ? ' on' : '') + '" data-skin="' + k + '" aria-pressed="' + (st.theme === k) + '" style="background:' + bg + ';color:' + fg + '">' + n + '</button>').join('') + '</div>') +
-    (st.uiStyle === 'mono' ? '' : paletteHTML(st) +
-    '<div class="hdr">' + t('look.accent') + '</div><div class="group"><div class="cellcol"><div class="swgrid">' + ACCENTS.map(([k]) =>
-      '<button class="swc' + ((st.accent || 'orange') === k ? ' on' : '') + '" data-acc="' + k + '" aria-pressed="' + ((st.accent || 'orange') === k) + '" style="background:' + accentColor(st, k) + '" aria-label="' + esc(t('look.accentAria', { c: t('accent.' + k) })) + '"></button>').join('') + '</div></div></div>') +
-    '<div class="hdr">' + t('look.scale') + '</div><div class="group"><div class="cellcol">' + seg('scale', [['5', '1–5'], ['10', '1–10'], ['100', '%']], String(scaleOf(st)), t('look.scale')) + '</div><div class="cell center" style="gap:12px">' +
+        '<div class="hdr">' + t('look.scale') + '</div><div class="group"><div class="cellcol">' + seg('scale', [['5', '1–5'], ['10', '1–10'], ['100', '%']], String(scaleOf(st)), t('look.scale')) + '</div><div class="cell center" style="gap:12px">' +
     [20, 60, 100].map((p) => mBadge(p, st)).join('') + '</div></div><p class="ftr">' + t('look.scaleHint') + '</p>';
+  return '<div class="large">' + t('look.title') + '</div>' +
+    '<div class="seg lktabs" role="tablist" aria-label="' + esc(t('look.title')) + '">' + tabs.map((k) => '<button data-lktab="' + k + '" role="tab" aria-selected="' + (cur === k) + '" aria-pressed="' + (cur === k) + '">' + esc(t('look.tab.' + k)) + '</button>').join('') + '</div>' +
+    (cur === 'view' ? viewP : cur === 'color' ? colorP : moreP);
 }
 
 // Папка Melete (Android): выбрать, синхронизировать, восстановить данные из папки
@@ -626,7 +632,7 @@ function tabsHTML(app) {
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
     '<p class="ftr">' + t('tabs.hint') + '</p>' +
-    (cand.length ? '<div class="hdr">' + t('tabs.addTool') + '</div><div class="group">' + cand.map(candRow).join('') + '</div><p class="ftr">' + t('tabs.addToolHint', { max: TABS_MAX }) + '</p>' : '') +
+    (cand.length ? '<div class="hdr">' + t('tabs.addTool') + '</div><div class="group dense2">' + cand.map(candRow).join('') + '</div><p class="ftr">' + t('tabs.addToolHint', { max: TABS_MAX }) + '</p>' : '') +
     dockHTML(st);
 }
 
@@ -766,6 +772,7 @@ export function createPanel(app, onChange) {
         if (was !== (st.uiStyle === 'mono' && st.monoLang !== false)) relang();
         return;
       }
+      if ((b = g('[data-lktab]'))) { lookTab = b.dataset.lktab; render(); return; }
       if ((b = g('[data-uisz]'))) {
         const st = app.store.state.settings, v = b.dataset.uisz;
         st.uiScale = v === 'auto' ? null : Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, uiScale(st) + +v * SCALE_STEP)) * 100) / 100;
