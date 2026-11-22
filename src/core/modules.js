@@ -19,6 +19,7 @@ import { createFxPanel } from '../ui/fxpanel.js';
 import { gemOf } from './mastery.js';
 import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
+import * as MF from './mediafolders.js';
 import { isOn, setFeature } from './settings.js';
 import { moduleById } from '../modules/index.js';
 import { createSetlists } from './metrosets.js';
@@ -57,6 +58,21 @@ function moduleStore(app, id) {
     all: ns,
     save: () => app.saveDevice(),
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+  };
+}
+
+// Папки медиатеки (core/mediafolders.js): одни и те же у медиатеки, пульта и сцены
+export function foldersApi(app) {
+  const st = () => app.store.state.settings, changed = () => app.store.settingsChanged();
+  return {
+    list: () => MF.foldersOf(st()),
+    add(name) { const id = MF.addFolder(st(), name); if (id) changed(); return id; },
+    rename(id, name) { const ok = MF.renameFolder(st(), id, name); if (ok) changed(); return ok; },
+    remove(id) { const moved = MF.removeFolder(st(), id, app.files.list('audio')); moved.forEach((x) => app.files.save(x)); changed(); },
+    move(recs, id) { recs.forEach((x) => { MF.setFolder(x, id); app.files.save(x); }); },
+    catOf: (x) => MF.catOf(x, MF.foldersOf(st())),
+    cats: (files) => MF.catsFor(files, MF.foldersOf(st())),
+    inCat: (x, c) => MF.inCat(x, c, MF.foldersOf(st())),
   };
 }
 
@@ -129,6 +145,7 @@ export function makeCtx(app, mod) {
     diag: { count: (k, n) => dCount(mod.id + '.' + k, n), time: (k, ms) => dTime(mod.id + '.' + k, ms), gauge: (k, v) => dGauge(mod.id + '.' + k, v), event: (k, d) => dEvent(mod.id + '.' + k, d) },
     // Файлы пользователя на устройстве (src/core/files.js) и предупреждение о правах перед загрузкой
     files: app.files,
+    folders: foldersApi(app), // папки-категории медиатеки
     // Долгие обработки записей (ядро, jobs.js): дорожки и ноты — ход, отмена, подписка; очередь в фоне — auto
     jobs: WEB ? null : app.jobs, // в веб-версии разделения на дорожки и текста песни нет: модули не показывают связанного с ними (platform.js)
     // пакеты моделей (src/core/screens/packs.js): строка пакета, скачать с вопросом, подписка на ход

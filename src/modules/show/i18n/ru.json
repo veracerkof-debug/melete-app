@@ -227,5 +227,11 @@
   "num.min": "Минор",
   "num.bpm": "Темп, bpm",
   "num.bpmIs": "Определён: {n}",
-  "num.bpmUnknown": "Темп ещё не определён"
+  "num.bpmUnknown": "Темп ещё не определён",
+  "cat.all": "Все",
+  "cat.songs": "Песни",
+  "cat.instr": "Инструменты",
+  "cat.free": "Практика",
+  "cat.dict": "Диктофон",
+  "cat.video": "Видео"
 }

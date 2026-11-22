@@ -710,17 +710,20 @@ function noiseSheet(r) {
 
 // opts.pad — файл добавляется как звук (в списке медиатеки не показывается); cur — выбранный сейчас
 function pickFile(opts, done) {
-  let q = '';
-  const list = () => ctx.files.list('audio').filter((x) => !x.stem).sort((a, b) => (b.created || 0) - (a.created || 0)).filter((x) => !q || x.name.toLowerCase().includes(q.toLowerCase()));
+  let q = '', cat = 'all'; // cat — папка медиатеки (core/mediafolders.js): разное аудио не перемешивается
+  const pool = () => ctx.files.list('audio').filter((x) => !x.stem);
+  const catsHTML = () => { const cs = ctx.folders.cats(pool()); if (!cs.some((c) => c.id === cat)) cat = 'all'; return '<div class="shchips tight hscroll" style="margin-top:8px">' + cs.map((c) => '<button class="shchip' + (cat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" aria-pressed="' + (cat === c.id) + '">' + esc(c.id === 'all' || c.auto ? t('cat.' + c.id) : c.name) + ' ' + c.n + '</button>').join('') + '</div>'; };
+  const list = () => pool().filter((x) => (cat === 'all' ? !x.dict || ctx.folders.catOf(x) !== 'dict' : ctx.folders.inCat(x, cat))).sort((a, b) => (b.created || 0) - (a.created || 0)).filter((x) => !q || x.name.toLowerCase().includes(q.toLowerCase()));
   const body = () => ctx.ui.snav(t('pick.title'), { right: '<button class="link b r" data-close>' + esc(t('ui.cancel')) + '</button>' }) +
     '<div class="group"><input class="shfield" type="search" data-q placeholder="' + esc(t('pick.search')) + '" value="' + esc(q) + '" aria-label="' + esc(t('pick.search')) + '"><button class="cell act" data-x="addfile"><span class="grow">' + esc(t('pick.add')) + '</span></button></div>' +
-    '<div class="group shpick" style="margin-top:12px">' + (list().length ? list().map((x) => '<button class="row" data-file="' + x.id + '"><span>' + esc(x.name) + '</span><small>' + (x.dur ? M.mmss(x.dur) : '') + '</small></button>').join('') : '<p class="ftr" style="padding:14px">' + esc(t(q ? 'pick.noRes' : 'pick.empty')) + '</p>') + '</div>' +
+    catsHTML() + '<div class="group shpick" style="margin-top:12px">' + (list().length ? list().map((x) => '<button class="row" data-file="' + x.id + '"><span>' + esc(x.name) + '</span><small>' + (x.dur ? M.mmss(x.dur) : '') + '</small></button>').join('') : '<p class="ftr" style="padding:14px">' + esc(t(q ? 'pick.noRes' : 'pick.empty')) + '</p>') + '</div>' +
     (opts.cur ? '<div class="group" style="margin-top:12px"><button class="cell" data-x="nofile" style="color:var(--red)"><span class="grow">' + esc(t('pick.remove')) + '</span></button></div>' : '');
   ctx.ui.sheet(body, (el, sh) => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac'; inp.hidden = true; el.appendChild(inp);
     el.addEventListener('click', (e) => {
       const g = (s) => e.target.closest(s); let b;
-      if ((b = g('[data-file]'))) { done(b.dataset.file); sh.close(); }
+      if ((b = g('[data-cat]'))) { cat = b.dataset.cat; sh.update(); }
+      else if ((b = g('[data-file]'))) { done(b.dataset.file); sh.close(); }
       else if (g('[data-x="addfile"]')) inp.click();
       else if (g('[data-x="nofile"]')) { done(null); sh.close(); }
     });
@@ -732,6 +735,7 @@ function pickFile(opts, done) {
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       const rec = { id, name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type, songs: [], created: Date.now(), blob: f, video: /^video\//.test(f.type), ...(opts.pad ? { show: true } : {}) };
       const dur = await probeDur(f); if (dur) rec.dur = dur;
+      if (cat !== 'all' && ctx.folders.list().some((fd) => fd.id === cat)) rec.folder = cat;
       if (!(await ctx.files.add(rec))) { ctx.ui.toast(t('pick.noSave')); return; }
       done(id); sh.close();
     });

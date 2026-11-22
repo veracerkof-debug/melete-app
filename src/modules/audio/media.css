@@ -160,3 +160,6 @@
 .sgp.ok{background:var(--ok)}.sgp.near{background:#C9962C}.sgp.miss{background:#C2564B}
 .sgbtns{display:flex;gap:8px;justify-content:center}
 .sgbtns .btn.on{background:var(--tint);color:var(--on-tint)}
+/* папки-категории над списком медиатеки */
+.mlcats{padding:var(--sp-1) var(--sp-3)}
+.mlcat small{opacity:.6;margin-left:var(--sp-1);font-size:var(--fs-1)}

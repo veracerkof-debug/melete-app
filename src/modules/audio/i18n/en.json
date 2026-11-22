@@ -288,5 +288,21 @@
   "sing.phr": "Phrase {n}: {p} % — sing again",
   "sing.micDenied": "No microphone access",
   "sing.micNone": "No microphone found",
-  "showBtn": "Show desk"
+  "showBtn": "Show desk",
+  "folders": "Folders",
+  "folder": "Folder",
+  "folderAuto": "Auto (by recording type)",
+  "folderNew": "New folder",
+  "folderName": "Folder name",
+  "folderBad": "That name is taken or empty",
+  "folderDel": "Delete folder",
+  "folderDelAsk": "Folder “{name}” will go away; recordings stay and return to their type folders.",
+  "folderDelHint": "Recordings are not deleted.",
+  "toFolder": "To folder",
+  "cat.all": "All",
+  "cat.songs": "Songs",
+  "cat.instr": "Instruments",
+  "cat.free": "Practice",
+  "cat.dict": "Recorder",
+  "cat.video": "Video"
 }

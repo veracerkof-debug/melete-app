@@ -227,5 +227,11 @@
   "num.min": "Minor",
   "num.bpm": "Tempo, bpm",
   "num.bpmIs": "Detected: {n}",
-  "num.bpmUnknown": "Tempo not detected yet"
+  "num.bpmUnknown": "Tempo not detected yet",
+  "cat.all": "All",
+  "cat.songs": "Songs",
+  "cat.instr": "Instruments",
+  "cat.free": "Practice",
+  "cat.dict": "Recorder",
+  "cat.video": "Video"
 }

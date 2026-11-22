@@ -130,7 +130,7 @@ function refreshStemRows(root, t) {
 // Что играет сейчас: звук — движок Signalsmith (src/audio/stretchplayer.js: скорость и тональность одним алгоритмом,
 // без <audio>-элемента), видео — элемент. Интерфейс у обоих как у медиа-элемента
 const pl = () => (AU.engOn ? AU.eng : AU.el);
-const ML = { q: '', sort: 'date', f: 'all', view: 'lib', sel: null }; // sel — выбранные файлы (Set id) в режиме выбора
+const ML = { q: '', sort: 'date', f: 'all', cat: 'all', view: 'lib', sel: null }; // sel — выбранные файлы (Set id) в режиме выбора
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
 let host = null, ctx = null, size = 'full', input = null, uiTimer = 0, offs = [], app = null;
 
@@ -974,7 +974,12 @@ const netRemote = {
 };
 function libHTML() {
   const { t, tn } = ctx;
-  let list = tracks().slice();
+  // папки-категории (core/mediafolders.js): в «Все» нет записей диктофона, пока их не переложили в свою папку; в папке «Диктофон» — только они
+  const pool = ctx.files.list('audio').filter((x) => !x.stem && !x.show && !variantOf(x));
+  const cats = ctx.folders.cats(pool);
+  if (!cats.some((c) => c.id === ML.cat)) ML.cat = 'all';
+  cats[0].n = pool.filter((x) => !x.dict || ctx.folders.catOf(x) !== 'dict').length; // «Все» считает то, что в нём видно
+  let list = pool.filter((x) => (ML.cat === 'all' ? !x.dict || ctx.folders.catOf(x) !== 'dict' : ctx.folders.inCat(x, ML.cat)));
   queuePeaks();
   if (ML.q) { const q = foldQ(ML.q); list = list.filter((x) => foldQ(x.name).includes(q)); }
   if (ML.f === 'songs') list = list.filter((x) => fileSongs(x).length);
@@ -990,7 +995,7 @@ function libHTML() {
       (all.length ? '<button class="link mlselon" data-x="mlselon">' + t('select') + '</button>' : '') + icb('data-x="aadd"', I.plus, t('addFile'), 'sm') + (DEV && ctx.hasTool('show') ? icb('data-x="ashow"', I.show, t('showBtn'), 'sm') : '')) + '</div>' +
     '<div class="mlbar"><div class="mlfil" role="group">' + [['all', t('f.all')], ['songs', t('f.songs')], ['free', t('f.free')]].map(([k, n]) => '<button class="' + (ML.f === k ? 'on' : '') +
       '" data-x="mlf" data-v="' + k + '" aria-pressed="' + (ML.f === k) + '">' + n + '</button>').join('') + '</div><select class="sortsel" data-mls aria-label="' + t('sort') + '">' +
-    [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>';
+    [['date', t('s.date')], ['name', t('s.name')], ['dur', t('s.dur')], ['size', t('s.size')]].map(([v, l]) => '<option value="' + v + '"' + (ML.sort === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div>' + catsHTML(cats);
   // записи MIDI (игра в пианино, глайдере, терменвоксе): касание — открыть инструмент и проиграть
   const midis = ML.f === 'songs' ? [] : ctx.files.list('midi').filter((x) => !ML.q || foldQ(x.name).includes(foldQ(ML.q))).sort((a, b) => (b.created || 0) - (a.created || 0));
   const midiHTML = midis.length && !sel ? '<div class="mlmh2">MIDI</div><div class="mlist">' + midis.map((x) => {
@@ -1022,7 +1027,7 @@ function libHTML() {
   h += '</div>';
   if (sel) {
     const n = sel.size ? '' : ' disabled';
-    h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button>' +
+    h += '<div class="mlselbar"><button class="cell act" data-x="mlsong"' + n + '>' + t('toSongs') + '</button><button class="cell act" data-x="mlfolder"' + n + '>' + t('toFolder') + '</button>' +
       '<button class="cell act" data-x="mlsend"' + n + '>' + t('selSend') + '</button><button class="cell act" data-x="mlconv"' + n + '>' + t('selConv') + '</button>' +
       '<button class="ic sm mldel" data-x="mldel" aria-label="' + t('delSel') + '"' + n + '>' + I.trash + '</button></div>';
   } else if (AU.cur) {
@@ -1374,7 +1379,7 @@ function menuSheet(id) {
       '<button class="cell act" data-m="shareAs">' + t('shareAs') + '</button><button class="cell act" data-m="conv">' + t('convertTo') + '</button>' +
       (isVideo(x) ? '<button class="cell act" data-m="vaudio">' + t('videoAudio') + '</button>' : '') +
       (ctx.canSendTo && ctx.canSendTo() ? '<button class="cell act" data-m="todev">' + t('toDevice') + '</button>' : '') + // на сопряжённое устройство (Melete DEV)
-      '<button class="cell act" data-m="ren">' + t('rename') + '</button></div>' + formatsHTML(x) +
+      '<button class="cell act" data-m="ren">' + t('rename') + '</button><button class="cell" data-m="folder"><span class="grow">' + t('folder') + '</span><span class="val">' + esc(catLabel({ id: ctx.folders.catOf(x), auto: !ctx.folders.list().some((f) => f.id === ctx.folders.catOf(x)), name: (ctx.folders.list().find((f) => f.id === ctx.folders.catOf(x)) || {}).name })) + '</span></button></div>' + formatsHTML(x) +
       '<div class="hdr">' + t('addToSongs') + '</div><div class="group">' + (songs.length ? songs.map((s) => '<button class="cell" data-m="song" data-sg="' + s.id + '" aria-pressed="' + inSong(x, s.id) +
         '"><span class="grow">' + esc(s.title) + '</span>' + (inSong(x, s.id) ? ui.icons.check : '') + '</button>').join('') : '<div class="cell l2">' + t('noSongs') + '</div>') + '</div>' +
       '<div class="group" style="margin-top:16px"><button class="cell danger center" data-m="del">' + t('delFromLib') + '</button></div>';
@@ -1386,6 +1391,7 @@ function menuSheet(id) {
     if (m === 'play') { load(x); playEl(); sh.close(); render(); }
     else if (m === 'song') { linkSong(x, b.dataset.sg, !inSong(x, b.dataset.sg)); ctx.files.save(x); sh.update(); render(); }
     else if (m === 'ren') renameSheet(x, () => sh.update());
+    else if (m === 'folder') folderSheet([x], () => { sh.update(); render(); });
     else if (m === 'send') { if (variantsOf(x).length) pickFormat([x], (list) => shareMany(list)); else shareRec(x, b); }
     else if (m === 'fsend') { const r = ctx.files.get(b.dataset.f); if (r) shareMany([r]); }
     else if (m === 'fdel') {
@@ -1547,6 +1553,47 @@ async function removeSelected() {
   render();
 }
 
+// Папки-категории: полоса над списком, выбор папки для записей, имя папки, меню папки
+const catLabel = (c) => (c.id === 'all' || c.auto ? ctx.t('cat.' + c.id) : c.name || '');
+function catsHTML(cats) {
+  const { t } = ctx;
+  return '<div class="chips nowrap mlcats" role="group" aria-label="' + t('folders') + '">' + cats.map((c) => '<button class="chip mlcat' + (ML.cat === c.id ? ' on' : '') + '" data-x="mlcat" data-v="' + c.id + '"' + (c.id !== 'all' && !c.auto ? ' data-cu="1"' : '') + ' aria-pressed="' + (ML.cat === c.id) + '">' + esc(catLabel(c)) + ' <small>' + c.n + '</small></button>').join('') +
+    '<button class="chip" data-x="mlcatadd" aria-label="' + t('folderNew') + '">+</button></div>';
+}
+function folderNameSheet(initial, ok) {
+  const { t, ui } = ctx;
+  ui.sheet(() => ui.snav(t('folderName'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="fnok">' + t('save') + '</button>' }) +
+    '<div class="group"><label class="cell"><input class="inp left" id="fnv" maxlength="40" aria-label="' + t('folderName') + '" value="' + esc(initial) + '"></label></div>',
+  (el, sh) => {
+    const i = el.querySelector('#fnv');
+    setTimeout(() => { i.focus(); i.select(); }, 80);
+    const go = () => { const v = i.value.trim(); if (!v) return; if (ok(v) !== false) sh.close(); };
+    el.querySelector('#fnok').addEventListener('click', go);
+    i.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  });
+}
+function folderSheet(recs, after) {
+  const { t, ui } = ctx;
+  const body = () => ui.snav(t('folder')) + '<div class="group"><button class="cell" data-fid="">' + '<span class="grow">' + t('folderAuto') + '</span></button>' +
+    ctx.folders.list().map((f) => '<button class="cell" data-fid="' + f.id + '"><span class="grow">' + esc(f.name) + '</span>' + (recs.length === 1 && recs[0].folder === f.id ? ui.icons.check : '') + '</button>').join('') + '</div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell act" data-fnew>' + t('folderNew') + '</button></div>';
+  ui.sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fid]');
+    if (b) { ctx.folders.move(recs, b.dataset.fid || null); sh.close(); if (after) after(); }
+    else if (e.target.closest('[data-fnew]')) folderNameSheet('', (nm) => { const id = ctx.folders.add(nm); if (!id) { ui.toast(t('folderBad')); return false; } ctx.folders.move(recs, id); sh.close(); if (after) after(); return true; });
+  }));
+}
+function folderMenu(id) {
+  const { t, ui } = ctx, f = ctx.folders.list().find((x) => x.id === id);
+  if (!f) return;
+  ui.sheet(() => ui.snav(f.name) + '<div class="group"><button class="cell act" data-fm="ren">' + t('rename') + '</button></div><div class="group" style="margin-top:16px"><button class="cell danger center" data-fm="del">' + t('folderDel') + '</button></div><p class="ftr">' + t('folderDelHint') + '</p>',
+    (el, sh) => el.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-fm]'); if (!b) return;
+      if (b.dataset.fm === 'ren') folderNameSheet(f.name, (nm) => { if (!ctx.folders.rename(id, nm)) { ui.toast(t('folderBad')); return false; } sh.close(); render(); return true; });
+      else if (await ui.confirm(t('folderDel'), t('folderDelAsk', { name: f.name }), t('folderDel'))) { ctx.folders.remove(id); if (ML.cat === id) ML.cat = 'all'; sh.close(); render(); }
+    }));
+}
+
 function renameSheet(x, after) {
   const { t, ui } = ctx;
   ui.sheet(() => ui.snav(t('nameTitle'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="rnok">' + t('save') + '</button>' }) +
@@ -1608,6 +1655,7 @@ async function onFile(e) {
     const rec = { id, name: f.name.replace(/\.[^.]+$/, ''), size: f.size, type: f.type, songs: sid ? [sid] : [], created: Date.now(), blob: f,
       video: p ? p.video : /^video\//.test(f.type) || VIDEO_EXT.test(f.name) };
     if (p && p.dur) rec.dur = p.dur;
+    if (ML.cat !== 'all' && ctx.folders.list().some((fd) => fd.id === ML.cat)) rec.folder = ML.cat; // добавили в открытую свою папку — туда и ляжет
     if (!(await ctx.files.add(rec))) lost = true;
     else ensureCover(rec).then((ok) => { if (ok) render(); }); // обложка — по тегам файла, не задерживает загрузку
     ids.push(id);
@@ -1667,6 +1715,9 @@ function act(a, el) {
     case 'mmplay': { const x = ctx.files.get(el.dataset.id); if (x) ctx.midi.play(x); break; }
     case 'mmmenu': midiMenu(el.dataset.id); break;
     case 'mlf': ML.f = el.dataset.v; render(); break;
+    case 'mlcat': ML.cat = el.dataset.v; render(); break;
+    case 'mlcatadd': folderNameSheet('', (nm) => { const id = ctx.folders.add(nm); if (!id) { ctx.ui.toast(ctx.t('folderBad')); return false; } ML.cat = id; render(); return true; }); break;
+    case 'mlfolder': if (ML.sel && ML.sel.size) folderSheet([...ML.sel].map((id) => ctx.files.get(id)).filter(Boolean), () => { ML.sel = null; render(); }); break;
     case 'mlseloff': ML.sel = null; render(); break;
     case 'mlsel': { const id = el.dataset.id; ML.sel.has(id) ? ML.sel.delete(id) : ML.sel.add(id); render(); break; }
     case 'mlsall': {
@@ -1701,6 +1752,7 @@ function act(a, el) {
 function bind() {
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); offs.push(() => el.removeEventListener(ev, fn, o)); };
   // удержание строки — выбор нескольких файлов (вместо отдельной кнопки); дальше — касания по строкам
+  onHold(host, '.mlcat[data-cu]', (el) => folderMenu(el.dataset.v));
   onHold(host, '.mlmain[data-x="mlplay"], .mlmain[data-x="mlsel"]', (el) => { if (!ML.sel) ML.sel = new Set(); ML.sel.add(el.dataset.id); render(); });
   onHold(host, '.rpre', (el) => rateSheet(rates().findIndex((x) => Math.abs(x - +el.dataset.rpre) < 0.001)));
   on(host, 'click', (e) => {

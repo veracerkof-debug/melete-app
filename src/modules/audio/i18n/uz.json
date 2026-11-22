@@ -287,5 +287,21 @@
   "sing.phr": "Jumla {n}: {p} % — qayta kuylash",
   "sing.micDenied": "Mikrofonga ruxsat yo‘q",
   "sing.micNone": "Mikrofon topilmadi",
-  "showBtn": "Chiqish pulti"
+  "showBtn": "Chiqish pulti",
+  "folders": "Papkalar",
+  "folder": "Papka",
+  "folderAuto": "Avto (yozuv turi bo'yicha)",
+  "folderNew": "Yangi papka",
+  "folderName": "Papka nomi",
+  "folderBad": "Bunday nom bor yoki bo'sh",
+  "folderDel": "Papkani o'chirish",
+  "folderDelAsk": "“{name}” papkasi yo'qoladi; yozuvlar qoladi va tur papkalariga qaytadi.",
+  "folderDelHint": "Yozuvlar o'chirilmaydi.",
+  "toFolder": "Papkaga",
+  "cat.all": "Hammasi",
+  "cat.songs": "Qo'shiqlar",
+  "cat.instr": "Asboblar",
+  "cat.free": "Mashq",
+  "cat.dict": "Diktofon",
+  "cat.video": "Video"
 }

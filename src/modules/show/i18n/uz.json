@@ -227,5 +227,11 @@
   "num.min": "Minor",
   "num.bpm": "Temp, bpm",
   "num.bpmIs": "Aniqlandi: {n}",
-  "num.bpmUnknown": "Temp hali aniqlanmadi"
+  "num.bpmUnknown": "Temp hali aniqlanmadi",
+  "cat.all": "Hammasi",
+  "cat.songs": "Qo'shiqlar",
+  "cat.instr": "Asboblar",
+  "cat.free": "Mashq",
+  "cat.dict": "Diktofon",
+  "cat.video": "Video"
 }

@@ -18,6 +18,7 @@ import * as SM from '../../music/show.js';
 import { DIRS, SENS } from '../../audio/drone.js';
 import { saveEvent, liveEvents } from '../calendar.js';
 import { setlistsOf } from '../metrosets.js';
+import * as MF from '../mediafolders.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
 import { fileSongs } from '../files.js';
@@ -259,15 +260,19 @@ export function openStage(app, evId, i = 0) {
     if (pp && pp.getAttribute('aria-pressed') !== String(on)) { pp.setAttribute('aria-pressed', String(on)); pp.innerHTML = on ? '❚❚' : I.play; }
   };
   { const sid = (() => { try { return localStorage.getItem(PLK); } catch { return null; } })(), r = sid && app.files ? app.files.get(sid) : null; if (r) plLoad(r, false); }
+  let plCat = 'all'; // папка медиатеки в выборе записи плеера
   const plSheet = () => {
-    const files = audioFiles(app);
-    const body = () => snav(t('stage.player')) + (files.length ? '<div class="group">' + files.map((r) => '<button class="cell" data-plf="' + esc(r.id) + '"><span class="grow">' + esc(r.name || '') + '</span>' + (S.pl && S.pl.id === r.id ? (S.pl.el.paused ? '❚❚' : '♪') : '') + '</button>').join('') + '</div>' : '<p class="ftr">' + esc(t('stage.plEmpty')) + '</p>') +
+    const fl = () => MF.foldersOf(app.store.state.settings), pool = () => audioFiles(app);
+    const files0 = () => { const f = fl(); return pool().filter((x) => (plCat === 'all' ? !x.dict || MF.catOf(x, f) !== 'dict' : MF.inCat(x, plCat, f))); };
+    const catsBar = () => { const f = fl(), cs = MF.catsFor(pool(), f); if (!cs.some((c) => c.id === plCat)) plCat = 'all'; return '<div class="sgbanks hscroll" role="tablist">' + cs.map((c) => '<button class="sgchip' + (plCat === c.id ? ' on' : '') + '" role="tab" data-plcat="' + esc(c.id) + '" aria-selected="' + (plCat === c.id) + '">' + esc(c.id === 'all' || c.auto ? t('stage.cat.' + c.id) : c.name) + ' ' + c.n + '</button>').join('') + '</div>'; };
+    const body = () => { const files = files0(); return snav(t('stage.player')) + catsBar() + (files.length ? '<div class="group">' + files.map((r) => '<button class="cell" data-plf="' + esc(r.id) + '"><span class="grow">' + esc(r.name || '') + '</span>' + (S.pl && S.pl.id === r.id ? (S.pl.el.paused ? '❚❚' : '♪') : '') + '</button>').join('') + '</div>' : '<p class="ftr">' + esc(t('stage.plEmpty')) + '</p>') +
       (S.pl ? '<div class="group"><div class="cell"><button class="btn" data-plpp>' + (S.pl.el.paused ? '▶' : '❚❚') + '</button><input type="range" class="sgrng" data-plseek min="0" max="1000" value="' + (S.pl.el.duration > 0 ? Math.round(S.pl.el.currentTime / S.pl.el.duration * 1000) : 0) + '" aria-label="' + esc(t('stage.seek')) + '"></div>' +
-        '<button class="cell act center" data-plstop>' + esc(t('stage.plOff')) + '</button></div>' : '');
+        '<button class="cell act center" data-plstop>' + esc(t('stage.plOff')) + '</button></div>' : ''); };
     sheet(body, (el, sh) => {
       el.addEventListener('click', (e) => {
         let b;
-        if ((b = e.target.closest('[data-plf]'))) { const id = b.dataset.plf; if (S.pl && S.pl.id === id) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); } else plPlay(files.find((r) => r.id === id)); sh.update(); render(); }
+        if ((b = e.target.closest('[data-plcat]'))) { plCat = b.dataset.plcat; sh.update(); }
+        else if ((b = e.target.closest('[data-plf]'))) { const id = b.dataset.plf; if (S.pl && S.pl.id === id) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); } else plPlay(pool().find((r) => r.id === id)); sh.update(); render(); }
         else if (e.target.closest('[data-plpp]') && S.pl) { if (S.pl.el.paused) S.pl.el.play().catch(() => {}); else S.pl.el.pause(); sh.update(); render(); }
         else if (e.target.closest('[data-plstop]')) { plStop(); try { localStorage.removeItem(PLK); } catch { /* */ } sh.update(); render(); }
       });

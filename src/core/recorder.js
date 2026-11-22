@@ -85,7 +85,8 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
     try { head = new Uint8Array(await blob.slice(0, 16).arrayBuffer()); } catch { /* нечем прочитать */ }
     if (head && !headOk(head, m.type || '')) log('rec', 'запись ' + id + ': начало файла не похоже на ' + (m.type || '?') + ' — сохранена как есть', 'w');
     const rec = { id, name: m.name + '.' + extOf(m.type || ''), size: blob.size, type: blob.type, songs: m.songs || [],
-      created: Date.now(), blob, kind: 'audio', ...(dur ? { dur } : {}), ...(m.video ? { video: true } : {}), ...extra };
+      created: Date.now(), blob, kind: 'audio', ...(dur ? { dur } : {}), ...(m.video ? { video: true } : {}),
+      ...(m.tool ? { rtool: m.tool } : {}), ...(m.ses ? { ses: m.ses } : {}), ...extra }; // rtool, ses — откуда запись: инструмент и вид сессии (папки медиатеки)
     try { if ((await app.files.add(rec)) === false) throw new Error(rec.unsaved ? 'нет места' : 'база недоступна'); } catch (e) { log('rec', 'запись ' + id + ' не сохранилась: ' + (e && e.message || e) + ' — куски остаются на диске', 'e'); return null; }
     await spool.drop(id).catch(() => {});
     return rec;
@@ -264,7 +265,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
         if (onDiskFail) onDiskFail(e);
       });
       mr.ondataavailable = (e) => { if (e.data && e.data.size) { take.add(e.data); } };
-      cur = { mr, take, id, video, tool, songs, t0, type: rtype, claim };
+      cur = { mr, take, id, video, tool, songs, t0, type: rtype, claim, ses: (app.active && app.active.type) || null };
       mr.start(SLICE);
       emit();
       return res === 'ok' ? 'ok' : res;
@@ -290,7 +291,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
           const dur = (Date.now() - r.t0) / 1000;
           const blob = await r.take.blob(r.type.split(';')[0]);
           if (dur < 1 || !blob || !blob.size) { r.take.drop(); done(null); return; }
-          const rec = await saveTake(r.id, blob, { name: recName(r.tool, r.t0), type: r.type, songs: r.songs, video: !!r.video }, dur);
+          const rec = await saveTake(r.id, blob, { name: recName(r.tool, r.t0), type: r.type, songs: r.songs, video: !!r.video, tool: r.tool, ses: r.ses }, dur);
           done(rec);
         };
         r.mr.onstop = () => { finish().catch((e) => { log('rec', 'остановка записи: ' + (e && e.message || e), 'e'); done(null); }); };
