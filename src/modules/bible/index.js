@@ -41,8 +41,6 @@ const shortOf = (rec) => String(rec.name || '').replace(/\.[^.]+$/, '').slice(0,
 
 import meta, { ICON } from './meta.js';
 const I = {
-  prev: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  next: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
   minus: '<svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
@@ -70,9 +68,7 @@ const step = (d) => { for (let i = ALL.indexOf(chKey(cur.code, cur.ch)) + d; i >
 
 function barHTML() {
   const { t, ui } = ctx, small = size === 'strip' || size === 'quarter';
-  return '<div class="bbar">' + ui.icb('data-x="bprev"', I.prev, t('prev'), 'sm') +
-    '<button class="bpick" data-x="bpick" aria-label="' + ui.esc(t('pick')) + '">' + ui.esc((small ? P.abbr(cur.code) : P.name(cur.code)) + ' ' + cur.ch) + '</button>' +
-    ui.icb('data-x="bnext"', I.next, t('next'), 'sm') +
+  return '<div class="bbar">' + '<button class="bpick" data-x="bpick" aria-label="' + ui.esc(t('pick')) + '">' + ui.esc((small ? P.abbr(cur.code) : P.name(cur.code)) + ' ' + cur.ch) + '</button>' +
     (small ? '' : '<button class="btr" data-x="btr" aria-label="' + ui.esc(t('tr')) + '">' + ui.esc(P.short) + '</button>' + (ctx.together ? ui.icb('data-x="btogether"', I.together, t('together'), 'sm') : '') + '<span class="bgrow"></span>' + ui.icb('data-x="bsearch"', I.search, t('search'), 'sm') +
       ui.icb('data-x="bpure"', I.full, t('pure'), 'sm')) +
     '<button class="ic sm bmark' + (isRead() ? ' on' : '') + '" data-x="bmark" aria-pressed="' + isRead() + '" aria-label="' + ui.esc(t(isRead() ? 'unmark' : 'markRead')) + '">' + I.check + '</button></div>';

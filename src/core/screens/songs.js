@@ -47,22 +47,23 @@ export function libraryHTML(app, view) {
     // посмотреть, как всё устроено: демо-набор (убирается в «Данных и копиях»)
     '<br><button class="btn" style="margin-top:10px" data-act="demoAdd">' + t('demo.add') + '</button></div>';
   const { list, usedGenres, usedTags } = listSongs(songs, app.store.sessions(), L, view, getLang());
-  // одна полоса: категории, жанры и теги (было три ряда); поиск и сортировка — в одной строке
-  const filt = usedGenres.map((g) => '<button class="fchip' + (view.genre && view.genre.toLowerCase() === g.name.toLowerCase() ? ' on' : '') + '" data-fg="' + esc(g.name) + '" style="--c:' + g.color + ';--t:' + textColor(g) + '"><i></i>' + esc(g.name) + '</button>').join('') +
-    usedTags.map((x) => '<button class="fchip tagf' + (view.tag === x.id ? ' on' : '') + '" data-ft="' + x.id + '" style="--c:' + x.color + ';--t:' + textColor(x) + '">#' + esc(x.name) + '</button>').join('');
-  h += '<div class="hscroll catbar"><button class="catp' + (!view.cat ? ' on' : '') + '" data-cat="" style="--c:var(--ink);--t:var(--bg)">' + t('songs.all') + ' <i>' + songs.length + '</i></button>' +
-    L.cats.map((c) => '<button class="catp' + (view.cat === c.id ? ' on' : '') + '" data-cat="' + c.id + '" style="--c:' + c.color + ';--t:' + textColor(c) + '">' + esc(c.name) + ' <i>' + countInCat(songs, c.id) + '</i></button>').join('') +
-    (countInCat(songs, '') && L.cats.length ? '<button class="catp' + (view.cat === '_none' ? ' on' : '') + '" data-cat="_none" style="--c:var(--l2);--t:#fff">' + t('songs.noCat') + ' <i>' + countInCat(songs, '') + '</i></button>' : '') +
-    (filt ? '<span class="fsep"></span>' + filt : '') + '</div>';
+  // категории, жанры и теги — не полосой над списком, а одним выбором рядом с поиском (экран не перегружен); категория песни — точка у названия
+  const cur = view.cat ? 'c:' + view.cat : view.genre ? 'g:' + view.genre : view.tag ? 't:' + view.tag : '';
+  const opt = (v, label) => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(label) + '</option>';
+  const grp = (label, items) => items.length ? '<optgroup label="' + esc(label) + '">' + items.join('') + '</optgroup>' : '';
+  const fsel = '<select class="sortsel" data-input="flt" aria-label="' + t('songs.filter') + '">' + opt('', t('songs.all')) +
+    grp(t('libm.cats'), L.cats.map((c) => opt('c:' + c.id, c.name + ' · ' + countInCat(songs, c.id))).concat(countInCat(songs, '') && L.cats.length ? [opt('c:_none', t('songs.noCat') + ' · ' + countInCat(songs, ''))] : [])) +
+    grp(t('libm.genres'), usedGenres.map((g) => opt('g:' + g.name, g.name))) +
+    grp(t('libm.tags'), usedTags.map((x) => opt('t:' + x.id, '#' + x.name))) + '</select>';
   h += '<div class="srow"><label class="search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg><input type="search" placeholder="' + t('songs.search') + '" aria-label="' + t('songs.searchAria') + '" value="' + esc(view.q) + '" data-input="q"></label>' +
-    (view.genre || view.tag ? '<button class="link" data-fclear style="font-size:13px;min-height:0">' + t('songs.clearFilter') + '</button>' : '') +
+    fsel +
     '<select class="sortsel" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
   if (!list.length) return h + '<div class="empty">' + t('songs.notFound') + '</div>';
   const due = new Set(st.toolsOnly ? [] : dueSongs(songs, app.store.sessions()).map((x) => x.s.id)); // к повторению (review.js)
   return h + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
     return '<button class="stile3" data-song="' + s.id + '" style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' +
-      (c && !view.cat ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
+      (c ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + (due.has(s.id) ? '<span class="rvmark">' + t('rv.mark') + '</span>' : '') + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
       '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';

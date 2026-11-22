@@ -76,8 +76,8 @@ test('смахивание: «Песни» — по списку и по пол�
   await melete.swipe('#main', -170, 0, { fy: Math.min(0.9, fy) });
   expect(await cur()).not.toBe('library');
   await melete.tab('library'); await page.waitForTimeout(300);
-  const fb = await page.evaluate(() => { const m = document.querySelector('#main').getBoundingClientRect(), r = (document.querySelector('#main .fbar') || document.querySelector('#main .catbar')).getBoundingClientRect(); return (r.y + r.height / 2 - m.y) / m.height; });
-  await melete.swipe('#main', 170, 0, { fy: fb }); // полоса в начале — вправо можно сразу
+  const fb = await page.evaluate(() => { const m = document.querySelector('#main').getBoundingClientRect(), r = (document.querySelector('#main .slist')).getBoundingClientRect(); return (r.y + r.height / 2 - m.y) / m.height; });
+  await melete.swipe('#main', 170, 0, { fy: fb }); // без полосы чипов — вправо можно сразу
   expect(await cur()).toBe('home');
   expect(errors).toEqual([]);
 });

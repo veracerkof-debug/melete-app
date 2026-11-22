@@ -208,8 +208,8 @@ export function bindGestures(el, h) {
     if (d.long || pinch) return;
     if (h.tap && !d.moved && h.tap(e)) { lastTap = 0; return; } // выбор стихов: касание — отметить
     const dx = e.clientX - d.x, dy = e.clientY - d.y, dt = performance.now() - d.t;
-    // смахивание: соседняя глава
-    if (Math.abs(dx) > 70 && Math.abs(dy) < 45 && dt < 700) { h.step(dx < 0 ? 1 : -1); lastTap = 0; return; }
+    // длинное смахивание (≥ 40 % ширины): соседняя глава
+    if (Math.abs(dx) > Math.max(120, el.clientWidth * 0.4) && Math.abs(dy) < Math.abs(dx) * 0.3 && dt < 900) { h.step(dx < 0 ? 1 : -1); lastTap = 0; return; }
     if (d.moved) return;
     // метки: касание
     const m = e.target.closest('.bs, .bmo, .bfn, .bcm, .bxr, a.blink');

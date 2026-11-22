@@ -294,6 +294,11 @@ export function createShell(app, root) {
   root.addEventListener('input', (e) => {
     const k = e.target.dataset && e.target.dataset.input;
     if (!k) return;
+    if (k === 'flt') { // фильтр песен: c:<категория> / g:<жанр> / t:<тег>
+      const v = e.target.value;
+      view.cat = v.startsWith('c:') ? v.slice(2) : ''; view.genre = v.startsWith('g:') ? v.slice(2) : ''; view.tag = v.startsWith('t:') ? v.slice(2) : '';
+      render(); return;
+    }
     view[k] = e.target.value;
     if (k === 'q') {
       const pos = e.target.selectionStart;
