@@ -69,7 +69,7 @@
 .sgbpm b{font-size:24px;font-weight:700;color:var(--gold)}
 .sgbpm small{font-size:11px;color:rgba(244,241,234,.6);letter-spacing:.03em}
 .sgpads{flex:none;padding:4px 10px 0}
-.sgpgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;touch-action:none}
+.sgpgrid{display:grid;grid-template-columns:repeat(var(--c,4),1fr);gap:6px;touch-action:none}
 .sgpad{position:relative;min-height:64px;border-radius:14px;background:rgba(255,255,255,.07);border:1.5px solid color-mix(in srgb,var(--pc,var(--gold)) 55%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:0 2px 7px;touch-action:none;-webkit-touch-callout:none}
 .sgpad b{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pc,var(--gold));text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .sgpad i{position:absolute;left:8px;top:5px;font-size:11px;font-style:normal;color:rgba(244,241,234,.4)}
@@ -91,3 +91,27 @@
   .stage:not(.pads) .sgtempo,.stage:not(.pads) .sgseek{grid-column:1}
 }
 .stage.night .sgtempo .sgic,.stage.night .sgseek{display:none}
+
+/* ---- сцена: метроном одной полосой, клавиши пэда, список, цвета падов из «Звуков» (слово автора 22.11.2026) ---- */
+.sgbpm{touch-action:none;user-select:none;-webkit-user-select:none;border:1.5px solid transparent}
+.sgbpm.on{background:color-mix(in srgb,var(--gold) 34%,transparent);border-color:var(--gold)}
+.sgbpm small{text-transform:uppercase}
+.sgic.tapb{width:auto;min-width:52px;padding:0 10px;font-size:13px;letter-spacing:.04em}
+.sgkeys{flex:none;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:6px 12px 0}
+.sgkey{min-height:42px;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);font-size:15px;font-weight:600;touch-action:none;user-select:none;-webkit-user-select:none}
+.sgkey.on{background:color-mix(in srgb,var(--gold) 30%,transparent);border-color:var(--gold);color:var(--gold)}
+.sgbanks{display:flex;gap:6px;padding:0 0 6px;overflow-x:auto}
+.sgpad.off{pointer-events:none;opacity:.25;border-style:dashed}
+.pc-pink{--pc:rgb(229 138 166)}.pc-amber{--pc:var(--gold)}.pc-teal{--pc:rgb(108 197 185)}.pc-green{--pc:rgb(143 209 143)}.pc-red{--pc:var(--coral)}.pc-violet{--pc:rgb(183 154 240)}.pc-blue{--pc:rgb(134 180 240)}.pc-gray{--pc:rgba(244,241,234,.85)}
+.p-kick,.p-kickw,.p-snare,.p-rim,.p-clap,.p-hat,.p-crash,.p-tom{--pc:var(--gold)}
+.p-kick,.p-kickw{--pc:var(--coral)}.p-hat,.p-crash,.p-tom{--pc:rgba(244,241,234,.85)}
+.sglist{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+.sgrow{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border-radius:12px;text-align:left;touch-action:manipulation}
+.sgrow.cur{background:color-mix(in srgb,var(--gold) 20%,transparent);box-shadow:inset 3px 0 0 var(--gold)}
+.sgrow .grow{display:flex;flex-direction:column;min-width:0}
+.sgrow b{font-size:18px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgrow small{font-size:13px;color:rgba(244,241,234,.7);white-space:normal}
+.sgrow .sgm{flex:none;font-size:14px;color:var(--gold);font-variant-numeric:tabular-nums}
+.sgrow .sgn{width:22px;text-align:center;color:rgba(244,241,234,.5)}
+.sgbig.free{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:16px;color:rgba(244,241,234,.7);text-align:center}
+.stage.night .sgkeys{display:none}

@@ -18,11 +18,19 @@ test('рабочая сцена: без события, список песен,
   await page.click('.sghead'); await page.waitForTimeout(400);
   await page.click('[data-sgj="1"]'); await page.waitForTimeout(500);
   expect(await melete.text('.sghead b')).toBe('Вторая');
-  // темп: +5 и TAP
+  // темп: +1; цифры темпа — кнопка метронома (касание включает и выключает)
   const bpm = () => page.evaluate(() => +document.querySelector('.sgbpm b').textContent);
   const b0 = await bpm(); expect(b0).toBe(120);
-  await page.click('[data-sgbpm="5"]'); await page.waitForTimeout(200);
-  expect(await bpm()).toBe(125);
+  await page.click('[data-sgbpm="1"]'); await page.waitForTimeout(200);
+  expect(await bpm()).toBe(121);
+  await page.locator('.sgbpm').dispatchEvent('pointerdown', { pointerId: 5, isPrimary: true, clientY: 300 });
+  await page.locator('.sgbpm').dispatchEvent('pointerup', { pointerId: 5, isPrimary: true, clientY: 300 });
+  await page.waitForTimeout(300);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(1);
+  await page.locator('.sgbpm').dispatchEvent('pointerdown', { pointerId: 5, isPrimary: true, clientY: 300 });
+  await page.locator('.sgbpm').dispatchEvent('pointerup', { pointerId: 5, isPrimary: true, clientY: 300 });
+  await page.waitForTimeout(300);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(0);
   // барабанные пэды: восемь, касание — удар (подсветка), ползунки пространства и эха
   await expect(page.locator('.sgpad')).toHaveCount(8);
   await page.locator('.sgpad.p-kickw').dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true });
@@ -50,5 +58,33 @@ test('рабочая сцена: без события, список песен,
   await expect(page.locator('.sgbtn.main.on')).toHaveCount(0);
   // состав рабочего сет-листа сохранён в настройках
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).settings.stageWork.songs)).toEqual(['s1', 's2']);
+  expect(errors).toEqual([]);
+});
+
+test('сцена без песен: метроном одной кнопкой, пэд по клавишам, «Звуки» с ударными', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  await expect(page.locator('.stage')).toHaveCount(1);
+  expect(await melete.text('.sghead b')).toBeTruthy();
+  // клавиши пэда видны сразу; касание — звучит, повторное по той же — стоп
+  await expect(page.locator('.sgkey')).toHaveCount(12);
+  const tap = async (sel) => { await page.locator(sel).dispatchEvent('pointerdown', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.locator(sel).dispatchEvent('pointerup', { pointerId: 3, isPrimary: true, clientX: 100, clientY: 100 }); await page.waitForTimeout(300); };
+  await tap('[data-sgk="7"]');
+  await expect(page.locator('.sgkey.on')).toHaveCount(1);
+  // звуки: готовый банк «Ударные» — восемь падов, касание подсвечивает
+  await expect(page.locator('.sgpad[data-pad]')).toHaveCount(8);
+  await page.locator('.sgpad.p-snare').dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true });
+  await page.waitForTimeout(120);
+  await expect(page.locator('.sgpad.p-snare.hit')).toHaveCount(1);
+  // метроном и пэд вместе; «стоп всё» гасит
+  await tap('.sgbpm');
+  await expect(page.locator('.sgbpm.on')).toHaveCount(1);
+  await page.click('[data-sg="panic"]'); await page.waitForTimeout(500);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

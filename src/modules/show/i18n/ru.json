@@ -206,5 +206,14 @@
   "desk.thisNum": "Этот номер",
   "desk.knobTrack": "Трек",
   "desk.knobPad": "Пэд",
-  "desk.knobNoise": "Шум"
+  "desk.knobNoise": "Шум",
+  "bank.drums": "Ударные",
+  "synth.kick": "Бочка",
+  "synth.kickw": "Бочка зал",
+  "synth.snare": "Малый",
+  "synth.rim": "Рим",
+  "synth.tom": "Том",
+  "synth.clap": "Хлопок",
+  "synth.hat": "Хэт",
+  "synth.crash": "Крэш"
 }

@@ -206,5 +206,14 @@
   "desk.thisNum": "Shu raqam",
   "desk.knobTrack": "Trek",
   "desk.knobPad": "Pad",
-  "desk.knobNoise": "Shovqin"
+  "desk.knobNoise": "Shovqin",
+  "bank.drums": "Zarb",
+  "synth.kick": "Kik",
+  "synth.kickw": "Kik zal",
+  "synth.snare": "Snayr",
+  "synth.rim": "Rim",
+  "synth.tom": "Tom",
+  "synth.clap": "Qarsak",
+  "synth.hat": "Xet",
+  "synth.crash": "Krash"
 }

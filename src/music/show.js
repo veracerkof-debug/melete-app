@@ -31,6 +31,7 @@ export function normalizePad(p) {
   if (!o.id) o.id = uid('p');
   o.name = typeof o.name === 'string' ? o.name.slice(0, 40) : '';
   o.file = typeof o.file === 'string' && o.file ? o.file : null; // id записи медиатеки
+  o.synth = typeof o.synth === 'string' && /^[a-z]{2,8}$/.test(o.synth) ? o.synth : ''; // встроенный звук (ударные): без файла, играет синтез
   o.color = pick(o.color, PAD_COLORS, 'pink');
   o.mode = pick(o.mode, PAD_MODES, 'shot');
   o.again = pick(o.again, PAD_AGAIN, 'restart');
@@ -53,6 +54,7 @@ export function normalizeBank(b) {
   o.name = typeof o.name === 'string' ? o.name.slice(0, 24) : '';
   o.cols = clamp(o.cols, COLS[0], COLS[1], 3) | 0;
   o.rows = clamp(o.rows, ROWS[0], ROWS[1], 4) | 0;
+  o.preset = o.preset === 'drums' ? 'drums' : ''; // готовый набор («Ударные»): название берётся из языка
   o.pinned = !!o.pinned; // закреплённый банк виден внизу на любой странице звуков
   const n = o.cols * o.rows, src = Array.isArray(o.pads) ? o.pads : [];
   o.pads = Array.from({ length: n }, (_, i) => (src[i] && typeof src[i] === 'object' ? normalizePad(src[i]) : null));
@@ -169,6 +171,8 @@ export function normalizeShow(s = {}) {
   o.duckAmount = clamp(o.duckAmount, 0, 100, 40);        // на сколько процентов приглушать основной трек
   o.duckTime = clamp(o.duckTime, 0.05, 3, 0.25);         // с: нарастание приглушения
   o.banks = Array.isArray(o.banks) && o.banks.length ? o.banks.map(normalizeBank) : defaultBanks();
+  // готовый набор «Ударные» (слово автора 22.11.2026: барабанные пэды сцены — часть «Звуков»): один раз; удалённый не возвращается
+  if (!o.drumsSeeded) { if (!o.banks.some((b) => b.preset === 'drums')) { const fresh = o.banks.every((b) => b.pinned || b.pads.every((x) => !x)); if (fresh) o.banks.unshift(drumBank()); else o.banks.push(drumBank()); } o.drumsSeeded = true; } // у нового — набор первым, чтобы звуки сразу были под рукой
   if (!o.banks.some((b) => !b.pinned)) o.banks.unshift(newBank('', { cols: 3, rows: 4 }));
   o.bank = o.banks.some((b) => b.id === o.bank && !b.pinned) ? o.bank : o.banks.find((b) => !b.pinned).id;
   o.events = (Array.isArray(o.events) ? o.events : []).map(normalizeEvent);
@@ -182,6 +186,12 @@ export function defaultBanks() {
     newBank('', { cols: 3, rows: 4 }),
     newBank('', { cols: 2, rows: 1, pinned: true, pads: [newPad({ color: 'green' }), newPad({ color: 'red' })] }),
   ];
+}
+// Ударные сцены: звук — синтез (audio/stagepads.js), id совпадают с PADS
+export const DRUM_IDS = ['kick', 'kickw', 'snare', 'rim', 'tom', 'clap', 'hat', 'crash'];
+const DRUM_COLORS = ['red', 'red', 'amber', 'amber', 'violet', 'teal', 'blue', 'green'];
+export function drumBank() {
+  return newBank('', { cols: 4, rows: 2, preset: 'drums', pads: DRUM_IDS.map((id, i) => newPad({ synth: id, color: DRUM_COLORS[i], fadeOut: 0.05 })) });
 }
 export const bankOf = (s, id = s.bank) => s.banks.find((b) => b.id === id) || s.banks.find((b) => !b.pinned);
 export const dockOf = (s) => s.banks.find((b) => b.pinned) || null;

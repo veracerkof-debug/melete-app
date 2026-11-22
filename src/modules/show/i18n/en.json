@@ -206,5 +206,14 @@
   "desk.thisNum": "This number",
   "desk.knobTrack": "Track",
   "desk.knobPad": "Pad",
-  "desk.knobNoise": "Noise"
+  "desk.knobNoise": "Noise",
+  "bank.drums": "Drums",
+  "synth.kick": "Kick",
+  "synth.kickw": "Kick hall",
+  "synth.snare": "Snare",
+  "synth.rim": "Rim",
+  "synth.tom": "Tom",
+  "synth.clap": "Clap",
+  "synth.hat": "Hi-hat",
+  "synth.crash": "Crash"
 }

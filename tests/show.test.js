@@ -33,9 +33,15 @@ describe('пэды и банки', () => {
     b = resizeBank(b, 2, 2);
     expect(b.pads.length).toBe(4); expect(b.spare.map((p) => p.name)).toEqual(['п5', 'п6']);
   });
+  it('готовый банк «Ударные»: один раз, удалённый не возвращается', () => {
+    const s = normalizeShow({});
+    s.banks = s.banks.filter((b) => b.preset !== 'drums');
+    expect(normalizeShow(s).banks.some((b) => b.preset === 'drums')).toBe(false);
+    expect(normalizeShow({ banks: [] }).banks.filter((b) => b.preset === 'drums').length).toBe(1);
+  });
   it('умолчания хранилища: пустые банки, закреплённые «верно/неверно» без файлов', () => {
     const s = normalizeShow({});
-    expect(s.banks.length).toBe(2); expect(dockOf(s).pads.length).toBe(2); expect(dockOf(s).pads.every((p) => p.file === null)).toBe(true);
+    expect(s.banks.length).toBe(3); expect(s.banks.filter((b) => b.preset === 'drums').length).toBe(1); expect(s.banks.find((b) => b.preset === 'drums').pads.every((p) => p.synth)).toBe(true); expect(dockOf(s).pads.length).toBe(2); expect(dockOf(s).pads.every((p) => p.file === null)).toBe(true);
     expect(bankOf(s).pinned).toBe(false); expect(s.page).toBe('prog'); expect(s.event).toBeNull();
   });
   it('поиск пада по id и повторная нормализация без потерь', () => {

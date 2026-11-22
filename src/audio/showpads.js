@@ -5,17 +5,21 @@
 // Файл раскрывается в память заранее (preload) — касание играет сразу; раскрытое хранится не больше MAX_CACHE штук.
 import { holdAt } from './param.js';
 import { faderGain } from '../music/show.js';
+import { createStagePads, PADS } from './stagepads.js';
 import { measureLoudness, normGainDb, dbGain } from './loudness.js';
 
 const MAX_CACHE = 24, MAX_VOICES = 24, CLICK = 0.012; // CLICK — минимальный вход/выход, без щелчка
 
 // getNorm() → { on, target, pads } — нормализация громкости; known(fileId) → { lufs, peak } уже измеренное; onMeasure(fileId, m) — новое измерение
-export function createShowPads({ dest, getBlob, now = () => dest.context.currentTime, getNorm = () => ({ on: false }), known = () => null, onMeasure = () => {} }) {
+export function createShowPads({ dest, getBlob, drumFx = () => ({}), now = () => dest.context.currentTime, getNorm = () => ({ on: false }), known = () => null, onMeasure = () => {} }) {
   const c = dest.context;
   const out = c.createGain(); out.gain.value = 1; out.connect(dest);
   const duckNode = c.createGain(); duckNode.gain.value = 1; duckNode.connect(dest); // сюда подключается основной трек (showdeck.js): пока звучит пад с «приглушать» — тише
   const cache = new Map(), pending = new Map(), loud = new Map(); // loud — измеренная громкость файла           // файл → буфер / обещание раскрытия
   const voices = new Set(), subs = new Set();
+  // Ударные (pad.synth): синтез с залом и эхом; создаётся один раз при первом ударе, дальше правятся только параметры
+  let dr = null;
+  const drums = () => (dr ||= createStagePads(c, out, drumFx()));
   let duckAmount = 0.4, duckTime = 0.25, errs = new Set();
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
 
@@ -89,9 +93,14 @@ export function createShowPads({ dest, getBlob, now = () => dest.context.current
   const of = (padId) => [...voices].filter((v) => v.id === padId && !v.ending);
   const api = {
     out, duckNode,
+    drums: () => dr, // созданные ударные (или null)
+    setSpace(v) { if (dr) dr.setSpace(v); }, setEcho(v) { if (dr) dr.setEcho(v); }, setBpm(b) { if (dr) dr.setBpm(b); },
+    // «стоп всё» со сценой: хвосты ударных гасятся, потом возвращаются
+    hush(sec) { if (dr) dr.hush(sec); }, unhush() { if (dr) dr.unhush(); },
     load, preload, ready, failed: (fileId) => errs.has(fileId),
     // касание пада; → 'play' | 'stop' | 'wait' (файл ещё раскрывается) | 'empty' (файла нет) | 'error'
     press(pad) {
+      if (pad && pad.synth) { const i = PADS.findIndex((x) => x.id === pad.synth); if (i < 0) return 'empty'; try { return drums().hit(i, 0.85) ? 'play' : 'error'; } catch { return 'error'; } }
       if (!pad || !pad.file) return 'empty';
       const live = of(pad.id);
       if (live.length && pad.again !== 'layer') {
@@ -116,7 +125,7 @@ export function createShowPads({ dest, getBlob, now = () => dest.context.current
     forget(fileId) { cache.delete(fileId); loud.delete(fileId); errs.delete(fileId); },
     normOf: (fileId) => { const nm = getNorm(), m = loud.get(fileId); return nm && nm.on && nm.pads && m ? normGainDb(m.lufs, m.peak, nm.target) : 0; },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
-    dispose() { api.stopAll(0.1); setTimeout(() => { try { out.disconnect(); duckNode.disconnect(); } catch { /* уже */ } cache.clear(); subs.clear(); }, 400); },
+    dispose() { api.stopAll(0.1); setTimeout(() => { try { if (dr) dr.dispose(); out.disconnect(); duckNode.disconnect(); } catch { /* уже */ } cache.clear(); subs.clear(); }, 400); },
   };
   return api;
 }

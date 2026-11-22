@@ -145,13 +145,14 @@ function loop() { paint(); raf = eng && eng.active ? requestAnimationFrame(loop)
 
 function padHTML(p, dock) {
   const f = fileOf(p.file), pc = ' pc-' + p.color;
+  if (p.synth) return '<button class="shpad' + pc + '" data-pad="' + p.id + '" aria-label="' + esc(p.name || t('synth.' + p.synth)) + '"><b>' + esc(p.name || t('synth.' + p.synth)) + '</b></button>';
   if (!p.file) return '<button class="shpad empty' + pc + '" data-pad="' + p.id + '" aria-label="' + esc(t('emptyPad')) + '"><b>' + esc(p.name || t('emptyPad')) + '</b></button>';
   const meta = S.ui.info && !dock ? [f && f.dur ? M.mmss(f.dur) : '', p.mode === 'loop' ? t('padLoop') : p.mode === 'hold' ? t('padHold') : ''].filter(Boolean).join(' · ') : '';
   return '<button class="shpad' + pc + '" data-pad="' + p.id + '" aria-label="' + esc(p.name || (f ? f.name : '')) + '"><b>' + esc(p.name || (f ? f.name : '')) + '</b>' + (meta ? '<span>' + esc(meta) + '</span>' : '') + '</button>';
 }
 function padsHTML() {
   const b = M.bankOf(S), d = S.ui.dock ? M.dockOf(S) : null, banks = S.banks.filter((x) => !x.pinned);
-  return '<div class="shbanks hscroll" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + banks.map((x, i) => '<button role="tab" class="' + (x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: i + 1 })) + '</button>').join('') +
+  return '<div class="shbanks hscroll" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + banks.map((x, i) => '<button role="tab" class="' + (x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (x.id === b.id) + '">' + esc(x.name || (x.preset === 'drums' ? t('bank.drums') : t('bank.untitled', { n: i + 1 }))) + '</button>').join('') +
     '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
     '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => p ? padHTML(p) : '<button class="shpad empty" data-cell="' + i + '" aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>').join('') + '</div>' +
     (d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => p ? padHTML(p, true) : '<button class="shpad empty" data-cell="' + i + '" data-dock="1"><b>+</b></button>').join('') + '<button class="shstop" data-x="stopall" style="grid-row:span ' + d.rows + '">' + esc(t('stopAll')) + '</button></div>'
@@ -285,7 +286,7 @@ function onDown(e) {
   const el = e.target.closest && e.target.closest('.shpad[data-pad]');
   if (!el || edit) return;
   const p = M.padById(S, el.dataset.pad);
-  if (!p || !p.file) return;
+  if (!p || !(p.file || p.synth)) return;
   const en = ensureEng(); if (!en) return;
   if (S.ui.buzz) buzz();
   const r = en.press(p);
@@ -302,7 +303,7 @@ function onClick(e) {
   let b;
   if ((b = g('[data-page]'))) { go(b.dataset.page); return; }
   if ((b = g('[data-bank]'))) { if (S.bank === b.dataset.bank && edit) { bankSheet(M.bankOf(S)); return; } S.bank = b.dataset.bank; save(); render(); preload(); return; }
-  if ((b = g('.shpad[data-pad]'))) { const p = M.padById(S, b.dataset.pad); if (p && (edit || !p.file)) padSheet(p); return; }
+  if ((b = g('.shpad[data-pad]'))) { const p = M.padById(S, b.dataset.pad); if (p && (edit || !(p.file || p.synth))) padSheet(p); return; }
   if ((b = g('[data-tonic]'))) { S.bed.pad.tonic = b.dataset.tonic === '' ? null : +b.dataset.tonic; save(); if (bed && bed.state.pad) bed.padTonic(bedTonic(M.currentNumber(S))); render(); return; }
   if ((b = g('[data-bsnd]'))) { S.bed.pad.sound = b.dataset.bsnd; save(); if (bed) bed.padSound(S.bed.pad.sound); render(); return; }
   if ((b = g('[data-noise]'))) { const r = noiseRec(b.dataset.noise); if (!r) return; if (edit) noiseSheet(r); else noiseTo(S.bed.noise.cur === r.id ? null : r.id); return; }
