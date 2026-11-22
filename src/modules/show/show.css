@@ -151,3 +151,31 @@
 .shdk.auto{font-size:var(--fs-4);flex:1}
 .shbedbar .shnoises{display:flex;flex-wrap:nowrap;gap:var(--sp-2);overflow-x:auto;scrollbar-width:none}
 .shbedbar .shnoise{flex:none;white-space:nowrap}
+/* строка номера: сверху название, под ним трек; касание — играть / стоп */
+.shpick{height:auto;min-height:56px;padding-top:var(--sp-1);padding-bottom:var(--sp-1)}
+.shpt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.shpt b{max-width:100%}
+.shpt small{flex:none;max-width:100%;font-size:var(--fs-2);color:var(--l2);text-align:left}
+.shpick.playing{opacity:1}
+.shpick.playing b,.shpick.playing i{color:var(--tint-text)}
+/* тайм-коды под волной: прыжок касанием */
+.shtcs{flex:none;display:flex;gap:var(--sp-2);overflow-x:auto;scrollbar-width:none;padding:0}
+.shtc{flex:none;display:flex;align-items:center;gap:var(--sp-1);min-height:var(--hit-min);padding:0 var(--sp-3);border-radius:var(--r-2);background:var(--fill);color:var(--ink);font:600 var(--fs-3) var(--font);white-space:nowrap}
+.shtc i{font-style:normal;color:var(--tint-text);font-variant-numeric:tabular-nums}
+.shtc:active{background:var(--fill2)}
+/* «Звуки»: подписи маленькие, пэды фона и драм-пэды одного размера, свои звуки — на всё остальное место; размер блока — --lz (src/ui/layout.js) */
+.shbedbar{gap:var(--sp-1)}
+.shcap{flex:none;min-height:28px;padding:0 var(--sp-3);border-radius:var(--r-2);background:var(--fill);color:var(--ink);font:600 var(--fs-2) var(--font);white-space:nowrap}
+.shcap.on{background:var(--tint);color:var(--on-tint)}
+.shbedrow .grow{flex:1}
+.shdk{min-height:calc(56px * var(--lz, 1))}
+.shlbl{font:600 var(--fs-2) var(--font);color:var(--l2);padding:0 var(--sp-3) var(--sp-1)}
+.shpads.drm{flex:none;grid-template-rows:none;grid-auto-rows:calc(56px * var(--lz, 1));padding-bottom:var(--sp-2)}
+.shpads.drm .shpad{padding:var(--sp-1) var(--sp-2)}
+.shwave{height:calc(68px * var(--lz, 1))}
+.shpick{min-height:calc(56px * var(--lz, 1))}
+.shbody{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.shpads:not(.drm){flex:1 0 auto;grid-template-rows:repeat(var(--r),minmax(calc(56px * var(--lz, 1)),1fr))}
+.shfoot{position:sticky;bottom:0;z-index:2;background:var(--bg);margin-top:auto}
+.shbanks{flex:none}
+.shknob{width:calc(52px * var(--lz, 1));height:calc(52px * var(--lz, 1))}

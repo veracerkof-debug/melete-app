@@ -10,6 +10,7 @@ import { createShowBed } from '../../audio/showbed.js';
 import { measureBlob, normGainDb } from '../../audio/loudness.js';
 import { swipe } from '../../ui/gestures.js';
 import { sortable, buzz, onHold } from '../../ui/hold.js';
+import { arrange, bindLayout } from '../../ui/layout.js';
 import * as M from '../../music/show.js';
 
 const I = {
@@ -190,29 +191,39 @@ function padHTML(p, dock) {
 // Фон — часть экрана «Звуки»: вкл/выкл, тональность, шум одной полосой; подробности — «⋯»
 function bedBarHTML() {
   const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES, man = b.pad.tonic;
-  const key = (v, l, on, cur, cls = '') => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + cls + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
-  return '<div class="shbedbar"><div class="shbedrow"><button class="shchip bedon' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
-    '<button class="shchip" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '">⋯</button></div>' +
+  const key = (v, l, on, cur) => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
+  // подпись у группы — маленькая: «Фон F♯» (вкл/выкл), «Авто», «⋯»; сами клавиши — крупные
+  return '<div class="shbedbar"><div class="shbedrow"><button class="shcap' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
+    '<button class="shcap' + (man == null ? ' on' : '') + '" data-tonic="" aria-pressed="' + (man == null) + '">' + esc(t('bed.tonicAuto')) + '</button>' +
+    '<span class="grow"></span><button class="shcap" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '">⋯</button></div>' +
     '<div class="shbedkeys" role="group" aria-label="' + esc(t('bed.tonic')) + '">' + tn.map((x, i) => key(String(i), x, man === i, b.pad.on && ton === i)).join('') + '</div>' +
-    '<div class="shbedrow">' + key('', t('bed.tonicAuto'), man == null, false, ' auto') + '</div>' +
     (S.noises.length ? '<div class="shnoises hscroll">' + S.noises.map((r) => '<button class="shnoise' + (b.noise.cur === r.id ? ' on' : '') + '" data-noise="' + r.id + '" aria-pressed="' + (b.noise.cur === r.id) + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div>' : '') + '</div>';
 }
-function padsHTML() {
-  const b = M.bankOf(S), d = S.ui.dock ? M.dockOf(S) : null, banks = S.banks.filter((x) => !x.pinned);
-  return '<div class="shbanks hscroll" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + banks.map((x, i) => '<button role="tab" class="' + (x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (x.id === b.id) + '">' + esc(x.name || (x.preset === 'drums' ? t('bank.drums') : t('bank.untitled', { n: i + 1 }))) + '</button>').join('') +
+// «Звуки»: фон (дрон), драм-пэды (готовый банк «Ударные» — компактно, как клавиши фона), свои звуки (банки с вкладками — всё остальное место), закреплённые, крутилки
+const padCell = (p, i, dock) => (p ? padHTML(p, dock) : '<button class="shpad empty" data-cell="' + i + '"' + (dock ? ' data-dock="1"' : '') + ' aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>');
+function padsBlocks() {
+  const banks = S.banks.filter((x) => !x.pinned), drum = banks.find((x) => x.preset === 'drums'), sound = banks.filter((x) => x !== drum), d = S.ui.dock ? M.dockOf(S) : null;
+  let b = M.bankOf(S); if (drum && b && b.id === drum.id) b = sound[0] || null;
+  if (!b) b = sound[0] || drum || null;
+  const blocks = [{ id: 'bed', html: bedBarHTML() }];
+  if (drum) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
+  blocks.push({ id: 'sounds', html: '<div class="shbanks hscroll" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + '</button>').join('') +
     '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
-    bedBarHTML() + '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => p ? padHTML(p) : '<button class="shpad empty" data-cell="' + i + '" aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>').join('') + '</div>' +
-    (d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => p ? padHTML(p, true) : '<button class="shpad empty" data-cell="' + i + '" data-dock="1"><b>+</b></button>').join('') + '<button class="shstop" data-x="stopall" style="grid-row:span ' + d.rows + '">' + esc(t('stopAll')) + '</button></div>'
-      : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') +
-    '';
+    (b && b !== drum ? '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => padCell(p, i)).join('') + '</div>' : '') });
+  const foot = (h) => '<div class="shfoot">' + h + (S.ui.strip ? stripHTML() : '') + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
+  blocks.push({ id: 'dock', html: foot(d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => padCell(p, i, true)).join('') + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>'
+    : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') });
+  return blocks;
 }
+const layOf = (page) => { const L = (S.layout ||= {}); return (L[page] ||= { order: [], hidden: [], size: {} }); };
+const padsHTML = () => arrange(padsBlocks(), layOf('pads'));
 function numHTML(n, i) {
   const f = fileOf(n.file), a = effAna(n);
   const meta = [
     n.kind === 'track' ? (f ? esc(f.name) : esc(t('num.noFile'))) : esc(t('num.noTrack')),
     n.kind === 'track' && a && a.pc != null ? '<i>' + esc(keyName(a.pc + n.shift, a.minor)) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') + '</i>' : '',
     n.dur ? M.mmss(n.dur) : '',
-    n.cues.length ? esc(t('num.cuesN', { n: n.cues.length })) : '',
+    tcOf(n).length ? esc(t('num.cuesN', { n: tcOf(n).length })) : '',
     n.note ? esc(t('num.hasNote')) : '',
   ].filter(Boolean).map((x) => '<span>' + x + '</span>').join('');
   return '<button class="shnum' + (n.done ? ' done' : '') + '" data-num="' + n.id + '"><span class="ntm">' + (n.at != null ? M.hhmm(n.at) : '') + '</span><span><span class="nnm">' + esc(n.title || t('num.untitled', { n: i + 1 })) + '</span><span class="nmt">' + meta + '</span></span></button>';
@@ -256,14 +267,30 @@ function stripHTML() {
 const numKnobsHTML = () => '<div class="shstrip shnk" role="group" aria-label="' + esc(t('desk.thisNum')) + '"><span class="shnkl">' + esc(t('desk.thisNum')) + '</span>' + [['nlevel', 'desk.knobTrack'], ['npad', 'desk.knobPad'], ['nnoise', 'desk.knobNoise']].map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
 const fader = (k, label, v) => '<div class="shfd"><span class="shfn">' + esc(label) + '</span><b class="shfv" data-fv="' + k + '">' + v + '</b><div class="shtrack" data-fader="' + k + '" role="slider" tabindex="0" aria-label="' + esc(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '" style="--v:' + v + '%">' +
   '<i class="tk" style="bottom:25%"></i><i class="tk" style="bottom:50%"></i><i class="tk" style="bottom:75%"></i><div class="shfill"></div><div class="shcap"></div></div><span class="shfo" data-fo="' + k + '">' + M.dbText(v) + ' ' + esc(t('db')) + '</span></div>';
+// Тайм-коды номера (слово автора 22.11.2026): свои метки номера и метки самой записи из медиатеки — вместе, по времени
+const tcOf = (n) => {
+  const f = n && n.kind === 'track' ? fileOf(n.file) : null, own = (n && n.cues) || [];
+  const fm = (f && Array.isArray(f.marks) ? f.marks : []).filter((m) => m && Number.isFinite(+m.t)).map((m, i) => ({ id: 'fm' + i, t: +m.t, text: String(m.name || '').slice(0, 200) || t('tc.mark', { n: i + 1 }), mark: true }));
+  return own.concat(fm.filter((m) => !own.some((c) => Math.abs(c.t - m.t) < 0.6))).sort((a, b) => a.t - b.t);
+};
+// Перейти к тайм-коду: идёт этот трек — перемотать; нет — запустить номер с этого места
+async function jumpTo(n, sec) {
+  if (!n || n.kind !== 'track') return;
+  if (deck && deck.state.file === n.file && (deck.state.playing || deck.state.time > 0)) { deck.seek(sec); if (!deck.state.playing) deck.resume(); deskPaint(); return; }
+  S.cur = n.id; save(); await startNumber(n, sec);
+}
 // Единый список выступления — всегда на «Эфире»: номер, название, тональность, темп, заметка. Касание — выбрать (играет только ▶),
 // смахнуть влево — плавно перейти к номеру, смахнуть вправо по проигранному — вернуть в программу, удержать — настройки номера
 function pickHTML() {
   const e = cur(); if (!e) return '';
+  const st = deck ? deck.state : null;
   return '<div class="shpicks" role="list" aria-label="' + esc(t('pick.list')) + '">' + e.numbers.map((n, i) => {
-    const k = numKey(n), b = numBpm(n), nt = n.note ? n.note.split('\n')[0] : '';
-    return '<button class="shpick' + (n.id === S.cur ? ' cur' : '') + (n.done ? ' done' : '') + '" role="listitem" data-pick="' + n.id + '"' + (n.id === S.cur ? ' aria-current="true"' : '') + '><i>' + (i + 1) + '</i><b>' + esc(n.title || t('num.untitled', { n: i + 1 })) + '</b>' +
-      (k ? '<em>' + esc(k) + '</em>' : '') + (b ? '<em>' + b + '</em>' : '') + (nt ? '<small>' + esc(nt) + '</small>' : '') + '</button>';
+    const k = numKey(n), b = numBpm(n), f = n.kind === 'track' ? fileOf(n.file) : null, on = !!(st && st.playing && n.kind === 'track' && st.file === n.file);
+    // сверху — название номера, под ним — что в нём играет (трек) или заметка
+    const sub = n.kind === 'track' ? (f ? f.name : t('num.noFile')) : (n.note ? n.note.split('\n')[0] : '');
+    return '<button class="shpick' + (n.id === S.cur ? ' cur' : '') + (n.done ? ' done' : '') + (on ? ' playing' : '') + '" role="listitem" data-pick="' + n.id + '" aria-pressed="' + on + '"' + (n.id === S.cur ? ' aria-current="true"' : '') + '><i>' + (on ? '■' : i + 1) + '</i>' +
+      '<span class="shpt"><b>' + esc(n.title || t('num.untitled', { n: i + 1 })) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+      (k ? '<em>' + esc(k) + '</em>' : '') + (b ? '<em>' + b + '</em>' : '') + '</button>';
   }).join('') + '<button class="shpick add" data-x="numnew">+ ' + esc(t('num.add')) + '</button></div>';
 }
 // Плавный переход к номеру: идущий затухает за время его выхода, выбранный входит со своим нарастанием; прежний — проигран, выбранный — снова в программе
@@ -279,32 +306,45 @@ async function glideTo(n) {
 }
 let pickRow = null;
 const pickById = (id) => { const e = cur(); return e ? e.numbers.find((x) => x.id === id) || null : null; };
+// Тайм-коды под волной: касание — прыжок (метки номера и метки записи из медиатеки)
+function tcHTML(n) {
+  const L = n && n.kind === 'track' ? tcOf(n) : [];
+  if (!L.length) return '';
+  return '<div class="shtcs hscroll" role="group" aria-label="' + esc(t('tc.title')) + '">' + L.map((c) => '<button class="shtc" data-tc="' + c.t + '" aria-label="' + esc(M.mmss(c.t) + ' ' + c.text) + '"><i class="num">' + M.mmss(c.t) + '</i><span>' + esc(c.text) + '</span></button>').join('') + '</div>';
+}
 function deskHTML() {
   const e = cur(), n = M.currentNumber(S), nx = M.nextNumber(S), idx = e && n ? e.numbers.indexOf(n) + 1 : 0, f = n && fileOf(n.file), a = effAna(n);
   const sub = n ? [t('desk.of', { n: idx, m: e.numbers.length }), a && a.pc != null && n.kind === 'track' ? keyName(a.pc + n.shift, a.minor) + (n.shift ? ' ' + (n.shift > 0 ? '+' : '−') + Math.abs(n.shift) : '') : ''].filter(Boolean).join(' · ') : '';
   const evl = e ? '<button class="evt shevt" data-x="evpick">' + esc(e.title || t('event.untitled', { n: S.events.filter((x) => !x.deleted).indexOf(e) + 1 })) + '<small>' + esc(evSub(e)) + '</small></button>' : '<button class="shadd" data-x="evnew">+ ' + esc(t('event.new')) + '</button>';
-  return '<div class="shdesk">' + evl + pickHTML() + '<div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' +
-    (n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>'
-      : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>') +
-    '<div class="shcueln" id="shcueln" aria-live="polite"></div>' +
-    (n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="pp" id="shpp">' + esc(t('desk.pause')) + '</button><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '') +
-    (n ? numKnobsHTML() : '') + stripHTML() +
-    '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b>' + (nx ? '<span class="shtrn">' + esc([numKey(n) && numKey(nx) ? numKey(n) + ' → ' + numKey(nx) : numKey(nx), numBpm(n) && numBpm(nx) ? numBpm(n) + ' → ' + numBpm(nx) : numBpm(nx) ? numBpm(nx) + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div></div>';
+  const blocks = [
+    { id: 'event', html: evl },
+    { id: 'picks', html: pickHTML() },
+    { id: 'now', html: '<div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' },
+    { id: 'wave', html: n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>' : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>' },
+    { id: 'cues', html: '<div class="shcueln" id="shcueln" aria-live="polite"></div>' + tcHTML(n) },
+    { id: 'ctl', html: n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '' },
+    { id: 'nknobs', html: n ? numKnobsHTML() : '' },
+    { id: 'knobs', html: stripHTML() },
+    { id: 'next', html: '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b>' + (nx ? '<span class="shtrn">' + esc([numKey(n) && numKey(nx) ? numKey(n) + ' → ' + numKey(nx) : numKey(nx), numBpm(n) && numBpm(nx) ? numBpm(n) + ' → ' + numBpm(nx) : numBpm(nx) ? numBpm(nx) + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div>' },
+  ];
+  return '<div class="shdesk">' + arrange(blocks, layOf('desk')) + '</div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
 function deskPaint(force) {
   if (!host || S.page !== 'desk') return;
-  const n = M.currentNumber(S);
+  const n = M.currentNumber(S), e = cur();
   if (deck) deck.tick();
   const st = deck ? deck.state : null;
   if (force && st && n && n.kind === 'track' && st.ended && !st.playing) { /* дошёл до конца: ничего не делаем, номер остаётся перед глазами */ }
   const tm = host.querySelector('#shtime'), cn = host.querySelector('#shcueln'), pp = host.querySelector('#shpp');
+  const crow = host.querySelector('.shpick.cur');
+  if (crow) { const on = !!(deck && deck.state.playing && n && n.kind === 'track' && deck.state.file === n.file); if (crow.classList.contains('playing') !== on) { crow.classList.toggle('playing', on); crow.setAttribute('aria-pressed', String(on)); const i = crow.querySelector('i'); if (i) i.textContent = on ? '■' : String(e.numbers.indexOf(n) + 1); } }
   const own = n && n.kind === 'track' && st && st.file === n.file;
   const time = own ? st.time : 0, dur = own ? st.dur : (n && n.dur) || 0;
   if (tm) tm.textContent = M.mmss(time) + ' / ' + M.mmss(dur || (fileOf(n.file) || {}).dur || 0);
   if (pp) pp.textContent = t(own && st.playing ? 'desk.pause' : 'desk.play');
   if (cn && n) {
-    const c = M.cueNow(n, time);
+    const c = M.cueNow({ cues: tcOf(n) }, time);
     const live = c.prev && own && st.playing && time - c.prev.t < 5 ? c.prev : null;
     cn.className = 'shcueln' + (live ? ' now' : c.next && c.in < 10 && own ? ' soon' : '');
     cn.textContent = live ? t('desk.now') + ' · ' + live.text : c.next ? t('desk.in', { t: M.mmss(c.in) }) + ' · ' + c.next.text : '';
@@ -321,7 +361,7 @@ function drawWave(cv, n, time, dur, own) {
   for (let i = 0; i < N; i++) { const v = pk ? pk[i] : 0.15, hh = Math.max(2, v * (h * 0.9)), x = i * bw, played = d && own && (i / N) * d <= time; g.fillStyle = played ? tint : l3; g.globalAlpha = played ? 1 : 0.55; g.fillRect(x + 0.5, (h - hh) / 2, Math.max(1, bw - 1.5), hh); }
   g.globalAlpha = 1;
   if (d) { // метки
-    g.fillStyle = ink; n.cues.forEach((c) => { const x = (c.t / d) * w; g.fillRect(x - 0.75, 0, 1.5, h); g.beginPath(); g.moveTo(x - 5, 0); g.lineTo(x + 5, 0); g.lineTo(x, 7); g.closePath(); g.fill(); });
+    g.fillStyle = ink; tcOf(n).forEach((c) => { const x = (c.t / d) * w; g.fillRect(x - 0.75, 0, 1.5, h); g.beginPath(); g.moveTo(x - 5, 0); g.lineTo(x + 5, 0); g.lineTo(x, 7); g.closePath(); g.fill(); });
     if (own) { const x = (time / d) * w; g.fillStyle = ink; g.fillRect(x - 1.5, 0, 3, h); }
   }
 }
@@ -339,7 +379,7 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') + '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
-    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   const pk = host.querySelector('.shpicks');
@@ -395,9 +435,13 @@ function onClick(e) {
   if ((b = g('[data-bsnd]'))) { S.bed.pad.sound = b.dataset.bsnd; save(); if (bed) bed.padSound(S.bed.pad.sound); render(); return; }
   if ((b = g('[data-noise]'))) { const r = noiseRec(b.dataset.noise); if (!r) return; if (edit) noiseSheet(r); else noiseTo(S.bed.noise.cur === r.id ? null : r.id); return; }
   if ((b = g('.shpad[data-cell]'))) { newPadAt(+b.dataset.cell, !!b.dataset.dock); return; }
-  if ((b = g('[data-pick]'))) { // выбрать номер, не включая звук; соседний трек готовится заранее
-    const n = pickById(b.dataset.pick); if (!n || n.id === S.cur) return;
-    S.cur = n.id; save(); if (n.kind === 'track' && n.file && deck) deck.prepare(n.file); render(); return;
+  if ((b = g('[data-tc]'))) { jumpTo(M.currentNumber(S), +b.dataset.tc).catch((er) => ctx.logErr(er)); return; }
+  if ((b = g('[data-pick]'))) { // касание названия: идёт — остановить, не идёт — включить (другой номер — плавный переход к нему)
+    const n = pickById(b.dataset.pick); if (!n) return;
+    const playing = n.kind === 'track' && deck && deck.state.playing && deck.state.file === n.file;
+    if (playing) { deck.stop(n.fadeOut > 0 ? n.fadeOut : S.goFade); render(); return; }
+    if (n.id === S.cur) { startNumber(n).catch((er) => ctx.logErr(er)); return; }
+    glideTo(n).catch((er) => ctx.logErr(er)); return;
   }
   if ((b = g('[data-num]'))) { const n = cur() && cur().numbers.find((x) => x.id === b.dataset.num); if (n) numSheet(n); return; }
   const x = g('[data-x]'); if (!x) return;
@@ -887,6 +931,8 @@ export default {
     host.addEventListener('change', onChange);
     host.addEventListener('keydown', onKey);
     if (ctx.output) offs.push(ctx.output.bind(host, { cat: 'media' })); // вывод на другое устройство — та же шторка, что в сессии
+    // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js)
+    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'now', 'wave', 'cues', 'ctl', 'nknobs', 'knobs', 'next'], name: (id) => t('lay.b.' + id), save, render, t }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
     // список выступления: влево — плавно перейти к номеру, вправо по проигранному — вернуть; удержать — настройки номера
     offs.push(swipe(host, { min: 50, ok: (e) => { const r = e.target.closest && e.target.closest('[data-pick]'); pickRow = r ? r.dataset.pick : null; return !!r; },
       left: () => { const n = pickRow && pickById(pickRow); if (n) glideTo(n).catch((er) => ctx.logErr(er)); },

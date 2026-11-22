@@ -19,6 +19,7 @@ import { DIRS, SENS } from '../../audio/drone.js';
 import { saveEvent, liveEvents } from '../calendar.js';
 import { setlistsOf } from '../metrosets.js';
 import * as MF from '../mediafolders.js';
+import { arrange, bindLayout } from '../../ui/layout.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
 import { fileSongs } from '../files.js';
@@ -596,7 +597,8 @@ export function openStage(app, evId, i = 0) {
       } else if (e.target.closest('[data-spall]')) { st.stagePads = null; app.store.save(); sh.update(); }
     }), { onClose: () => render() });
   };
-  const padsHTML = () => {
+  const layOf = () => { const st = app.store.state.settings; const L = (st.layout ||= {}); return (L.stage ||= { order: [], hidden: [], size: {} }); };
+  const padsParts = () => {
     const sdo = sd(), banks = sdo.banks.filter((b) => !b.pinned), b = bank();
     const nm = (x, i) => x.name || (x.preset === 'drums' ? t('stage.drums') : t('stage.bankN', { n: i + 1 }));
     const cell = (p) => {
@@ -610,11 +612,11 @@ export function openStage(app, evId, i = 0) {
     const bg = '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>';
     // свой список пэдов на сцене (settings.stagePads — id по порядку): вместо банков — только отмеченные; правка — «✎ Пэды»
     const custom = stagePadList();
-    if (custom) return '<div class="sgpads">' + bg + '<div class="sgpgrid" style="--c:' + Math.min(4, custom.length) + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + custom.map(cell).join('') + '</div></div>';
-    return '<div class="sgpads">' + bg + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
+    if (custom) return { keys: bg, pads: '<div class="sgpads"><div class="sgpgrid" style="--c:' + Math.min(4, custom.length) + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + custom.map(cell).join('') + '</div></div>' };
+    return { keys: bg, pads: '<div class="sgpads">' + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
       '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
       (b.pads.some((p) => p && p.synth) ? '<div class="sgfx"><label><span>' + esc(t('stage.space')) + '</span><input type="range" class="sgrng" data-fx="space" min="0" max="100" value="' + Math.round(S.space * 100) + '" aria-label="' + esc(t('stage.space')) + '"></label>' +
-        '<label><span>' + esc(t('stage.echo')) + '</span><input type="range" class="sgrng" data-fx="echo" min="0" max="100" value="' + Math.round(S.echo * 100) + '" aria-label="' + esc(t('stage.echo')) + '"></label></div>' : '') + '</div>';
+        '<label><span>' + esc(t('stage.echo')) + '</span><input type="range" class="sgrng" data-fx="echo" min="0" max="100" value="' + Math.round(S.echo * 100) + '" aria-label="' + esc(t('stage.echo')) + '"></label></div>' : '') + '</div>' };
   };
   const render = () => {
     if (!S.el) return;
@@ -628,36 +630,40 @@ export function openStage(app, evId, i = 0) {
     S.el.classList.toggle('night', !!S.night);
     const oldLs = S.el.querySelector('.sgsongs'), lsTop = oldLs ? oldLs.scrollTop : 0, lsI = S.lsI;
     S.lsI = S.i;
-    S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
-      (free ? '<div class="sghead"><b>' + esc(t('stage.title')) + '</b><span>' + esc(t('stage.freeSub')) + '</span></div>' : '<span class="grow"></span>') +
-      '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
-      '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
-      '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      // слева вверху — слова, аккорды или табы; справа вверху — список песен (текущая по центру; смахнуть влево-вправо — песня, вверх-вниз — прокрутка)
-      '<div class="sgmain">' +
+    const stageLay = layOf(), pk = padsParts();
+    const stageBlocks = [
+      { id: 'main', html: '<div class="sgmain">' +
       (S.view === 'tab' && !free ? '<div class="sgtext sgscorebox">' + scoreHTML() + '</div>' : S.view === 'list' || free ? (free && S.view !== 'list' ? '<div class="sgtext"><div class="sgbig free">' + esc(t('stage.freeHint')) + '<br><button class="btn" data-sg="list">' + esc(t('stage.pickSongs')) + '</button></div></div>' : '<div class="sgtext">' + listHTML(L) + '</div>') :
         '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? (it.scroll ? '<i class="sgprog" aria-hidden="true"><i></i></i>' : '') + '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
           '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>') +
       (free || S.view === 'list' ? '' : '<div class="sgsongs" role="list" aria-label="' + esc(t('stage.list')) + '">' + L.map((sg, j) => { const ii = evObj ? itemOf(evObj, sg, audioFiles(app)) : null;
         const meta = ii ? [ii.key ? keyLabel(ii.key) + (ii.capo ? ' c' + ii.capo : '') : '', ii.bpm ? ii.bpm + ' bpm' : '', ii.note || ''].filter(Boolean).join(' · ') : '';
         return '<button class="sgsong' + (j === S.i ? ' cur' : '') + '" role="listitem" data-sgreel="' + j + '"' + (j === S.i ? ' aria-current="true"' : '') + '><i class="num">' + (j + 1) + '</i><span class="sgst"><b>' + esc(sg.title) + '</b>' + (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span></button>'; }).join('') + '</div>') +
-      '</div>' +
-      (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') +
-      plHTML() +
-      // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
+      '</div>' },
+      { id: 'seek', html: (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') },
+      { id: 'player', html: plHTML() },
+      { id: 'tempo', html: // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
       '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
         '<button class="sgic txt" data-sgbpm="-1" aria-label="' + esc(t('stage.bpm') + ' −1') + '">−</button>' +
         '<button class="sgbpm' + (run ? ' on' : '') + '" data-sgmetro aria-pressed="' + run + '" aria-label="' + esc(t('stage.metroBtn')) + '"><b class="num">' + bpm + '</b><small>bpm</small></button>' +
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
-        '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
-      '<div class="sgchips">' + 
+        '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' },
+      { id: 'chips', html: '<div class="sgchips">' + 
         chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('pads', false, '✎ ' + t('stage.pads')) +
-        (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
-      padsHTML() +
-      '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
+        (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' },
+      { id: 'keys', html: pk.keys },
+      { id: 'pads', html: pk.pads },
+      { id: 'bar', html: '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
         '<button class="sgbtn main' + (S.playing ? ' on' : '') + '" data-sg="play" aria-label="' + esc(t(S.playing ? 'stage.stop' : 'stage.play')) + '">' + (S.playing ? I.stop : I.play) + '</button>') +
       // громкости по отдельности и общая — всегда на экране: тянуть вверх-вниз (140 px — весь ход)
-      '<div class="sgknobs" role="group" aria-label="' + esc(t('stage.vol')) + '">' + KNOBS.map((k) => knobHTML(k)).join('') + '</div></div>' +
+      '<div class="sgknobs" role="group" aria-label="' + esc(t('stage.vol')) + '">' + KNOBS.map((k) => knobHTML(k)).join('') + '</div></div>' },
+    ];
+    S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
+      (free ? '<div class="sghead"><b>' + esc(t('stage.title')) + '</b><span>' + esc(t('stage.freeSub')) + '</span></div>' : '<span class="grow"></span>') +
+      '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
+      '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
+      '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
+      arrange(stageBlocks, stageLay) +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
     const ls = S.el.querySelector('.sgsongs');
@@ -828,6 +834,8 @@ export function openStage(app, evId, i = 0) {
   addEventListener('keydown', onKey);
   S.el.addEventListener('scroll', onUserScroll, true);
   onHold(S.el, '.sgsongs, .sghead', (el) => stageMenu(el));
+  // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js); пэды, клавиши, крутилки, темп, перемотка — со своими жестами, меню у них не открывается
+  bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], input, [role="slider"]');
   // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
   const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
   let vg = null;

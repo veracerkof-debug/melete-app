@@ -184,3 +184,11 @@
 /* жесты на весь экран: касание не уходит браузеру на прокрутку (иначе приходит pointercancel и смахивание не срабатывает); текст прокручивается только вверх-вниз */
 .stage{touch-action:none}
 .sgtext{touch-action:pan-y}
+/* размер блока (--lz из src/ui/layout.js): крупность клавиш, пэдов, темпа, плеера, кнопки старта и крутилок */
+.sgpads .sgkey{min-height:calc(56px * var(--lz, 1))}
+.sgpad{min-height:calc(40px * var(--lz, 1))}
+.sgtempo .sgic,.sgbpm{height:calc(var(--hit-min) * var(--lz, 1))}
+.sgplayer .sgic,.sgplseek{height:calc(var(--hit-min) * var(--lz, 1))}
+.sgbar .sgbtn.main{min-height:calc(72px * var(--lz, 1))}
+.sgknob{width:calc(var(--hit) * var(--lz, 1));height:calc(var(--hit) * var(--lz, 1))}
+.sgmain{min-height:calc(160px * var(--lz, 1))}
