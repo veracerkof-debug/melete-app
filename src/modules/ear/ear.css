@@ -139,9 +139,9 @@
 .edcard{flex-direction:row;align-items:center;justify-content:flex-start;padding:8px 10px;gap:10px;min-height:56px}
 .edcard .edic{position:static;width:34px;height:34px;border-radius:11px;flex:none}
 .edcard .edic svg{width:20px;height:20px}
-.edcard .edr{position:relative;margin-left:auto;width:32px;height:32px;flex:none}
+.edcard .edr{position:relative;top:0;right:0;order:3;margin-left:0;width:32px;height:32px;flex:none} /* кольцо — справа, после названия (в разметке оно стоит до названия; отчёт автора 22.11.2026) */
 .edcard .edn{margin:0;font-size:15px}
 .edcard .eds{display:none}
 .edgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .edcard{min-width:0;overflow:hidden}
-.edcard .edn{min-width:0;flex:1;text-align:left;line-height:1.15}
+.edcard .edn{order:2;min-width:0;flex:1;text-align:left;line-height:1.15}
