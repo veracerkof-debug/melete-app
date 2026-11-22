@@ -215,5 +215,9 @@
   "synth.tom": "Том",
   "synth.clap": "Хлопок",
   "synth.hat": "Хэт",
-  "synth.crash": "Крэш"
+  "synth.crash": "Крэш",
+  "pick.list": "Программа выступления",
+  "pick.restored": "Номер возвращён в программу",
+  "bed.more": "Настройки фона",
+  "desk.vol": "Громкость"
 }

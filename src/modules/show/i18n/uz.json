@@ -215,5 +215,9 @@
   "synth.tom": "Tom",
   "synth.clap": "Qarsak",
   "synth.hat": "Xet",
-  "synth.crash": "Krash"
+  "synth.crash": "Krash",
+  "pick.list": "Chiqish dasturi",
+  "pick.restored": "Raqam dasturga qaytarildi",
+  "bed.more": "Fon sozlamalari",
+  "desk.vol": "Ovoz"
 }

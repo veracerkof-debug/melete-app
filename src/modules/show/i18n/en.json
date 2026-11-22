@@ -215,5 +215,9 @@
   "synth.tom": "Tom",
   "synth.clap": "Clap",
   "synth.hat": "Hi-hat",
-  "synth.crash": "Crash"
+  "synth.crash": "Crash",
+  "pick.list": "Show program",
+  "pick.restored": "Number put back in the program",
+  "bed.more": "Bed settings",
+  "desk.vol": "Volume"
 }
