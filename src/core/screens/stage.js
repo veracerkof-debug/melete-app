@@ -164,13 +164,20 @@ export function openStage(app, evId, i = 0) {
   const mixVal = (k) => {
     const m = mixSet();
     if (m[k] != null) return m[k];
-    if (k === 'metro' || k === 'pad') return Math.round((audio.mixer.value(k === 'pad' ? 'drone' : 'metro') || 0) * 100);
+    if (k === 'metro' || k === 'pad') { // исходный уровень шины запоминаем до своей правки, чтобы общий ползунок не накладывался на него дважды
+      const mb = S.mb || (S.mb = {});
+      if (mb[k] == null) mb[k] = Math.round((audio.mixer.value(k === 'pad' ? 'drone' : 'metro') || 0) * 100);
+      return mb[k];
+    }
     if (k === 'sounds') return 85;
     const v = audio.mixer && audio.mixer.elementVolume ? audio.mixer.elementVolume('media') : 1;
     return Math.round((Number.isFinite(v) ? v : 1) * 100);
   };
+  // Общая громкость сцены — тонкий ползунок у края экрана, всегда под рукой: множитель поверх четырёх уровней (узлы те же, правка — параметром)
+  const allVal = () => { const a = mixSet().all; return a == null ? 100 : a; };
+  const effVal = (k) => mixVal(k) * allVal() / 100;
   const mixApply = (k) => safe('mix', () => {
-    const v = mixVal(k), bus = (MIXES.find((x) => x[0] === k) || [])[1];
+    const v = effVal(k), bus = (MIXES.find((x) => x[0] === k) || [])[1];
     if (bus) audio.mixer.override(bus, v / 100);
     else if (k === 'sounds') { if (S.eng) S.eng.setLevel(v); }
     else if (S.track) S.track.volume = Math.max(0, Math.min(1, v / 100));
@@ -185,8 +192,10 @@ export function openStage(app, evId, i = 0) {
         if (!e.target.closest('[data-sgmixreset]')) return;
         app.store.state.settings.stageMix = {}; app.store.save();
         MIXES.forEach(([k, bus]) => { if (bus) audio.mixer.override(bus, null); }); // снова общая громкость приложения
+        S.mb = {};
         if (S.eng) S.eng.setLevel(mixVal('sounds'));
         if (S.track) S.track.volume = Math.max(0, Math.min(1, mixVal('track') / 100));
+        const al = S.el && S.el.querySelector('[data-sgall]'); if (al) al.value = 100;
         sh.update();
       });
     });
@@ -198,7 +207,7 @@ export function openStage(app, evId, i = 0) {
       const c = getContext(audio.mixer.state.mode), out = audio.mixer.bus('drone');
       if (!c || !out) return null;
       S.eng = createShowPads({ dest: out, getBlob: (id) => { const f = app.files && app.files.get(id); return f ? f.blob : null; }, drumFx: () => ({ bpm: curBpm, space: S.space, echo: S.echo }) });
-      S.eng.setLevel(mixVal('sounds'));
+      S.eng.setLevel(effVal('sounds'));
       return S.eng;
     });
   };
@@ -506,6 +515,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgbtn" data-sg="prev"' + (S.i ? '' : ' disabled') + ' aria-label="' + esc(t('stage.prev')) + '">' + I.prev + '</button>' +
         '<button class="sgbtn main' + (S.playing ? ' on' : '') + '" data-sg="play" aria-label="' + esc(t(S.playing ? 'stage.stop' : 'stage.play')) + '">' + (S.playing ? I.stop : I.play) + '</button>' +
         '<button class="sgbtn" data-sg="next"' + (S.i < L.length - 1 ? '' : ' disabled') + ' aria-label="' + esc(t('stage.nextBtn')) + '">' + I.next + '</button>') + '</div>' +
+      '<input type="range" class="sgall" data-sgall min="0" max="100" value="' + allVal() + '" aria-label="' + esc(t('stage.vol')) + '">' +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
     if (S.view === 'tab' && !free) {
@@ -652,7 +662,10 @@ export function openStage(app, evId, i = 0) {
   };
   S.el.addEventListener('pointerup', padUp);
   S.el.addEventListener('pointercancel', (e) => { const g = S.md; if (g && e.pointerId === g.id) { S.md = null; } padUp(e); });
+  S.el.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('[data-sgall]')) app.store.save(); });
   S.el.addEventListener('input', (e) => {
+    const a = e.target.closest && e.target.closest('[data-sgall]');
+    if (a) { mixSet().all = +a.value; MIXES.forEach(([k]) => mixApply(k)); return; }
     const r = e.target.closest && e.target.closest('[data-fx]');
     if (!r) return;
     const v = +r.value / 100;
@@ -661,7 +674,7 @@ export function openStage(app, evId, i = 0) {
   S.unOut = bindOutput(app, S.el); // вывод на другое устройство (dev): та же шторка, что в сессии
   document.body.appendChild(S.el);
   document.documentElement.classList.add('onstage');
-  MIXES.forEach(([k, bus]) => { if (bus && mixSet()[k] != null) mixApply(k); }); // свои уровни сцены — на время сцены
+  MIXES.forEach(([k, bus]) => { if (bus && (mixSet()[k] != null || mixSet().all != null)) mixApply(k); }); // свои уровни сцены — на время сцены
   S.offBeat = audio.metro.onBeat(beat);
   addEventListener('resize', onResize);
   addEventListener('keydown', onKey);
@@ -678,7 +691,7 @@ export function openStage(app, evId, i = 0) {
   // щипок по тексту — размер шрифта (как A− и A+)
   const offG = [pinch(S.el, { min: 4, max: 25, ok: (e) => !!e.target.closest('.sgscore') && !!S.score, get: () => Math.round(S.score.scale * 10),
       set: (v, live) => { S.score.setScale(v / 10); if (!live) sset('scoreScale', S.score.scale); } }),
-    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys') }),
+    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys, .sgall') }),
     pinch(S.el, { min: 14, max: 64, ok: (e) => !!e.target.closest('.sgtext'), get: () => S.fs,
       set: (v, live) => { S.fs = v; fit(); if (!live) try { sessionStorage.setItem('melete.stage.fs', v); } catch { /* */ } } })];
   S.i = Math.max(0, Math.min(list().length - 1, i));
