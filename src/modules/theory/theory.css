@@ -7,7 +7,8 @@
 .scnotes b{display:block;font-size:19px;font-weight:600}
 .scnotes span{font-size:12px;color:var(--l2)}
 .ctrl4{display:grid;align-items:center;justify-items:center;margin-top:16px}
-.ctrl4{grid-template-columns:repeat(4,1fr);margin-top:14px}
+.ctrl4{grid-template-columns:repeat(4,1fr);margin-top:14px;row-gap:10px}
+.ctrl4:has(>:nth-child(5)){grid-template-columns:repeat(5,1fr)} /* пять кнопок — в одну строку, не пятая под первой (отчёт автора 22.11.2026) */
 .fnb{font-size:12px;font-weight:700;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex:none}
 .fT{background:color-mix(in srgb,var(--ok) 20%,transparent);color:color-mix(in srgb,var(--ok) 55%,var(--ink))}
 .fS{background:color-mix(in srgb,#567198 18%,transparent);color:color-mix(in srgb,#0a66d6 60%,var(--ink))}
