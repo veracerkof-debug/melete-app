@@ -613,7 +613,7 @@ export function openStage(app, evId, i = 0) {
 // на сцену; иначе короткий выбор — ближайшие впереди первыми; сет-листов нет — новое событие с песнями
 export function stagePick(app) {
   const L = setlistsOf(app.store.state).filter((x) => x.n > 0), now = Date.now(), today = L.filter((x) => Math.abs(x.start - now) < 12 * 3600000);
-  if (!L.length) { workStage(app); return; } // событий с песнями нет — рабочая сцена (без события)
+  if (!L.length) { workStage(app); return; } // событий с песнями нет — рабочая сцена (без события; песен нет — пустая сцена)
   if (today.length === 1) { openStage(app, today[0].id, 0); return; }
   const day = (ts) => (ts ? new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '');
   sheet(() => snav(t('stage.pick')) + '<div class="group"><button class="cell" data-stgw><span class="grow" style="text-align:left"><b>' + esc(t('stage.work')) + '</b><span class="bksub">' + esc(t('stage.workSub')) + '</span></span>' + icons.chev + '</button>' +
@@ -625,7 +625,8 @@ export function stagePick(app) {
 // Рабочая сцена (без события): свой сет-лист в настройках; нет песен — сначала выбор состава
 export function workStage(app) {
   const w = workEvent(app.store.state.settings).songs.filter((id) => app.store.songById(id));
-  if (w.length) openStage(app, WORK, 0); else workSheet(app, () => { if (workEvent(app.store.state.settings).songs.length) openStage(app, WORK, 0); });
+  if (w.length || !app.store.songs().length) openStage(app, WORK, 0); // песен нет вовсе — сцена открывается пустой: метроном, пэд, звуки
+  else workSheet(app, () => openStage(app, WORK, 0)); // песни есть — сначала состав; закрыли шторку — сцена и с пустым составом
 }
 // Состав рабочего сет-листа: все песни галочками, порядок — как выбирали
 export function workSheet(app, done = () => {}) {

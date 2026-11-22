@@ -32,17 +32,17 @@ test('рабочая сцена: без события, список песен,
   await page.waitForTimeout(300);
   await expect(page.locator('.sgbpm.on')).toHaveCount(0);
   // барабанные пэды: восемь, касание — удар (подсветка), ползунки пространства и эха
-  await expect(page.locator('.sgpad')).toHaveCount(8);
+  await expect(page.locator('.sgpad[data-pad]')).toHaveCount(8);
   await page.locator('.sgpad.p-kickw').dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true });
   await page.waitForTimeout(150);
   await expect(page.locator('.sgpad.p-kickw.hit')).toHaveCount(1);
-  for (const i of [1, 2, 4, 7]) { await page.locator('.sgpad[data-pad="' + i + '"]').dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true }); await page.waitForTimeout(60); }
+  for (const i of [1, 2, 4, 7]) { await page.locator('.sgpad[data-pad]').nth(i).dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true }); await page.waitForTimeout(60); }
   await page.locator('[data-fx="space"]').fill('90'); await page.locator('[data-fx="echo"]').fill('70');
   expect(await page.evaluate(() => sessionStorage.getItem('melete.stage.space'))).toBe('0.9');
   const shot = process.env.ED_SHOTS; if (shot) await page.screenshot({ path: shot + '/stage.png' });
   // пэды — свернуть и вернуть
   await page.click('[data-sgt="pads"]'); await page.waitForTimeout(200);
-  await expect(page.locator('.sgpad')).toHaveCount(0);
+  await expect(page.locator('.sgpad[data-pad]')).toHaveCount(0);
   await page.click('[data-sgt="pads"]'); await page.waitForTimeout(200);
   // замок: касания игнорируются, снимается удержанием
   await page.click('[data-sg="lock"]'); await page.waitForTimeout(200);

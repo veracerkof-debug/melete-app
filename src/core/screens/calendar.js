@@ -510,7 +510,7 @@ export function nextEventsHTML(app) {
   const all = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i);
   // сцена одной кнопкой (есть сет-лист с песнями)
   // кнопка «Сцена» — всегда, когда есть песни: событие не обязательно, без него открывается рабочая сцена (слово автора 22.11.2026)
-  const stage = events(app).some((e) => !e.deleted && (e.songs || []).length) || app.store.songs().length ? '<button class="hstage" data-act="stage">' + STAGE_IC + '<span>' + t('stage.btn') + '</span></button>' : '';
+  const stage = '<button class="hstage" data-act="stage">' + STAGE_IC + '<span>' + t('stage.btn') + '</span></button>'; // сцена работает и без песен (слово автора 22.11.2026)
   // календарь — не вкладка (слово автора 21.11.2026): одна строка на главной — что сегодня или на неделе; касание открывает экран календаря
   const o = all[0], c = cal(app);
   const line = o ? '<b>' + esc(titleOf(c, o.ev)) + '</b><small>' + esc(relDate(o.start) + ', ' + timeTxt(o)) + '</small>' : '<b>' + esc(t('cal.title')) + '</b><small>' + esc(t('cal.emptyTitle')) + '</small>';
