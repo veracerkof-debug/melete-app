@@ -2600,5 +2600,7 @@
   "mic.takeTitle": "Boshqa yozuv ketmoqda",
   "mic.takeText": "Hozir «{who}» da yozuv ketmoqda. Uni to‘xtatib (saqlanadi) shu yerda boshlaymizmi?",
   "mic.takeYes": "To‘xtatib boshlash",
-  "rec.micBusy": "Boshqa yozuv ketmoqda — mikrofon u tugaguncha band"
+  "rec.micBusy": "Boshqa yozuv ketmoqda — mikrofon u tugaguncha band",
+  "mic.silent": "Kirish jim (qoʻngʻiroq yoki boshqa ilova). Yozuv davom etadi",
+  "mic.back": "Ovoz qaytdi"
 }

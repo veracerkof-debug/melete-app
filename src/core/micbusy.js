@@ -9,7 +9,9 @@ const who = (w) => { const k = 'mic.who.' + w, s = t(k); return s === k ? w : s;
 export const askTakeover = (w) => ui.confirm(t('mic.takeTitle'), t('mic.takeText', { who: who(w) }), t('mic.takeYes'));
 
 let shown = null;
+const toast = (m) => ui.toast(m);
 export function initMicBusy() {
+  addEventListener('melete:micsilent', (e) => toast(t((e.detail || {}).on ? 'mic.silent' : 'mic.back')));
   addEventListener('melete:micbusy', (e) => {
     const d = e.detail || {};
     if (d.soft || shown) return; // слух маскота уступает молча

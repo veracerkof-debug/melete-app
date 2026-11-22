@@ -55,7 +55,7 @@ export function createGate() {
 // app.audio.tap() — отвод звука, app.files — медиатека, app.store.state.settings.rec — настройки. Одна запись за раз.
 // spool — хранилище кусков записи (recspool.js; по умолчанию IndexedDB)
 export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } = {}) {
-  let cur = null, chain = null;
+  let cur = null, chain = null, silentSince = 0;
   const subs = new Set();
   const emit = () => subs.forEach((fn) => fn(cur));
   const prefs = () => {
@@ -130,6 +130,13 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
       for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
       const p = prefs(), db = dbOf(Math.sqrt(s / buf.length)), g = gate.step(db, p.gate, performance.now());
       meter.db = db; meter.open = g.open;
+      // сторож тишины: идёт запись с микрофона, а вход молчит до нуля (звонок, чужое приложение) — запись не трогаем, только говорим
+      if (cur && p.mic) {
+        const now = performance.now();
+        if (db > -100) { if (meter.silent) { meter.silent = false; log('rec', 'запись: звук вернулся'); window.dispatchEvent(new CustomEvent('melete:micsilent', { detail: { on: false } })); } silentSince = 0; }
+        else if (!silentSince) silentSince = now;
+        else if (!meter.silent && now - silentSince > 3000) { meter.silent = true; log('rec', 'запись: вход молчит (звонок или другое приложение) — запись продолжается', 'w'); window.dispatchEvent(new CustomEvent('melete:micsilent', { detail: { on: true } })); }
+      }
       if (g.howl && p.mon) { p.mon = false; apply(); if (meter.howl) meter.howl(); }
       gateGain.gain.setTargetAtTime(p.mon && g.open ? 1 : 0, c.currentTime, g.open ? 0.004 : 0.06);
     }, 20);

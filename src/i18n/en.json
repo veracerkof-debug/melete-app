@@ -2636,5 +2636,7 @@
   "mic.takeTitle": "Another recording is running",
   "mic.takeText": "“{who}” is recording now. Stop it (it will be saved) and start here?",
   "mic.takeYes": "Stop and start",
-  "rec.micBusy": "Another recording is running — the microphone is busy until it ends"
+  "rec.micBusy": "Another recording is running — the microphone is busy until it ends",
+  "mic.silent": "The input is silent (a call or another app). Recording continues",
+  "mic.back": "Sound is back"
 }

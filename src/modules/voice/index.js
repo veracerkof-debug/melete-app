@@ -197,7 +197,7 @@ async function startRec0() {
   try {
     setStopper('voice', () => stopRec());
     const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo || s.pick !== 'mix', raw: s.raw, who: 'voice', ask: ctx.mic.askTakeover });
-    Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, recCh: r.channels, bt: r.bt, marks: [], t0: Date.now(), inWarn: '', warned: {}, recDev: r.dev ? { ...r.dev, rate: r.dev.rate || r.rate } : null });
+    Object.assign(S, { phase: 'rec', silAt: null, silent: false, sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, recCh: r.channels, bt: r.bt, marks: [], t0: Date.now(), inWarn: '', warned: {}, recDev: r.dev ? { ...r.dev, rate: r.dev.rate || r.rate } : null });
     s.liveMarks = { t0: S.t0, marks: [] }; ctx.store.save();
     resetMeter(r.rate || 48000);
     ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + (r.dev ? ' (пишет: ' + (r.dev.type || '') + ' «' + r.dev.name + '»)' : '') + ', ' + r.rate + ' Гц, каналов ' + r.channels + (r.raw === false ? ', с обработкой системы' : ''));
@@ -990,6 +990,36 @@ function onLevel(e) {
   meterUpdate(e);
   S.sec = e.sec; S.paused = !!e.paused;
   const tm = host.querySelector('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
+  silenceWatch(e);
+}
+// Сторож тишины: вход молчит до цифрового нуля дольше SIL_SEC (звонок, другое приложение взяло микрофон, вынули
+// микрофон) — запись НЕ останавливается (звук вернётся сам, когда система отпустит вход), но на таймлайне ставится метка,
+// на плашке — предупреждение, а когда звук вернулся — метка «звук вернулся» и снятие предупреждения
+const SIL_SEC = 3;
+function silenceMark(at, key) {
+  S.marks.push({ t: Math.max(0, at), name: t(key) }); S.marks.sort((a, b) => a.t - b.t);
+  st().liveMarks = { t0: S.t0, marks: S.marks }; ctx.store.save();
+}
+function silenceWatch(e) {
+  if (e.paused) { S.silAt = null; return; }
+  if (e.peak < 1e-5) {
+    if (S.silAt == null) S.silAt = e.sec;
+    else if (!S.silent && e.sec - S.silAt >= SIL_SEC) {
+      S.silent = true; S.inWarn = t('lost.silent');
+      silenceMark(S.silAt, 'mark.silent');
+      ctx.log('запись: вход молчит с ' + S.silAt.toFixed(1) + ' с (звонок или другое приложение) — запись продолжается', 'w');
+      ctx.ui.toast(t('lost.silent'));
+      render();
+    }
+  } else {
+    if (S.silent) {
+      S.silent = false; if (S.inWarn === t('lost.silent')) S.inWarn = '';
+      silenceMark(e.sec, 'mark.back');
+      ctx.log('запись: звук вернулся на ' + e.sec.toFixed(1) + ' с');
+      render();
+    }
+    S.silAt = null;
+  }
 }
 function onPos(e) {
   if (!S.playing || !S.take) return;

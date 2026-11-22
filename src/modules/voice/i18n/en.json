@@ -272,5 +272,8 @@
   "dev.phoneAudioMic": "Phone audio and microphone",
   "err.capture": "Android did not allow recording the phone audio",
   "capture.hint": "Records the sound of other apps (a lesson, a backing track). Android asks for permission every time; calls and apps that forbid capture are not recorded.",
-  "micBusy": "The microphone is busy with a recording in another tool — it will not be interrupted."
+  "micBusy": "The microphone is busy with a recording in another tool — it will not be interrupted.",
+  "lost.silent": "The input is silent (a call or another app). Recording continues and will pick up the sound",
+  "mark.silent": "Input went silent",
+  "mark.back": "Sound is back"
 }

@@ -272,5 +272,8 @@
   "dev.phoneAudioMic": "Telefon ovozi va mikrofon",
   "err.capture": "Android telefon ovozini yozishga ruxsat bermadi",
   "capture.hint": "Boshqa ilovalar ovozi yoziladi (dars, minus). Android har safar ruxsat so‘raydi; qo‘ng‘iroqlar va yozishni taqiqlagan ilovalar yozilmaydi.",
-  "micBusy": "Mikrofonni boshqa asbobdagi yozuv band qilgan — uni hech narsa uzmaydi."
+  "micBusy": "Mikrofonni boshqa asbobdagi yozuv band qilgan — uni hech narsa uzmaydi.",
+  "lost.silent": "Kirish jim (qoʻngʻiroq yoki boshqa ilova). Yozuv davom etadi, ovoz qaytganda yoziladi",
+  "mark.silent": "Kirish jim boʻldi",
+  "mark.back": "Ovoz qaytdi"
 }
