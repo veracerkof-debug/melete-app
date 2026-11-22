@@ -507,11 +507,14 @@ function exportICS(app) {
 
 // Главная: ближайшие события на неделю (до двух)
 export function nextEventsHTML(app) {
-  const list = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i).slice(0, 2);
+  const all = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i);
   // сцена одной кнопкой (есть сет-лист с песнями)
   const stage = events(app).some((e) => !e.deleted && (e.songs || []).length) ? '<button class="hstage" data-act="stage">' + STAGE_IC + '<span>' + t('stage.btn') + '</span></button>' : '';
-  if (!list.length) return stage ? '<div class="hstagerow">' + stage + '</div>' : '';
-  return '<div class="hhdr"><span>' + t('cal.soon') + '</span><button class="link" data-tab="calendar">' + t('cal.title') + '</button></div><div class="clist hnext">' + list.map((o) => evRow(app, o, { date: true })).join('') + '</div>' + (stage ? '<div class="hstagerow">' + stage + '</div>' : '');
+  // календарь — не вкладка (слово автора 21.11.2026): одна строка на главной — что сегодня или на неделе; касание открывает экран календаря
+  const o = all[0], c = cal(app);
+  const line = o ? '<b>' + esc(titleOf(c, o.ev)) + '</b><small>' + esc(relDate(o.start) + ', ' + timeTxt(o)) + '</small>' : '<b>' + esc(t('cal.title')) + '</b><small>' + esc(t('cal.emptyTitle')) + '</small>';
+  const more = all.length > 1 ? '<i class="hcalmore">+' + (all.length - 1) + '</i>' : '';
+  return '<div class="hcalrow"><button class="hcal" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><span class="hcali" aria-hidden="true">' + TAB_ICONS.calendar + '</span><span class="hcalt">' + line + '</span>' + more + '<span class="hcalgo" aria-hidden="true">›</span></button>' + stage + '</div>';
 }
 
 // Песня: её события (ближайшие полгода) и «+ событие» с этой песней

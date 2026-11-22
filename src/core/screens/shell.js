@@ -172,6 +172,7 @@ export function createShell(app, root) {
     const d = b.dataset;
     // правка главной (блоки: меньше, больше, убрать, вернуть, готово)
     if (d.hbe) { if (homeEditAct(app, d.hbe)) render(); return true; }
+    if (homeEditing() && b.closest('.hblk')) return true; // в правке главной кнопки блоков (календарь, события, начать) не срабатывают
     if (routinesClick(app, e, render)) return true; // планы занятия на экране «Песни»
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);

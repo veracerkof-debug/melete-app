@@ -42,7 +42,7 @@ export const tabModsInTools = (st) => Object.keys(TAB_MODULES).filter((id) => is
 // «Календарь». В «Инструментах» — карточкой, касание открывает страницу; удержание — правка, обратно вниз
 export const PAGES = ['library', 'calendar'];
 export const isPage = (id) => PAGES.includes(id);
-export const pagesInTools = (st) => PAGES.filter((id) => !visibleTabs(st, tabIds(st)).includes(id));
+export const pagesInTools = (st) => PAGES.filter((id) => id !== 'calendar' && !visibleTabs(st, tabIds(st)).includes(id)); // календарь — строкой на главной, не плиткой
 export const pageName = (id) => t('nav.' + id);
 export const TAB_ICONS = {
   home: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="10"/><path d="M14 8.5V14l3.6 2.4"/></svg>',

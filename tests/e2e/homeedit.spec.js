@@ -14,7 +14,7 @@ test('правка главной: камень — в плитке недели
   await page.waitForTimeout(300);
   await expect(page.locator('.hblk[data-hb="week"] .hgstone')).toHaveCount(0);
   await expect(page.locator('.hbtray [data-hbe="show:league"]')).toHaveCount(1); // лежит в «Убрано»
-  await page.locator('.hbtray [data-hbe="show:league"]').click({ force: true });
+  await page.locator('.hbtray [data-hbe="show:league"]').dispatchEvent('click'); // «Убрано» может лежать под нижней панелью — касание попало бы во вкладку
   await page.waitForTimeout(300);
   await expect(page.locator('.hblk[data-hb="week"] .hgstone')).toHaveCount(1); // вернулся в плитку
   void errors;

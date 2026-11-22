@@ -18,7 +18,7 @@ test('доступность: вкладки и инструменты', async (
       .map((x) => ({ id: x.id, nodes: x.nodes.map((n) => n.target.join(' ')) })));
     v.forEach((x) => x.nodes.filter((n) => !ALLOW.some((r) => r.test(n))).forEach((n) => bad.push(where + ' ' + x.id + ' ' + n)));
   };
-  for (const tab of ['home', 'songs', 'calendar', 'tools']) { await melete.tab(tab); await page.waitForTimeout(600); await run(tab); }
+  for (const tab of ['home', 'songs', 'calendar', 'tools']) { if (tab === 'calendar') { await melete.tab('home'); await page.waitForTimeout(400); await page.click('.hcal'); } else await melete.tab(tab); await page.waitForTimeout(600); await run(tab); }
   for (const id of await melete.modules()) { await melete.free('F', [id]); await run(id); }
   expect(bad).toEqual([]);
 });

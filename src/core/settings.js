@@ -156,7 +156,9 @@ export function setTheme(store, theme) {
 
 /* ---------- вкладки ---------- */
 
-export const DEFAULT_TABS = ['home', 'library', 'calendar', 'tools'];
+export const DEFAULT_TABS = ['home', 'library', 'tools'];
+// Календарь — не вкладка (слово автора 21.11.2026): открывается строкой на главной; из панели и порядка его убирают
+const NOT_TAB = ['calendar'];
 // Где появляется новая вкладка: «Библия» (церковный режим) — в середине, сразу после «Песен»
 const TAB_AFTER = { bible: 'library' };
 // «Слух» и «Ритм» стали главами одного инструмента «Слух и ритм» (06.11.2026): прежние места (вкладки, быстрый доступ,
@@ -189,6 +191,7 @@ export function tabsMigrate(settings) {
 // Вкладка, которой нет ни там, ни там (новая в обновлении), появляется в конце (у «Библии» — после «Песен»).
 // Хотя бы одна остаётся всегда.
 export function visibleTabs(settings, known) {
+  known = known.filter((k) => !NOT_TAB.includes(k));
   const off = settings.tabsOff || [];
   const list = (settings.tabs || DEFAULT_TABS).filter((k, i, a) => known.includes(k) && !off.includes(k) && a.indexOf(k) === i);
   known.forEach((k) => {
@@ -205,7 +208,7 @@ export function visibleTabs(settings, known) {
 // Вкладки, которые нельзя убрать с нижней панели
 export const FIXED_TABS = ['home', 'tools'];
 
-export const hiddenTabs = (settings, known) => known.filter((k) => !visibleTabs(settings, known).includes(k));
+export const hiddenTabs = (settings, known) => known.filter((k) => !NOT_TAB.includes(k) && !visibleTabs(settings, known).includes(k));
 
 // Действия на экране «Вкладки»: 'up' — выше, 'off' — убрать, 'on' — вернуть в конец
 // Новый порядок видимых вкладок (перетаскивание в «Вкладках»): только те, что уже видны

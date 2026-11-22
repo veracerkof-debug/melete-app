@@ -5,26 +5,26 @@ import { test, expect } from './melete.js';
 
 const tabs = (page) => page.evaluate(() => [...document.querySelectorAll('.tabbar .tab')].map((x) => x.dataset.tab).join(','));
 
-test('правка вкладок: календарь в инструменты и обратно, инструмент вкладкой', async ({ page, melete, errors }) => {
+test('правка вкладок: песни в инструменты и обратно, инструмент вкладкой', async ({ page, melete, errors }) => {
   await melete.open();
-  expect(await tabs(page)).toContain('calendar');
-  // удержание календаря — режим правки, ведение вверх — в «Инструменты»
-  let c = await page.locator('.tab[data-tab="calendar"]').boundingBox();
+  expect(await tabs(page)).toContain('library');
+  // удержание «Песен» — режим правки, ведение вверх — в «Инструменты»
+  let c = await page.locator('.tab[data-tab="library"]').boundingBox();
   await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2); await page.mouse.down(); await page.waitForTimeout(700);
   await expect(page.locator('html')).toHaveClass(/arrange/);
   await page.mouse.move(c.x + c.width / 2, c.y - 150, { steps: 8 }); await page.mouse.move(c.x + c.width / 2, c.y - 300, { steps: 8 });
   await page.mouse.up(); await page.waitForTimeout(500);
-  expect(await tabs(page)).not.toContain('calendar');
+  expect(await tabs(page)).not.toContain('library');
   await expect(page.locator('.arrghost')).toHaveCount(0); // призрак (в обёртках классов) убран целиком
   // главную не унести
   await expect(page.locator('.tab[data-tab="home"] .arrb')).toHaveCount(0);
-  // в «Инструментах» — карточка календаря; ведение на полосу перед «Песнями» — снова вкладка
+  // в «Инструментах» — карточка «Песен»; ведение на полосу перед «Инструментами» — снова вкладка
   await page.click('.tab[data-tab="tools"]'); await page.waitForTimeout(800);
-  c = await page.locator('.tgrid [data-open-tool="calendar"]').boundingBox();
-  const lib = await page.locator('.tab[data-tab="library"]').boundingBox();
+  c = await page.locator('.tgrid [data-open-tool="library"]').boundingBox();
+  const lib = await page.locator('.tab[data-tab="tools"]').boundingBox();
   await page.mouse.move(c.x + 30, c.y + 30); await page.mouse.down(); await page.mouse.move(c.x + 50, c.y + 50, { steps: 4 });
   await page.mouse.move(lib.x + 5, lib.y + lib.height / 2, { steps: 12 }); await page.mouse.up(); await page.waitForTimeout(500);
-  expect(await tabs(page)).toBe('home,calendar,library,tools');
+  expect(await tabs(page)).toBe('home,library,tools');
   // «+» у метронома — вкладкой; «−» — обратно
   await page.locator('.tgrid [data-open-tool="metro"] .arrb.in').click({ force: true }); await page.waitForTimeout(400);
   expect(await tabs(page)).toContain('metro');
@@ -38,8 +38,8 @@ test('правка вкладок: календарь в инструменты 
   await page.click('[data-arr="done"]'); await page.waitForTimeout(300);
   await expect(page.locator('html')).not.toHaveClass(/arrange/);
   // без правки карточка страницы открывает её
-  await page.locator('.tab[data-tab="calendar"]').click(); await page.waitForTimeout(300);
-  await expect(page.locator('.tab[data-tab="calendar"]')).toHaveAttribute('aria-current', 'page');
+  await page.locator('.tab[data-tab="library"]').click(); await page.waitForTimeout(300);
+  await expect(page.locator('.tab[data-tab="library"]')).toHaveAttribute('aria-current', 'page');
 });
 
 test('«Минимал»: три вкладки (с 06.11.2026 и «Инструменты»), значки и на главной', async ({ page, melete, errors }) => {
