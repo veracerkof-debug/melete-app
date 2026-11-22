@@ -42,7 +42,7 @@
 .bj{color:var(--red)}
 .bins,.bem,.bq{font-style:italic}
 .bins{color:var(--l2)}
-.bpb{display:block;height:.6em}
+.bpbrk{display:block;height:.6em}
 .bsub{font-family:var(--font);font-weight:600;font-size:.82em;color:var(--l2);margin:14px 0 4px;line-height:1.35}
 .bsub:first-child{margin-top:0}
 .bv{border-radius:4px;transition:background-color .8s}

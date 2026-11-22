@@ -34,11 +34,11 @@ export function renderVerse(raw, { prefix = 'H', strong = true } = {}) {
     } else if (m[4]) {
       const t = m[4].toLowerCase(), cls = { j: 'bj', i: 'bins', e: 'bem', t: 'bq' }[t];
       out += m[3] ? '</span>' : '<span class="' + cls + '">';
-    } else if (m[5]) out += m[5].toLowerCase() === 'pb' ? '<span class="bpb"></span>' : '<br>';
+    } else if (m[5]) out += m[5].toLowerCase() === 'pb' ? '<span class="bpbrk"></span>' : '<br>';
     else if (m[6] != null) out += esc(unesc(m[6]));
   }
   // незакрытые <J>/<i>/<e>/<t> закрываются
-  const open = (out.match(/<span class="(bj|bins|bem|bq)">/g) || []).length - (out.match(/<\/span>/g) || []).length + (out.match(/<span class="(bnote|bhd|bpb)">/g) || []).length;
+  const open = (out.match(/<span class="(bj|bins|bem|bq)">/g) || []).length - (out.match(/<\/span>/g) || []).length + (out.match(/<span class="(bnote|bhd|bpbrk)">/g) || []).length;
   return out + '</span>'.repeat(Math.max(0, open));
 }
 
