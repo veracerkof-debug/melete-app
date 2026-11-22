@@ -136,3 +136,53 @@
 .lvch .lvdone svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .pane .lvwrap:has(.lvkp) .atwrap{flex:1 0 84px}
 .lvfret{grid-auto-rows:25px}
+
+/* Редактор нот и табов (editor.js): окно на весь экран — стан занимает почти всё, ввод — одна полоса снизу (сворачивается) */
+.ned{position:fixed;inset:0;z-index:39;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);animation:fade .18s}
+.ned.leaving{opacity:0;transition:opacity .16s}
+.nedtop{display:flex;align-items:center;gap:2px;flex:none;min-height:48px;padding:0 4px;border-bottom:.5px solid var(--sep)}
+.edb{border:0;background:none;color:var(--ink);font:inherit;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.edb:disabled{opacity:.3;pointer-events:none}
+.edb.ico{width:42px;height:42px;border-radius:12px;flex:none}
+.edb.ico svg,.edb.chp svg,.edb.dur svg,.edb.tc svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.edb.ico.on{background:var(--tint);color:var(--on-tint);border-radius:50%}
+.edb:active{background:var(--fill)}
+.edttl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:0 6px;height:42px;cursor:pointer}
+.edname{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edsave{font-size:11px;color:var(--l2);flex:none}.edsave.dirty{color:var(--tint)}
+.edtr{flex:none;max-width:34%;height:34px;padding:0 10px;border-radius:999px;border:1px solid var(--sep);background:none;color:var(--ink);font:inherit;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.nedscore{flex:1;min-height:0;overflow:auto;background:white;position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.nedscore .atsurf{min-height:100%}
+.ned .athl{display:none}
+.nedpos{position:absolute;left:10px;bottom:calc(var(--edock,230px) + 8px + env(safe-area-inset-bottom,0px));padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--cell) 90%,transparent);color:var(--l2);font-size:12px;pointer-events:none;box-shadow:0 1px 6px rgba(0,0,0,.12);z-index:2}
+.edcur{position:absolute;z-index:3;pointer-events:none;border-radius:7px;background:color-mix(in srgb,var(--tint) 22%,transparent);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--tint) 65%,transparent)}
+.edbar{position:absolute;z-index:2;pointer-events:none;background:color-mix(in srgb,var(--tint) 18%,transparent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tint) 55%,transparent);border-radius:4px}
+.neddock{flex:none;display:flex;flex-direction:column;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-top:.5px solid var(--sep);background:var(--bg);max-height:46vh;overflow:auto}
+.neddock.hid{padding-top:2px;padding-bottom:calc(2px + env(safe-area-inset-bottom,0px))}
+.edrow{display:flex;gap:3px;flex:none}
+.edrow>.edb{flex:1;min-width:0;height:42px;border-radius:12px;background:var(--cell)}
+.edrow>.edb.on{background:var(--tint);color:var(--on-tint)}
+.edrow.durs .dur b{font-size:20px;line-height:1}
+.edb.chp{gap:4px;font-size:12px;font-weight:600}.edb.chp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edfret{--cell-h:34px;grid-auto-rows:var(--cell-h)!important;gap:2px!important}
+.edfret .lvfc{min-height:0;font-size:14px}
+.edfret .lvfh{height:20px!important;font-size:12px!important;border:0;cursor:pointer}
+.edkbtop{display:flex;justify-content:center;padding:0}
+.edbase{font-size:12px;color:var(--l2);padding:2px 12px;touch-action:none;cursor:ew-resize}
+.edpiano{height:92px!important}
+.edtech{display:flex;flex-wrap:wrap;gap:6px;padding:4px 2px}
+.edtech .tc{min-height:42px;padding:0 12px;border-radius:999px;border:1px solid var(--sep);font-size:14px;font-weight:600;gap:6px;flex:none}
+.edtech .tc.on{background:var(--tint);color:var(--on-tint);border-color:transparent}
+.edtech.bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:2px 0}
+.edtech.bars .tc{min-width:0;overflow:hidden}
+.edtech.bars .tc span{overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
+.edtech.bars .tc.big{flex-direction:row;border-radius:12px;min-height:42px;font-size:13px;padding:2px 4px;gap:4px;line-height:1.1;text-align:center;border:1px solid var(--sep)}
+.edtech.bars .tc.big svg{width:18px;height:18px;flex:none}
+.edtech.bars .tc.big.fill{background:var(--tint);color:var(--on-tint);font-size:14px;border-color:transparent;grid-column:span 2}
+.edbh{grid-column:span 2;font-weight:700;font-size:14px;display:flex;flex-direction:column;justify-content:center;padding:0 4px;line-height:1.2}
+.edbh small{font-weight:400;font-size:11px;color:var(--l2)}
+.pane .ned{position:fixed}
+@media (orientation:landscape) and (max-height:480px){
+  .nedtop{min-height:42px}.edb.ico{height:36px}
+  .neddock{max-height:58vh}
+}

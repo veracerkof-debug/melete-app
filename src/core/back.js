@@ -17,6 +17,7 @@ export function backStep(app) {
   if (document.getElementById('onboard')) return click('#onboard [data-obback]') || false;
   if (click('.pdffull [data-x="pfull0"]')) return true; // PDF во весь экран
   if (closeTopSheet()) return true;
+  if (document.querySelector('.ned:not(.leaving)')) return click('.ned [data-e="close"]'); // редактор нот: «Назад» — выход (правка сохраняется сама)
   const calm = document.querySelector('.session.calm');
   if (calm && calm.parentElement.calmExit && calm.parentElement.calmExit()) return true; // фокус: «назад» возвращает панель
   if (click('.bwrap.bselm [data-x="bsel0"]')) return true; // Библия: выбор стихов

@@ -21,6 +21,7 @@ import { readMidi, takeDur } from '../../music/midi.js';
 import { sniffScore } from './sniff.js';
 import { asciiToTex } from '../../music/asciitab.js';
 import { createLive } from './live.js';
+import { createEditor } from './editor.js';
 // Шрифт нот и звуковой банк — файлы проекта, никаких CDN
 import BRAVURA from '@coderline/alphatab/font/Bravura.woff2?url';
 import SONIVOX from '@coderline/alphatab/soundfont/sonivox.sf3?url';
@@ -46,7 +47,7 @@ const ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.gp8,.xml,.musicxml,.mxl,.cap,.capx
 const FMT_NAMES = { pdf: 'PDF', gp345: 'Guitar Pro 3–5', gpx: 'Guitar Pro 6', gp7: 'Guitar Pro 7/8', mxl: 'MusicXML', musicxml: 'MusicXML', capella: 'Capella', ascii: 'ASCII', text: 'TXT' };
 
 let dropped = null; // файлы, перетащенные в окно до того, как модуль открылся (src/core/drop.js)
-let host = null, ctx = null, size = 'full', input = null, offs = [], live = null;
+let host = null, ctx = null, size = 'full', input = null, offs = [], live = null, editor = null;
 const st = () => ctx.store.all();
 const scaleOf = () => (+st().scale > 0 ? +st().scale : 1); // масштаб стана; нет в настройках — 1 (иначе alphaTab рисует в ноль)
 const tabs = () => ctx.files.list('tab');
@@ -66,7 +67,7 @@ const loadLib = () => AT.lib || (AT.lib = import('@coderline/alphatab').catch((e
 // Партия без струн (ноты из студии, фортепиано) в профиле «только табы» не рисуется — для неё нотный стан
 const stringed = (sc) => !sc || sc.tracks.some((tr) => tr.staves.some((x) => x.tuning && x.tuning.length));
 // MIDI и файлы студий: у каждой партии свой стан — гитара и бас табулатурой (строй из MusicXML), остальные нотами
-const prof = (at) => (isLive() ? liveProf(at) : st().prof === 'both' ? at.StaveProfile.ScoreTab : isDaw(AT.cur) ? at.StaveProfile.Default : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
+const prof = (at) => (AT.ed ? at.StaveProfile.Default : isLive() ? liveProf(at) : st().prof === 'both' ? at.StaveProfile.ScoreTab : isDaw(AT.cur) ? at.StaveProfile.Default : stringed(AT.score) ? at.StaveProfile.Tab : at.StaveProfile.Score);
 // Партия с игры: ноты и табы вместе (по умолчанию), только ноты или только табы; без струн — ноты
 const isLive = () => !!(AT.cur && AT.cur.fmt === 'live');
 // (стан и таб — флагами партии при загрузке, профиль — «как в файле»)
@@ -236,8 +237,8 @@ function ensureApi(at) {
     });
     AT.api.scoreLoaded.on((sc) => { if (isLive()) liveStaves(sc); const was = AT.score; AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); if (stringed(was) !== stringed(sc)) restyle(); render(); });
     // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
-    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); if (live && isLive()) live.markBars(); });
-    if (AT.api.postRenderFinished) AT.api.postRenderFinished.on(() => { if (live && isLive()) live.markBars(); }); // границы тактов и долей готовы только здесь — курсор ввода и выделенные такты ставятся по свежей раскладке
+    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); if (live && isLive()) live.markBars(); if (AT.ed) AT.ed.marks(); });
+    if (AT.api.postRenderFinished) AT.api.postRenderFinished.on(() => { if (live && isLive()) live.markBars(); if (AT.ed) AT.ed.marks(); }); // границы тактов и долей готовы только здесь — курсор ввода и выделенные такты ставятся по свежей раскладке
     // партия с игры: касание ноты — правка, касание паузы — новая нота, такты — выбор
     AT.api.noteMouseDown.on((n) => { if (live && isLive()) live.onNote(n); });
     AT.api.beatMouseDown.on((b) => { if (live && isLive()) live.onBeat(b); });
@@ -311,6 +312,7 @@ function setTrack(i) {
 
 // Поверхность alphaTab живёт между перерисовками окна: переносим её в новое место
 function attach() {
+  if (AT.ed && AT.ed.on) return; // стан сейчас в окне редактора
   const slot = host && host.querySelector('#atSlot');
   if (slot && AT.el && AT.el.parentNode !== slot) {
     slot.appendChild(AT.el);
@@ -345,6 +347,7 @@ function playerSetup() {
     });
     api.playerStateChanged.on((e) => {
       ATP.playing = e.state === 1;
+      if (AT.ed) AT.ed.played(ATP.playing);
       const b = host && host.querySelector('#atplay');
       if (b) b.innerHTML = ATP.playing ? I.pause : I.play;
       if (AT.hl) AT.hl.classList.toggle('play', ATP.playing);
@@ -475,6 +478,7 @@ function scoreView() {
       ? '<div class="chips nowrap sgrow">' + tr.map((x, i) => '<button class="chip' + (i === AT.track ? ' on' : '') + '" data-x="ttrack" data-i="' + i + '">' + esc(x.name || t('trackN', { n: i + 1 })) + '</button>').join('') + '</div>'
       : '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>') +
     icb('data-x="tzoom" data-d="-1"', I.minus, t('smaller'), 'sm') + icb('data-x="tzoom" data-d="1"', I.plus, t('bigger'), 'sm') +
+    (AT.score && big() ? icb('data-x="ted"', I.pen, t('ed.edit'), 'sm') : '') +
     '<button class="ic txt sm' + (st().prof === 'both' ? ' act' : '') + '" data-x="tprof" aria-pressed="' + (st().prof === 'both') + '" aria-label="' + t('scoreTab') + '">♪+T</button>' +
     (daw && AT.proj && ctx.hasTool('looper') ? '<button class="btn sm" data-x="dstudio">' + t('toStudio') + '</button>' : '') + '</div>' +
     (big() ? barHTML() : '') + '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + ctx.ui.loader('beat', AT.cur.name) + '</div>' : '') + '</div>';
@@ -554,6 +558,7 @@ function html() {
 
 function render() {
   if (!host || !ctx) return;
+  if (AT.ed && AT.ed.on) return; // редактор открыт на весь экран — окно модуля под ним не трогаем
   host.innerHTML = html();
   attach();
 }
@@ -728,6 +733,7 @@ async function onFile(e) {
 }
 
 function act(a, el) {
+  if (a === 'lvblank') { editor.openNew(); return; } // «Писать ноты и табы» — редактор (editor.js); запись с инструмента — прежняя партия с игры
   if (a.startsWith('lv') && live && live.act(a, el)) return;
   const { t, ui } = ctx, x = el.dataset.id ? ctx.files.get(el.dataset.id) : null;
   switch (a) {
@@ -753,6 +759,7 @@ function act(a, el) {
     case 'tlist': tabSheet(); break;
     case 'tpaste': pasteSheet(); break;
     case 'dstudio': toStudio(); break;
+    case 'ted': if (AT.cur) editor.openRec(AT.cur); break;
     case 'pzoom': if (PDF.view) PDF.view.zoomBy(+el.dataset.d); break;
     case 'pfit': if (PDF.view) PDF.view.fit(); break;
     case 'pgo': if (PDF.view) PDF.view.go(PDF.page + +el.dataset.d); break;
@@ -793,6 +800,7 @@ export default {
     if (!live) live = createLive({ get ctx() { return ctx; }, st, esc, icb, I, AT, loadLib, ensureApi, render, fontUrl: BRAVURA, host: () => host,
       setProf: (at) => { if (AT.api) { AT.api.settings.display.staveProfile = prof(at); AT.api.settings.notation.elements.set(at.NotationElement.GuitarTuning, false); AT.api.updateSettings(); } },
       playBtns: () => '<button class="ic sm" id="atplay" data-x="atplay" aria-label="' + ctx.t('playTab') + '">' + (ATP.playing ? I.pause : I.play) + '</button>' });
+    if (!editor) editor = createEditor({ get ctx() { return ctx; }, st, esc, AT, loadLib, ensureApi, restyle, render, togglePlay, openTab, fontUrl: BRAVURA });
     input = document.createElement('input');
     input.type = 'file';
     if (!Capacitor.isNativePlatform()) input.accept = ACCEPT; // на Android без фильтра: у .gpx, .als, .rpp… нет своего типа — система показывала их серыми
@@ -824,6 +832,7 @@ export default {
   resize(sz) { size = sz; render(); },
   // Окно закрыто: табулатура останавливается, сама поверхность остаётся для быстрого повторного открытия
   unmount() {
+    if (editor && editor.on) editor.close();
     if (live && !ctx.session) live.close(); // в занятии окно может вернуться — запись идёт дальше
     offs.splice(0).forEach((f) => (typeof f === 'function' ? f() : null));
     if (input) { input.remove(); input = null; }
