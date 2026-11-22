@@ -182,11 +182,15 @@ export function createEditor(env) {
 
   /* ---------- стан: отрисовка и курсор ---------- */
 
+  // Отрисовки идут по одной: пока alphaTab рисует прежнюю партитуру, новая ждёт (накладка отрисовок роняет раскладку); ждёт только последняя
   function draw(first = false) {
-    if (S.drawQ) return;
+    S.again = true;
+    if (S.drawQ || S.busy) return;
     S.drawQ = requestAnimationFrame(async () => {
       S.drawQ = 0;
-      if (!S.on || !AT.api) return;
+      if (!S.on || !AT.api || !S.again) return;
+      S.again = false; S.busy = true;
+      clearTimeout(S.busyT); S.busyT = setTimeout(() => { S.busy = false; if (S.again) draw(); }, 4000); // отрисовка не вернулась — не застреваем
       try {
         const at = await lib();
         S.score = E.toScore(S.doc);
@@ -195,9 +199,11 @@ export function createEditor(env) {
         s.notation.elements.set(at.NotationElement.GuitarTuning, true);
         if (first || s.display.scale !== scale()) { s.display.scale = scale(); AT.api.updateSettings(); }
         AT.api.renderScore(S.score, [Math.min(S.loc.t, S.score.tracks.length - 1)]);
-      } catch (e) { C().logErr(e); }
+      } catch (e) { S.busy = false; C().logErr(e); }
     });
   }
+  // alphaTab закончил рисовать: следующая отрисовка, если правка пришла за это время
+  function rendered() { S.busy = false; clearTimeout(S.busyT); if (S.again) draw(); }
   const scale = () => (+env.st().edScale > 0 ? +env.st().edScale : 0.9);
   const curBeat = () => {
     const sc = S.score; if (!sc) return null;
@@ -684,7 +690,8 @@ export function createEditor(env) {
   // alphaTab → редактор (из index.js): отрисовка закончена — курсор и выбранные такты на место
   const api = {
     get on() { return S.on; },
-    marks,
+    marks() { if (S.on) { marks(); } },
+    rendered,
     played(on) { S.playing = on; badge(); },
     closeTop() { if (S.mode === 'bars') { endBars(); return true; } if (S.mode === 'tech') { S.mode = 'pad'; dock(); return true; } close(); return true; },
   };

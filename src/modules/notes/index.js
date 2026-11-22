@@ -237,7 +237,7 @@ function ensureApi(at) {
     });
     AT.api.scoreLoaded.on((sc) => { if (isLive()) liveStaves(sc); const was = AT.score; AT.score = sc; AT.track = 0; AT.state = 'ready'; hlHide(); if (stringed(was) !== stringed(sc)) restyle(); render(); });
     // подсветка играемого места — заново после каждой отрисовки (масштаб, вид, дорожка)
-    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); if (live && isLive()) live.markBars(); if (AT.ed) AT.ed.marks(); });
+    AT.api.renderFinished.on(() => { if (AT.beat) hlPlace(AT.beat, false); if (live && isLive()) live.markBars(); if (AT.ed) { AT.ed.rendered(); AT.ed.marks(); } });
     if (AT.api.postRenderFinished) AT.api.postRenderFinished.on(() => { if (live && isLive()) live.markBars(); if (AT.ed) AT.ed.marks(); }); // границы тактов и долей готовы только здесь — курсор ввода и выделенные такты ставятся по свежей раскладке
     // партия с игры: касание ноты — правка, касание паузы — новая нота, такты — выбор
     AT.api.noteMouseDown.on((n) => { if (live && isLive()) live.onNote(n); });
