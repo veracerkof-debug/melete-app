@@ -88,3 +88,26 @@ test('сцена без песен: метроном одной кнопкой, 
   await expect(page.locator('.sgbpm.on')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test('сцена: панель табов — файл песни рисуется на сцене, щипок-масштаб без ошибок', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const songs = [{ id: 's1', title: 'С табами', key: 'C', targetBpm: 90, notes: 'C   G\nСлова', created: Date.now() }, { id: 's2', title: 'Без табов', key: 'G', targetBpm: 100, notes: 'Слова', created: Date.now() }];
+  await melete.open({ songs });
+  await page.evaluate(async () => {
+    const tab = ['e|-----0-----0---|', 'B|---1-----1-----|', 'G|-0-------0-----|', 'D|---------------|', 'A|---------------|', 'E|---------------|'].join('\n');
+    await window.__melete.files.add({ id: 'tb1', kind: 'tab', name: 'riff.txt', blob: new Blob([tab], { type: 'text/plain' }), size: tab.length, songs: ['s1'], fmt: 'ascii', det: 'ascii', created: Date.now() });
+  });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  await page.click('[data-sgw="s1"]'); await page.click('[data-sgw="s2"]'); await page.click('[data-sgwgo]'); await page.waitForTimeout(800);
+  await expect(page.locator('[data-sgt="tab"]')).toHaveCount(1); // у первой песни есть табы
+  await page.click('[data-sgt="tab"]');
+  await expect(page.locator('.sgscore')).toHaveCount(1);
+  await expect(page.locator('.sgsurfhost svg, .sgscoretxt').first()).toBeVisible({ timeout: 30_000 });
+  // следующая песня без табов — панель уходит, чип скрыт
+  await page.click('[data-sg="next"]'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-sgt="tab"]')).toHaveCount(0);
+  await expect(page.locator('.sgscore')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

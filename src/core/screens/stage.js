@@ -20,6 +20,7 @@ import { saveEvent, liveEvents } from '../calendar.js';
 import { setlistsOf } from '../metrosets.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
+import { fileSongs } from '../files.js';
 import { swipe, pinch } from '../../ui/gestures.js';
 import { onHold, holdMenu } from '../../ui/hold.js';
 import { outBtnHTML, bindOutput, outRefresh } from './outputsheet.js';
@@ -140,7 +141,7 @@ export function openStage(app, evId, i = 0) {
   // барабанные пэды с залом и эхом, темп по касанию, блокировка (слово автора 22.11.2026: один экран, управляющий всем)
   const ss = (k, d) => { try { const v = sessionStorage.getItem('melete.stage.' + k); return v == null ? d : v; } catch { return d; } };
   const sset = (k, v) => { try { sessionStorage.setItem('melete.stage.' + k, v); } catch { /* */ } };
-  Object.assign(S, { eng: null, held: new Map(), freeBpm: +ss('freeBpm', 0) || 0, freeKey: null, view: ss('view', 'text'), showPads: ss('pads', '1') === '1', space: +ss('space', 0.6), echo: +ss('echo', 0.4), taps: [], locked: false, hushed: false, fade: 0 });
+  Object.assign(S, { eng: null, held: new Map(), freeBpm: +ss('freeBpm', 0) || 0, freeKey: null, view: ss('view', 'text'), score: null, scoreId: '', scoreKind: null, showPads: ss('pads', '1') === '1', space: +ss('space', 0.6), echo: +ss('echo', 0.4), taps: [], locked: false, hushed: false, fade: 0 });
   const pedalMode = () => (app.store.state.settings.stagePedal === 'song' ? 'song' : 'page'); // педаль листает страницу или песню
   const list = () => { const ev = evOf(app, evId); return ev ? setSongs(ev, app.store.songById) : []; };
   const item = () => { const ev = evOf(app, evId), s = list()[S.i]; return ev && s ? { s, it: itemOf(ev, s, audioFiles(app)) } : null; };
@@ -391,6 +392,8 @@ export function openStage(app, evId, i = 0) {
     const wasPad = S.padOn;
     stop({ keepPad: wasPad });
     S.i = j;
+    S.scoreId = ''; S.scoreKind = null;
+    if (S.view === 'tab' && !tabsOf().length) { S.view = 'text'; }
     remember();
     const x = item();
     if (wasPad) { if (x && x.it.pad) startPad(x.it); else stopPad(); } // пэд — связка между песнями
@@ -410,6 +413,7 @@ export function openStage(app, evId, i = 0) {
     }
     else if (k === 'track') { if (!x) return; if (S.track) stopTrack(); else if (x.it.track) startTrack(x.it); }
     else if (k === 'pads') { S.showPads = !S.showPads; sset('pads', S.showPads ? '1' : '0'); }
+    else if (k === 'tab') { S.view = S.view === 'tab' ? 'text' : 'tab'; sset('view', S.view); S.scoreKind = S.score && S.score.id === S.scoreId ? S.scoreKind : null; }
     else if (k === 'mix') { mixSheet(); return; }
     else if (k === 'view') { S.view = S.view === 'list' ? 'text' : 'list'; sset('view', S.view); }
     render();
@@ -418,6 +422,34 @@ export function openStage(app, evId, i = 0) {
   // Список песен как экран музыканта: номер, название, тональность, темп, заметка автора; касание — по настройке «реакция»
   const TAPS = ['open', 'play', 'mark', 'sheet'];
   const tapAct = () => { const v = app.store.state.settings.stageTap; return TAPS.includes(v) ? v : 'open'; };
+  // Табы и ноты песни (файлы «Табы и ноты», привязанные к ней): панель на сцене, просмотр — stagescore.js (грузится при первом открытии)
+  const tabsOf = () => { const x = item(); return x && app.files ? app.files.list('tab').filter((r) => fileSongs(r).includes(x.s.id)) : []; };
+  const scoreOpen = async () => {
+    if (S.scoreBusy) return;
+    S.scoreBusy = true;
+    try { await scoreOpen1(); } finally { S.scoreBusy = false; }
+  };
+  const scoreOpen1 = async () => {
+    const fs = tabsOf(), rec = fs.find((r) => r.id === S.scoreId) || fs[0];
+    if (!rec) { S.view = 'text'; sset('view', 'text'); render(); return; }
+    S.scoreId = rec.id;
+    if (!S.score) {
+      try { const m = await import('./stagescore.js'); S.score = m.createScoreView({ scale: +ss('scoreScale', 0.85), onFail: (e) => logErr('stage', e) }); } catch (e) { logErr('stage', e); S.scoreKind = { kind: 'error' }; render(); return; }
+    }
+    if (S.score.id === rec.id && S.scoreKind) return;
+    const full = app.files.get(rec.id) || rec;
+    S.scoreKind = null;
+    const k = await S.score.open(full);
+    if (!S.el || S.scoreId !== rec.id) return;
+    S.scoreKind = k;
+    render();
+  };
+  const scoreHTML = () => {
+    const fs = tabsOf(), k = S.scoreKind;
+    return '<div class="sgscore">' + (fs.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + fs.map((r) => '<button class="sgchip' + (r.id === S.scoreId ? ' on' : '') + '" role="tab" data-sgtab="' + esc(r.id) + '" aria-selected="' + (r.id === S.scoreId) + '">' + esc(r.name) + '</button>').join('') + '</div>' : '') +
+      (!k ? '<p class="sgscoremsg">' + esc(t('stage.scoreLoad')) + '</p>' : k.kind === 'pdf' ? '<p class="sgscoremsg">' + esc(t('stage.scorePdf')) + '</p>' : k.kind === 'error' ? '<p class="sgscoremsg">' + esc(t('stage.scoreFail')) + '</p>' :
+        k.kind === 'text' ? '<pre class="sgscoretxt">' + esc(k.text) + '</pre>' : '<div class="sgsurfhost"></div>') + '</div>';
+  };
   const listHTML = (L) => {
     const ev = evOf(app, evId);
     if (!L.length) return '<div class="sgbig free"><button class="btn fill" data-sg="list">' + esc(t('stage.pickSongs')) + '</button></div>';
@@ -455,7 +487,7 @@ export function openStage(app, evId, i = 0) {
       '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
       '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      (S.view === 'list' || free ? (free && S.view !== 'list' ? '<div class="sgtext"><div class="sgbig free">' + esc(t('stage.freeHint')) + '<br><button class="btn" data-sg="list">' + esc(t('stage.pickSongs')) + '</button></div></div>' : '<div class="sgtext">' + listHTML(L) + '</div>') :
+      (S.view === 'tab' && !free ? scoreHTML() : S.view === 'list' || free ? (free && S.view !== 'list' ? '<div class="sgtext"><div class="sgbig free">' + esc(t('stage.freeHint')) + '<br><button class="btn" data-sg="list">' + esc(t('stage.pickSongs')) + '</button></div></div>' : '<div class="sgtext">' + listHTML(L) + '</div>') :
         '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? (it.scroll ? '<i class="sgprog" aria-hidden="true"><i></i></i>' : '') + '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
           '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>') +
       (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') +
@@ -466,7 +498,7 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
       '<div class="sgchips">' + chip('pad', pad, t('stage.pad') + (pad || free ? ' ' + NOTES[pc] : it && it.key ? ' ' + keyLabel(it.key) : '')) +
-        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('pads', S.showPads, t('stage.sounds')) + chip('mix', false, t('stage.mix')) + chip('view', S.view === 'list', t('stage.listView')) +
+        chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('pads', S.showPads, t('stage.sounds')) + chip('mix', false, t('stage.mix')) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('view', S.view === 'list', t('stage.listView')) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
       (pad || free ? '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>' : '') +
       (S.showPads ? padsHTML() : '') +
@@ -476,6 +508,11 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgbtn" data-sg="next"' + (S.i < L.length - 1 ? '' : ' disabled') + ' aria-label="' + esc(t('stage.nextBtn')) + '">' + I.next + '</button>') + '</div>' +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
+    if (S.view === 'tab' && !free) {
+      const hh = S.el.querySelector('.sgsurfhost');
+      if (hh && S.score) { hh.appendChild(S.score.el); if (S.score.el.dataset.w !== String(hh.clientWidth)) { S.score.el.dataset.w = hh.clientWidth; S.score.relayout(); } }
+      if (!S.score || !S.scoreKind) scoreOpen();
+    }
     outRefresh(app, S.el);
     fit();
   };
@@ -519,6 +556,7 @@ export function openStage(app, evId, i = 0) {
       else if (a === 'exit') confirm(t('stage.exitTitle'), t('stage.exitText'), t('stage.exitYes')).then((ok) => ok && close());
     } else if ((b = e.target.closest('[data-sgt]'))) toggle(b.dataset.sgt);
     else if ((b = e.target.closest('[data-sgbank]'))) { sd().bank = b.dataset.sgbank; S.bank = b.dataset.sgbank; app.saveDevice(); render(); }
+    else if ((b = e.target.closest('[data-sgtab]'))) { S.scoreId = b.dataset.sgtab; S.scoreKind = null; render(); }
     else if ((b = e.target.closest('[data-sgrow]'))) rowTap(+b.dataset.sgrow);
     else if ((b = e.target.closest('[data-sgbpm]'))) setBpm(curBpm() + +b.dataset.sgbpm);
     else if ((b = e.target.closest('[data-sgseek]'))) { // перемотка минусовки касанием полосы
@@ -557,6 +595,7 @@ export function openStage(app, evId, i = 0) {
   const close = (silent = false) => {
     stop();
     if (S.eng) { S.eng.dispose(); S.eng = null; }
+    if (S.score) { S.score.destroy(); S.score = null; }
     if (S.offBeat) S.offBeat();
     // всё, что сцена меняла, — как было
     audio.metro.cfg = metro0;
@@ -637,7 +676,9 @@ export function openStage(app, evId, i = 0) {
   onHold(S.el, '[data-sgunlock]', () => { S.locked = false; render(); }, 700); // блокировка снимается удержанием замка
   // жесты: смахнуть влево — следующая песня, вправо — прошлая (длинное уверенное движение — случайно не сработает);
   // щипок по тексту — размер шрифта (как A− и A+)
-  const offG = [swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys') }),
+  const offG = [pinch(S.el, { min: 4, max: 25, ok: (e) => !!e.target.closest('.sgscore') && !!S.score, get: () => Math.round(S.score.scale * 10),
+      set: (v, live) => { S.score.setScale(v / 10); if (!live) sset('scoreScale', S.score.scale); } }),
+    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys') }),
     pinch(S.el, { min: 14, max: 64, ok: (e) => !!e.target.closest('.sgtext'), get: () => S.fs,
       set: (v, live) => { S.fs = v; fit(); if (!live) try { sessionStorage.setItem('melete.stage.fs', v); } catch { /* */ } } })];
   S.i = Math.max(0, Math.min(list().length - 1, i));
