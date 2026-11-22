@@ -48,6 +48,17 @@ function nativeEngine() {
       const out = new Uint8Array(off); let p = 0; parts.forEach((u) => { out.set(u, p); p += u.length; });
       return out;
     },
+    // Длинная запись (час и больше — ~1 ГБ): файл порциями сразу в Blob, без склейки в один массив и без трёх копий в памяти
+    async readBlob(path) {
+      const blobs = []; let batch = [], held = 0, off = 0, size = Infinity;
+      while (off < size) {
+        const r = await V.read({ path, offset: off, length: CHUNK }); size = r.size; const u = unb64(r.data || ''); if (!u.length) break;
+        batch.push(u); held += u.length; off += u.length;
+        if (held >= 24 * 1048576) { blobs.push(new Blob(batch)); batch = []; held = 0; } // порция ушла в Blob — куски можно отпустить
+      }
+      if (batch.length) blobs.push(new Blob(batch));
+      return new Blob(blobs, { type: 'audio/wav' });
+    },
     async write(path, u8) { for (let off = 0; off < u8.length || off === 0; off += CHUNK) { await V.write({ path, data: b64(u8.subarray(off, off + CHUNK)), append: off > 0 }); if (!u8.length) break; } },
     remove: (path) => V.remove({ path }).catch(() => {}),
     // исходники записей в памяти (rec-*.wav): { path, size, at }

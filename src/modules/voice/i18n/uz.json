@@ -221,6 +221,7 @@
   "gr.lim": "Limit",
   "kept.saved": "mediatekada — asli 14 kun saqlanadi",
   "kept.cut": "yozuv uzilib qolgan — ochib saqlash mumkin",
+  "mark.src": "Kirish: {dev}",
   "lost.switch": "Kirish uzildi — yozish ichki mikrofondan davom etmoqda",
   "lost.stop": "Kirish uzildi — yozish toʻxtatildi, yozilganlarning hammasi saqlandi",
   "lost.space": "Joy tugayapti — yozish toʻxtatildi, yozilganlarning hammasi saqlandi",

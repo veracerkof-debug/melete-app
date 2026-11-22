@@ -17,6 +17,7 @@
   "trSyn": "Russian Synodal",
   "trSynSub": "66 books · built in",
   "trSub": "books: {n} · {mb} MB",
+  "together": "Read together",
   "trAdd": "Add a MyBible module",
   "trHint": "MyBible modules are .SQLite3 files (published on MyBible module sites). The 66 canonical books are used; commentaries and dictionaries are not needed. The module is stored only on this device. Psalm numbering follows the module.",
   "trDel": "Delete translation",

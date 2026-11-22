@@ -3,7 +3,7 @@
    «Пиано» — одна октава крупно: белые во всю высоту, чёрные поверх. */
 .dwrap{display:flex;flex-direction:column}
 .dgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:8px;height:min(68vh,640px);padding:2px}
-.dtile{position:relative;background:color-mix(in srgb,var(--tint) 7%,var(--cell));color:var(--ink);border-radius:18px;font-size:clamp(30px,6.4vh,52px);font-weight:500;letter-spacing:-.02em;
+.dtile{position:relative;background:color-mix(in srgb,var(--tint) 7%,var(--cell));color:var(--ink);border-radius:4px;font-size:clamp(30px,6.4vh,52px);font-weight:500;letter-spacing:-.02em;
   display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.05);
   transition:transform .14s ease,background .2s,color .2s,box-shadow .3s}
 .dtile.sh{background:color-mix(in srgb,var(--tint) 15%,var(--cell));color:color-mix(in srgb,var(--ink) 78%,var(--bg))}
@@ -17,7 +17,7 @@
 .dtile.on .csf{color:inherit;opacity:.82}
 @keyframes dbreath{
   0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--tint) 0%,transparent),inset 0 0 0 0 rgba(255,255,255,0);filter:brightness(1)}
-  50%{box-shadow:0 0 22px 3px color-mix(in srgb,var(--tint) 45%,transparent),inset 0 0 26px rgba(255,255,255,.18);filter:brightness(1.07)}
+  50%{box-shadow:0 0 26px 5px color-mix(in srgb,var(--tint) 70%,transparent),inset 0 0 30px rgba(255,255,255,.38);filter:brightness(1.28)}
 }
 .dkeys{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;height:min(68vh,640px);padding:2px;touch-action:none;user-select:none;-webkit-user-select:none}
 .dkey{display:flex;align-items:flex-end;justify-content:center;font-weight:600;transition:background .18s,color .18s,transform .1s;touch-action:none}
@@ -44,10 +44,10 @@
 .dstop:active,.lay:active,.dlatch:active{transform:scale(.9)}
 .pane .dwrap{flex:1;min-height:0}
 .pane .dgrid,.pane .dkeys{flex:1;height:auto;margin:0;min-height:0}
-.pane .dtile{font-size:clamp(18px,10cqmin,56px);border-radius:14px}
+.pane .dtile{font-size:clamp(18px,10cqmin,56px);border-radius:4px}
 .pane .dbar{padding-top:8px}
-.pane.strip .dtile{font-size:clamp(14px,20cqh,28px);border-radius:10px}
-.pane.quarter .dtile{font-size:clamp(14px,9cqmin,34px);border-radius:12px}
+.pane.strip .dtile{font-size:clamp(14px,20cqh,28px);border-radius:3px}
+.pane.quarter .dtile{font-size:clamp(14px,9cqmin,34px);border-radius:3px}
 .pane.quarter .dgrid,.pane.strip .dgrid{gap:5px}
 .pane.strip .dkey.w{padding-bottom:4px;font-size:12px}
 .pane.strip .dkey.b{padding-bottom:3px;font-size:10px}
@@ -132,5 +132,7 @@
   .pane.full .dbar{flex-wrap:wrap;row-gap:6px;justify-content:space-evenly}
   .pane.full .dbar .layers{order:-1;flex:1 1 100%}
 }
-/* Диезы и бемоли — темнее, чтобы отличались от натуральных ступеней (слово автора 21.11.2026) */
-.dtile.sh{background:color-mix(in srgb,var(--tint) 30%,var(--cell));color:var(--ink)}
+/* Диезы и бемоли — как прежде (слово автора 22.11.2026: 30 % было слишком ярко; остаётся 15 % из первых правил) */
+
+/* Пэды — до верхнего края окна: без полосы-«чёлки» над плитками (слово автора 22.11.2026) */
+.session .ws .pane.toolhost:has(.dwrap.bleed){padding-top:0!important}

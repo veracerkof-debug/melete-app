@@ -44,4 +44,16 @@ describe('файлы', () => {
     expect(f.get('big').unsaved).toBe(true);
     expect(f.noDb).toBeFalsy();
   });
+
+  it('умершее соединение (InvalidStateError): база открывается заново, запись не теряется', async () => {
+    let opened = 0;
+    const store = { getAll: () => ({ result: [] }), put: () => ({}) };
+    const conn = (dead) => ({ transaction() { if (dead) throw new DOMException('closing', 'InvalidStateError'); const t = { objectStore: () => store }; setTimeout(() => t.oncomplete(), 0); return t; } });
+    const idb = { open() { const r = {}, db = conn(opened++ === 0); setTimeout(() => { r.result = db; r.onsuccess(); }, 0); return r; } };
+    const f = createFiles({ indexedDB: idb });
+    await f.ready;
+    expect(await f.add({ id: 'v1', name: 'rec' })).toBe(true); // первое соединение «умерло» — второе рабочее
+    expect(f.noDb).toBe(false);
+    expect(opened).toBe(2);
+  });
 });

@@ -221,6 +221,7 @@
   "gr.lim": "Limit",
   "kept.saved": "in the library — source kept for 14 days",
   "kept.cut": "recording was cut off — open and save",
+  "mark.src": "Input: {dev}",
   "lost.switch": "Input disconnected — recording continues from the built-in mic",
   "lost.stop": "Input disconnected — recording stopped, everything recorded is kept",
   "lost.space": "Storage is running out — recording stopped, everything recorded is kept",

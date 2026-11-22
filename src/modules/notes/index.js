@@ -1,6 +1,7 @@
 // Табы и ноты, текст: табулатуры Guitar Pro / MusicXML (alphaTab, локально) с воспроизведением (SONiVOX),
 // ноты и табы в PDF (pdf.js, локально), текст песни с аккордами и транспонированием; раздел «MIDI и DAW» —
 // файлы .mid и проекты чужих студий (Ableton, Reaper, FL Studio; src/music/daw.js) нотами через MusicXML, «В студию» — править. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
+import { Capacitor } from '@capacitor/core';
 import './notes.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -72,7 +73,8 @@ const isLive = () => !!(AT.cur && AT.cur.fmt === 'live');
 const liveProf = (at) => at.StaveProfile.Default;
 function liveStaves(sc) {
   const v = st().liveProf;
-  sc.tracks.forEach((tr) => tr.staves.forEach((x) => { const tab = !!(x.tuning && x.tuning.length); x.showTablature = tab && v !== 'score'; x.showStandardNotation = !tab || v !== 'tab'; }));
+  // AT.liveSafe — после ошибки отрисовки таба с игры: нотный стан без таба, запись идёт дальше
+  sc.tracks.forEach((tr) => tr.staves.forEach((x) => { const tab = !!(x.tuning && x.tuning.length); x.showTablature = tab && v !== 'score' && !AT.liveSafe; x.showStandardNotation = !tab || v !== 'tab' || !!AT.liveSafe; }));
 }
 
 /* ---------- PDF: один просмотр на приложение (как и alphaTab) ---------- */
@@ -243,6 +245,13 @@ function ensureApi(at) {
       const msg = (e && (e.message || e.type)) || 'ошибка';
       // партия без струн (фортепиано, ударные) в профиле «только табы» не рисуется — переключение на нотный стан и повтор
       if (/staves/.test(msg) && AT.api.settings.display.staveProfile === at.StaveProfile.Tab) { AT.api.settings.display.staveProfile = at.StaveProfile.Score; AT.api.updateSettings(); AT.api.render(); return; }
+      // партия с игры: ошибка отрисовки не ломает запись («начинаю — через секунду всё встаёт», отчёт 22.11.2026): ноты копятся и
+      // сохранятся в любом случае; превью — один раз переводится на нотный стан без таба, пока идёт запись экран не трогаем
+      if (live && isLive()) {
+        if (ctx) ctx.log('alphaTab (с игры): ' + msg, 'w');
+        if (!AT.liveSafe && AT.score) { AT.liveSafe = true; try { liveStaves(AT.score); AT.api.renderScore(AT.score); } catch { /* превью необязательно */ } return; }
+        if (live.busy) return;
+      }
       if (ctx) ctx.log('alphaTab: ' + msg, 'e');
       AT.state = 'error'; render();
       if (ctx) ctx.ui.toast(AT.cur && AT.cur.det ? ctx.t('openFailFmt', { fmt: FMT_NAMES[AT.cur.det] || AT.cur.det }) : ctx.t('openFail'));
@@ -785,7 +794,7 @@ export default {
       playBtns: () => '<button class="ic sm" id="atplay" data-x="atplay" aria-label="' + ctx.t('playTab') + '">' + (ATP.playing ? I.pause : I.play) + '</button>' });
     input = document.createElement('input');
     input.type = 'file';
-    input.accept = ACCEPT;
+    if (!Capacitor.isNativePlatform()) input.accept = ACCEPT; // на Android без фильтра: у .gpx, .als, .rpp… нет своего типа — система показывала их серыми
     input.multiple = true;
     input.hidden = true;
     input.addEventListener('change', onFile);

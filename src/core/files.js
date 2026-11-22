@@ -20,18 +20,29 @@ export function createFiles({ indexedDB = globalThis.indexedDB, onWriteFail = ()
     try {
       const r = indexedDB.open(DB, 1);
       r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: 'id' });
-      r.onsuccess = () => res(r.result);
+      r.onsuccess = () => {
+        const db = r.result;
+        // соединение закрыли снаружи (Android убрал приложение в фон, смена версии) — забыть его, следующая операция откроет новое;
+        // иначе «мёртвое» соединение оставалось навсегда и каждая запись падала с InvalidStateError (отчёт 22.11.2026, час записи)
+        db.onclose = () => { if (dbP) dbP = null; };
+        db.onversionchange = () => { try { db.close(); } catch { /* уже */ } dbP = null; };
+        res(db);
+      };
       r.onerror = () => rej(r.error);
       r.onblocked = () => rej(new Error('база файлов занята другой вкладкой')); // иначе обещание висело бы без конца
     } catch (e) { rej(e); }
   }));
 
-  const tx = (mode, op) => open().then((d) => new Promise((res, rej) => {
+  const tx = (mode, op, again = true) => open().then((d) => new Promise((res, rej) => {
     const t = d.transaction(STORE, mode), rq = op(t.objectStore(STORE));
     t.oncomplete = () => res(rq && rq.result);
     t.onerror = () => rej(t.error);
     t.onabort = () => rej(t.error);
-  }));
+  })).catch((e) => {
+    // соединение умерло (InvalidStateError: закрывается или закрыто) — открыть заново и повторить один раз: запись не теряется
+    if (again && e && e.name === 'InvalidStateError') { dbP = null; return tx(mode, op, false); }
+    throw e;
+  });
 
   // Поля, которые не сохраняем (служебные, на время работы)
   const clean = (r) => { const c = { ...r }; delete c._busy; delete c.unsaved; return c; };

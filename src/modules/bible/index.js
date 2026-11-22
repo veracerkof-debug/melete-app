@@ -3,6 +3,7 @@
 // (отметка идёт в план чтения, ядро: ctx.bible) и переход к следующей главе.
 // Текст и список книг — src/core/bible.js, планы и отметки — src/core/reading.js (в ядре: их видят главная и календарь).
 // В «Минимале» — изучение по логике MyBible (study.js): номера Стронга, комментарии, сноски, ссылки, подзаголовки и жесты.
+import { Capacitor } from '@capacitor/core';
 import './bible.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -47,6 +48,7 @@ const I = {
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   search: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>',
   full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  together: '<svg viewBox="0 0 24 24"><circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="8" r="3"/><path d="M3 19c0-3 2.4-5 5.5-5s5.5 2 5.5 5M13 14.2c.9-.4 1.6-.5 2.5-.5 3 0 5.5 2 5.5 5.3"/></svg>',
   unfull: '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
   share: '<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>',
@@ -71,7 +73,7 @@ function barHTML() {
   return '<div class="bbar">' + ui.icb('data-x="bprev"', I.prev, t('prev'), 'sm') +
     '<button class="bpick" data-x="bpick" aria-label="' + ui.esc(t('pick')) + '">' + ui.esc((small ? P.abbr(cur.code) : P.name(cur.code)) + ' ' + cur.ch) + '</button>' +
     ui.icb('data-x="bnext"', I.next, t('next'), 'sm') +
-    (small ? '' : '<button class="btr" data-x="btr" aria-label="' + ui.esc(t('tr')) + '">' + ui.esc(P.short) + '</button><span class="bgrow"></span>' + ui.icb('data-x="bsearch"', I.search, t('search'), 'sm') +
+    (small ? '' : '<button class="btr" data-x="btr" aria-label="' + ui.esc(t('tr')) + '">' + ui.esc(P.short) + '</button>' + (ctx.together ? ui.icb('data-x="btogether"', I.together, t('together'), 'sm') : '') + '<span class="bgrow"></span>' + ui.icb('data-x="bsearch"', I.search, t('search'), 'sm') +
       ui.icb('data-x="bpure"', I.full, t('pure'), 'sm')) +
     '<button class="ic sm bmark' + (isRead() ? ' on' : '') + '" data-x="bmark" aria-pressed="' + isRead() + '" aria-label="' + ui.esc(t(isRead() ? 'unmark' : 'markRead')) + '">' + I.check + '</button></div>';
 }
@@ -290,7 +292,9 @@ function addModule(done) {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
-  input.accept = '.SQLite3,.sqlite3,.sqlite,.db,.zip';
+  // на Android без фильтра: у файла .SQLite3 нет своего типа, система показывает его серым и выбрать нельзя (отчёт 22.11.2026,
+  // модуль НРП 2023). Подходит ли файл, проверяет addOne по содержимому
+  if (!Capacitor.isNativePlatform()) input.accept = '.SQLite3,.sqlite3,.sqlite,.db,.zip';
   input.addEventListener('change', async () => {
     let list = [...input.files];
     if (!list.length) return;
@@ -422,6 +426,7 @@ function bind() {
     else if (a === 'bselcopy') copyVerses([...sel]);
     else if (a === 'bselshare') shareVerses([...sel]);
     else if (a === 'btr') trSheet();
+    else if (a === 'btogether') ctx.openTool('together'); // совместное чтение — часть Библии
     else if (a === 'bmark') { const k = chKey(cur.code, cur.ch), on = !ctx.bible.isRead(k); ctx.bible.mark(k, on); ctx.log('прочитано ' + k + ': ' + on); render(); }
   };
   host.addEventListener('click', onClick);

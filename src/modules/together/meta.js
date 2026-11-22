@@ -9,6 +9,7 @@ export default {
   id: 'together',
   order: 6,
   church: true, // только в церковном режиме
+  inner: true, // не отдельный инструмент: часть Библии, кнопка «Читать вместе» в её полосе (слово автора 22.11.2026)
   name: { ru: ru.name, uz: uz.name, en: en.name },
   i18n: { ru, uz, en },
   icon: ICON,

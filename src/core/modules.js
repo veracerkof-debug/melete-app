@@ -200,7 +200,7 @@ export function makeCtx(app, mod) {
     // Вывод на другое устройство (dev; null — нет): btn(cls) → html кнопки «Вывод», bind(root, { cat }) → отписка, refresh(root)
     output: app.output ? { btn: (cls) => outBtnHTML(app, cls), bind: (root, o) => bindOutput(app, root, o), refresh: (root) => outRefresh(app, root) } : null,
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
-    openTool: (id) => app.openTool && app.openTool(id),
+    openTool: (id) => (app.openTool ? app.openTool(id) : app.showTool && app.showTool(id)), // вне занятия (вкладка Библии) — окно инструмента через оболочку
     // Своё расписание инструмента в «Неделе» (дни, время, напоминание называет инструмент) — шторка занятия
     schedule: () => import('./screens/plan.js').then((m) => m.toolSlotSheet(app, mod.id)),
     // Есть ли другой модуль и включён ли он (кнопки «В студию» прячутся, когда студия выключена)
@@ -228,7 +228,7 @@ export function makeCtx(app, mod) {
     sendTo: (rec) => import('./screens/sendto.js').then((m) => m.sendSheet(app, rec)),
     net: (o) => { const N = app.net || (app.net = {}); if (o) N[mod.id] = o; else delete N[mod.id]; },
     // Открыть инструмент с переданными настройками (например, «Табы» на файле: { lastTab, sec })
-    openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); },
+    openIn(id, patch) { Object.assign(app.device[id] ??= {}, patch); app.saveDevice(); if (app.openTool) app.openTool(id); else if (app.showTool) app.showTool(id); },
     // инструкция модуля (для вкладок-модулей, у которых нет шапки с «?»)
     help: () => showHelp(app, mod),
     openMixer: () => { if (app.openMixer) app.openMixer(); }, // шторка микшера (студия: кнопка в транспорте)

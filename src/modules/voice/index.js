@@ -280,10 +280,19 @@ const wavSec = (u8, rate, ch) => (u8.length > 44 && rate && ch ? (u8.length - 44
 async function saveRecorded(r) {
   S.saving++; refreshRecs();
   try {
-    const u8 = await engine().read(r.path), marks = st().marksBy[r.path] || [];
-    if (!u8 || u8.length <= 44) throw new Error('empty');
-    const sr = r.rate || 48000, sec = r.sec || wavSec(u8, sr, r.channels || 1);
-    const ok = await addFile(t('fileName', stamp()) + '.wav', marks.length ? withCue(u8, marks, sr) : u8, sec, marks, DICT);
+    const marks = st().marksBy[r.path] || [], sr = r.rate || 48000, eng = engine();
+    // длинная запись (оценка: больше 150 МБ — это от получаса стерео в 24 бита): порциями в Blob, без трёх копий в памяти;
+    // метки у такой — в записи медиатеки (marks), блок cue в сам WAV не вшивается (для этого нужна копия всего файла)
+    const big = !!eng.readBlob && (r.sec || 0) * sr * (r.channels || 2) * 3 > 150 * 1048576;
+    let wav, sec = r.sec || 0;
+    if (big) { wav = await eng.readBlob(r.path); if (!wav || wav.size <= 44) throw new Error('empty'); }
+    else {
+      const u8 = await eng.read(r.path);
+      if (!u8 || u8.length <= 44) throw new Error('empty');
+      sec = sec || wavSec(u8, sr, r.channels || 1);
+      wav = marks.length ? withCue(u8, marks, sr) : u8;
+    }
+    const ok = await addFile(t('fileName', stamp()) + '.wav', wav, sec, marks, DICT);
     if (ok === false) throw new Error('add');
     const s = st();
     if (!s.savedRaw.some((x) => x.path === r.path)) { s.savedRaw.push({ path: r.path, at: Date.now() }); ctx.store.save(); }
@@ -427,7 +436,7 @@ const stamp = () => { const d = new Date(), pad = (n) => String(n).padStart(2, '
 // Метки — и в запись медиатеки (плеер показывает их на волне), и в сам WAV (cue: видят Reaper, Audition, Audacity)
 async function addFile(name, wav, dur, marks = [], extra = {}) {
   const song = ctx.session && ctx.session.songId;
-  return ctx.files.add({ ...extra, id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: new Blob([wav], { type: 'audio/wav' }), dur, ...(marks.length ? { marks } : {}) });
+  return ctx.files.add({ ...extra, id: 'vc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, size: wav.size != null ? wav.size : wav.length, type: 'audio/wav', kind: 'audio', songs: song ? [song] : [], created: Date.now(), blob: wav instanceof Blob ? wav : new Blob([wav], { type: 'audio/wav' }), dur, ...(marks.length ? { marks } : {}) });
 }
 // Исходник в медиатеку как есть (звук байт в байт; метки — блоком после звука, только у целого файла)
 async function saveRaw() {
@@ -994,7 +1003,13 @@ function onLost(e) {
 // Android сменил вход сам (или не послушался выбора) — показать фактический
 function onRoute(e) {
   if (S.phase !== 'rec' || !e || !e.dev) return;
-  S.recDev = e.dev; ctx.log('запись: звук идёт с ' + e.dev.type + ' «' + e.dev.name + '»', 'w');
+  const was = S.recDev; S.recDev = e.dev; ctx.log('запись: звук идёт с ' + e.dev.type + ' «' + e.dev.name + '»', 'w');
+  // вход сменился посреди записи (USB отвалился — звук пошёл с телефона и обратно): метка с названием входа в этом месте —
+  // после записи видно, какие куски писал другой микрофон (отчёт 22.11.2026: «части будто перемешались»)
+  if (was && was.type !== e.dev.type) {
+    const tm = Math.max(0, Math.round((S.sec || 0) * 10) / 10);
+    if (!S.marks.some((m) => Math.abs(m.t - tm) < 0.5)) { S.marks.push({ t: tm, name: t('mark.src', { dev: e.dev.name || e.dev.type }) }); S.marks.sort((a, b) => a.t - b.t); st().liveMarks = { t0: S.t0, marks: S.marks }; ctx.store.save(); }
+  }
   const row = host && host.querySelector('.vc-inrow');
   if (row) { const tmp = document.createElement('div'); tmp.innerHTML = inHTML(); row.replaceWith(tmp.firstChild); }
 }
