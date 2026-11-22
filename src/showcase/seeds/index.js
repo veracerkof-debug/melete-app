@@ -5,7 +5,8 @@
 // он добавится при следующем заходе.
 import { earDemo, beatDemo, vocalDemo } from './builders.js';
 import { SOUNDS, EXTRA, melodyTrack, showData, studioSong } from '../showdemo.js';
-import { projectFromSong } from '../../music/project.js';
+import { projectFromSong, newProject, normalizeProject } from '../../music/project.js';
+import { loopById, placeLoop } from '../../music/studioloops.js';
 import { DEMO_PREFIX } from '../../core/demo.js';
 import { uid } from '../../core/time.js';
 
@@ -33,7 +34,11 @@ export const SEEDS = {
   // Студия: проект из «Оды к радости» — мелодия, бас, ударные
   studio: async (env) => {
     const pr = projectFromSong(studioSong(env.lang)); pr.id = DEMO_PREFIX + uid();
-    env.app.store.state.projects = [...(env.app.store.state.projects || []).filter((p) => !String(p.id).startsWith(DEMO_PREFIX)), pr];
+    // второй проект целиком из рисунков (панель «Рисунки»): аккорды ля минор, ударные, бас, клавиши и пэд — бас и клавиши идут по аккордам
+    const pat = normalizeProject(newProject({ name: { ru: 'Рисунки', uz: 'Naqshlar' }[env.lang] || 'Patterns', bpm: 96, key: { pc: 9, minor: true } }));
+    pat.id = DEMO_PREFIX + uid(); pat.tracks = []; pat.clips = [];
+    ['pop', 'bap', 'funk', 'rhodes', 'warm'].forEach((id) => placeLoop(pat, loopById(id), 0));
+    env.app.store.state.projects = [...(env.app.store.state.projects || []).filter((p) => !String(p.id).startsWith(DEMO_PREFIX)), pr, normalizeProject(pat)];
     env.app.store.save();
   },
   // Пульт выступления: «День студента» — номера, метки, фон, банки падов, шумы; звуки и мелодии синтезируются тут же

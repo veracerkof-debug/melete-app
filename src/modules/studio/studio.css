@@ -185,3 +185,28 @@
 .stlist{display:flex;flex-direction:column}
 .stlist>.stempty{margin:auto 0;padding-top:0}
 .stlist>.btn.block{margin-top:auto!important;min-height:52px}
+
+/* панель «Рисунки»: одна полоса над транспортом — семьи и плитки с мини-картинкой; боком — колонка (loops.js) */
+.stlps{flex:none;display:flex;flex-direction:column;gap:4px}
+.stlpt{display:flex;align-items:center;gap:4px}
+.stlpfs{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.stlpf{flex:none;min-height:40px;padding:0 9px;border-radius:20px;background:var(--cell);color:var(--l2);font-size:13px;font-weight:600}
+.stlpf.on{color:var(--ink);background:color-mix(in srgb,var(--c) 20%,var(--cell));box-shadow:inset 0 0 0 1.5px var(--c)}
+.stlpx{flex:none;width:40px;height:40px;min-width:40px;padding:0}
+.stlpr{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;padding:2px 2px 6px;overscroll-behavior:contain}
+.stlpc{flex:none;width:116px;display:grid;grid-template-rows:46px auto auto;gap:3px;padding:6px 6px 8px;border-radius:12px;background:var(--cell);color:var(--ink);text-align:left;box-shadow:inset 0 -3px 0 var(--c);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.stlpc b{font-size:12px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stlpc i{font-style:normal;font-size:11px;color:var(--l2)}
+.stlpp{display:block;min-width:0;border-radius:6px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);overflow:hidden}
+.stlpp svg{display:block;width:100%;height:100%;fill:currentColor}
+.stlpc.ch .stlpp{display:grid;place-items:center;padding:0 5px;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.stlpc.lift{opacity:.35}
+.stlpg{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.stlph{padding:0 6px 2px;font-size:11px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@container (max-height: 520px){.stlph{display:none}}
+@media (orientation: landscape) and (max-height: 520px) {
+  .stwrap.side .stlps{width:176px;min-height:0}
+  .stwrap.side .stlpr{flex:1;min-height:0;flex-direction:column;overflow-x:hidden;overflow-y:auto;touch-action:pan-y}
+  .stwrap.side .stlpc{width:auto}
+  .stwrap.side .stlph{display:none}
+}

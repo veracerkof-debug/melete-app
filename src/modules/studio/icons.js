@@ -31,5 +31,6 @@ export const I = {
   mix: '<svg viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><path d="M2.5 13h5M9.5 8h5M16.5 15h5"/></svg>',
   tune: '<svg viewBox="0 0 24 24"><path d="M4 18h16M4 12h16M4 6h16"/><circle cx="9" cy="6" r="2" style="fill:currentColor"/><circle cx="15" cy="12" r="2" style="fill:currentColor"/><circle cx="7" cy="18" r="2" style="fill:currentColor"/></svg>',
   keys: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8M6.5 13h3M10.5 13h3M14.5 13h3"/></svg>',
+  loops: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="6" rx="1.5"/><rect x="13" y="4" width="8" height="6" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><path d="M14 16.5h7M14 19.5h4"/></svg>',
   mutec: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M6 17 18 7"/></svg>',
 };

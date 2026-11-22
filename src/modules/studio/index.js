@@ -36,11 +36,13 @@ import { mName } from '../../music/notes.js';
 import meta from './meta.js';
 import { I } from './icons.js';
 import { createRecording } from './record.js';
+import { loopsHTML, loopsBind } from './loops.js';
+import { loopById, placeLoop, spanFrom, FAMILIES as LP_FAMS } from '../../music/studioloops.js';
 const UNDO_MAX = 40;
 
-let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null, offPad = null;
+let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null, offPad = null, offLoops = null;
 // экран: { view: 'list' | 'song' | 'clip' | 'mix', pid, cid, bar, live (запись живого ввода) }; отмена и повтор: снимки проекта (JSON)
-const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0, sel: [], tool: null }; // auto — { tr, kind }: правка огибающей дорожки; sel — выделенные клипы
+const V = { view: 'list', pid: null, cid: null, bar: 0, live: false, auto: null, clipPos: 0, cursor: 0, sel: [], tool: null, loops: false }; // auto — { tr, kind }: правка огибающей дорожки; sel — выделенные клипы
 const undo = { pid: null, last: '', stack: [], redo: [] };
 // буфер обмена (06.11.2026 — и группа): [{ c: слепок клипа (clipCopy), tr: id дорожки, d: сдвиг от первого, доли }]
 let clipBuf = null;
@@ -90,7 +92,14 @@ function undoStep(redo = false) {
   if (V.cid && !clip()) { V.view = 'song'; V.cid = null; }
   render();
 }
-const trName = (tr) => tr.name || ctx.t('tr.' + tr.kind) + ' ' + (proj().tracks.filter((t) => t.kind === tr.kind).indexOf(tr) + 1);
+const ROLE_FAM = { bass: 'bass', keys: 'keys', pad: 'pads' }; // дорожки, созданные рисунками, называются по роли: «Бас», «Клавиши», «Пэды»
+const trName = (tr) => {
+  if (tr.name) return tr.name;
+  const fam = ROLE_FAM[tr.role];
+  if (!fam) return ctx.t('tr.' + tr.kind) + ' ' + (proj().tracks.filter((t) => t.kind === tr.kind).indexOf(tr) + 1);
+  const same = proj().tracks.filter((t) => t.role === tr.role), n = same.indexOf(tr) + 1;
+  return ctx.t('lp.f.' + fam) + (same.length > 1 ? ' ' + n : '');
+};
 const fileName = (id) => { const r = id && ctx.files.get(id); return r ? r.name : ctx.t('tr.noFile'); };
 const filePeaks = (id) => { const r = id && ctx.files.get(id); if (!r || !r.peaks || !r.peaks.length) return null; const a = Float32Array.from(r.peaks); a.dur = r.dur || 1; return a; };
 const instName = (id) => ctx.t('inst.' + id);
@@ -116,7 +125,7 @@ function listHTML() {
 function transportHTML(p) {
   const { t, ui } = ctx, playing = seq && seq.playing;
   return '<div class="sttop">' +
-    '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + '</div>' +
+    '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + (V.view === 'song' ? ui.icb('data-x="loops"', I.loops, t('lp.open'), 'sm plain' + (V.loops ? ' on' : '')) : '') + '</div>' +
     '<div class="stgrp mid">' + ui.icb('data-x="rewind"', I.rewind, t('rewind'), 'sm plain') +
     ui.icb('data-x="rec"', I.rec, t(rec.busy ? 'rec.stop' : 'rec.title'), 'sm plain strec' + (rec.busy ? ' on' : '')) +
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
@@ -158,6 +167,7 @@ function render() {
   if (offLive) { offLive(); offLive = null; }
   if (offMix) { offMix(); offMix = null; }
   if (offPad) { offPad(); offPad = null; }
+  if (offLoops) { offLoops(); offLoops = null; }
   document.querySelectorAll('.stanchor').forEach((a) => a.remove());
   host.innerHTML = view();
   toolPlace();
@@ -206,6 +216,7 @@ function render() {
     pl.selection = (V.sel || []).filter((id) => clipById(p, id));
     selBar(pl.selection);
     pl.cursor = V.cursor || 0; // плейлист создаётся заново при каждой перерисовке — курсор живёт в V (пауза продолжает с места)
+    if (V.loops && !V.embed) loopsMount(true);
   }
   tickPos();
 }
@@ -726,10 +737,49 @@ async function exportMidi() {
   holdMenu(host.querySelector('.stinfo') || host, [{ icon: I.share, label: t('share'), run: () => ctx.midi.share(rec) }], name);
 }
 
+// Панель «Рисунки» (loops.js): ставится между плейлистом и транспортом на месте, плейлист не перерисовывается
+function loopsMount(open) {
+  if (offLoops) { offLoops(); offLoops = null; }
+  const old = host && host.querySelector('#stlps');
+  if (old) old.remove();
+  const p = proj(), anchor = host && host.querySelector('#stpl');
+  if (!open || !p || !anchor) return;
+  const fam = LP_FAMS.includes(st().lpFam) ? st().lpFam : 'drums';
+  const tmp = document.createElement('div'); tmp.innerHTML = loopsHTML(ctx, p, fam);
+  const el = tmp.firstElementChild; anchor.after(el);
+  const colorOf = (id) => { const lp = loopById(id); return lp ? getComputedStyle(el.querySelector('[data-lp="' + id + '"]') || el).getPropertyValue('--c') || null : null; };
+  offLoops = loopsBind(el, {
+    fam: (f) => { ctx.store.set('lpFam', f); loopsMount(true); },
+    tap: (id) => placeLoopAt(id, pl ? pl.cursor : V.cursor || 0, null, true),
+    hit: (x, y, id) => {
+      const h = pl && pl.hit(x, y), lp = loopById(id), pp = proj();
+      if (!h || !lp || !pp) return null;
+      return { row: h.row, beat: h.beat, tr: h.row < pp.tracks.length ? pp.tracks[h.row] : null, len: spanFrom(pp, lp, h.beat), color: colorOf(id) };
+    },
+    mark: (m) => { if (pl) pl.mark(m); },
+    drop: (id, h) => placeLoopAt(id, h.beat, h.tr ? h.tr.id : null, false),
+  });
+}
+// Положить рисунок: клип в проект (свободная подходящая дорожка или новая), звук — сразу с этого места; «Отменить» — в тосте
+function placeLoopAt(id, at, want, hear) {
+  const p = proj(), lp = loopById(id);
+  if (!p || !lp || rec.busy) return;
+  const r = placeLoop(p, lp, at, want);
+  if (!r) { ctx.ui.toast(ctx.t('clip.max')); return; }
+  save();
+  V.cursor = r.clip.at;
+  if (hear && ctx.audio.unlock()) { if (seq.playing) seq.stop(); seq.start(r.clip.at); } else if (seq.playing) seq.audioChanged();
+  V.sel = [r.clip.id];
+  render();
+  if (pl) { pl.selection = [r.clip.id]; selBar(pl.selection); pl.draw(); }
+  ctx.ui.toast(ctx.t('lp.added', { n: ctx.t('lp.' + lp.id) }), { action: ctx.t('undo'), onAction: () => { undoStep(); render(); } });
+}
+
 function act(x, el) {
   const p = proj();
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
+    case 'loops': V.loops = !V.loops; loopsMount(V.loops); { const b = host && host.querySelector('.sttop [data-x="loops"]'); if (b) b.classList.toggle('on', V.loops); } break;
     case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
     case 'paste': { const p = proj(), made = pasteBuf(p, pl ? pl.cursor : 0); if (made.length) { save(); seq.audioChanged(); render(); if (pl) { pl.selection = made.map((c) => c.id); pl.draw(); } selBar(made.map((c) => c.id)); } break; }
     case 'toSong': if (V.embed) { V.embed.close(); break; } V.view = 'song'; V.auto = null; render(); break;
@@ -867,6 +917,7 @@ export default {
     if (offLive) { offLive(); offLive = null; }
     if (offMix) { offMix(); offMix = null; }
     if (offPad) { offPad(); offPad = null; }
+    if (offLoops) { offLoops(); offLoops = null; }
     toolDrop();
     offs.splice(0).forEach((f) => f());
     document.querySelectorAll('.stanchor').forEach((a) => a.remove());

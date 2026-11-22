@@ -11,6 +11,7 @@
 // касание линейки — играть отсюда; вести по линейке — петля, вести край петли — изменить, удержать линейку — меню
 // (маркер, снять петлю). Касание значка дорожки — её меню, «+» внизу — новая дорожка.
 // Без зависимости от модуля: получает проект и обратные вызовы.
+import { chordsTimeline } from '../../music/studioloops.js';
 import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, piecePasses, DRUMS, TQ } from '../../music/project.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
@@ -28,7 +29,7 @@ export function createPlaylist(host, get, on) {
   cv.className = 'plcv';
   host.appendChild(cv);
   // sels — выделенные клипы; plus — «+» на пустом месте { tr, bar }; band — рамка выделения (экранные точки)
-  const V = { pxb: 0, row: ROW0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sels: new Set(), plus: null, band: null, cursor: 0 };
+  const V = { pxb: 0, row: ROW0, x: 0, y: 0, dpr: Math.min(2, devicePixelRatio || 1), pos: -1, sels: new Set(), plus: null, band: null, cursor: 0, drop: null, tl: null, tlKey: '' };
   let W = 0, H = 0, raf = 0, drag = null, holdT = 0, css = null, lastTap = { t: 0, id: null };
   const setSel = (ids) => { V.sels = new Set(ids); on.sel && on.sel([...V.sels]); };
   const colors = () => css || (css = (() => { const s = getComputedStyle(host); const v = (k) => s.getPropertyValue(k).trim(); return { ink: v('--ink'), l2: v('--l2'), sep: v('--sep'), fill: v('--fill'), fill2: v('--fill2') || v('--fill'), cell: v('--cell'), tint: v('--tint'), bg: v('--bg'), red: v('--red') || '#D2463F' }; })());
@@ -148,6 +149,14 @@ export function createPlaylist(host, get, on) {
         g.restore();
       }
     }
+    // метка «сюда ляжет рисунок» (тянут плитку из панели «Рисунки»): ряд дорожки или новая дорожка под всеми
+    if (V.drop) {
+      const m = V.drop, i = Math.min(m.row, p.tracks.length), x = xOf(m.beat), y = yOf(i) + GAP, w = Math.max(10, m.len * V.pxb), h = V.row - GAP * 2;
+      g.save(); g.beginPath(); g.rect(HEAD, RULER, W - HEAD, H - RULER); g.clip();
+      g.globalAlpha = 0.28; g.fillStyle = m.color || C.tint; rr(x, y, w, h, 7); g.fill(); g.globalAlpha = 1;
+      g.strokeStyle = m.color || C.tint; g.lineWidth = 2; g.setLineDash([6, 4]); rr(x, y, w, h, 7); g.stroke(); g.setLineDash([]);
+      g.restore();
+    }
     if (V.band) {
       const { x0, y0, x1, y1 } = V.band;
       g.fillStyle = C.tint; g.globalAlpha = 0.12; g.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); g.globalAlpha = 1;
@@ -176,6 +185,11 @@ export function createPlaylist(host, get, on) {
       g.fillStyle = C.bg; g.beginPath(); g.moveTo(x + 3, 5); g.lineTo(x + 9, 9); g.lineTo(x + 3, 13); g.closePath(); g.fill();
       if (nm) g.fillText(nm, x + 12, 13);
     });
+    // аккорды проекта (все аккордовые дорожки) — над линейкой мелко: гармония видна, не открывая дорожку
+    const tk = p.updatedAt + ':' + p.clips.length + ':' + p.key.pc;
+    if (V.tlKey !== tk) { V.tl = chordsTimeline(p); V.tlKey = tk; }
+    g.font = '600 10px system-ui'; g.fillStyle = C.tint;
+    V.tl.forEach((ch) => { const x = xOf(ch.t), w = ch.d * V.pxb; if (w < 18 || x + w < HEAD || x > W) return; g.fillText(fit(chordName(ch.pc, ch.type, p.key.minor), w - 6), Math.max(x, HEAD) + 3, RULER - 3); });
     g.restore();
     if (px >= HEAD && px <= W) { g.fillStyle = V.pos >= 0 ? C.red : C.tint; g.beginPath(); g.moveTo(px - 6, RULER - 10); g.lineTo(px + 6, RULER - 10); g.lineTo(px, RULER - 2); g.closePath(); g.fill(); }
     // колонка дорожек
@@ -418,6 +432,9 @@ export function createPlaylist(host, get, on) {
     get selection() { return [...V.sels].filter((id) => P().clips.some((c) => c.id === id)); },
     set selection(ids) { V.sels = new Set(ids || []); draw(); },
     clearPlus() { V.plus = null; draw(); },
+    // что под пальцем (экранные точки): ряд дорожки (за последней — «новая») и такт; null — вне стола
+    hit(cx, cy) { const r = cv.getBoundingClientRect(), x = cx - r.left, y = cy - r.top; if (x < HEAD || x > W || y < RULER || y > H) return null; const n = P().num; return { row: Math.max(0, Math.min(P().tracks.length, rowOf(y))), beat: Math.max(0, Math.floor(bOf(x) / n) * n) }; },
+    mark(m) { V.drop = m; draw(); },
     get zoom() { return V.pxb; },
     zoomBy(f) { zoomTo(V.pxb * f); },
     get row() { return V.row; },
