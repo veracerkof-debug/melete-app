@@ -291,7 +291,7 @@ async function saveRecorded(r) {
     const marks = st().marksBy[r.path] || [], sr = r.rate || 48000, eng = engine();
     // длинная запись (оценка: больше 150 МБ — это от получаса стерео в 24 бита): порциями в Blob, без трёх копий в памяти;
     // метки у такой — в записи медиатеки (marks), блок cue в сам WAV не вшивается (для этого нужна копия всего файла)
-    const big = !!eng.readBlob && (r.sec || 0) * sr * (r.channels || 2) * 3 > 150 * 1048576;
+    const big = !!eng.readBlob && (r.sec || 0) * sr * (r.channels || 2) * 3 > 40 * 1048576;
     let wav, sec = r.sec || 0;
     if (big) { wav = await eng.readBlob(r.path); if (!wav || wav.size <= 44) throw new Error('empty'); }
     else {

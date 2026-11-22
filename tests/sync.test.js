@@ -177,7 +177,7 @@ describe('связь телефона и компьютера: целиком', 
       if (url.includes('/put') && ++puts === 2 && down) throw Object.assign(new Error('connect timed out'), {});
       return H(m, url, o);
     };
-    await expect(syncNow(phone, () => {}, H2)).rejects.toBeTruthy();
+    await expect(syncNow(phone, () => {}, H2, { retryMs: [] })).rejects.toBeTruthy(); // без повторов обрыв — ошибка
     expect(pc.files.get('big')).toBeUndefined(); // недокачанное не становится файлом
     expect(phone.store.songs().map((x) => x.title)).toEqual(['Калинка']); // у телефона ничего не пропало
     expect(phone.files.get('big').blob.size).toBe(5 << 20);
@@ -185,6 +185,18 @@ describe('связь телефона и компьютера: целиком', 
     await syncNow(phone, () => {}, H2);
     expect(pc.files.get('big').blob.size).toBe(5 << 20);
     expect(pc.store.songs().map((x) => x.title)).toEqual(['Калинка']);
+  });
+
+  it('короткий обрыв на куске файла: повтор сам доводит передачу до конца', async () => {
+    await phone.files.add({ id: 'big', name: 'big.wav', kind: 'audio', type: 'audio/wav', blob: bytes(5 << 20, 7) });
+    await pair('192.168.1.5', '482913', 'Телефон', H);
+    let puts = 0;
+    const H2 = async (m, url, o) => {
+      if (url.includes('/put') && ++puts === 2) throw Object.assign(new Error('connect timed out'), {});
+      return H(m, url, o);
+    };
+    await syncNow(phone, () => {}, H2, { retryMs: [5] });
+    expect(pc.files.get('big').blob.size).toBe(5 << 20);
   });
 
   it('телефон ждёт компьютер только для свежих записей и того, что компьютер умеет', async () => {

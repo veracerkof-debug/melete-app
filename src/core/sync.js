@@ -25,6 +25,7 @@ import { modeOf, applyMode, allows, activeCount } from './linkmode.js'; // ре�
 export const PORT_PRE = 53319, PORT_DEV = 53329;
 export const PORT = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? PORT_PRE : PORT_DEV;
 export const SYNC_PARTS = ['songs', 'profile', 'reading', 'calendar'];
+export const RETRY_MS = [1000, 3000, 8000]; // паузы повторов куска файла
 export const CHUNK = 2 << 20; // кусок файла — 2 МБ (в base64 ~2,7 МБ на запрос)
 const LS_KEY = 'melete.sync'; // { peers: { ключ: { name, at } } } на компьютере; { pc: { addr, key, name, last, ids } } на телефоне
 
@@ -446,6 +447,18 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
     if (x.reason !== 'stopped' && x.reason !== 'busy') log('sync', 'синхронизация: отказ ' + path + ' — ' + x.reason + (e.status ? ' (' + e.status + ')' : '') + (e.message && !e.status ? ': ' + String(e.message).slice(0, 120) : '') + ', ключ ' + String(key || '').slice(0, 6), 'w');
     throw x;
   });
+  // Кусок файла: короткий обрыв Wi-Fi не должен ронять передачу гигабайта — три повтора с паузой (put безопасен: компьютер
+  // сам говорит, с какого байта продолжить, get — чтение). Ключ, режим, «занят» и остановка — без повторов.
+  const retryMs = opts.retryMs || RETRY_MS;
+  const chunk = async (method, path, o) => {
+    for (let k = 0; ; k++) {
+      try { return await call(method, path, o); } catch (e) {
+        if (k >= retryMs.length || !['unreachable', 'off'].includes(e.reason)) throw e;
+        log('sync', 'обрыв на куске файла — повтор ' + (k + 1) + ' из ' + retryMs.length, 'w');
+        await new Promise((ok) => setTimeout(ok, retryMs[k])); halt();
+      }
+    }
+  };
   const before = { songs: app.store.songs().length, sessions: app.store.allSessions().length };
   onStep({ stage: 'data' });
   const first = () => call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
@@ -498,7 +511,7 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
     do {
       halt();
       const u8 = new Uint8Array(await rec.blob.slice(off, off + CHUNK).arrayBuffer());
-      const res = await call('POST', '/melete/v1/put', { json: { meta, off, b64: b64.from(u8), auto }, timeout: 120000 });
+      const res = await chunk('POST', '/melete/v1/put', { json: { meta, off, b64: b64.from(u8), auto }, timeout: 120000 });
       if (res.done) break;
       off = res.got != null ? res.got : off + u8.length;
     } while (off < meta.size);
@@ -510,7 +523,7 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
     const meta = await call('GET', '/melete/v1/meta?id=' + encodeURIComponent(id) + q);
     onStep({ stage: 'down', name: meta && meta.name, done, total });
     const parts = [];
-    for (let off = 0; off < (meta.size || 0); off += CHUNK) { halt(); parts.push(await call('GET', '/melete/v1/get?id=' + encodeURIComponent(id) + '&off=' + off + '&len=' + CHUNK + q, { bin: true, timeout: 120000 })); }
+    for (let off = 0; off < (meta.size || 0); off += CHUNK) { halt(); parts.push(await chunk('GET', '/melete/v1/get?id=' + encodeURIComponent(id) + '&off=' + off + '&len=' + CHUNK + q, { bin: true, timeout: 120000 })); }
     await F.add({ ...meta, blob: new Blob(parts, { type: meta.type || '' }) });
     out.down++; done++;
   }

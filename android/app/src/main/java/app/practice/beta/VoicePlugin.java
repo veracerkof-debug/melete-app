@@ -522,6 +522,16 @@ public class VoicePlugin extends Plugin {
     @PluginMethod
     public void remove(PluginCall call) { fileOf(call).delete(); call.resolve(); }
 
+    // Полный путь и размер файла записи: страница читает длинную запись напрямую (Capacitor.convertFileSrc), без моста base64
+    @PluginMethod
+    public void locate(PluginCall call) {
+        File f = fileOf(call);
+        JSObject r = new JSObject();
+        r.put("abs", f.exists() ? f.getAbsolutePath() : "");
+        r.put("size", f.exists() ? f.length() : 0);
+        call.resolve(r);
+    }
+
     // Исходники записей в памяти диктофона (rec-*.wav): после сбоя или закрытия запись можно открыть снова
     @PluginMethod
     public void list(PluginCall call) {

@@ -51,6 +51,15 @@ function nativeEngine() {
     },
     // Длинная запись (час и больше — ~1 ГБ): файл порциями сразу в Blob, без склейки в один массив и без трёх копий в памяти
     async readBlob(path) {
+      // быстрый путь: файл целиком через адрес приложения, без моста base64 (час записи ~1 ГБ — секунды, не минута);
+      // размер должен сойтись с файлом, иначе — прежнее чтение порциями
+      try {
+        const loc = await V.locate({ path });
+        if (loc && loc.abs && loc.size > 44) {
+          const resp = await fetch(Capacitor.convertFileSrc(loc.abs));
+          if (resp.ok) { const b = await resp.blob(); if (b.size === loc.size) return new Blob([b], { type: 'audio/wav' }); log('диктофон: прямое чтение дало ' + b.size + ' из ' + loc.size + ' байт — читаю порциями', 'w'); }
+        }
+      } catch (e) { log('диктофон: прямое чтение недоступно (' + (e && e.message || e) + ') — порциями', 'w'); }
       const blobs = []; let batch = [], held = 0, off = 0, size = Infinity;
       while (off < size) {
         const r = await V.read({ path, offset: off, length: CHUNK }); size = r.size; const u = unb64(r.data || ''); if (!u.length) break;
