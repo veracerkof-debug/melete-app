@@ -65,7 +65,7 @@ src/modules/<id>/
 | `ear`, `beat` | Слух, Ритм | тренажёры с режимом «Уроки» (`music/course.js`, `ui/course.js`) |
 | `audio` | Медиатека | плеер с дорожками, нотами, аккордами, A–B, скоростью и тональностью |
 | `convert` | Конвертер | `inner`, часть медиатеки; движок `audio/convert/` |
-| `show` | Пульт выступления | `inner`, часть медиатеки (dev); данные `music/show.js`, звук падов `audio/showpads.js`; `docs/show.md` |
+| `show` | Пульт выступления | `inner`, часть медиатеки (dev); данные `music/show.js`, звук падов `audio/showpads.js`; `docs/show.md`. С 22.11.2026 два экрана («Эфир», «Звуки»); «Программа» и «Фон» — шторки (`viewSheet`); готовый банк «Ударные» (`drumBank`, пады с `synth`, синтез `audio/stagepads.js` внутри `showpads`) |
 | `notes` | Ноты (табы, ноты, текст) | alphaTab, pdf.js, текст с аккордами, «С игры» |
 | `voice` | Диктофон | движок `audio/voiceengine.js`, обработка `audio/vocal.js` |
 | `vocal` | Вокал | распевки по диапазону (`music/warmup.js`, библиотека `exercises.js`), голос и тип (`music/voicetype.js`), импровизация над дроном; шина `vocal`; тема — `docs/vocal.md` |
