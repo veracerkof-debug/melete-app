@@ -12,12 +12,11 @@ test('рабочая сцена: без события, список песен,
   await page.click('[data-sgw="s1"]'); await page.click('[data-sgw="s2"]'); await page.waitForTimeout(200);
   await page.click('[data-sgwgo]'); await page.waitForTimeout(800);
   await expect(page.locator('.stage')).toHaveCount(1);
-  expect(await melete.text('.sghead b')).toBe('Первая');
+  expect(await melete.text('.sgsong.cur b')).toBe('Первая');
   await page.waitForTimeout(3000); // плашка веб-версии уходит
-  // сет-лист на экране: касание названия — список, прыжок к песне
-  await page.click('.sghead'); await page.waitForTimeout(400);
-  await page.click('[data-sgj="1"]'); await page.waitForTimeout(500);
-  expect(await melete.text('.sghead b')).toBe('Вторая');
+  // список программы на экране: касание строки — прыжок к песне
+  await page.click('.sgsong[data-sgreel="1"]'); await page.waitForTimeout(500);
+  expect(await melete.text('.sgsong.cur b')).toBe('Вторая');
   // темп: +1; цифры темпа — кнопка метронома (касание включает и выключает)
   const bpm = () => page.evaluate(() => +document.querySelector('.sgbpm b').textContent);
   const b0 = await bpm(); expect(b0).toBe(120);
@@ -40,15 +39,13 @@ test('рабочая сцена: без события, список песен,
   await page.locator('[data-fx="space"]').fill('90'); await page.locator('[data-fx="echo"]').fill('70');
   expect(await page.evaluate(() => sessionStorage.getItem('melete.stage.space'))).toBe('0.9');
   const shot = process.env.ED_SHOTS; if (shot) await page.screenshot({ path: shot + '/stage.png' });
-  // пэды — свернуть и вернуть
-  await page.click('[data-sgt="pads"]'); await page.waitForTimeout(200);
-  await expect(page.locator('.sgpad[data-pad]')).toHaveCount(0);
-  await page.click('[data-sgt="pads"]'); await page.waitForTimeout(200);
+  // инструменты постоянные: панель звуков всегда на экране
+  await expect(page.locator('.sgpad[data-pad]').first()).toBeVisible();
   // замок: касания игнорируются, снимается удержанием
   await page.click('[data-sg="lock"]'); await page.waitForTimeout(200);
   await expect(page.locator('.sglock')).toHaveCount(1);
   await page.click('.sglock', { force: true, position: { x: 20, y: 20 } }); // игнорируется
-  expect(await melete.text('.sghead b')).toBe('Вторая');
+  expect(await melete.text('.sgsong.cur b')).toBe('Вторая');
   await melete.hold('[data-sgunlock]', 900); await page.waitForTimeout(300);
   await expect(page.locator('.sglock')).toHaveCount(0);
   // старт и «стоп всё» удержанием ■
@@ -106,7 +103,7 @@ test('сцена: панель табов — файл песни рисуетс
   await expect(page.locator('.sgscore')).toHaveCount(1);
   await expect(page.locator('.sgsurfhost svg, .sgscoretxt').first()).toBeVisible({ timeout: 30_000 });
   // следующая песня без табов — панель уходит, чип скрыт
-  await page.click('[data-sg="next"]'); await page.waitForTimeout(500);
+  await page.click('.sgsong:not(.cur)'); await page.waitForTimeout(500);
   await expect(page.locator('[data-sgt="tab"]')).toHaveCount(0);
   await expect(page.locator('.sgscore')).toHaveCount(0);
   expect(errors).toEqual([]);

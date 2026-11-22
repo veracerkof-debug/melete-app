@@ -23,10 +23,10 @@ test('автопрокрутка, педаль, ночь', async ({ page, melete
   await melete.click('.sgtext .lyr'); await page.waitForTimeout(1500);
   expect(await top()).toBeGreaterThan(paused);
   for (let i = 0; i < 9; i++) { await page.keyboard.press('PageDown'); await page.waitForTimeout(250); }
-  expect(await melete.text('.sghead b')).toBe('Вторая');
+  expect(await melete.text('.sgsong.cur b')).toBe('Вторая');
   await page.keyboard.press('PageUp'); await page.waitForTimeout(400);
-  expect(await melete.text('.sghead b')).toBe('Длинная');
-  await melete.hold('.sghead');
+  expect(await melete.text('.sgsong.cur b')).toBe('Длинная');
+  await melete.hold('.sgsongs');
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /Ночь|Night|Tun/.test(x.textContent)); b && b.click(); }); await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.querySelector('.stage')?.classList.contains('night'))).toBe(true);
   expect(errors).toEqual([]);
