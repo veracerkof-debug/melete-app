@@ -3,8 +3,8 @@
 // обработка и сохранение в медиатеку с метками; исходник остаётся в «Записях в памяти» (кнопка «Ещё»).
 import { test, expect } from './melete.js';
 
-const open = async (page, melete) => {
-  await melete.open();
+const open = async (page, melete, tools = null) => {
+  await melete.open(tools ? { tools } : {});
   await melete.tab('tools');
   await melete.click('[data-open-tool="voice"]');
   await page.waitForSelector('.voice .vc-bot', { timeout: 10_000 });
@@ -63,7 +63,8 @@ test('пресеты: выбор, правка — «изменён», «Сох�
 });
 
 test('запись → метки → дубль → в медиатеку с метками; исходник в памяти', async ({ page, melete, errors }) => {
-  await open(page, melete);
+  // с 21.11.2026 «Стоп» по умолчанию сразу сохраняет в папку диктофона (autoSave); этот путь — через экран дубля, автосохранение выключено
+  await open(page, melete, { voice: { autoSave: false } });
   await melete.click('.voice [data-preset="speech"]');
   await melete.click('.voice .vc-bot [data-x="rec"]');
   await page.waitForSelector('.voice [data-x="stop"]', { timeout: 8_000 });
