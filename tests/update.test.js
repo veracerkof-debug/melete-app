@@ -80,3 +80,19 @@ describe('сборка на GitHub', () => {
     expect(q.left).toBe(15 * 60000);
   });
 });
+
+import { updFlow } from '../src/core/screens/update.js';
+describe('инфографика обновления: этап цепочки', () => {
+  it('нет новой сборки — цепочки нет', () => { expect(updFlow({ st: 'none', info: null, building: null })).toBe(null); });
+  it('идёт сборка на GitHub — этап 0, дробная часть по времени', () => {
+    const now = 1e6, f = updFlow({ st: 'none', building: { n: 9, started: now - 300000, eta: now + 300000, left: 300000 } }, now);
+    expect(f.key).toBe('build'); expect(f.pos).toBeCloseTo(0.5, 1); expect(f.p).toBe(50);
+  });
+  it('готова — 1; скачивание — 1…2 по доле; скачано — 2', () => {
+    const info = { build: 9, size: 330 * 1048576 };
+    expect(updFlow({ st: 'avail', info }).pos).toBe(1);
+    const d = updFlow({ st: 'down', info, f: 0.25 }); expect(d.pos).toBe(1.25); expect(d.p).toBe(25); expect(d.got).toBe(83);
+    expect(updFlow({ st: 'down', info, f: 0.1, wait: true }).key).toBe('wait');
+    expect(updFlow({ st: 'ready', info }).pos).toBe(2);
+  });
+});

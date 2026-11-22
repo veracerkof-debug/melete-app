@@ -258,7 +258,11 @@ a.cell{color:inherit;text-decoration:none}
 .hread .hrr{font-size:20px;font-weight:600;font-family:Georgia,"Noto Serif",serif}
 .hread .hrs,.mread .hrs{font-size:13px;color:var(--tint-text)}
 /* вкладка «Библия» (церковный режим): модуль на всё окно между верхом экрана и вкладками */
-#main.wbible{padding-bottom:0}
+#main.wbible{padding-left:0;padding-right:0;padding-bottom:0}
+/* Библия — сплошное рабочее пространство (слово автора 22.11.2026): без белой карточки вокруг текста; своя панель — только у кнопок внизу */
+.toolhost.btab.pane{background:transparent;border-radius:0;box-shadow:none;padding:0}
+.btab .btext{padding-left:18px;padding-right:18px}
+.btab .bbar{padding-left:10px;padding-right:10px}
 .btab{height:calc(100dvh - var(--tabh,64px) - 18px - env(safe-area-inset-top,0px));display:flex;flex-direction:column}
 /* Оформление → размер интерфейса: −/+, «Авто», предпросмотр двух экранов в рамках */
 .szrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -456,7 +460,23 @@ html.tablabels:not(.desk) .tab::before{top:5px;margin-top:0;width:54px;height:30
 .updbar[hidden],body:has(.pane) .updbar,.starting .updbar{display:none}
 .updbar .btn.sm,.updbar .link{min-height:40px}
 .updbar .link{padding:0 8px}
-.updprog{flex:none;width:72px;height:6px;margin-right:10px;border-radius:3px;background:linear-gradient(90deg,var(--tint) var(--f),var(--fill) var(--f))}
+/* Инфографика обновления в шторке: заголовок и крупные проценты, цепочка из четырёх узлов с линией хода */
+.updflow{background:var(--cell);border-radius:18px;padding:16px 16px 12px;margin:0 0 14px}
+.updfl-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.updfl-t{min-width:0;display:flex;flex-direction:column;gap:2px}.updfl-t b{font-size:17px;line-height:1.2}.updfl-t span{font-size:14px;color:var(--l2)}
+.updfl-p{font-size:34px;font-weight:700;line-height:1;color:var(--tint-text,var(--tint))}.updfl-p small{font-size:16px;margin-left:2px}
+.updfl-track{position:relative;height:22px;margin:16px 11px 6px}
+.updfl-line{position:absolute;left:0;right:0;top:8px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--tint) var(--f),var(--fill) var(--f));transition:background .4s}
+.updfl-n{position:absolute;top:0;left:calc(var(--i) * 33.3333%);width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--cell);border:3px solid var(--fill);box-sizing:border-box}
+.updfl-n:last-child{left:100%}
+.updfl-n.done{background:var(--tint);border-color:var(--tint)}.updfl-n.cur{border-color:var(--tint);background:var(--cell)}
+.updfl-n.cur i{position:absolute;inset:3px;border-radius:50%;background:var(--tint);animation:updpulse 1.6s ease-in-out infinite}
+@keyframes updpulse{50%{transform:scale(.55);opacity:.6}}
+@media (prefers-reduced-motion:reduce){.updfl-n.cur i{animation:none}}
+.updfl-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--l2);margin:0 -4px}.updfl-lbl .cur{color:var(--ink);font-weight:600}
+.updfl-lbl span{flex:1;text-align:center}.updfl-lbl span:first-child{text-align:left;flex:none;width:25%}.updfl-lbl span:last-child{text-align:right;flex:none;width:25%}
+.updfl-note{margin-top:10px;padding-top:8px;border-top:1px solid var(--sep);font-size:13px;color:var(--l2)}
+.updprog{flex:1 1 72px;max-width:140px;height:6px;margin-right:10px;border-radius:3px;background:linear-gradient(90deg,var(--tint) var(--f),var(--fill) var(--f))}
 html.desk .updbar{left:auto;right:20px;bottom:20px;margin:0}
 
 /* Режим правки вкладок и «Инструментов» (core/screens/arrange.js): значки покачиваются, «−» и «+» в углу,
