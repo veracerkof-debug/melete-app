@@ -89,7 +89,7 @@ export function playTimes(p, notes = quantize(p)) {
   });
 }
 
-export const barsOf = (p, notes = quantize(p)) => Math.max(1, Math.ceil(notes.reduce((a, n) => Math.max(a, n.t + n.d), 0) / p.num - 1e-6));
+export const barsOf = (p, notes = quantize(p)) => Math.max(1, Math.min(200, Math.round(p.minBars || 0)), Math.ceil(notes.reduce((a, n) => Math.max(a, n.t + n.d), 0) / p.num - 1e-6));
 
 // Струна и лад каждой ноты: свои (после правки) — если сходятся со строем и капо, иначе — аппликатура сама.
 // s — с тонкой струны (1), f — от капо

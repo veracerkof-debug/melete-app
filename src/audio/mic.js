@@ -5,15 +5,16 @@ import { log } from '../core/log.js';
 export const FFT = 4096;
 
 // Возвращает { analyser, read(), sampleRate, stop() } или бросает ошибку с .reason: 'denied' | 'unavailable'
-export async function openMic(mode) {
+export async function openMic(mode, deviceId = '') {
   const c = getContext(mode);
   if (!c || !navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('mic'), { reason: 'unavailable' });
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
     });
   } catch (e) {
+    if (deviceId && e && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) return openMic(mode, ''); // выбранный вход пропал — вход по умолчанию
     throw Object.assign(new Error('mic'), { reason: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' });
   }
   log('audio', 'микрофон открыт (анализ)');

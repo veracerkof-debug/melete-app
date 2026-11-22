@@ -21,6 +21,7 @@ const TUNS = {
   bass: ['E1 A1 D2 G2', 'D1 A1 D2 G2', 'B0 E1 A1 D2 G2'],
   ukulele: ['G4 C4 E4 A4', 'G3 C4 E4 A4'],
 };
+const DURS = [[4, '1'], [2, '1/2'], [1, '1/4'], [0.5, '1/8'], [0.25, '1/16']]; // длительность в долях-четвертях
 const ICON = {
   rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none"/></svg>',
@@ -173,7 +174,7 @@ export function createLive(env) {
     if (cf.src === 'mic') {
       let n = 0;
       try {
-        mic = await createMicNotes({ mode: C().audio.mixer.state.mode, open: () => C().mic.request(), a4: C().a4 ? C().a4() : 440,
+        mic = await createMicNotes({ mode: C().audio.mixer.state.mode, open: () => C().mic.request(cf.micDev || ''), a4: C().a4 ? C().a4() : 440,
           onEv: (e) => { if (e.k === 'on') on('m' + ++n, e.m, e.v, e.t + lat(c)); else off('m' + n, e.t + lat(c)); },
           onPitch: (m) => { if (m !== L.pitch) { L.pitch = m; const el = env.host() && env.host().querySelector('#lvpitch'); if (el) el.textContent = m == null ? '' : mName(m); } } });
       } catch (e) {
@@ -307,7 +308,8 @@ export function createLive(env) {
       '<div class="vrow tight">' + icb('data-x="lvpitch" data-d="-1"', ICON.down, t('live.lower')) + '<b class="num lvv">' + esc(mName(L.sel.m)) + '</b>' + icb('data-x="lvpitch" data-d="1"', ICON.up, t('live.higher')) + '</div>' +
       '<div class="vrow tight">' + icb('data-x="lvlen" data-d="-1"', ICON.left, t('live.shorter')) + '<b class="num lvv">' + (n ? FR(n.d) : '') + '</b>' + icb('data-x="lvlen" data-d="1"', ICON.right, t('live.longer')) + '</div>' +
       (p.tuning && tf ? '<div class="vrow tight">' + icb('data-x="lvstr" data-d="1"', ICON.up, t('live.strUp')) + '<b class="num lvv">' + esc(t('live.sf', { s: tf.s, f: tf.f })) + '</b>' + icb('data-x="lvstr" data-d="-1"', ICON.down, t('live.strDown')) + '</div>' : '') +
-      icb('data-x="lvdel"', ICON.trash, t('delete')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + '</div>';
+      icb('data-x="lvdel"', ICON.trash, t('delete')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) +
+      '<div class="vrow tight lvdurs" role="group" aria-label="' + esc(t('live.dur')) + '">' + DURS.map(([b, l]) => '<button class="chip lvchip' + (n && Math.abs(n.d - b) < 1e-6 ? ' on' : '') + '" data-x="lvdur" data-b="' + b + '" aria-label="' + esc(t('live.dur') + ' ' + l) + '">' + l + '</button>').join('') + '</div></div>';
   }
   function barsBar() {
     const b = L.bars, b1 = b.b1 == null ? b.b0 : b.b1;
@@ -326,7 +328,7 @@ export function createLive(env) {
     const bpm = p ? Math.round(p.bpm) : cf.bpm, has = p && p.raw.length;
     return '<div class="lvbar2">' + big + (has ? env.playBtns() : '') +
       '<button class="chip lvchip" data-x="lvset" aria-label="' + esc(t('live.settings')) + '">' + (cf.metro || has ? '♩ ' + bpm : esc(t('live.free'))) + '</button>' +
-      (has ? '<span class="sgrow"></span>' + icb('data-x="lvbars"', ICON.bars, t('live.bars')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + icb('data-x="lvshare"', ICON.share, t('live.export')) : '<span class="l2 lvhint">' + esc(t('live.src.' + cf.src)) + '</span>') + '</div>';
+      (has || (p && p.minBars) ? '<span class="sgrow"></span>' + '<button class="btn sm" data-x="lvbaradd">' + esc(t('live.barAdd')) + '</button>' + icb('data-x="lvbars"', ICON.bars, t('live.bars')) + icb('data-x="lvundo"', ICON.undo, t('live.undo')) + icb('data-x="lvshare"', ICON.share, t('live.export')) : '<span class="l2 lvhint">' + esc(t('live.src.' + cf.src)) + '</span>') + '</div>';
   }
 
   function body() {
@@ -335,8 +337,8 @@ export function createLive(env) {
       (p && p.raw.length ? '<button class="chip lvchip" data-x="lvgrid" aria-label="' + esc(t('live.grid')) + '">' + esc(p.grid === 'auto' ? t('grid.autoN', { g: t('grid.' + g) }) : t('grid.' + g)) + '</button>' : '') +
       (p && p.tuning ? '<button class="ic txt sm' + (env.st().liveProf !== 'score' ? ' act' : '') + '" data-x="lvprof" aria-label="' + esc(t('scoreTab')) + '">' + esc(env.st().liveProf === 'score' ? '♪' : env.st().liveProf === 'tab' ? 'T' : '♪+T') + '</button>' : '') +
       icb('data-x="lvset"', ICON.gear, t('live.settings')) + '</div>';
-    const empty = !p || (!p.raw.length && L.phase !== 'rec' && L.phase !== 'count');
-    const surf = empty ? '<div class="lvempty"><p>' + esc(t(defaults().src === 'mic' ? 'live.emptyMic' : 'live.emptyMidi')) + '</p></div>'
+    const empty = !p || (!p.raw.length && !p.minBars && L.phase !== 'rec' && L.phase !== 'count');
+    const surf = empty ? '<div class="lvempty"><p>' + esc(t(defaults().src === 'mic' ? 'live.emptyMic' : 'live.emptyMidi')) + '</p><button class="btn" data-x="lvblank" style="margin-top:14px;min-height:48px">' + esc(t('live.blank')) + '</button></div>'
       : '<div class="atwrap" id="atSlot">' + (AT.state === 'loading' ? '<div class="atload">' + C().ui.loader('beat', '') + '</div>' : '') + '</div>';
     const bar = L.sel && L.phase === 'edit' ? noteBar() : L.bars && L.phase === 'edit' ? barsBar() : mainBar();
     return '<div class="lvwrap">' + head + surf + bar + '</div>';
@@ -346,11 +348,14 @@ export function createLive(env) {
 
   function setSheet() {
     const { ui } = C(), cf = defaults(), p = L.part, locked = p && p.raw.length;
+    let devs = [];
+    C().mic.devices().then((d) => { devs = d; });
     const row = (label, html) => '<div class="cell"><span class="grow">' + esc(label) + '</span>' + html + '</div>';
     const body = () => {
       const tuns = TUNS[cf.inst];
       return ui.snav(t('live.settings')) +
         '<div class="group">' + '<div class="cellcol">' + ui.seg('lvsrc', [['mic', t('live.src.mic')], ['midi', t('live.src.midi')]], cf.src, t('live.src')) + '</div></div>' +
+        (cf.src === 'mic' ? '<div class="group"><button class="cell act" data-x="lvindev"><span class="grow">' + esc(t('live.indev')) + '</span><span class="val l2">' + esc(devs.find((d) => d.id === cf.micDev)?.label || t('live.devAuto')) + '</span></button></div>' : '') +
         '<div class="hdr">' + esc(t('live.inst')) + '</div><div class="group"><div class="cellcol">' + ui.seg('lvinst', Object.keys(INSTS).map((k) => [k, t('live.inst.' + k)]), cf.inst, t('live.inst')) + '</div>' +
         (tuns ? '<div class="cellcol">' + ui.seg('lvtun', tuns.map((x) => [x, x.replace(/\d/g, '')]), cf.tun, t('live.tuning')) + '</div>' +
           row(t('live.capo'), '<div class="vrow tight">' + icb('data-x="lvcapo" data-d="-1"', env.I.minus, t('live.capo')) + '<b class="num lvv">' + cf.capo + '</b>' + icb('data-x="lvcapo" data-d="1"', env.I.plus, t('live.capo')) + '</div>') : '') + '</div>' +
@@ -364,7 +369,8 @@ export function createLive(env) {
       const upd = () => { C().store.save(); sh.update(); env.render(); };
       el.addEventListener('click', (e) => {
         let b;
-        if ((b = e.target.closest('[data-seg="lvsrc"] [data-v]'))) { cf.src = b.dataset.v; if (p && !p.raw.length) p.mono = cf.src === 'mic'; upd(); }
+        if ((b = e.target.closest('[data-x="lvindev"]'))) { inDevSheet(cf, devs, upd); }
+        else if ((b = e.target.closest('[data-seg="lvsrc"] [data-v]'))) { cf.src = b.dataset.v; if (p && !p.raw.length) p.mono = cf.src === 'mic'; upd(); }
         else if ((b = e.target.closest('[data-seg="lvinst"] [data-v]'))) { cf.inst = b.dataset.v; cf.tun = null; defaults(); if (p) applyInst(); upd(); }
         else if ((b = e.target.closest('[data-seg="lvtun"] [data-v]'))) { cf.tun = b.dataset.v; if (p) applyInst(); upd(); }
         else if ((b = e.target.closest('[data-seg="lvnum"] [data-v]'))) { cf.num = +b.dataset.v; if (p) { p.num = cf.num; draw(); save(); } upd(); }
@@ -377,6 +383,15 @@ export function createLive(env) {
         }
       });
       el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'lvmet') { cf.metro = e.target.checked; upd(); } });
+    });
+  }
+  // Вход для записи с микрофона: «Авто» или любое устройство (встроенный микрофон, USB-интерфейс, гарнитура)
+  async function inDevSheet(cf, devs, done) {
+    const { ui } = C();
+    if (!devs.length || devs.every((d) => /^#\d+$/.test(d.label))) { try { const m = await C().mic.request(''); m.stop(); devs = await C().mic.devices(); } catch { /* без разрешения — только «Авто» */ } }
+    const row = (id, name) => '<button class="cell act' + ((cf.micDev || '') === id ? ' on' : '') + '" data-dev="' + esc(id) + '" aria-pressed="' + ((cf.micDev || '') === id) + '"><span class="grow">' + esc(name) + '</span>' + ((cf.micDev || '') === id ? '<span class="l2">✓</span>' : '') + '</button>';
+    ui.sheet(() => ui.snav(t('live.indev')) + '<div class="group">' + row('', t('live.devAuto')) + devs.map((d) => row(d.id, d.label)).join('') + '</div><p class="ftr">' + esc(t('live.indevFtr')) + '</p>', (el, sh) => {
+      el.addEventListener('click', (e) => { const b = e.target.closest('[data-dev]'); if (!b) return; cf.micDev = b.dataset.dev; C().store.save(); sh.close(); done(); });
     });
   }
   function applyInst() {
@@ -397,14 +412,21 @@ export function createLive(env) {
   }
   function shareSheet() {
     const { ui } = C(), p = L.part, name = (L.rec && L.rec.name) || t('live.title');
-    ui.sheet(() => ui.snav(t('live.export')) + '<div class="group"><button class="cell act" data-k="xml">MusicXML</button><button class="cell act" data-k="mid">MIDI</button>' +
+    ui.sheet(() => ui.snav(t('live.export')) + '<div class="group"><button class="cell act" data-k="gp">Guitar Pro (.gp)</button><button class="cell act" data-k="xml">MusicXML</button><button class="cell act" data-k="mid">MIDI</button>' +
       (C().hasTool('looper') ? '<button class="cell act" data-k="studio">' + esc(t('toStudio')) + '</button>' : '') + '</div><p class="ftr">' + esc(t('live.exportFtr')) + '</p>',
     (el, sh) => el.addEventListener('click', async (e) => {
       const k = e.target.closest('[data-k]');
       if (!k) return;
       sh.close();
       const fn = name.replace(/[\\/:*?"<>|]/g, '-');
-      if (k.dataset.k === 'xml') C().sendFile(new TextEncoder().encode(xml()), fn + '.musicxml', fn, 'application/vnd.recordare.musicxml+xml');
+      if (k.dataset.k === 'gp') {
+        // Guitar Pro 7 (.gp): партия → MusicXML → партитура alphaTab → экспортёр alphaTab (читается в Guitar Pro, TuxGuitar и др.)
+        try {
+          const at = await env.loadLib(), st0 = new at.Settings();
+          const sc = at.importer.ScoreLoader.loadScoreFromBytes(new TextEncoder().encode(xml()), st0);
+          C().sendFile(new at.exporter.Gp7Exporter().export(sc, st0), fn + '.gp', fn, 'application/x-guitar-pro');
+        } catch (er) { C().logErr(er); C().ui.toast(t('live.gpFail')); }
+      } else if (k.dataset.k === 'xml') C().sendFile(new TextEncoder().encode(xml()), fn + '.musicxml', fn, 'application/vnd.recordare.musicxml+xml');
       else if (k.dataset.k === 'mid') C().sendFile(writeMidi(partEvents(p), { name: fn }), fn + '.mid', fn, 'audio/midi');
       else { const pj = projectFromSong(partSong(p, name)); C().projects.save(pj); C().ui.toast(t('dawOpened')); C().openIn('looper', { inbox: { kind: 'proj', pid: pj.id, temp: true } }); } // в лупер: партией в свободную петлю
     }));
@@ -437,6 +459,13 @@ export function createLive(env) {
     const p = L.part;
     switch (a) {
       case 'lvnew': L.part = null; L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'idle'; L.phase = 'idle'; L.sel = null; L.bars = null; env.render(); return true;
+      case 'lvblank': { // писать с нуля: пустая партия на 4 такта — нота ставится касанием паузы
+        L.part = fresh(); L.part.minBars = 4; L.phase = 'edit'; L.sel = null; L.bars = null; L.restAt = null; L.undo = [];
+        L.rec = { tmp: true, id: 'live-tmp', kind: 'tab', fmt: 'live', name: t('live.title') }; env.AT.cur = L.rec; env.AT.state = 'loading';
+        draw(); env.render(); return true;
+      }
+      case 'lvbaradd': { const q = L.part; if (q) edit((x) => { x.minBars = Math.min(200, barsOf(x) + 1); }); return true; }
+      case 'lvdur': { const i = L.part.raw.indexOf(L.sel); if (i >= 0) edit((q) => setLen(q, i, +el.dataset.b)); return true; }
       case 'lvrec': start(); return true;
       case 'lvstop': stop(); return true;
       case 'lvset': setSheet(); return true;

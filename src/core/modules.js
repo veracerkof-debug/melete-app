@@ -105,7 +105,11 @@ export function makeCtx(app, mod) {
     store: moduleStore(app, mod.id),
     audio: app.audio,
     output: app.output, // вывод на другое устройство: get/set цели категории, share для движков (core/output.js)
-    mic: { request: () => app.audio.openMic() },
+    mic: {
+      request: (deviceId) => app.audio.openMic(deviceId),
+      // входы для выбора: [{ id, label }] (названия видны после разрешения микрофона)
+      devices: async () => { try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput' && d.deviceId).map((d, i) => ({ id: d.deviceId, label: d.label || ('#' + (i + 1)) })); } catch { return []; } },
+    },
     // Сигналы метронома без звука (вспышка, фонарик, вибрация): info() → { vibrate, torch } — что есть на устройстве
     pulse: app.pulse,
     // Вид «Минимал» (эксперимент): у инструментов с выбором вида он закреплён — самый простой и функциональный

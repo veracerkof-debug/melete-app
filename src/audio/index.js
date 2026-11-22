@@ -146,7 +146,7 @@ export function createAudio({ device, metroCfg, onTempo, onBpmChange, saveMetro,
     chime,
     refTone,
     analyser,
-    openMic: () => openMic(device.mix.mode),
+    openMic: (deviceId) => openMic(device.mix.mode, deviceId),
     // Для записи: контекст и отвод всего, что звучит (после компрессора и прямой выход метронома), в узел:
     // into(node) → off(). null — звука нет
     tap() {
