@@ -476,7 +476,11 @@ export function openStage(app, evId, i = 0) {
       const f = p.file && app.files ? app.files.get(p.file) : null, name = p.name || (p.synth ? t('stage.p.' + p.synth) : f ? f.name : '');
       return '<button class="sgpad ' + (p.synth ? 'p-' + p.synth : 'pc-' + p.color) + '" data-pad="' + esc(p.id) + '" aria-label="' + esc(name) + '"><b>' + esc(name) + '</b></button>';
     };
-    return '<div class="sgpads">' + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
+    // фон (пэд): кнопка и тональности — в той же панели, что и звуки
+    const x = item(), pad = droneOn(), pc = keyPc(), free = !x;
+    const bg = '<div class="sgbg"><button class="sgchip' + (pad ? ' on' : '') + '" data-sgt="pad" aria-pressed="' + pad + '">' + esc(t('stage.pad') + (pad || free ? ' ' + NOTES[pc] : x.it.key ? ' ' + keyLabel(x.it.key) : '')) + '</button></div>' +
+      (pad || free ? '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>' : '');
+    return '<div class="sgpads">' + bg + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
       '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
       (b.pads.some((p) => p && p.synth) ? '<div class="sgfx"><label><span>' + esc(t('stage.space')) + '</span><input type="range" class="sgrng" data-fx="space" min="0" max="100" value="' + Math.round(S.space * 100) + '" aria-label="' + esc(t('stage.space')) + '"></label>' +
         '<label><span>' + esc(t('stage.echo')) + '</span><input type="range" class="sgrng" data-fx="echo" min="0" max="100" value="' + Math.round(S.echo * 100) + '" aria-label="' + esc(t('stage.echo')) + '"></label></div>' : '') + '</div>';
@@ -506,10 +510,10 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgbpm' + (run ? ' on' : '') + '" data-sgmetro aria-pressed="' + run + '" aria-label="' + esc(t('stage.metroBtn')) + '"><b class="num">' + bpm + '</b><small>bpm</small></button>' +
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' +
-      '<div class="sgchips">' + chip('pad', pad, t('stage.pad') + (pad || free ? ' ' + NOTES[pc] : it && it.key ? ' ' + keyLabel(it.key) : '')) +
+      '<div class="sgchips">' + (pad && !S.showPads ? chip('pad', pad, t('stage.pad') + ' ' + NOTES[pc]) : '') + // фон — в панели «Звуки»; вне её — только пока звучит, чтобы его можно было выключить
+        
         chip('track', !!S.track, '♪ ' + (trName || t('stage.track')), !!(it && it.track)) + chip('pads', S.showPads, t('stage.sounds')) + chip('mix', false, t('stage.mix')) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) + chip('view', S.view === 'list', t('stage.listView')) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' +
-      (pad || free ? '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>' : '') +
       (S.showPads ? padsHTML() : '') +
       '<div class="sgbar">' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
         '<button class="sgbtn" data-sg="prev"' + (S.i ? '' : ' disabled') + ' aria-label="' + esc(t('stage.prev')) + '">' + I.prev + '</button>' +
