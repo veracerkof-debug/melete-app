@@ -822,3 +822,11 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .sndbar i[data-lvl="high"]{background:var(--red)}
 .sndld .val{min-width:3.4em;text-align:right;font-weight:600}
 @media (prefers-reduced-motion:reduce){.sndbar i{transition:none}}
+/* выбор нескольких песен */
+.selbar{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:var(--sp-2) var(--sp-4);position:sticky;top:0;z-index:2;background:var(--bg)}
+.selt{font-weight:600}
+.stile3.sel{background:var(--fill)}
+.selmk{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:var(--sp-2);border-radius:var(--r-1);border:1.5px solid var(--l3);font-style:normal;font-size:var(--fs-2);color:var(--on-tint)}
+.stile3.sel .selmk{background:var(--tint);border-color:var(--tint)}
+.selacts{display:flex;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);position:sticky;bottom:0;background:var(--bg)}
+.selacts .cell{flex:1;justify-content:center;text-align:center}

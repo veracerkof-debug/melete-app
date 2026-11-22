@@ -60,14 +60,20 @@ export function libraryHTML(app, view) {
     '<select class="sortsel" data-input="sort" aria-label="' + t('songs.sort') + '">' + SORTS.map((v) => '<option value="' + v + '"' + (view.sort === v ? ' selected' : '') + '>' + t('sort.' + v) + '</option>').join('') + '</select></div>';
   if (!list.length) return h + '<div class="empty">' + t('songs.notFound') + '</div>';
   const due = new Set(st.toolsOnly ? [] : dueSongs(songs, app.store.sessions()).map((x) => x.s.id)); // к повторению (review.js)
-  return h + '<div class="slist">' + list.map(({ s, st: ss }) => {
+  // выбор нескольких песен (слово автора 22.11.2026): удержать песню → «Выбрать»; касание отмечает; внизу — действия
+  const sel = view.sel instanceof Set ? view.sel : null;
+  if (sel) [...sel].forEach((id) => { if (!app.store.songById(id)) sel.delete(id); });
+  const allOn = !!sel && list.length > 0 && list.every(({ s }) => sel.has(s.id));
+  const selBar = sel ? '<div class="selbar" role="group"><button class="link" data-act="selall">' + t(allOn ? 'songs.selNone' : 'songs.selAll') + '</button><b class="selt" aria-live="polite">' + t('songs.selN', { n: sel.size }) + '</b><button class="link b" data-act="seldone">' + t('songs.selDone') + '</button></div>' : '';
+  const selAct = sel ? '<div class="selacts"><button class="cell act" data-act="selsend"' + (sel.size ? '' : ' disabled') + '>' + t('share.title') + '</button><button class="cell act" data-act="selcat"' + (sel.size ? '' : ' disabled') + '>' + t('songs.selCat') + '</button><button class="cell act danger" data-act="seldel"' + (sel.size ? '' : ' disabled') + '>' + t('song.delete') + '</button></div>' : '';
+  return h + selBar + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
-    return '<button class="stile3" data-song="' + s.id + '" style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' +
+    return '<button class="stile3' + (sel && sel.has(s.id) ? ' sel' : '') + '" data-song="' + s.id + '"' + (sel ? ' role="checkbox" aria-checked="' + sel.has(s.id) + '"' : '') + ' style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' + (sel ? '<i class="selmk" aria-hidden="true">' + (sel.has(s.id) ? '✓' : '') + '</i>' : '') +
       (c ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + (due.has(s.id) ? '<span class="rvmark">' + t('rv.mark') + '</span>' : '') + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
       '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
-  }).join('') + '</div>';
+  }).join('') + '</div>' + selAct;
 }
 
 /* ---------- карточка песни ---------- */
@@ -290,4 +296,17 @@ export function itemEditor(app, kind, id, back) {
     });
     el.addEventListener('change', (e) => { if (e.target.hasAttribute('data-col-in') || e.target.hasAttribute('data-txc-in')) re(); });
   });
+}
+
+// Выбранным песням — одна категория (или «Без категории»)
+export function selCatSheet(app, ids, done) {
+  const L = ensureLib(app.store.state, t);
+  sheet(() => snav(t('songs.selCat')) + '<div class="group"><button class="cell" data-cat="">' + '<span class="grow">' + t('songs.noCat') + '</span></button>' +
+    L.cats.map((c) => '<button class="cell" data-cat="' + c.id + '"><span class="grow">' + esc(c.name) + '</span><i class="cdot" style="background:' + c.color + '"></i></button>').join('') + '</div>',
+  (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cat]'); if (!b) return;
+    const cat = b.dataset.cat || null;
+    ids.forEach((id) => { const x = app.store.songById(id); if (x) { x.cat = cat; x.updatedAt = Date.now(); } });
+    app.store.save(); sh.close(); if (done) done();
+  }));
 }

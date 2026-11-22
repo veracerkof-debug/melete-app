@@ -12,7 +12,9 @@ import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
-import { libraryHTML, songHTML, songForm, libManager } from './songs.js';
+import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
+import { listSongs, ensureLib } from '../library.js';
+import { getLang } from '../../i18n/index.js';
 import { routinesClick } from './routine.js';
 import { renderTools, openToolView, toolsTab, setToolsTab } from './tools.js';
 import { reportSheet, ideaSheet } from './report.js';
@@ -177,7 +179,16 @@ export function createShell(app, root) {
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);
     else if (d.play) app.startSession('song', d.play);
+    else if (d.song && view.sel instanceof Set) { if (view.sel.has(d.song)) view.sel.delete(d.song); else view.sel.add(d.song); render(); } // выбор нескольких песен
     else if (d.song) go('library', d.song);
+    else if (d.act === 'selall') { const L = listSongs(app.store.songs(), app.store.sessions(), ensureLib(app.store.state, t), view, getLang()).list; const on = L.length && L.every(({ s }) => view.sel.has(s.id)); L.forEach(({ s }) => { if (on) view.sel.delete(s.id); else view.sel.add(s.id); }); render(); }
+    else if (d.act === 'seldone') { view.sel = null; render(); }
+    else if (d.act === 'selsend') { if (view.sel && view.sel.size) shareSheet(app, { songIds: [...view.sel] }); }
+    else if (d.act === 'selcat') { if (view.sel && view.sel.size) selCatSheet(app, [...view.sel], () => { view.sel = null; render(); }); }
+    else if (d.act === 'seldel') {
+      const ids = view.sel ? [...view.sel] : [];
+      if (ids.length) confirm(t('songs.selDelTitle', { n: ids.length }), t('songs.selDelText'), t('song.delYes')).then((ok) => { if (ok) { ids.forEach((id) => deleteSong(app.store, id)); view.sel = null; render(); } });
+    }
     else if (d.edit) songForm(app, d.edit, (id) => go('library', id));
     else if (d.del) {
       const s = app.store.songById(d.del);
@@ -251,6 +262,7 @@ export function createShell(app, root) {
     const id = b.dataset.song, s = app.store.songById(id);
     if (!s) return;
     holdMenu(b, [
+      { icon: SM.edit, label: t('songs.sel'), run: () => { view.sel = new Set([id]); render(); } },
       { icon: SM.play, label: t('song.play'), run: () => app.startSession('song', id) },
       { icon: SM.edit, label: t('song.edit'), run: () => songForm(app, id, (nid) => go('library', nid)) },
       { icon: SM.share, label: t('share.title'), run: () => shareSheet(app, { songIds: [id] }) },
