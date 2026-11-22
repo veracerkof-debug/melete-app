@@ -25,6 +25,7 @@ import { createPomodoro, pomoDefaults, POMO_LIMITS } from './pomodoro.js';
 import { pause as pauseActive, resume as resumeActive, awayStart, awayEnd, countsWhileHidden } from './session.js';
 import { createStopwatch } from './stopwatch.js';
 import { createActivity } from './activity.js';
+import { initMicBusy } from './micbusy.js';
 import { initNoSound } from './nosound.js';
 import { createPulse } from './pulse.js';
 import { initBackground } from './background.js';
@@ -326,6 +327,7 @@ export function boot(root) {
   if (DEV) extendOutput(app.output, app); // кандидаты, выбор устройства, «всё на…», проверка связи для шторки (слой — core/output.js)
   // Признаки занятия: касания, звук, микрофон — и проверки бездействия сессии и секундомера
   activity = app.activity = createActivity(app, { soundingAudio });
+  initMicBusy(); // «микрофон занят записью» — большая надпись (audio/micowner.js)
   // Мелета-тамагочи: по желанию рядом на занятии, слушает (если разрешено) и говорит, как идёт
   initTama(app);
   // иконка приложения: значок вкладки в браузере (на Android — выбранный alias уже включён)

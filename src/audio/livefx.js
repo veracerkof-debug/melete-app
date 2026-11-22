@@ -4,6 +4,7 @@
 // цели громкости — только в файле. Контекст у диктофона свой (малая задержка), пространства реверберации строятся в
 // нём (localSpaces). Без AudioWorklet голосовая цепочка вживую пропускается (звук идёт как есть, в файле — полностью).
 // Вход и выход — свои: открыть вход (deviceId, где браузер умеет выбирать), выход — setSinkId, где он есть.
+import { micOpen } from './micowner.js';
 import { createFxChain, localSpaces } from './fx.js';
 import { createVocalNode, normalizeVoiceSet } from './vocal.js';
 
@@ -32,8 +33,8 @@ export async function openInput(c, deviceId) {
   const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
   if (deviceId && deviceId !== -1 && typeof deviceId === 'string') audio.deviceId = { exact: deviceId };
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio }); } catch (e) {
-    const why = e && e.name === 'NotAllowedError' ? 'denied' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable';
+  try { stream = await micOpen({ audio }, 'livefx'); } catch (e) {
+    const why = e && e.reason === 'busy' ? 'busy' : e && e.name === 'NotAllowedError' ? 'denied' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable';
     throw Object.assign(new Error(why), { reason: why });
   }
   const src = c.createMediaStreamSource(stream);

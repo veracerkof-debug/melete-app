@@ -7,6 +7,7 @@
 import { newTrack, isEmptyProject, loopOf, secPerBeat, addClip, punchClip, takesOf, normalizeProject } from '../../music/project.js';
 import { renderProject } from '../../audio/render.js';
 import { createCapture, openInput } from '../../audio/capture.js';
+import { recBeginAsk, setStopper } from '../../audio/micowner.js';
 import { encodeWav, peaks as wavPeaks } from '../../audio/voicefx.js';
 import { engine as audioEngine } from '../../audio/voiceengine.js';
 import { clickVoice, clickNoise } from '../../audio/metronome.js';
@@ -137,6 +138,11 @@ export function createRecording(S) {
     const c = tap.ctx, rec = { kind, p, src, cap: null, input: null, off: null, tr: null, lat: 0, stem, loop: null };
     try {
       if (kind === 'track' && src === 'in') {
+        // с микрофона: запись занимает его до остановки; чужая идущая запись сама не прервётся (audio/micowner.js)
+        setStopper('studio', () => stop(true));
+        const g = await recBeginAsk('studio', ctx.mic.askTakeover);
+        if (!g.ok) { cleanup(rec); return; }
+        rec.claim = g;
         rec.input = await openInput({ in: (S.st().rec && S.st().rec.in) || null });
         const node = c.createMediaStreamSource(rec.input.stream);
         rec.cap = createCapture(c, node, { channels: rec.input.channels, onFull: () => stop() });
@@ -174,6 +180,7 @@ export function createRecording(S) {
     if (rec.off) rec.off();
     if (rec.monNode) { try { rec.monNode.disconnect(); } catch { /* */ } }
     if (rec.input) rec.input.close();
+    if (rec.claim) { rec.claim.end(); rec.claim = null; }
     if (rec.hidden) { rec.hidden.forEach((x) => { x.mute = false; }); rec.hidden = null; }
   }
   // Стоп: буфер → WAV в медиатеку (с волной); запись в дорожку — клип с доли старта (поправка задержки — off клипа)

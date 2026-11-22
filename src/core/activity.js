@@ -5,6 +5,7 @@
 import { t } from '../i18n/index.js';
 import { esc, toast, leave } from '../ui/index.js';
 import { openMic } from '../audio/mic.js';
+import { micBusy } from '../audio/micowner.js';
 import { touch, noteHeard, idleAction, markAsked, confirmPlaying, saveActive, QUIET_MS } from './session.js';
 import { tamaOf } from './tama.js';
 import { engine as voiceEngine, devKind } from '../audio/voiceengine.js';
@@ -106,15 +107,16 @@ export function createActivity(app, { soundingAudio }) {
     } catch { /* нет списка устройств — как раньше */ }
   }
   try { voiceEngine().on('devices', btCheck); } catch { /* без движка — без проверки */ }
-  const wantMic = () => (presence() || tamaEar()) && !off() && !micErr && !btOut && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
+  const wantMic = () => (presence() || tamaEar()) && !off() && !micErr && !btOut && !micBusy('mascot') && document.visibilityState === 'visible' && (!!app.active || app.stopwatch.running || act.tools > 0);
   async function micStart() {
     if (mic || opening) return;
     opening = true;
     if (Date.now() - btAt > 5000) await btCheck();
     if (btOut) { opening = false; return; }
     try {
-      mic = await openMic(app.device.mix?.mode);
+      mic = await openMic(app.device.mix?.mode, '', { who: 'mascot', soft: true, yieldFn: () => micStop() });
     } catch (e) {
+      if (e && e.reason === 'busy') { opening = false; return; } // микрофон занят записью или инструментом — слух уступает, без ошибки
       micErr = true;
       toast(t(e.reason === 'denied' ? 'presence.denied' : 'presence.unavailable'));
     }

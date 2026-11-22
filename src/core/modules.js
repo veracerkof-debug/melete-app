@@ -1,5 +1,6 @@
 // Хозяин модулей: создаёт ctx по контракту (MODULE_SPEC.md), монтирует модуль в окно,
 // учитывает время инструмента, открытого вне сессии.
+import { askTakeover } from './micbusy.js';
 import { isDesk } from '../ui/desk.js';
 import { keyLabel } from './qwerty.js';
 import { getLang, makeT, makeTn, fmtNum, t as coreT, CORE_DICTS as coreDicts } from '../i18n/index.js';
@@ -107,6 +108,8 @@ export function makeCtx(app, mod) {
     output: app.output, // вывод на другое устройство: get/set цели категории, share для движков (core/output.js)
     mic: {
       request: (deviceId) => app.audio.openMic(deviceId),
+      // идёт чужая запись: спросить «остановить её и начать здесь?» (src/core/micbusy.js, audio/micowner.js: recBeginAsk)
+      askTakeover,
       // входы для выбора: [{ id, label }] (названия видны после разрешения микрофона)
       devices: async () => { try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput' && d.deviceId).map((d, i) => ({ id: d.deviceId, label: d.label || ('#' + (i + 1)) })); } catch { return []; } },
     },

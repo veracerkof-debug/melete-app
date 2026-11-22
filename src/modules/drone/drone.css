@@ -136,3 +136,5 @@
 
 /* Пэды — до верхнего края окна: без полосы-«чёлки» над плитками (слово автора 22.11.2026) */
 .session .ws .pane.toolhost:has(.dwrap.bleed){padding-top:0!important}
+/* То же в отдельном окне инструмента (.tview): плитки от самого верха карточки, без белой полосы (слово автора 22.11.2026) */
+.tview .tvhost:has(.dwrap.bleed){padding-top:0!important;overflow:hidden}

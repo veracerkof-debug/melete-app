@@ -5,6 +5,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { encodeWav } from './voicefx.js';
 import { REC } from './recstate.js';
+import { recBeginAsk, micOpen } from './micowner.js';
 import { log } from '../core/log.js';
 
 const V = Capacitor.isNativePlatform() ? registerPlugin('Voice') : null;
@@ -132,7 +133,7 @@ function webEngine() {
   const typeOf = (d) => (/bluetooth|bt|airpods|buds/i.test(d.label) ? 'bt' : /usb/i.test(d.label) ? 'usb_device' : /head|гарнитур|наушник/i.test(d.label) ? 'wired_headset' : d.kind === 'audiooutput' ? 'speaker' : 'builtin_mic');
   const putFile = async (path, u8, meta = {}) => { const ok = await tx('files', 'readwrite', (s) => req(s.put({ u8, at: Date.now(), ...meta }, path))).then(() => true, () => false); if (!ok) mem.set(path, u8); };
   // открыть вход: устройство (deviceId) или звук экрана/вкладки (getDisplayMedia: звук компьютера, урок в браузере)
-  async function openStream(deviceId, nc, raw) {
+  async function openStream(deviceId, nc, raw, who) {
     const dsp = { echoCancellation: !raw, noiseSuppression: !raw, autoGainControl: !raw };
     if (deviceId === 'display') {
       const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, systemAudio: 'include' });
@@ -140,7 +141,7 @@ function webEngine() {
       if (!s.getAudioTracks().length) throw Object.assign(new Error('noaudio'), { name: 'NoAudio' });
       return s;
     }
-    return navigator.mediaDevices.getUserMedia({ audio: { ...(deviceId && deviceId !== -1 ? { deviceId: { exact: deviceId } } : {}), channelCount: nc, ...dsp } });
+    return micOpen({ audio: { ...(deviceId && deviceId !== -1 ? { deviceId: { exact: deviceId } } : {}), channelCount: nc, ...dsp } }, who);
   }
   return {
     native: false,
@@ -159,8 +160,8 @@ function webEngine() {
       // места мало — не начинать: запись, оборвавшаяся на середине, хуже, чем честный отказ сразу
       if (!monitor && (await freeBytes()) < MIN_FREE) throw Object.assign(new Error('space'), { message: 'space' });
       let stream;
-      const why = (e) => (e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable');
-      try { stream = await openStream(deviceId, nc, raw); }
+      const why = (e) => (e && e.reason === 'busy' ? 'busy' : e && e.name === 'NotAllowedError' ? 'denied' : e && e.name === 'NoAudio' ? 'noaudio' : e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError' || e.name === 'TypeError') ? 'nomic' : 'unavailable');
+      try { stream = await openStream(deviceId, nc, raw, monitor ? 'voice-level' : CUR); }
       catch (e) { throw Object.assign(new Error('mic'), { message: why(e) }); }
       // контекст — на родной частоте входа (USB-микрофон 44,1 или 96 кГц пишется без пересчёта); не умеет — как выйдет
       const set0 = (stream.getAudioTracks()[0] && stream.getAudioTracks()[0].getSettings && stream.getAudioTracks()[0].getSettings()) || {};
@@ -304,4 +305,22 @@ function webEngine() {
 }
 
 let ENGINE = null;
-export const engine = () => ENGINE || (ENGINE = V ? nativeEngine() : webEngine());
+// Хозяин микрофона (micowner.js): запись занимает микрофон до остановки; вторая запись не начнётся сама.
+// o.who — кто пишет ('voice' по умолчанию, у ансамбля 'ens'), o.ask(кто) → Promise<boolean> — спросить человека, остановить ли чужую запись
+let CUR = 'voice'; // кто пишет сейчас — для openStream веб-движка
+function guard(E) {
+  const start = E.start, stop = E.stop;
+  let claim = null;
+  const unclaim = () => { if (claim) { claim.end(); claim = null; } };
+  E.start = async (o = {}) => {
+    const { who, ask, ...rest } = o;
+    if (rest.monitor) return start.call(E, rest);
+    const g = await recBeginAsk(who || 'voice', ask);
+    if (!g.ok) throw Object.assign(new Error('busy'), { message: 'busy', reason: 'busy', by: g.by.who });
+    claim = g; CUR = who || 'voice';
+    try { return await start.call(E, rest); } catch (e) { unclaim(); throw e; }
+  };
+  E.stop = () => { let p; try { p = Promise.resolve(stop.call(E)); } catch (e) { unclaim(); throw e; } return p.finally(unclaim); };
+  return E;
+}
+export const engine = () => ENGINE || (ENGINE = guard(V ? nativeEngine() : webEngine()));

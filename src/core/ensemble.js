@@ -17,6 +17,7 @@ import { decodeWav, encodeWav, peaks } from '../audio/voicefx.js';
 import { projectFromStems } from '../music/project.js';
 import { http, pcOf, CHUNK, b64, metaOf } from './sync.js';
 import { log, logErr } from './log.js';
+import { setStopper } from '../audio/micowner.js';
 
 export const PARTS = ['vocals', 'guitar', 'bass', 'drums', 'piano', 'other'];
 // Чистая дорожка партии: режим разделения и часть (прочее — не делится)
@@ -253,7 +254,8 @@ export function createEnsembleClient(app, { rec, H = http, now = () => Date.now(
   }
   async function startRec(n) {
     try {
-      await rec.start({ deviceId: -1, stereo: false, raw: true });
+      setStopper('ens', () => stopRec(false)); // чужая запись, начатая поверх, сначала сохранит этот дубль
+      await rec.start({ deviceId: -1, stereo: false, raw: true, who: 'ens' });
       S.recTake = n; S.recording = true; S.recAt = now(); S.saved = null; S.err = null;
       log('ens', 'запись дубля ' + n);
     } catch (e) { S.err = 'mic'; S.failTake = n; logErr('ens', e); }

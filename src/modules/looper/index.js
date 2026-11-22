@@ -344,6 +344,7 @@ function layerSheet(i) {
 
 const fail = (e) => {
   const r = e && e.reason;
+  if (r === 'busy') return; // большая надпись «идёт запись» уже показана (core/micbusy.js)
   ctx.ui.toast(ctx.t(r === 'denied' ? 'err.denied' : r === 'unavailable' ? 'err.mic' : r === 'layers' ? 'err.layers' : e && e.message === 'nosound' ? 'err.sound' : 'err.fail'));
   if (!r) ctx.logErr(e);
 };
@@ -593,7 +594,7 @@ export default {
   status(c) { return c.t(c.store.get('metro') ? 'st.metro' : 'st.free'); },
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
-    if (!lp) lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); clickPan(); }, log: c.log });
+    if (!lp) { lp = createLooper({ mixer: c.audio.mixer, onChange: () => { tick(); if (parts) parts.follow(); clickPan(); }, log: c.log }); lp.setAsk(c.mic.askTakeover); }
     if (!parts) parts = createParts(c, lp, { render: () => render(), barSec: () => barSec(), play: () => { if (lp.state.state === 'idle') main(); } });
     // присланное другим модулем (ctx.openIn('looper', { inbox })) — один раз
     const box = st().inbox; if (box) { delete st().inbox; c.store.save(); setTimeout(() => takeInbox(box), 0); }

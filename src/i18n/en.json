@@ -2624,5 +2624,17 @@
   "together.push.report": "{name} read: {ref}",
   "together.push.nudge": "{name} sends a reading nudge",
   "together.push.msg": "{name}: {text}",
-  "together.push.title": "Together"
+  "together.push.title": "Together",
+  "mic.who.voice": "Recorder",
+  "mic.who.ens": "Ensemble",
+  "mic.who.recorder": "Tool recording",
+  "mic.who.studio": "Studio",
+  "mic.who.looper": "Looper",
+  "mic.busyTitle": "Recording in progress",
+  "mic.busyText": "The microphone is busy: recording in “{who}”. This tool will not hear sound until the recording ends. The recording keeps going and nothing will interrupt it.",
+  "mic.busyOk": "OK",
+  "mic.takeTitle": "Another recording is running",
+  "mic.takeText": "“{who}” is recording now. Stop it (it will be saved) and start here?",
+  "mic.takeYes": "Stop and start",
+  "rec.micBusy": "Another recording is running — the microphone is busy until it ends"
 }

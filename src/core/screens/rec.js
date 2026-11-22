@@ -5,6 +5,7 @@
 // Запись — recorder.js. MIDI (у инструментов с midiIn): записывается сама игра; здесь же — записи MIDI этого
 // инструмента (воспроизведение в нём, «Поделиться» файлом .mid, удаление), открытие чужого .mid и MIDI-клавиатура.
 // Пока запись играет, кнопка записи — «стоп».
+import { askTakeover } from '../micbusy.js';
 import { t } from '../../i18n/index.js';
 import { sheet, snav, seg, sw, toast, icb, esc, icons, confirm } from '../../ui/index.js';
 import { fmtClock } from '../format.js';
@@ -84,7 +85,7 @@ function recSheet(app, mod, host, name) {
       fmtSeg +
       (on ? '' : '<button class="btn fill recgo" data-rgo>' + REC_ICON + '<span>' + t('rec.go') + '</span></button><p class="ftr">' + t('rec.hint') + '</p>');
   };
-  const arm = async () => { const r = await R.arm(); if (r === 'mic') { R.prefs.mic = false; app.store.settingsChanged(); toast(t('rec.micDenied')); } return r; };
+  const arm = async () => { const r = await R.arm(); if (r === 'busy') toast(t('rec.micBusy')); else if (r === 'mic') { R.prefs.mic = false; app.store.settingsChanged(); toast(t('rec.micDenied')); } return r; };
   R.meter.howl = () => toast(t('rec.howl'));
   sheet(body, (el, sh) => {
     if (fmt() !== 'midi') arm().then(() => sh.update());
@@ -204,8 +205,8 @@ function recSheet(app, mod, host, name) {
         video = mod.recordVideo(host);
         if (!video) toast(t('rec.noVideo'));
       }
-      const r = await R.start({ tool: name, video });
-      if (r === 'empty') { if (video) video.stop(); toast(t('rec.empty')); return; }
+      const r = await R.start({ tool: name, video, ask: askTakeover });
+      if (r === 'empty' || r === 'busy') { if (video) video.stop(); toast(t(r === 'busy' ? 'rec.micBusy' : 'rec.empty')); return; }
       sh.close();
       if (r === 'unsupported') toast(t('rec.unsupported'));
       else if (r === 'nosound') toast(t('rec.nosound'));

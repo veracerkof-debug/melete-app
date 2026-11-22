@@ -16,6 +16,7 @@ import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
 import { engine, isLav, KIND, devKind } from '../../audio/voiceengine.js';
+import { setStopper } from '../../audio/micowner.js';
 import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, migrateVoiceFx, withCue } from '../../audio/voicefx.js';
 import { BUILTIN, isUser, isDirty, applyPreset, saveAs, overwrite, rename, remove as removePreset, migratePresets, normalizePresets } from '../../audio/voicepresets.js';
 import { MODE_IDS, LEVELS, normalizeVoiceSet, editVoiceSet, modeParams, modeLevel } from '../../audio/vocal.js';
@@ -137,8 +138,9 @@ const sw = (k, on) => '<label class="sw"><input type="checkbox" role="switch" ar
 // Вход до записи: слушать и обрабатывать вживую (livefx) — мини-окно спектра и уровня после обработки,
 // в наушниках (если включено) — звук с обработкой. Ничего не пишется. Android: вход направляется маршрутом.
 let L = null; // { c, inp, fx, an, mon, raf, buf }
+let recStarting = false; // запись начинается: монитор входа не открывается (вторым потоком он бы спорил с записью за микрофон)
 async function liveStart() {
-  if (L || !host || !big() || S.phase !== 'idle') return;
+  if (L || !host || !big() || S.phase !== 'idle' || recStarting) return;
   const s = st(), dev = curIn(), E = engine();
   if (dev && dev.type === 'display') return; // звук экрана — окно выбора только при записи
   L = { pending: true };
@@ -164,7 +166,7 @@ async function liveStart() {
     const loop = () => { if (!L || !L.an) return; L.raf = requestAnimationFrame(loop); meterUpdate(levelOf(L.an, L.buf)); grUpdate(L.fx.gr()); };
     loop();
   } catch (e) {
-    L = null; S.err = e && (e.reason === 'denied' || e.reason === 'nomic') ? e.reason : 'unavailable'; if (E.native) E.unroute();
+    L = null; S.err = e && (e.reason === 'denied' || e.reason === 'nomic' || e.reason === 'busy') ? e.reason : 'unavailable'; if (E.native) E.unroute();
     if (inp) { try { inp.stop(); } catch { /* уже */ } }
     if (c) c.close().catch(() => {});
   }
@@ -183,19 +185,25 @@ const liveHear = () => { if (L && L.mon) L.mon.gain.setTargetAtTime(st().hear ? 
 const liveRestart = async () => { await liveStop(); if (st().live) liveStart(); };
 async function startRec() {
   stopItem();
+  recStarting = true;
+  try { await startRec0(); } finally { recStarting = false; }
+  if (S.phase === 'idle') render(); // запись не началась — монитор входа возвращается
+}
+async function startRec0() {
   await liveStop();
   if (S.take && !S.take.saved && !(await ctx.ui.confirm(t('discardTitle'), t('discardText'), t('discardYes')))) return;
   await dropTake();
   const s = st(), dev = curIn();
   try {
-    const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo || s.pick !== 'mix', raw: s.raw });
+    setStopper('voice', () => stopRec());
+    const r = await engine().start({ deviceId: dev ? dev.id : -1, stereo: s.stereo || s.pick !== 'mix', raw: s.raw, who: 'voice', ask: ctx.mic.askTakeover });
     Object.assign(S, { phase: 'rec', sec: 0, peak: 0, rms: 0, paused: false, clip: 0, err: null, rate: r.rate, recCh: r.channels, bt: r.bt, marks: [], t0: Date.now(), inWarn: '', warned: {}, recDev: r.dev ? { ...r.dev, rate: r.dev.rate || r.rate } : null });
     s.liveMarks = { t0: S.t0, marks: [] }; ctx.store.save();
     resetMeter(r.rate || 48000);
     ctx.log('запись: вход ' + (dev ? dev.type : 'авто') + (r.dev ? ' (пишет: ' + (r.dev.type || '') + ' «' + r.dev.name + '»)' : '') + ', ' + r.rate + ' Гц, каналов ' + r.channels + (r.raw === false ? ', с обработкой системы' : ''));
   } catch (e) {
     const m = String(e && e.message);
-    S.err = m === 'denied' || m === 'space' || m === 'noaudio' || m === 'nomic' ? m : 'unavailable';
+    S.err = m === 'denied' || m === 'space' || m === 'noaudio' || m === 'nomic' || m === 'busy' ? m : 'unavailable';
     ctx.log('запись не началась: ' + S.err, 'w');
   }
   render();
@@ -902,7 +910,7 @@ function stageHTML() {
     '<div class="vc-bar vcled" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div></div>';
 }
 function html() {
-  const err = S.err ? '<p class="ftr vc-err">' + t(S.err === 'denied' && curIn() && curIn().type === 'display' && engine().native ? 'err.capture' : { denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing' }[S.err] || 'micNone') + '</p>' : '';
+  const err = S.err ? '<p class="ftr vc-err">' + t(S.err === 'denied' && curIn() && curIn().type === 'display' && engine().native ? 'err.capture' : { denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing', busy: 'micBusy' }[S.err] || 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div><div class="vc-bar vcled mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
       '<div class="vc-btns">' + markBtn(S.marks.length) + '<button class="vc-btn main stop" data-x="stop" aria-label="' + t('stop') + '">' + I.stop + '</button></div></div>';

@@ -3,6 +3,7 @@
 // (playbackTime), так что записанное ложится в песню с точностью до отсчёта; поправка на задержку входа — в долях
 // секунды снаружи (off клипа). Без DOM.
 import { engine } from './voiceengine.js';
+import { micOpen } from './micowner.js';
 
 const CHUNK = 8192, MAX_SEC = 20 * 60;
 
@@ -12,8 +13,9 @@ export async function openInput(prefs = {}) {
   if (E.native) await E.route(want);
   const raw = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { ...raw, ...(!E.native && want ? { deviceId: { exact: want } } : {}) } }); }
-  catch { try { stream = await navigator.mediaDevices.getUserMedia({ audio: raw }); } catch (e) { if (E.native) E.unroute(); throw Object.assign(new Error('mic'), { reason: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' }); } }
+  const fail = (e) => { if (E.native) E.unroute(); throw Object.assign(new Error('mic'), { reason: e && e.reason === 'busy' ? 'busy' : e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' }); };
+  try { stream = await micOpen({ audio: { ...raw, ...(!E.native && want ? { deviceId: { exact: want } } : {}) } }, 'studio'); }
+  catch (e0) { if (e0 && e0.reason === 'busy') fail(e0); try { stream = await micOpen({ audio: raw }, 'studio'); } catch (e) { fail(e); } }
   const tr = stream.getAudioTracks()[0], st = tr && tr.getSettings ? tr.getSettings() : {};
   return { stream, channels: Math.max(1, Math.min(2, +st.channelCount || 1)), close() { try { stream.getTracks().forEach((t) => t.stop()); } catch { /* */ } if (E.native) E.unroute(); } };
 }

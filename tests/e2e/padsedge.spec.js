@@ -12,3 +12,14 @@ test('пэды: без чёлки сверху, острые углы плито
   expect(r).toBeLessThanOrEqual(6);
   void errors;
 });
+
+// Отдельное окно инструмента (.tview, отчёт автора 22.11.2026): та же полоса-«чёлка» над плитками оставалась (padding-top .tvhost)
+test('пэды в окне инструмента: плитки от самого верха карточки', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open();
+  await melete.openTool('drone');
+  await page.waitForSelector('.tview .dtile', { timeout: 10_000 });
+  const gap = await page.evaluate(() => document.querySelector('.tview .dgrid').getBoundingClientRect().top - document.querySelector('.tview .tvhost').getBoundingClientRect().top);
+  expect(gap).toBeLessThan(3);
+  void errors;
+});

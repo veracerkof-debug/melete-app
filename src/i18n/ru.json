@@ -2646,5 +2646,17 @@
   "together.push.report": "{name} прочитал(а): {ref}",
   "together.push.nudge": "{name} напоминает про чтение",
   "together.push.msg": "{name}: {text}",
-  "together.push.title": "Вместе"
+  "together.push.title": "Вместе",
+  "mic.who.voice": "Диктофон",
+  "mic.who.ens": "Ансамбль",
+  "mic.who.recorder": "Запись из инструмента",
+  "mic.who.studio": "Студия",
+  "mic.who.looper": "Лупер",
+  "mic.busyTitle": "Идёт запись",
+  "mic.busyText": "Микрофон занят: идёт запись в «{who}». Этот инструмент не услышит звук, пока запись не закончится. Запись продолжается, её ничто не прервёт.",
+  "mic.busyOk": "Понятно",
+  "mic.takeTitle": "Идёт другая запись",
+  "mic.takeText": "Сейчас идёт запись в «{who}». Остановить её (она сохранится) и начать здесь?",
+  "mic.takeYes": "Остановить и начать",
+  "rec.micBusy": "Идёт другая запись — микрофон занят до её окончания"
 }

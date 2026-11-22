@@ -3,6 +3,7 @@
 // свои слои и длина, звучит одна. Звук — в шину media (микшер ядра). Без DOM.
 // Устойчивость: микрофон открывается один раз и держится, пока лупер открыт; каждая операция в try —
 // сбой одной не роняет петлю; ограничение длины (MAX_SEC) защищает память телефона.
+import { micOpen, recBeginAsk, setStopper } from './micowner.js';
 import { getContext } from './context.js';
 import { createFxChain, normalizeFx } from './fx.js';
 import { after, cancel } from './clock.js';
@@ -64,7 +65,8 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
   let c = null, mic = null, proc = null, out = null, mon = null;
   // fixed — длина петли задана тактами (вид «Партии»): петля живёт и без слоёв, её задают партии
   const slots = Array.from({ length: SLOTS }, () => ({ layers: [], len: 0, t0: 0, srcs: [], fixed: false }));
-  let cur = 0, state = 'idle'; // idle | rec | play | dub
+  let cur = 0, state = 'idle'; // idle | rec | play | dub — менять только через setState (запись занимает микрофон, audio/micowner.js)
+  let claim = null, askFn = null;
   let rec = null; // идёт запись: { start, chunks | buf, pos }
   let shift = 0; // сдвиг записи, с: звук слышен позже, чем задуман, и доходит до микрофона позже
   let monOn = false;
@@ -81,6 +83,17 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     }
     return c;
   }
+  // Запись (первая, наложение, замена) занимает микрофон до остановки: чужая идущая запись не прервётся сама, а эта —
+  // без вопроса не начнётся поверх чужой (audio/micowner.js)
+  const release = () => { if (claim) { claim.end(); claim = null; } };
+  function setState(x) { state = x; if (x !== 'rec' && x !== 'dub') release(); }
+  async function hold() {
+    if (claim) return;
+    const g = await recBeginAsk('looper', askFn);
+    if (!g.ok) throw Object.assign(new Error('busy'), { reason: 'busy', by: g.by.who });
+    claim = g;
+  }
+  async function begin() { await hold(); try { await openMic(); } catch (e) { release(); throw e; } }
   const latency = () => (c ? (c.outputLatency || 0) + (c.baseLatency || 0) : 0) + shift;
 
   // Микрофон: поток → процессор (захват) и монитор (только по выбору — на телефоне без наушников свистит)
@@ -88,8 +101,8 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     if (mic) return true;
     const cx = ctxOf();
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
-    catch (e) { throw Object.assign(new Error('mic'), { reason: e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' }); }
+    try { stream = await micOpen({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }, 'looper'); }
+    catch (e) { throw Object.assign(new Error('mic'), { reason: e && e.reason === 'busy' ? 'busy' : e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable' }); }
     const src = cx.createMediaStreamSource(stream);
     proc = cx.createScriptProcessor(CHUNK, 1, 1);
     proc.onaudioprocess = (e) => { if (rec) capture(e.inputBuffer.getChannelData(0), e.playbackTime); };
@@ -178,17 +191,18 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     setShift(ms) { shift = (+ms || 0) / 1000; },
     setMonitor(on) { monOn = !!on; if (mon) mon.gain.setTargetAtTime(monOn ? 1 : 0, c.currentTime, 0.02); emit(); },
     openMic,
+    setAsk(fn) { askFn = fn; },
 
     // Первая запись: at — когда начать (время контекста; null — сейчас)
     async startRec(at = null) {
-      await openMic();
+      await begin();
       if (state === 'rec' || state === 'dub') return;
       const s = S();
       stopAll(s);
       s.layers.forEach(freeChain);
       s.layers = []; s.len = 0;
       rec = { start: at ?? c.currentTime, chunks: [], total: 0 };
-      state = 'rec';
+      setState('rec');
       emit();
     },
     // Остановить первую запись → петля играет. barSec — длина такта (по метроному): длина петли — целые такты;
@@ -212,7 +226,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       s.len = len; s.t0 = r.start + lenSec;
       if (s.t0 > now) s.t0 -= lenSec; // первая петля ещё идёт — продолжаем её, не повторяя сначала
       s.layers = [L];
-      state = 'play';
+      setState('play');
       rec = { tail: L, start: r.start, until: r.start + lenSec + MARGIN_SEC }; // хвост дописывается уже под петлю
       startLayer(L);
       emit();
@@ -222,10 +236,10 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     async startDub({ takes = false } = {}) {
       const s = S();
       if (!s.len || state !== 'play') return;
-      await openMic();
-      if (s.layers.length >= MAX_LAYERS) throw Object.assign(new Error('layers'), { reason: 'layers' });
+      await begin();
+      if (s.layers.length >= MAX_LAYERS) { release(); throw Object.assign(new Error('layers'), { reason: 'layers' }); }
       rec = { buf: new Float32Array(s.len), got: 0, takes: takes ? [] : null }; // хвост первой записи, если ещё шёл, обрывается
-      state = 'dub';
+      setState('dub');
       emit();
     },
     // Наложение уже идёт (первое касание) — превратить его в замену (второе касание сразу следом)
@@ -240,7 +254,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       if (state !== 'dub' || !rec) return;
       const s = S(), r = rec;
       rec = null;
-      state = 'play';
+      setState('play');
       if (r.replace && r.got > 0) { // замена: стёртый отрезок верхнего слоя — в его полной записи тоже, слой перезапускается с новым буфером
         const L = r.replace; for (let i = 0; i < s.len; i++) if (r.mask[i]) L.full[i] = 0; L.ver = (L.ver || 0) + 1; restart(L, s);
       }
@@ -264,27 +278,27 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       stopAll(s);
       s.t0 = at ?? c.currentTime;
       s.layers.forEach((L) => startLayer(L));
-      state = 'play';
+      setState('play');
       emit();
     },
     stop() {
       if (rec && rec.wait) cancel(rec.wait);
       rec = null;
       stopAll();
-      state = 'idle';
+      setState('idle');
       emit();
     },
     // Отменить последний слой (при наложении — само наложение); снятый слой можно вернуть (redo), пока не записан новый
     undo() {
       const s = S();
-      if (state === 'dub') { rec = null; state = 'play'; emit(); return true; }
+      if (state === 'dub') { rec = null; setState('play'); emit(); return true; }
       if (state === 'rec') { api.stop(); return true; }
       const L = s.layers.pop();
       if (!L) return false;
       if (L.node) { try { L.node.src.stop(); L.node.src.disconnect(); } catch { /* */ } s.srcs = s.srcs.filter((x) => x !== L.node.src); }
       freeChain(L);
       s.undone = { L, len: s.len };
-      if (!s.layers.length && !s.fixed) { s.len = 0; state = 'idle'; }
+      if (!s.layers.length && !s.fixed) { s.len = 0; setState('idle'); }
       emit();
       return true;
     },
@@ -293,7 +307,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       const s = S(), u = s.undone;
       if (!u || s.layers.length >= MAX_LAYERS) return false;
       s.undone = null;
-      if (!s.layers.length && !s.fixed) { s.len = u.len; s.t0 = c.currentTime; state = 'play'; }
+      if (!s.layers.length && !s.fixed) { s.len = u.len; s.t0 = c.currentTime; setState('play'); }
       if (u.L.buf.length !== s.len) return false; // петля с тех пор стала другой длины
       s.layers.push(u.L);
       if (state === 'play' || state === 'dub') startLayer(u.L);
@@ -325,10 +339,10 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     async startReplace() {
       const s = S();
       if (!s.len || state !== 'play' || !s.layers.length) return;
-      await openMic();
+      await begin();
       const L = s.layers[s.layers.length - 1];
       rec = { buf: new Float32Array(s.len), got: 0, replace: L, from: null, mask: new Uint8Array(s.len) };
-      state = 'dub';
+      setState('dub');
       emit();
     },
     clear() { api.stop(); const s = S(); s.layers.forEach(freeChain); s.layers = []; s.len = 0; s.fixed = false; emit(); },
@@ -426,7 +440,7 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
       if (L.node) { try { L.node.src.stop(); L.node.src.disconnect(); } catch { /* */ } s.srcs = s.srcs.filter((x) => x !== L.node.src); }
       s.layers.splice(i, 1);
       freeChain(L);
-      if (!s.layers.length && !s.fixed) { s.len = 0; state = 'idle'; }
+      if (!s.layers.length && !s.fixed) { s.len = 0; setState('idle'); }
       emit();
     },
     // Другая петля: текущая останавливается, новая (если записана) играет сразу
@@ -442,7 +456,8 @@ export function createLooper({ mixer, onChange = () => {}, log = () => {} }) {
     get hasAny() { return slots.some((s) => s.len > 0); },
     close() { api.stop(); closeMic(); },
     // Снять всё при выходе (память): петли забываются
-    destroy() { slots.forEach((s) => { stopAll(s); s.layers.forEach(freeChain); s.layers = []; s.len = 0; }); closeMic(); state = 'idle'; },
+    destroy() { slots.forEach((s) => { stopAll(s); s.layers.forEach(freeChain); s.layers = []; s.len = 0; }); closeMic(); setState('idle'); },
   };
+  setStopper('looper', () => { if (state === 'rec') api.stopRec(0); else if (state === 'dub') api.stopDub(); }); // чужая запись поверх сначала сохранит эту
   return api;
 }

@@ -9,6 +9,7 @@
 // MIDI (пианино, глайдер, терменвокс): не звук, а сама игра — события модуля (src/music/midi.js); сохраняется
 // файлом .mid (kind: 'midi', tool — модуль) вместе с точной записью для воспроизведения в самом инструменте (take).
 import { engine } from '../audio/voiceengine.js';
+import { micOpen, recBeginAsk, setStopper } from '../audio/micowner.js';
 import { setOutput } from '../audio/livefx.js';
 import { writeMidi, takeDur } from '../music/midi.js';
 import { idbBackend, spoolTake, leftovers, headOk, durOfParts } from './recspool.js';
@@ -104,9 +105,10 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
     // выбранный вход: Android — маршрут (микрофон страницы берёт звук с него), браузер — deviceId
     if (E.native) await E.route(want);
     const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(!E.native && want ? { deviceId: { exact: want } } : {}) };
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio }); } catch {
+    try { stream = await micOpen({ audio }, 'recorder'); } catch (e0) {
+      if (e0 && e0.reason === 'busy') { if (E.native) E.unroute(); return 'busy'; } // идёт чужая запись — второй поток не открываем
       // выбранного входа нет (отключили) — по умолчанию
-      try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); } catch { if (E.native) E.unroute(); return 'mic'; }
+      try { stream = await micOpen({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }, 'recorder'); } catch (e1) { if (E.native) E.unroute(); return e1 && e1.reason === 'busy' ? 'busy' : 'mic'; }
     }
     // пока система спрашивала разрешение, лист записи закрыли (цепочку разобрали) — микрофон сразу отпускается,
     // иначе он остаётся открытым до перезапуска приложения (значок микрофона, таймер уровня 50 раз в секунду)
@@ -174,7 +176,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
     catch (e) { log('rec', 'MIDI-запись не сохранилась: ' + (e && e.message || e), 'e'); return null; }
   }
 
-  return {
+  const api = {
     get active() { return !!cur; },
     get state() { return cur && { tool: cur.tool, t0: cur.t0, video: !!cur.video, midi: cur.midi ? cur.mod : null }; },
     // Событие игры модуля mod (во время MIDI-записи этого модуля — в запись; иначе ничего)
@@ -222,21 +224,29 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
 
     // opts: { tool (название), songs ([id]), video ({ stream, stop } от модуля или null) }
     // → 'ok' | 'nosound' | 'unsupported' | 'empty' (оба источника выключены) | 'mic' (микрофон не дали — без него)
-    async start({ tool, songs = [], video = null, midi = null } = {}) {
+    async start({ tool, songs = [], video = null, midi = null, ask = null } = {}) {
       if (cur) return 'ok';
       if (midi) { cur = { midi: [], mod: midi, mvAt: new Map(), tool, songs, t0: Date.now(), p0: performance.now() }; emit(); return 'ok'; }
       if (!canRecord()) return 'unsupported';
       const p = prefs();
       if (!p.app && !p.mic) return 'empty';
       if (!build()) return 'nosound';
-      let res = 'ok';
-      if (p.mic) res = await openMic();
-      if (!chain) return 'nosound'; // лист закрыли, пока ждали микрофон
+      let res = 'ok', claim = null;
+      // с микрофоном — запись занимает его до остановки (audio/micowner.js): чужая идущая запись не прервётся сама
+      if (p.mic) {
+        const g = await recBeginAsk('recorder', ask);
+        if (!g.ok) return 'busy';
+        claim = g;
+        res = await openMic();
+        if (res === 'busy') { claim.end(); return 'busy'; }
+      }
+      if (!chain) { if (claim) claim.end(); return 'nosound'; } // лист закрыли, пока ждали микрофон
       const tracks = [...chain.dest.stream.getAudioTracks(), ...(video ? video.stream.getVideoTracks() : [])];
       const stream = new MediaStream(tracks), type = pickType(video ? VIDEO_TYPES : AUDIO_TYPES);
       let mr;
       try { mr = type ? new MediaRecorder(stream, { mimeType: type, audioBitsPerSecond: 160000 }) : new MediaRecorder(stream); } catch {
         if (video) video.stop();
+        if (claim) claim.end();
         teardown();
         return 'unsupported';
       }
@@ -247,7 +257,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
         if (onDiskFail) onDiskFail(e);
       });
       mr.ondataavailable = (e) => { if (e.data && e.data.size) { take.add(e.data); } };
-      cur = { mr, take, id, video, tool, songs, t0, type: rtype };
+      cur = { mr, take, id, video, tool, songs, t0, type: rtype, claim };
       mr.start(SLICE);
       emit();
       return res === 'ok' ? 'ok' : res;
@@ -268,6 +278,7 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
           if (fin) return;
           fin = true;
           teardown();
+          if (r.claim) r.claim.end();
           if (r.video) r.video.stop();
           const dur = (Date.now() - r.t0) / 1000;
           const blob = await r.take.blob(r.type.split(';')[0]);
@@ -281,4 +292,6 @@ export function createRecorder(app, { spool = idbBackend(), onDiskFail = null } 
       });
     },
   };
+  setStopper('recorder', () => api.stop()); // запись поверх чужой сначала сохранит эту
+  return api;
 }

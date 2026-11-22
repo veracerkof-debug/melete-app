@@ -2588,5 +2588,17 @@
   "together.push.report": "{name} oʻqidi: {ref}",
   "together.push.nudge": "{name} oʻqishni eslatmoqda",
   "together.push.msg": "{name}: {text}",
-  "together.push.title": "Birga"
+  "together.push.title": "Birga",
+  "mic.who.voice": "Diktofon",
+  "mic.who.ens": "Ansambl",
+  "mic.who.recorder": "Asbobdan yozuv",
+  "mic.who.studio": "Studiya",
+  "mic.who.looper": "Looper",
+  "mic.busyTitle": "Yozuv ketmoqda",
+  "mic.busyText": "Mikrofon band: «{who}» da yozuv ketmoqda. Yozuv tugamaguncha bu asbob ovozni eshitmaydi. Yozuv davom etadi, uni hech narsa uzmaydi.",
+  "mic.busyOk": "Tushunarli",
+  "mic.takeTitle": "Boshqa yozuv ketmoqda",
+  "mic.takeText": "Hozir «{who}» da yozuv ketmoqda. Uni to‘xtatib (saqlanadi) shu yerda boshlaymizmi?",
+  "mic.takeYes": "To‘xtatib boshlash",
+  "rec.micBusy": "Boshqa yozuv ketmoqda — mikrofon u tugaguncha band"
 }
