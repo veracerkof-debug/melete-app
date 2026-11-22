@@ -214,6 +214,12 @@ function weekHTML(app) {
 }
 
 // Звук (своя страница по карте 06.11.2026): буфер, ресурсы, движок, реверберация, нагрузка; дорожки и разбор записей
+// Режим звука — карточки с двумя шкалами (слово автора 22.11.2026: настройки — картинкой); выбор — тот же data-seg / data-v
+function cardSeg(name, items, cur, label, gl) {
+  return '<div class="segttl">' + esc(label) + '</div><div class="scards n' + items.length + '" role="group" data-seg="' + name + '" aria-label="' + esc(label) + '">' +
+    items.map(([v, n, a, b]) => '<button type="button" class="scard" data-v="' + v + '" aria-pressed="' + (String(cur) === String(v)) + '"><span class="sct">' + esc(n) + '</span>' +
+      '<span class="scg"><em>' + esc(gl[0]) + '</em><i style="--a:' + a + '%"></i></span><span class="scg"><em>' + esc(gl[1]) + '</em><i style="--a:' + b + '%"></i></span></button>').join('') + '</div>';
+}
 function soundHTML(app) {
   const st = app.store.state.settings;
   return '<div class="large">' + t('page.sound') + '</div>' +
@@ -224,8 +230,8 @@ function soundHTML(app) {
     '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
     (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' )) +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
-    '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + lseg('sndmode', [['fast', t('snd.fast')], ['bal', t('snd.bal')], ['smooth', t('snd.smooth')]], app.audio.mixer.state.mode, t('snd.mode')) + '</div>' +
-    '<div class="cellcol">' + lseg('sndperf', [['full', t('snd.full')], ['eco', t('snd.eco')]], app.audio.mixer.state.perf, t('snd.perf')) + '</div>' +
+    '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + cardSeg('sndmode', [['fast', t('snd.fast'), 18, 35], ['bal', t('snd.bal'), 50, 65], ['smooth', t('snd.smooth'), 85, 95]], app.audio.mixer.state.mode, t('snd.mode'), [t('snd.g.lat'), t('snd.g.safe')]) + '</div>' +
+    '<div class="cellcol">' + cardSeg('sndperf', [['full', t('snd.full'), 95, 90], ['eco', t('snd.eco'), 55, 40]], app.audio.mixer.state.perf, t('snd.perf'), [t('snd.g.qual'), t('snd.g.cpu')]) + '</div>' +
     '<div class="cellcol">' + lseg('sndengine', [['wl', t('snd.wl')], ['nodes', t('snd.nodes')]], app.audio.mixer.engine, t('snd.engine')) + '<div class="segcap">' + t('snd.engineHint') + '</div></div>' +
     '<div class="cellcol">' + lseg('sndverb', [['light', t('snd.verbLight')], ['conv', t('snd.verbConv')]], app.audio.mixer.verb, t('snd.verb')) + '<div class="segcap">' + t('snd.verbHint') + '</div></div>' +
     '<div class="cellcol">' + lseg('sndalgo', [['melete', 'Melete'], ['galactic', 'Galactic'], ['verbity', 'Verbity']], app.audio.mixer.verbAlgo, t('snd.algo')) + '<div class="segcap">' + t('snd.algoHint') + '</div></div></div>' +
@@ -264,7 +270,8 @@ function bibleHTML(app) {
 // Маскот (Мелетий, Мелета или без маскота): характер, напоминания, тамагочи, слова дня — свой раздел (решение автора)
 function mascotHTML(app) {
   const st = app.store.state.settings;
-  const row = (k, on) => '<div class="group"><div class="cell"><span class="grow">' + t('notif.' + k) + '</span>' + psw(k, on, t('notif.' + k)) + '</div></div><p class="ftr">' + t('notif.' + k + '.hint') + '</p>';
+  const MIC = { askIdle: ['#5E7E6A', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'], noSoundNote: ['#B0614E', '<svg viewBox="0 0 24 24"><path d="M5 9.5v5h3.5L13 18V6L8.5 9.5z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>'], rankNote: ['#646493', '<svg viewBox="0 0 24 24"><path d="M7 4h10l3.5 5L12 20 3.5 9z"/><path d="M3.5 9h17"/></svg>'] };
+  const row = (k, on) => '<div class="cell"><span class="ticon" style="--tc:' + MIC[k][0] + '">' + MIC[k][1] + '</span><span class="grow">' + t('notif.' + k) + '<span class="psub">' + t('notif.' + k + '.hint') + '</span></span>' + psw(k, on, t('notif.' + k)) + '</div>';
   return '<div class="large">' + t('page.mascot') + '</div>' + meleteHTML(st, { remind: false }) +
     // наборы слов Мелеты (слово дня и напоминания)
     (!st.toolsOnly && isOn(st, 'quote') ? '<div class="hdr">' + t('qset.title') + '</div><div class="group">' + qsetsFor(st).map((k) => '<label class="cell"><span class="grow">' + t('qset.' + k) + '</span>' +
@@ -274,8 +281,8 @@ function mascotHTML(app) {
         '<button class="ic sm" data-qdel="' + esc(b.id) + '" aria-label="' + esc(t('qset.del') + ': ' + b.title) + '">' + IC.minus + '</button>' +
         '<input type="checkbox" data-qset="own:' + esc(b.id) + '"' + (setsOf(st).includes('own:' + b.id) ? ' checked' : '') + ' style="width:22px;height:22px;margin-left:10px" aria-label="' + esc(b.title) + '"></div>').join('') +
       '<button class="cell act" data-aidoc>' + t('qset.make') + '</button></div><p class="ftr">' + t('qset.hint') + '</p>' : '') +
-    '<div class="hdr">' + t('rem.inApp') + '</div>' +
-    row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false);
+    '<div class="hdr">' + t('rem.inApp') + '</div><div class="group">' +
+    row('askIdle', st.askIdle !== false) + row('noSoundNote', st.noSoundNote !== false) + row('rankNote', st.rankNote !== false) + '</div>';
 }
 
 function notifHTML(app) {
@@ -662,7 +669,8 @@ function tabsHTML(app) {
   const cand = modules.filter((m) => !m.tab && !m.inner && isOn(st, m.id) && !mod(m.id) && !CHURCH_MODULES.includes(m.id));
   const candRow = (m) => '<div class="cell"><span class="ticon" style="--tc:' + (m.color || 'var(--tint)') + ';--on:' + (m.on || '#fff') + '">' + m.icon + '</span><span class="grow">' + esc(moduleName(m)) + '</span>' +
     '<button class="ic sm plain" data-tabmk="' + m.id + '" aria-label="' + esc(t('hold.makeTab') + ': ' + moduleName(m)) + '" style="color:var(--ok)"' + (vis.length >= TABS_MAX ? ' disabled' : '') + '>' + IC.plus + '</button></div>';
-  return '<div class="large">' + t('tabs.title') + '</div>' +
+  const prev = '<div class="tbprev" role="img" aria-label="' + esc(t('tabs.shown')) + '">' + vis.map((k) => '<span class="tbp"><i style="color:' + color(k) + '">' + tabIcon(k) + '</i><b>' + esc(nameOf(k)) + '</b></span>').join('') + '</div>';
+  return '<div class="large">' + t('tabs.title') + '</div>' + prev +
     '<div class="hdr">' + t('tabs.shown') + '</div><div class="group">' + vis.map((k, i) => row(k, true, i)).join('') + '</div>' +
     (hid.length ? '<div class="hdr">' + t('tabs.hidden') + '</div><div class="group">' + hid.map((k) => row(k, false)).join('') + '</div>' : '') +
     '<p class="ftr">' + t('tabs.hint') + '</p>' +

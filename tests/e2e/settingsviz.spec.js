@@ -21,3 +21,23 @@ test('данные и неделя: инфографика', async ({ page, mele
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/week.png' });
   void errors;
 });
+
+test('звук, маскот, вкладки: карточки, значки, миниатюра панели', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open();
+  const go = async (k) => { await melete.click('.avatar'); await page.waitForTimeout(500); await page.click('[data-pp="' + k + '"]'); await page.waitForTimeout(800); };
+  await go('sound');
+  await expect(page.locator('[data-seg="sndmode"] .scard')).toHaveCount(3);
+  await page.click('[data-seg="sndmode"] .scard[data-v="smooth"]'); await page.waitForTimeout(300);
+  await expect(page.locator('[data-seg="sndmode"] .scard[data-v="smooth"][aria-pressed="true"]')).toHaveCount(1);
+  await page.locator('[data-seg="sndmode"]').scrollIntoViewIfNeeded();
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/sound.png' });
+  await page.reload(); await page.waitForTimeout(800);
+  await go('mascot');
+  await expect(page.locator('.group .cell .ticon').first()).toBeVisible();
+  await page.reload(); await page.waitForTimeout(800);
+  await go('tabs');
+  expect(await page.locator('.tbprev .tbp').count()).toBeGreaterThan(2);
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/tabs2.png' });
+  void errors;
+});
