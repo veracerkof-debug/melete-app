@@ -54,6 +54,7 @@ describe('совместное чтение', () => {
     await a.tg.postCheckin({ ref: { b: 'PSA', c: 23 }, text: '' });
     await b.tg.sync(true); // первая сверка с отчётом — запомнить, не шуметь
     expect(b.notes).toHaveLength(0);
+    await new Promise((r) => setTimeout(r, 15)); // отметки времени — миллисекунды: на быстром CI два отчёта подряд получали одинаковое «at» и уведомления не было
     await a.tg.postCheckin({ ref: { b: 'PSA', c: 24 }, text: 'ещё', date: '2999-01-02' });
     await b.tg.sync(true);
     expect(b.notes).toHaveLength(1);
