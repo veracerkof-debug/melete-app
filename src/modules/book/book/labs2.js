@@ -177,6 +177,48 @@ export function harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName 
     },
   };
 
+  /* ---------- Один аккорд над разными басами: аккорд стоит, меняется бас (обращения и чужие басы) ---------- */
+  // вид аккорда → id в engine.chordById; бас — 12 полутонов над корнем аккорда
+  const SBQ = { maj: '', min: 'm', 7: '7', maj7: 'maj7' };
+  const SB_FN = { 1: 'root', 3: 'third', b3: 'third', 5: 'fifth', 7: 'seventh', b7: 'seventh' }; // какой звук аккорда в басу
+  const SB_NAMES = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
+  LABS.slashbass = {
+    st: { root: 'C', q: 'maj', i: 4 },
+    ch(s) { const c = chordById(SBQ[s.q] == null ? '' : SBQ[s.q]) || chordById(''), r = rootN(s.root); return { c, r, rp: pcOf(r), off: c.f.map((d) => IV[d][1] % 12) }; },
+    // роль баса i (полутонов над корнем): ступень аккорда (1, 3, 5, 7) или чужой звук
+    role(s, i) { const { c, off } = this.ch(s), k = off.indexOf(i); return k >= 0 ? { own: true, deg: c.f[k], fn: SB_FN[c.f[k]] || 'root' } : { own: false }; },
+    ms(s, i = s.i) {
+      const { c, rp } = this.ch(s), bp = (rp + i) % 12;
+      const pairs = c.f.map((d, j) => [near((rp + IV[d][1]) % 12, 55 + j * 2), d]), tri = pairs.map((x) => x[0]).sort((a, b) => a - b);
+      return { bass: 36 + bp - (bp > 7 ? 12 : 0), tri, pairs };
+    },
+    render(s) {
+      const { c, r } = this.ch(s), bn = (o) => nm(simp(up(r, SB_NAMES[o]))), cn = nm(r) + (c.id || '');
+      const cards = Array.from({ length: 12 }, (_, i) => {
+        const ro = this.role(s, i), cap = ro.own ? T('sb.f.' + ro.fn) : T('sb.out', { d: TENS[i] });
+        return '<button class="us' + (i === s.i ? ' on' : '') + '" data-a="b:' + i + '"><b>' + cn + (i ? '/' + bn(i) : '') + '</b><small>' + cap + '</small></button>';
+      }).join('');
+      const { bass, pairs } = this.ms(s), ro = this.role(s, s.i), marks = {};
+      pairs.forEach(([m, d]) => { marks[m] = { c: 'alt', t: d }; });
+      marks[bass] = { c: 'root', t: bn(s.i) };
+      const own = c.f.map((d) => nm(simp(up(r, d))) + ' = ' + d).join(' · '), fromBass = c.f.map((d) => TENS[(IV[d][1] - s.i + 120) % 12]).join(' ');
+      return '<div class="bkctl">' + rootSel('root', s.root, MAJ_ROOTS.map((x) => [x, x])) + seg('q', [['maj', T('sb.q.maj')], ['min', T('sb.q.min')], ['7', '7'], ['maj7', 'maj7']], s.q) + '</div>' +
+        '<div class="usgrid six">' + cards + '</div>' +
+        '<div class="bkfacts wide"><div class="bkbig">' + cn + (s.i ? '/' + bn(s.i) : '') + ' — ' + T(ro.own ? 'sb.h.' + ro.fn : 'sb.h.out') + '</div><dl>' +
+        fact(T('sb.chord'), own) + fact(T('sb.bass'), ro.own ? T('sb.bassOwn', { n: bn(s.i), d: ro.deg }) : T('sb.bassOut', { n: bn(s.i) })) +
+        fact(T('sb.fromBass', { b: bn(s.i) }), fromBass) + '</dl><p class="bknote">' + T(ro.own ? 'sb.n.' + ro.fn : 'sb.n.out', { c: cn, b: bn(s.i) }) + '</p></div>' +
+        keyboardSVG(marks, { lo: 36, hi: 79 }) + '<div class="bkrow">' + playBtn('data-a="p"') + playBtn('data-a="walk"', T('sb.walk')) + '</div>';
+    },
+    on(s, a) {
+      if (a.startsWith('b:')) s.i = +a.slice(2);
+      if (a === 'walk') { // аккорд тот же, бас идёт по его звукам: корень → терция → квинта (→ септима) → корень
+        const { off } = this.ch(s), seq = off.slice().sort((x, y) => x - y).concat([0]);
+        snd.prog(seq.map((i) => { const m = this.ms(s, i); return [m.bass, ...m.tri]; }), 1.1); return;
+      }
+      const { bass, tri } = this.ms(s); snd.chord([bass, ...tri], { dur: 1.8 });
+    },
+  };
+
   /* ---------- Аккорд над басом: 12 трезвучий над C (Левайн) и септаккорды над G («Джазология») ---------- */
   // [сдвиг корня трезвучия, мажор/минор, ключ подписи «звучит как», гамма]
   const SLT = [[1, 'M', 'db', 'phrygian'], [2, 'M', 'd', 'lydian'], [3, 'M', 'eb', 'dorian'], [4, 'M', 'e', 'lydaug'], [5, 'M', 'f', 'ionian'], [6, 'M', 'gb', 'dimhw'], [7, 'M', 'g', 'ionian'], [8, 'M', 'ab', 'ionian'], [9, 'M', 'a', 'dimhw'], [10, 'M', 'bb', 'mixolydian'], [11, 'M', 'b', 'dimwh']];
@@ -205,7 +247,7 @@ export function harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName 
     st: { i: 0 },
     render(s) {
       const g = rootN('G');
-      return '<div class="bktw"><table><thead><tr><th>' + T('sl.top') + '</th><th>' + T('sl.sounds') + '</th></tr></thead><tbody>' + SL7.map((x, i) => '<tr class="click' + (i === s.i ? ' on' : '') + '" data-a="r:' + i + '"><td><b>' + nm(simp(up(g, x[0]))) + x[1] + '/G</b></td><td>' + x[2] + '</td></tr>').join('') + '</tbody></table></div>';
+      return '<div class="bktw"><table><thead><tr><th>' + T('sl.top') + '</th><th>' + T('sl.deg') + '</th><th>' + T('sl.sounds') + '</th></tr></thead><tbody>' + SL7.map((x, i) => '<tr class="click' + (i === s.i ? ' on' : '') + '" data-a="r:' + i + '"><td><b>' + nm(simp(up(g, x[0]))) + x[1] + '/G</b></td><td class="num">' + chordById(x[1]).f.map((d) => TENS[(pcOf(simp(up(g, x[0]))) + IV[d][1] - pcOf(g) + 120) % 12]).join(' ') + '</td><td>' + x[2] + '</td></tr>').join('') + '</tbody></table></div>';
     },
     on(s, a) {
       if (!a.startsWith('r:')) return false;

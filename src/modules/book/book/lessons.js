@@ -112,7 +112,7 @@ export const LESSONS = {
     { id: 'key2', secs: [3, 4, 5], ex: [chord({ p: 'Am Dm E Am', g: 'Am Dm E Am' }, 'pg'), play({ b: 'A1 D2 E2 A1' }, 'b')] },
   ],
   // джазовый раздел
-  slash: [{ id: 'slash1', secs: [0, 1], ex: [] }, { id: 'slash2', secs: [2, 3], ex: [] }],
+  slash: [{ id: 'slash1', secs: [0, 1, 2], ex: [] }, { id: 'slash2', secs: [3, 4], ex: [] }],
   melmin: [
     { id: 'melmin1', secs: [0, 1], ex: [play({ p: 'C4 D4 Eb4 F4 G4 A4 B4 C5', g: 'C3 D3 Eb3 F3 G3 A3 B3 C4', b: 'C2 D2 Eb2 F2 G2 A2 B2 C3' }), quiz('parent')] },
     { id: 'melmin2', secs: [2, 3, 4], ex: [quiz('twin', 'parent')] },

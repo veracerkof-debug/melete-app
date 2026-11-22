@@ -137,3 +137,27 @@ describe('учебник: простые версии глав (средний �
   }
 });
 
+
+describe('учебник: «Аккорд над басом» — аккорд стоит, бас меняется', () => {
+  const L = LANGS.ru, mk = () => createLabs({ T: (k, v) => fill(L.S[k], v), L, snd });
+  const text = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  it('C/E — первое обращение: звуки аккорда считаются от его корня', () => {
+    const lab = mk().slashbass, st = { root: 'C', q: 'maj', i: 4 }, t = text(lab.render(st));
+    expect(t).toContain('C/E'); expect(t).toContain('тот же аккорд, терция в басу'); expect(t).toContain('C = 1 · E = 3 · G = 5');
+  });
+  it('C/G — второе обращение; C7/B♭ — третье; C/D — чужой бас: ступени от баса ♭7 9 11', () => {
+    const lab = mk().slashbass;
+    expect(text(lab.render({ root: 'C', q: 'maj', i: 7 }))).toContain('квинта в басу');
+    expect(text(lab.render({ root: 'C', q: '7', i: 10 }))).toContain('септима в басу');
+    const t = text(lab.render({ root: 'C', q: 'maj', i: 2 }));
+    expect(t).toContain('бас не из аккорда'); expect(t).toMatch(/♭7 9 11/);
+  });
+  it('все басы всех видов аккорда рисуются и играют', () => {
+    const lab = mk().slashbass;
+    for (const q of ['maj', 'min', '7', 'maj7']) for (let i = 0; i < 12; i++) { const st = { root: 'E♭', q, i }; expect(lab.render(st)).not.toMatch(/undefined|NaN/); lab.on(st, 'p'); lab.on(st, 'walk'); }
+  });
+  it('септаккорды над G: у каждой строки есть ступени от баса (Fmaj7/G → ♭7 9 11 13)', () => {
+    const t = text(mk().slash7.render({ i: 0 }));
+    expect(t).toContain('Ступени от G'); expect(t).toContain('♭7 9 11 13');
+  });
+});
