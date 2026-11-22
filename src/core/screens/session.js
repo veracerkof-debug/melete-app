@@ -478,6 +478,8 @@ export function createSessionScreen(app) {
     if (a && a.type === 'tool') { if (id !== a.tool) toast(t('ses.toolOutside', { name: moduleById(id) ? moduleName(moduleById(id)) : id })); return; }
     if (id === 'timer') { pomoSheet(); return; }
     const m = moduleById(id);
+    // у песни помним, каким инструментом занимались в прошлый раз: уведомление о песне открывает его (22.11.2026)
+    if (a && a.type === 'song' && a.songId && m && !m.inner) { const sg = store.songById(a.songId); if (sg && sg.lastTool !== id) { sg.lastTool = id; sg.updatedAt = store.now(); store.save(); } }
     if (m && m.session === false) { toast(t('ses.toolOutside', { name: moduleName(m) })); return; }
     const g = m ? groupOf(m) : id;
     if (m && m.group) w.sub[m.group] = m.id;

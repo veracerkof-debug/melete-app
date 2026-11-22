@@ -39,9 +39,11 @@ import { BUSES } from '../audio/mixer.js';
 import { toast, confirm, agree } from '../ui/index.js';
 import { startEdgeFade } from '../ui/edgefade.js';
 import { initBridge } from './bridge.js';
+import { initNotifyTap } from './notifytap.js';
 import { startLog, log } from './log.js';
 import { startDiag, provide as dProvide, count as dCount, gauge as dGauge, time as dTime, event as dEvent } from './diag.js';
-import { createBible } from './reading.js';
+import { createBible, readingFor } from './reading.js';
+import { refText } from './bible.js';
 import { APP_VERSION } from './report.js';
 import { crashOffer } from './screens/report.js';
 import { bindVerses } from './screens/verses.js';
@@ -55,7 +57,7 @@ import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
 import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
-import { reschedule, rescheduleEvents } from './reminders.js';
+import { reschedule, rescheduleEvents, rescheduleBible } from './reminders.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
 import { initShareIn } from './screens/share.js';
@@ -274,6 +276,21 @@ export function boot(root) {
   };
   store.subscribe(evSync);
   evSync();
+  // Чтение Библии: утреннее напоминание (церковный режим); касание открывает Библию на месте остановки
+  let bibSig = '', bibT = 0;
+  const bibSync = () => {
+    clearTimeout(bibT);
+    bibT = setTimeout(() => {
+      const s = store.state.settings, r = s.church && s.bible && s.bible.remind && s.bible.remind.on ? s.bible.remind : null;
+      const rd = r && s.bible.plan ? readingFor(s.bible, Date.now()) : null;
+      const sig = JSON.stringify([r, rd && rd.keys, getLang()]);
+      if (sig === bibSig) return;
+      bibSig = sig;
+      rescheduleBible(r, () => ({ title: t('church.remindTitle'), body: rd && rd.keys.length ? refText(rd.keys) : t('church.remindBody') }));
+    }, 2500);
+  };
+  store.subscribe(bibSync);
+  bibSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
   // Вспышка, фонарик и вибрация в такт метронома
@@ -322,6 +339,7 @@ export function boot(root) {
   initBackground(app);
   app.auto.start();
   initPlayer(app); // шторка, плавающая кнопка, всплывающее окно (Android)
+  initNotifyTap(app); // касание уведомления открывает поставленное (песню, план, инструмент)
   initBridge(app); // мост с главным экраном Ἐλάχιστον (Android): состояние, переходы, ▶/❚❚
   // веб-версия: один раз — что это знакомство, а полная версия — приложение для Android
   // (после регистрации: на стартовом экране не мешает выбору языка)

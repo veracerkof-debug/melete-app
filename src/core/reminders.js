@@ -76,7 +76,7 @@ export function remindTimes(r, d) {
   const starts = (r.startsOn ? r.startsOn(d) : [timeOn(r, d)]).map((hm) => at(d, hm));
   if (!starts.length) return []; // перерыв или день без занятий
   // занятие инструмента (slot.tool) — напоминание несёт его: { tool, title } (текст называет занятие, сделанное другое не снимает)
-  const meta = r.slotsOn ? r.slotsOn(d) : null, tag = (i) => (meta && meta[i] && meta[i].tool ? { tool: meta[i].tool, title: meta[i].title || '' } : {});
+  const meta = r.slotsOn ? r.slotsOn(d) : null, tag = (i) => { const m = meta && meta[i]; if (!m || !(m.tool || m.routine || m.songId)) return {}; return { ...(m.tool ? { tool: m.tool } : {}), ...(m.routine ? { routine: m.routine } : {}), ...(m.songId ? { songId: m.songId } : {}), title: m.title || '' }; };
   const t0 = starts[0];
   if (r.mode === 'custom') {
     const seen = new Set();
@@ -110,6 +110,10 @@ export function plan(settings, practicedToday, now = Date.now()) {
   }
   return out.slice(0, ID_N);
 }
+
+// Куда ведёт касание уведомления (слово автора 22.11.2026): что человек поставил в расписании, то и открывается.
+// План → занятие по плану; песня → её занятие; инструмент → его; иначе — главная. Разбор — notifytap.js
+export const goOf = (x) => (x.routine ? { go: 'routine', routine: x.routine } : x.songId ? { go: 'song', songId: x.songId } : x.tool ? { go: 'tool', tool: x.tool } : { go: 'home' });
 
 let LN = null;
 const native = () => Capacitor.isNativePlatform();
@@ -175,7 +179,7 @@ export async function reschedule(state, texts, now = Date.now()) {
     const mode = remindOf(st).mode, exact = await exactAllowed();
     await P.schedule({
       notifications: list.map((x, i) => ({ id: ID0 + i, ...note(texts({ i, ts: x.ts, n: x.n, slot: x.slot, mode, tone: x.tone, title: x.title, tool: x.tool })), schedule: { at: new Date(x.ts), allowWhileIdle: true },
-        channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: exact })),
+        channelId: CHANNELS[x.tone || mode] || CHANNELS.classic, autoCancel: true, isExactNotification: exact, extra: goOf(x) })),
     });
     log('remind', 'запланировано ' + list.length + (exact ? ', точно' : ', приблизительно') + ', первое — ' + new Date(list[0].ts).toLocaleString());
     return list.length;
@@ -195,10 +199,31 @@ export async function rescheduleEvents(list) {
     if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: EV_CH, name: 'Melete · ' + t('remind.chCal'), importance: 4, visibility: 1, vibration: true }).catch(() => {});
     const exact = await exactAllowed();
     await P.schedule({ notifications: list.slice(0, EV_N).map((x, i) => ({ id: EV0 + i, ...note({ title: x.title, body: x.body }), schedule: { at: new Date(x.ts), allowWhileIdle: true },
-      channelId: EV_CH, autoCancel: true, isExactNotification: exact })) });
+      channelId: EV_CH, autoCancel: true, isExactNotification: exact, extra: { go: 'calendar' } })) });
     log('remind', 'события: запланировано ' + Math.min(EV_N, list.length));
     return list.length;
   } catch (e) { log('remind', 'события не запланировались: ' + errText(e), 'e'); return 0; }
+}
+
+// Напоминание о чтении Библии (церковный режим, settings.bible.remind = { on, time }): утром, касание открывает Библию
+// на месте остановки (модуль сам помнит позицию). Номера 7300…7306 — на неделю вперёд; текст: { title, body }
+const BIB_CH = 'melete-bible', BIB0 = 7300, BIB_N = 7;
+export async function rescheduleBible(remind, text, now = Date.now()) {
+  const { P } = await plugin();
+  if (!P) return 0;
+  try {
+    await P.cancel({ notifications: Array.from({ length: BIB_N }, (_, i) => ({ id: BIB0 + i })) });
+    if (!remind || !remind.on || !/^\d\d:\d\d$/.test(remind.time || '')) return 0;
+    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'Библия: уведомления не разрешены', 'w'); return 0; }
+    const [h, m] = remind.time.split(':').map(Number), list = [];
+    for (let i = 0; i < BIB_N; i++) { const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(h, m, 0, 0); if (d.getTime() > now + MIN) list.push(d.getTime()); }
+    if (!list.length) return 0;
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: BIB_CH, name: 'Melete · ' + t('church.title'), importance: 4, visibility: 1, vibration: false }).catch(() => {});
+    const exact = await exactAllowed();
+    await P.schedule({ notifications: list.map((ts, i) => ({ id: BIB0 + i, ...note(text(ts)), schedule: { at: new Date(ts), allowWhileIdle: true }, channelId: BIB_CH, autoCancel: true, isExactNotification: exact, extra: { go: 'bible' } })) });
+    log('remind', 'Библия: запланировано ' + list.length);
+    return list.length;
+  } catch (e) { log('remind', 'Библия не запланировалась: ' + errText(e), 'e'); return 0; }
 }
 
 // Ближайшее запланированное напоминание о практике (для строки в настройках): время или null

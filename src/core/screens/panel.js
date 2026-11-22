@@ -253,6 +253,8 @@ function bibleHTML(app) {
       (st.bible && st.bible.plan ? '<button class="cell act" data-brestart>' + t('church.restart') + '</button>' : '') +
       (st.bible && st.bible.plan && String(st.bible.plan).startsWith('c') ? '<button class="cell act" data-bplanedit>' + t('bplan.edit') + '</button>' : '') +
       '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' + '</div>' +
+    '<div class="group"><div class="cell"><span class="grow">' + t('church.remind') + '</span>' + psw('brem', !!(st.bible && st.bible.remind && st.bible.remind.on), t('church.remind')) + '</div>' +
+      (st.bible && st.bible.remind && st.bible.remind.on ? '<div class="cell"><span class="grow">' + t('church.remindAt') + '</span><input type="time" class="inp num" data-bremt value="' + esc(st.bible.remind.time || '07:30') + '" step="900" aria-label="' + esc(t('church.remindAt')) + '"></div>' : '') + '</div>' +
     '<p class="ftr">' + t('church.hintOn') + (st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('bset.view') + '</div><div class="group"><div class="cell"><span class="grow">' + t('bset.barTop') + '</span><label class="sw"><input type="checkbox" data-bbartop' + (top ? ' checked' : '') + ' aria-label="' + esc(t('bset.barTop')) + '"><i></i></label></div></div>' +
     '<p class="ftr">' + t('bset.hint') + '</p>';
@@ -958,6 +960,8 @@ export function createPanel(app, onChange) {
         if (d.lms === 'srv') app.syncSrv.setMode(id, patch); else if (d.lms === 'mesh') app.mesh.setMode(id, patch); else setLinkMode(patch, d.lms === 'dev' ? id : undefined);
         render(); return;
       }
+      if (d.psw === 'brem') { const b = (app.store.state.settings.bible ??= {}); b.remind = { time: '07:30', ...(b.remind || {}), on: e.target.checked }; app.store.settingsChanged(); render(); return; }
+      if (d.bremt !== undefined) { const b = (app.store.state.settings.bible ??= {}); if (/^\d\d:\d\d$/.test(e.target.value)) { b.remind = { ...(b.remind || {}), on: true, time: e.target.value }; app.store.settingsChanged(); } return; }
       if (d.psw === 'deskBg') { app.store.state.settings.deskBg = e.target.checked; app.store.settingsChanged(); (app.deskBg ? app.deskBg.apply() : Promise.resolve()).finally(() => render()); return; }
       if (d.psw === 'localSend') { app.localSend.set(e.target.checked).then(() => render()); return; }
       if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }

@@ -23,6 +23,7 @@ const cleanSlot = (s, withDays) => {
   if (!s || !okHM(s.from) || !okHM(s.to) || minOf(s.to) <= minOf(s.from)) return null;
   const x = { id: String(s.id || newId()), from: s.from, to: s.to, title: String(s.title || '').slice(0, 60) };
   if (s.routine) x.routine = String(s.routine); // план занятия (routine.js)
+  if (s.songId) x.songId = String(s.songId); // песня: напоминание открывает её (слово автора 22.11.2026)
   if (s.tool && /^[a-z][a-z0-9-]*$/.test(s.tool)) x.tool = String(s.tool); // занятие инструмента (вокал, ритм…) — напоминание называет его (DECISIONS «Вокал»)
   if (withDays) { x.days = [...new Set((s.days || []).map(Number).filter((d) => d >= 0 && d <= 6))].sort(); if (!x.days.length) return null; }
   return x;
@@ -84,7 +85,7 @@ export function savePlan(st, p) {
 }
 
 // Правки. mode: 'all' — повторяющийся блок целиком; 'day' — только дата (свой набор блоков на этот день)
-const dayCopy = (p, d) => slotsOn(p, d).map(({ id, from, to, title, routine }) => ({ id: id + '-' + dateKey(d), from, to, title, routine }));
+const dayCopy = (p, d) => slotsOn(p, d).map(({ id, from, to, title, routine, songId, tool }) => ({ id: id + '-' + dateKey(d), from, to, title, routine, songId, tool }));
 export function addSlot(p, slot, { d = null, once = false } = {}) {
   if (once && d != null) { const k = dateKey(d); const cur = p.once[k] || dayCopy(p, d); p.once[k] = [...cur, cleanSlot({ ...slot, id: newId() }, false)].filter(Boolean); return p; }
   const s = cleanSlot({ ...slot, id: newId() }, true);

@@ -2604,5 +2604,10 @@
   "rt.it.grooves": "Грувы",
   "rt.it.fills": "Филлы",
   "rt.it.speed": "Скорость",
-  "rt.it.beat": "Тренажёр ритма"
+  "rt.it.beat": "Тренажёр ритма",
+  "plan.song": "Песня",
+  "church.remind": "Напоминание о чтении",
+  "church.remindAt": "Время",
+  "church.remindTitle": "Чтение Библии",
+  "church.remindBody": "Время читать"
 }

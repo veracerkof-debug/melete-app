@@ -81,6 +81,7 @@ function slotSheet(app, slot, done) {
     '<div class="cellcol"><span class="l2" style="font-size:13px">' + t('plan.repeat') + '</span><div class="gfdays" style="margin-top:8px">' + WD.map((n, i) => '<button type="button" class="gfday' + (days.has(i) && !onlyDay ? ' on' : '') + '" data-pdw="' + i + '" aria-pressed="' + (days.has(i) && !onlyDay) + '">' + esc(String(n).slice(0, 2)) + '</button>').join('') + '</div>' +
     '<label class="pchk"><input type="checkbox" data-ponly' + (onlyDay ? ' checked' : '') + '> ' + esc(t('plan.onlyThis', { d: dShort(d) })) + '</label></div>' +
     '<label class="cell"><span class="grow">' + t('rt.tool') + '</span><select class="sortsel" data-ptool aria-label="' + esc(t('rt.tool')) + '">' + toolOptions(slot.tool) + '</select></label>' +
+    (app.store.songs().length ? '<label class="cell"><span class="grow">' + t('plan.song') + '</span><select class="sortsel" data-psong aria-label="' + esc(t('plan.song')) + '"><option value="">' + esc(t('rt.noSong')) + '</option>' + app.store.songs().slice().sort((a, b) => a.title.localeCompare(b.title)).map((x) => '<option value="' + esc(x.id) + '"' + (x.id === slot.songId ? ' selected' : '') + '>' + esc(x.title) + '</option>').join('') + '</select></label>' : '') +
     (routinesOf(app.store.state.settings).length ? '<label class="cell"><span class="grow">' + t('rt.title1') + '</span><select class="sortsel" data-proutine aria-label="' + esc(t('rt.title1')) + '">' + routineOptions(app.store.state.settings, slot.routine) + '</select></label>' : '') + '</div>' +
     (isNew ? '' : '<div class="group" style="margin-top:16px"><button class="cell danger center" data-pdel>' + t('plan.delete') + '</button></div>'),
   (el) => {
@@ -91,11 +92,12 @@ function slotSheet(app, slot, done) {
         const from = el.querySelector('[data-pfrom]').value, to = el.querySelector('[data-pto]').value, title0 = el.querySelector('[data-pt]').value.trim();
         const routine = (el.querySelector('[data-proutine]') || {}).value || undefined;
         const tool = (el.querySelector('[data-ptool]') || {}).value || undefined;
+        const songId = (el.querySelector('[data-psong]') || {}).value || undefined;
         const title = title0 || (tool ? toolTitle(tool) : '');
         if (!from || !to || minOf(to) <= minOf(from)) { toast(t('plan.badTime')); return; }
         const q = planOf(app.store.state.settings);
-        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title, routine, tool }, { d, once: true }); else addSlot(q, { from, to, title, routine, tool, days: [...days] }); api.close(); commit(app, q, done); return; }
-        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, routine, tool, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
+        if (isNew) { if (onlyDay || !days.size) addSlot(q, { from, to, title, routine, tool, songId }, { d, once: true }); else addSlot(q, { from, to, title, routine, tool, songId, days: [...days] }); api.close(); commit(app, q, done); return; }
+        const apply = (mode) => { if (!mode) return; editSlot(q, slot.id, { from, to, title, routine, tool, songId, ...(mode === 'all' ? { days: [...days] } : {}) }, { d, mode }); api.close(); commit(app, q, done); };
         if (onlyDay && !slot.once) apply('day'); else if (slot.once) apply('day'); else apply('all');
         return;
       }

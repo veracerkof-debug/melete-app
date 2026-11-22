@@ -2546,5 +2546,10 @@
   "rt.it.grooves": "Gruvlar",
   "rt.it.fills": "Fillar",
   "rt.it.speed": "Tezlik",
-  "rt.it.beat": "Ritm trenajyori"
+  "rt.it.beat": "Ritm trenajyori",
+  "plan.song": "Qoʻshiq",
+  "church.remind": "Oʻqish eslatmasi",
+  "church.remindAt": "Vaqt",
+  "church.remindTitle": "Injil oʻqish",
+  "church.remindBody": "Oʻqish vaqti"
 }

@@ -2582,5 +2582,10 @@
   "rt.it.grooves": "Grooves",
   "rt.it.fills": "Fills",
   "rt.it.speed": "Speed",
-  "rt.it.beat": "Rhythm trainer"
+  "rt.it.beat": "Rhythm trainer",
+  "plan.song": "Song",
+  "church.remind": "Reading reminder",
+  "church.remindAt": "Time",
+  "church.remindTitle": "Bible reading",
+  "church.remindBody": "Time to read"
 }
