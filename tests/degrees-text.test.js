@@ -37,3 +37,13 @@ it('обычные аккорды в скобках → тональность �
   expect(view('[Am]а [Dm]б [E7]в [Am]г')).toBe('iа ivб V7в iг');
   expect(view('[D]а [A]б [Bm]в [G]г')).toBe('Iа Vб viв IVг');
 });
+
+import { convertText } from '../src/music/lyrics.js';
+it('замена записи насовсем: аккорды ↔ ступени, колонки над словами сохраняются', () => {
+  const C = { pc: 0, minor: false }, Am = { pc: 9, minor: true };
+  const d = convertText('C    G   Am   F\nСвя[Am]той [F]ной', C, 'deg');
+  expect(d).toBe('I    V   vi   IV\nСвя[vi]той [IV]ной');
+  expect(convertText(d, C, 'chords')).toBe('C    G   Am   F\nСвя[Am]той [F]ной'); // туда и обратно — то же
+  expect(convertText('Am  F   C   G\nслово', Am, 'deg')).toBe('i   VI  III VII\nслово'); // длиннее — пробелы съедены, колонки на местах
+  expect(convertText('Am F', null, 'deg')).toBe('Am F'); // без тональности ничего не меняет
+});

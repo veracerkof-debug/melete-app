@@ -39,3 +39,19 @@ test('ступени: вид «аккорд и ступень», редакто�
   if (process.env.ED_SHOTS) await page.screenshot({ path: process.env.ED_SHOTS + '/deg.png' });
   expect(errors).toEqual([]);
 });
+
+// Замена записи и угаданная тональность (слово автора 22.11.2026)
+test('ступени: замена аккордов ступенями в редакторе, угаданная тональность помечена', async ({ page, melete, errors }) => {
+  const songs = [{ id: 's1', title: 'Песня', notes: 'Am   F   C   G\nСвя[Dm]той\n', created: Date.now() }]; // тональность не задана
+  await melete.open({ songs, tools: { notes: { sec: 'text', textPick: { id: 's1', sess: null } } } });
+  await melete.free('F', ['notes']);
+  await expect(page.locator('.trkey.guess')).toHaveCount(1); // «≈ Am» — угадана по аккордам
+  await melete.click('[data-x="nedit"]'); await page.waitForTimeout(500);
+  await page.click('[data-cv="deg"]'); await page.waitForTimeout(200);
+  expect(await page.inputValue('#lta')).toBe('i    VI  III VII\nСвя[iv]той\n');
+  await page.click('[data-cv="chords"]'); await page.waitForTimeout(200);
+  expect(await page.inputValue('#lta')).toBe('Am   F   C   G\nСвя[Dm]той\n');
+  await page.click('[data-cv="deg"]'); await page.click('#lsave'); await page.waitForTimeout(500);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('practice.v1')).songs[0].notes)).toContain('VII');
+  expect(errors).toEqual([]);
+});

@@ -110,3 +110,31 @@ export function lyricsHTML(txt, n, key = null, { view = 'chords', style = 'roman
     return esc(line).replace(/\[([^\]]+)\]/g, (m, c) => (tokOf(c, numbers) ? b(c) : kindOf(c, numbers) === 'bad' ? bad(c) : m));
   }).join('\n');
 }
+
+// Замена записи насовсем (кнопка в редакторе текста): to = 'deg' — буквенные аккорды → римские цифры в тональности key;
+// 'chords' — ступени → аккорды в key. Строка аккордов сохраняет «колонки» над словами: короче — добавляются пробелы, длиннее — съедаются пробелы после.
+export function convertText(txt, key, to = 'deg') {
+  if (!key) return txt;
+  const numbers = !letterChords(txt);
+  const conv = (c) => {
+    if (to === 'deg') { if (!CH_RE.test(c)) return c; const x = chordToDegree(c, key); return x ? degreeToRoman(x) : c; }
+    if (CH_RE.test(c)) return c;
+    const x = parseDegree(c, { numbers });
+    return x ? degreeToChord(x, key) : c;
+  };
+  return String(txt || '').split('\n').map((line) => {
+    if (isLine(line, numbers) || isLooseLine(line, numbers)) {
+      const parts = line.split(/(\s+)/); let debt = 0;
+      return parts.map((t) => {
+        if (!t) return t;
+        if (/^\s+$/.test(t)) { const keep = Math.max(1, t.length - Math.max(0, debt)); debt = Math.max(0, debt - (t.length - keep)); return ' '.repeat(keep); }
+        const r = tokOf(t, numbers) ? conv(t) : t;
+        const d = r.length - t.length;
+        if (d < 0) return r + ' '.repeat(-d) + (debt < 0 ? '' : '') ;
+        debt += d;
+        return r;
+      }).join('').replace(/\s+$/, '');
+    }
+    return line.replace(/\[([^\]]+)\]/g, (m, c) => (tokOf(c, numbers) ? '[' + conv(c) + ']' : m));
+  }).join('\n');
+}

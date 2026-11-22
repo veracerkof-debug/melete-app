@@ -319,5 +319,8 @@
   "ed.t.stac": "Staccato",
   "deg.both": "Chord and degree",
   "deg.toBoth": "Show chord and degree together",
-  "ed.badChords": "Not recognised: {n} — check the spelling (Roman numerals, chords in brackets)"
+  "ed.badChords": "Not recognised: {n} — check the spelling (Roman numerals, chords in brackets)",
+  "ed.toDeg": "Replace chords with degrees ({k})",
+  "ed.toChords": "Replace degrees with chords ({k})",
+  "tr.guess": "Key guessed from the chords — tap to pick it exactly"
 }

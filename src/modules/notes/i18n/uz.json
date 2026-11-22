@@ -318,5 +318,8 @@
   "ed.t.stac": "Staccato",
   "deg.both": "Akkord va pogʻona",
   "deg.toBoth": "Akkord va pogʻonani birga koʻrsatish",
-  "ed.badChords": "Tanilmadi: {n} — yozilishini tekshiring (rim raqamlari, qavsdagi akkordlar)"
+  "ed.badChords": "Tanilmadi: {n} — yozilishini tekshiring (rim raqamlari, qavsdagi akkordlar)",
+  "ed.toDeg": "Akkordlarni pogʻonalarga almashtirish ({k})",
+  "ed.toChords": "Pogʻonalarni akkordlarga almashtirish ({k})",
+  "tr.guess": "Tonallik akkordlardan taxmin qilindi — aniq tanlash uchun bosing"
 }

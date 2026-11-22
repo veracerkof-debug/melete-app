@@ -8,7 +8,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import { fileSongs, inSong } from '../../core/files.js';
-import { lyricsHTML, chordsIn, degreesIn, markupHTML, badIn } from '../../music/lyrics.js';
+import { lyricsHTML, chordsIn, degreesIn, markupHTML, badIn, convertText } from '../../music/lyrics.js';
 import { tonicIsMinor } from '../../music/degrees.js';
 import { detectKey, parseNote, shiftKey, keyLabel, shiftTo } from '../../music/transpose.js';
 import { isPdf, openPdf, createPdfView, closePdfDoc, sniffPdf } from './pdf.js';
@@ -532,7 +532,7 @@ function textBody() {
   const n = song.tr || 0, key = songKey(song), capo = Math.max(0, Math.min(7, Math.round(+song.capo || 0)));
   // капо: аккорды формами на capo ладов ниже; касание — выбрать лад, удержание — снять
   const capoBtn = '<button class="trview capo' + (capo ? ' on' : '') + '" data-x="ncapo" aria-label="' + esc(t('capo.title')) + '">' + esc(capo ? t('capo.n', { n: capo }) + (key ? ' · ' + keyLabel(shiftKey(key, n - capo)) : '') : t('capo.title')) + '</button>';
-  const keyBtn = key ? '<button class="trkey num" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '">' + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
+  const keyBtn = key ? '<button class="trkey num' + (key.given ? '' : ' guess') + '" data-x="nkey" aria-label="' + esc(t('tr.pick')) + '"' + (key.given ? '' : ' title="' + esc(t('tr.guess')) + '"') + '>' + (key.given ? '' : '≈ ') + esc(keyLabel(key)) + (n ? ' → <b>' + esc(keyLabel(shiftKey(key, n))) + '</b>' : '') + '</button>' : '';
   return '<div class="ntools">' + icb('data-x="nlib"', I.list, t('lib.title'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(song.title) + '</span></div><div class="ntools"><div class="vrow tight">' + icb('data-x="ntr" data-d="-1"', I.minus, t('trDown'), 'sm') + '<span class="num trv">' + (n > 0 ? '+' : '') + n + '</span>' +
     icb('data-x="ntr" data-d="1"', I.plus, t('trUp'), 'sm') + keyBtn + capoBtn +
     // вид: аккорды или ступени (римские цифры / нэшвиллская запись — в выборе тональности)
@@ -647,9 +647,12 @@ function libSheet() {
 function lyricsEdit() {
   const { t, ui } = ctx, song = curSong();
   if (!song) return;
+  const ck = songKey(song); // тональность песни (заданная, по аккордам или по ступеням) — для замены записи
   ui.sheet(() => ui.snav(t('sec.text'), { left: '<button class="link l" data-close>' + t('cancel') + '</button>', right: '<button class="link b r" id="lsave">' + t('save') + '</button>' }) +
     '<div class="group"><div class="hlbox" style="min-height:52vh"><pre class="hlpre" id="lhl" aria-hidden="true"></pre><textarea class="ta hlta" id="lta" spellcheck="false" aria-label="' + t('sec.text') + '" placeholder="' + esc(t('textPh')) + '">' + esc(song.notes) + '</textarea></div></div>' +
-    '<p class="ftr hlbad" id="lbad" hidden></p><p class="ftr">' + t('textHint') + '</p>',
+    '<p class="ftr hlbad" id="lbad" hidden></p>' +
+    (ck ? '<div class="vrow" style="gap:8px;flex-wrap:wrap;margin:4px 0 8px"><button class="btn sm" data-cv="deg">' + esc(t('ed.toDeg', { k: keyLabel(ck) })) + '</button><button class="btn sm" data-cv="chords">' + esc(t('ed.toChords', { k: keyLabel(ck) })) + '</button></div>' : '') +
+    '<p class="ftr">' + t('textHint') + '</p>',
   (el, sh) => {
     const ta = el.querySelector('#lta'), hl = el.querySelector('#lhl'), bad = el.querySelector('#lbad');
     const paint = () => {
@@ -659,6 +662,8 @@ function lyricsEdit() {
       ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 0) + 'px'; hl.parentElement.style.height = ta.style.height; // поле растёт вместе с текстом, прокручивается шторка
     };
     ta.addEventListener('input', paint);
+    // Замена записи: до «Сохранить» её можно отменить (кнопка «Отмена»)
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-cv]'); if (!b || !ck) return; ta.value = convertText(ta.value, ck, b.dataset.cv); paint(); });
     paint();
     el.querySelector('#lsave').addEventListener('click', () => {
       updCur({ notes: ta.value });
