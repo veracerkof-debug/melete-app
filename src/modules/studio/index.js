@@ -122,7 +122,7 @@ function transportHTML(p) {
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
     '<button class="stinfo" data-x="settings" aria-label="' + ui.esc(t('settings')) + '"><b class="num">' + p.bpm + '</b><span>' + ui.esc(keyLabel(p.key) + ' · ' + p.num + '/' + p.den) + '</span><i class="num" id="stpos">1.1</i><em class="stld" id="stld" hidden></em></button>' +
     ui.icb('data-x="click"', I.click, t('click'), 'sm plain' + (seq && seq.click ? ' on' : '')) + '</div>' +
-    '<div class="stgrp">' + (clipBuf && clipBuf.length ? ui.icb('data-x="paste"', I.paste, t('clip.pasteHere'), 'sm plain') : '') + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
+    '<div class="stgrp">' + ui.icb('data-x="looper"', I.loop, t('looper.btn'), 'sm plain' + (p.region ? ' on' : '')) + (clipBuf && clipBuf.length ? ui.icb('data-x="paste"', I.paste, t('clip.pasteHere'), 'sm plain') : '') + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
 }
 // Шапка редактора клипа: назад, дорожка · такты куска (−/+), сетка (ноты), файл (запись)
 function clipHeadHTML(p, c, tr) {
@@ -742,6 +742,16 @@ function act(x, el) {
     }
     case 'rewind': if (rec.busy) break; V.clipPos = 0; V.cursor = 0; if (seq.playing) seq.start(0); else if (pl) { pl.cursor = 0; } tickPos(); break;
     case 'click': seq.click = !seq.click; render(); break;
+    // «Лупер» (слово автора 22.11.2026): касание — цикл по выделенному (или по такту у курсора) / снять цикл; удержание — экран лупера
+    case 'looper': {
+      if (p.region) { p.region = null; save(); render(); ctx.ui.toast(ctx.t('looper.off')); break; }
+      const sel = (pl && pl.selection ? pl.selection : []).map((id) => clipById(p, id)).filter(Boolean);
+      let a, b;
+      if (sel.length) { a = Math.min(...sel.map((c) => c.at)); b = Math.max(...sel.map((c) => c.at + c.len)); }
+      else { const at = seq.playing && seq.pos() >= 0 ? seq.pos() : (V.view === 'song' ? (pl ? pl.cursor : V.cursor) : V.clipPos) || 0; a = Math.floor(at / p.num) * p.num; b = a + p.num; }
+      setRegion(p, a, b, 1); save(); render(); ctx.ui.toast(ctx.t('looper.on'));
+      break;
+    }
     case 'undo': undoStep(); break;
     case 'redo': undoStep(true); break;
     case 'rec': if (rec.busy) rec.stop(true); else rec.sheet(); break;
@@ -838,6 +848,7 @@ export default {
     // удержания: название ряда ударных — очистить ряд; аккорд — убрать; проект в списке — удалить
     onHold(host, '.rkname[data-lane]', (el2) => { const cl = clip(); if (!cl) return; const lane = el2.dataset.lane; if (!cl.data.steps[lane]) return; holdMenu(el2, [{ icon: I.del, label: c.t('drum.clear'), danger: true, run: () => { delete cl.data.steps[lane]; save(); render(); } }], c.t('drum.' + lane)); });
     onHold(host, '.scch', (el2) => { const p = proj(), cl = clip(); if (cl) chordHold(ctx, p, cl.data, el2, () => { save(); render(); }); });
+    onHold(host, '[data-x="looper"]', () => { const p = proj(); if (!p || rec.busy) return; seq.stop(); save(); c.openIn('looper', { inbox: { kind: 'proj', pid: p.id } }); }); // удержание «Лупера» — экран лупера с этим проектом
     onHold(host, '.stproj', (b) => { const id = b.dataset.open; holdMenu(b, [{ icon: I.del, label: c.t('delete'), danger: true, run: () => c.ui.confirm(c.t('delTitle'), c.t('delText'), c.t('delete')).then((ok) => { if (ok) { c.projects.remove(id); render(); } }) }], (c.projects.get(id) || {}).name || c.t('untitled')); });
     render();
   },
