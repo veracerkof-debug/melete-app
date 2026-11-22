@@ -25,7 +25,8 @@ env:
 
 jobs:
   win:
-    runs-on: windows-latest
+    # windows-2022, не latest: на образе с Visual Studio 18 whisper.cpp (cmake) не находит cl.exe и сборка падает с 21.11.2026 (прогоны 220–231)
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
