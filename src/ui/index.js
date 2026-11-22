@@ -141,7 +141,7 @@ export function sheet(render, init, { onClose, hints } = {}) {
   const scrim = document.createElement('div');
   scrim.className = 'scrim opening'; // содержимое поднимается по очереди только при открытии, не при каждом обновлении
   setTimeout(() => scrim.classList.remove('opening'), 650);
-  scrim.style.zIndex = 45 + stack.length;
+  scrim.style.zIndex = 46 + stack.length; // над сценой (45): шторки списка и состава открываются прямо на сцене
   scrim.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"></div>';
   const el = scrim.firstChild;
   const api = {

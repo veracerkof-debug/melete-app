@@ -146,7 +146,8 @@ export function openStage(app, evId, i = 0) {
   const stopTrack = () => { if (S.track) { try { S.track.pause(); } catch { /* */ } S.track = null; } if (S.url) { URL.revokeObjectURL(S.url); S.url = ''; } };
   const stopClick = () => safe('click', () => { if (audio.metro.running) audio.metro.stop(); });
   const stopPad = (fade) => safe('pad', () => { audio.drone.stop(fade); S.padOn = false; });
-  const curBpm = () => (audio.metro.cfg && audio.metro.cfg.bpm) || (item() && item().it.bpm) || 90;
+  // темп: идёт метроном — его; иначе темп пункта сет-листа (метроном выключен — его настройка к песне не относится)
+  const curBpm = () => (audio.metro.running && audio.metro.cfg && audio.metro.cfg.bpm) || (item() && item().it.bpm) || (audio.metro.cfg && audio.metro.cfg.bpm) || 90;
   // Барабанные пэды: создаются при первом касании, узлы — один раз (ошибка не ломает остальное)
   const ensurePads = () => {
     if (S.pads) return S.pads;
