@@ -208,3 +208,17 @@
   .mv:is(.full,.half)>.mwheel{margin-block:auto}
   .mv:is(.full,.half)>.mside{margin-top:auto}
 }
+
+/* Полное окно: крупнее и плотнее (слово автора 22.11.2026) — число и «пуск» в циферблате, плитки управления выше, воздух между
+   циферблатом и плитками один, а не пустые полосы сверху и снизу */
+.mv.full{gap:clamp(20px,5cqh,40px)}
+.mv.full .mwheel .bpm{font-size:clamp(40px,17.5cqmin,132px)!important}
+.mv.full .mwheel .wcenter .bpmlbl{font-size:clamp(13px,4.2cqmin,19px)!important;margin-top:2px}
+.mv.full .mwheel .bigplay{width:clamp(46px,14cqmin,100px)!important;height:clamp(46px,14cqmin,100px)!important;margin-top:8px}
+.mv.full .mtile{height:clamp(64px,17cqmin,96px)!important;border-radius:22px!important}
+.mv.full .mtile svg{width:clamp(26px,7.4cqmin,40px)!important;height:clamp(26px,7.4cqmin,40px)!important}
+.mv.full .mtile b{font-size:clamp(20px,6.2cqmin,30px)!important}
+.mv.full .mtile .tapt{font-size:clamp(16px,4.8cqmin,22px)!important}
+.mstep{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(6px,2cqw,14px);width:100%;max-width:520px;margin-bottom:clamp(6px,1.6cqh,14px)}
+.mstb{height:clamp(52px,13cqmin,76px);border-radius:20px;background:var(--fill);color:var(--ink);font-size:clamp(18px,5.4cqmin,26px);font-weight:700;font-variant-numeric:tabular-nums;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .1s,background .15s}
+.mstb:active{transform:scale(.94);background:var(--fill2)}

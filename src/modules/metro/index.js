@@ -127,7 +127,9 @@ function view() {
     c.gap.on ? t('tag.gap', { play: c.gap.play, mute: c.gap.mute }) : ''].filter(Boolean);
   const ctl = size === 'quarter' ? [meter, sub]
     : [meter, tile('data-s="sl" aria-pressed="' + !!(SL && SL.open) + '"', SL_ICON, t('sl.title')), tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
-  const mv = '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside"><div class="mctl n' + ctl.length + '">' + ctl.join('') +
+  // полное окно: ряд точной подстройки −5 −1 +1 +5 у большого пальца (колесо — жестом, кнопки — для точности; слово автора 22.11.2026)
+  const steps = size === 'full' ? '<div class="mstep" role="group" aria-label="' + ui.esc(t('tempo')) + '">' + [-5, -1, 1, 5].map((d) => '<button class="mstb" data-hold="' + d + '" aria-label="' + ui.esc(t(d < 0 ? 'slower' : 'faster') + ' ' + (d > 0 ? '+' : '−') + Math.abs(d)) + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + '</button>').join('') + '</div>' : '';
+  const mv = '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside">' + steps + '<div class="mctl n' + ctl.length + '">' + ctl.join('') +
     '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
   const bar = size !== 'quarter' && SL ? SL.html() : '';
   return bar ? '<div class="mwrap sl">' + mv + bar + '</div>' : mv;

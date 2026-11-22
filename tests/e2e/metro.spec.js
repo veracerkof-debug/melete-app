@@ -21,3 +21,19 @@ test('полиритм и группы долей', async ({ page, melete, error
   await melete.click('[data-s="metro"]');
   expect(errors).toEqual([]);
 });
+
+// Ряд точной подстройки −5 −1 +1 +5 в полном окне метронома (слово автора 22.11.2026)
+test('метроном: ряд ±5/±1 меняет темп', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['metro']);
+  await page.waitForTimeout(600);
+  const bpm = async () => (await melete.settings()).metro.bpm;
+  const b0 = await bpm();
+  await page.locator('.mstb[data-hold="5"]').dispatchEvent('pointerdown'); await page.locator('.mstb[data-hold="5"]').dispatchEvent('pointerup'); await page.evaluate(() => window.dispatchEvent(new Event('pointerup')));
+  await page.waitForTimeout(300);
+  expect(await bpm()).toBe(b0 + 5);
+  await page.locator('.mstb[data-hold="-1"]').dispatchEvent('pointerdown'); await page.evaluate(() => window.dispatchEvent(new Event('pointerup')));
+  await page.waitForTimeout(300);
+  expect(await bpm()).toBe(b0 + 4);
+  void errors;
+});
