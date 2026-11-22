@@ -106,10 +106,10 @@ function openToolViewNow(app, id, onClose) {
   // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
   layer.innerHTML = mod.immersive
     ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
-      ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm tvhelp') + pureBtn + (rec ? recButtonHTML('tvrecf') : '') +
+      pureBtn + (rec ? recButtonHTML('tvrecf') : '') +
       grp + '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
     : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="tvhd">' +
-      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<div class="stitle2">' + esc(title) + '</div>' + (rec ? recButtonHTML() : '') + pureBtn + ui.icb('data-tv="help"', icons.help, t('help.open'), 'sm') + '</div>' +
+      ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm') + '<button class="stitle2 hqt" data-tv="help" aria-label="' + esc(t('help.open') + ': ' + title) + '">' + esc(title) + '</button>' + (rec ? recButtonHTML() : '') + pureBtn + '</div>' +
       grp + '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>';
   document.body.appendChild(layer);
   let track = mod.stats === false ? { stop: () => 0 } : trackToolTime(app, id), trackSec = 0;

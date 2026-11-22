@@ -73,6 +73,13 @@ function flowHTML(s) {
     '<div class="updfl-lbl">' + FLOW_STEPS.map((k, i) => '<span' + (i === cur ? ' class="cur"' : '') + '>' + esc(t('upd.fl.' + k)) + '</span>').join('') + '</div>' +
     (s.building && fl.key !== 'build' ? '<div class="updfl-note">' + esc(buildingLine(s.building)) + '</div>' : '') + '</div>';
 }
+// Статус всегда на виду (слово автора 22.11.2026): нет новой сборки — карточка «проверка / актуально / ошибка / лимит» вместо цепочки;
+// раньше строка статуса пряталась в пояснение под кнопками и закрывалась кружком «?»
+function statusCard(s, line) {
+  if (!line) return '';
+  const kind = s.st === 'checking' ? 'wait' : s.st === 'err' ? 'err' : 'ok';
+  return '<div class="updflow updst ' + kind + '" role="status"><div class="updfl-top"><div class="updfl-t"><b>' + esc(line) + '</b></div></div></div>';
+}
 // Строка статуса в шторке
 function stateLine(s) {
   if (s.st === 'checking') return t('upd.checking');
@@ -89,14 +96,14 @@ export function updateSheet(app) {
   let un = null, tick = 0;
   const sh = sheet(() => {
     const s = U.state, line = stateLine(s);
-    return snav(t('upd.title')) + flowHTML(s) +
+    return snav(t('upd.title')) + (flowHTML(s) || statusCard(s, line)) +
       '<div class="group"><div class="cell"><span class="grow">' + t('upd.ver', { b: U.build || '—', ch: U.channel === 'dev' ? t('upd.dev') : t('upd.pre') }) + '</span></div>' +
       '<div class="cellcol">' + seg('updMode', [['auto', t('upd.mAuto')], ['button', t('upd.mButton')]], U.mode, t('upd.mode')) + '<div class="segcap">' + t(U.mode === 'auto' ? (U.platform === 'android' ? 'upd.autoAnd' : 'upd.autoWin') : 'upd.btnHint') + '</div></div>' +
       (U.platform === 'android' ? '<div class="cell"><span class="grow">' + t('upd.mobile') + '<span class="psub">' + t('upd.mobileSub', { mb: s.info && s.info.size ? Math.round(s.info.size / 1048576) : 330 }) + '</span></span>' + sw('updMobile', !!st.updMobile, t('upd.mobile')) + '</div>' : '') +
       '<button class="cell act" data-u="check"' + (s.st === 'checking' || s.st === 'down' ? ' disabled' : '') + '>' + t('upd.check') + '</button>' +
       (s.st === 'avail' ? '<button class="cell act" data-u="get">' + t('upd.get') + '</button>' : '') +
       (s.st === 'ready' ? '<button class="cell act" data-u="install">' + t('upd.install') + '</button>' : '') +
-      '</div><p class="ftr">' + (line ? esc(line) + '<br>' : '') + t('upd.hint') + '</p>';
+      '</div><p class="ftr">' + t('upd.hint') + '</p>';
   }, (el) => {
     un = U.subscribe(() => sh.update());
     U.fresh(); // открыли «Обновления» — свежая проверка (не чаще раза в две минуты)

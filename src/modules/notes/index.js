@@ -451,7 +451,7 @@ function tabsBody() {
       '<div class="vrow" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadTab') + '</button>' +
       '<button class="btn sm" data-x="tpaste">' + I.pen.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2"') + ' ' + t('pasteTab') + '</button>' +
       '<button class="btn sm" data-x="lvnew">' + I.rec + ' ' + t('live.new') + '</button></div>' +
-      (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
+      (AT.state === 'error' && !isDaw(AT.cur) ? '<p class="ftr keep" style="text-align:center">' + t('openFailShort') + '</p>' : '') + '</div>';
   }
   if (AT.state === 'text') { // текст без строк струн — как есть
     return '<div class="ntools">' + icb('data-x="tlist"', I.list, t('tabFiles'), 'sm') + '<span class="sgrow aname" style="text-align:left">' + esc(AT.cur.name) + '</span>' +
@@ -486,7 +486,7 @@ function midiBody() {
   if (!AT.cur || !isDaw(AT.cur) || AT.state === 'error') {
     return '<div class="tablist tpin">' + (all.length ? '<div class="group">' + all.map(dawRow).join('') + '</div>' : '<p class="l2" style="font-size:14px;text-align:center;margin:18px 8px">' + t('dawEmpty') + '</p>') +
       '<div class="vrow" style="margin-top:12px"><button class="btn sm" data-x="tadd">' + I.plus.replace('<svg', '<svg style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4"') + ' ' + t('uploadDaw') + '</button></div>' +
-      (AT.state === 'error' && isDaw(AT.cur) ? '<p class="ftr" style="text-align:center">' + t('dawFail') + '</p>' : '') + '</div>';
+      (AT.state === 'error' && isDaw(AT.cur) ? '<p class="ftr keep" style="text-align:center">' + t('dawFail') + '</p>' : '') + '</div>';
   }
   return scoreView();
 }

@@ -40,7 +40,7 @@ export function remoteSheet(app, dev, H = http) {
   }
   const body = () => {
     let h = snav(t('rc.title', { name: dev.name || '' })) + '<div class="rc"><div class="seg rcseg" role="tablist">' + ['snd', 'media'].map((k) => '<button role="tab" data-rcview="' + k + '" aria-selected="' + (view === k) + '"' + (view === k ? ' class="on"' : '') + '>' + esc(t('rc.v.' + k)) + '</button>').join('') + '</div>';
-    if (err) h += '<p class="ftr danger">' + esc(err) + '</p>';
+    if (err) h += '<p class="ftr keep danger">' + esc(err) + '</p>';
     if (view === 'snd') return h + sndHTML() + '</div>';
     if (S && S.id) {
       h += '<div class="rcnow"><b>' + esc(String(S.name).replace(/\.[a-z0-9]{2,5}$/i, '')) + '</b><span class="l2 num">' + fmt(S.pos) + ' / ' + fmt(S.dur) + '</span></div>' +
@@ -51,7 +51,7 @@ export function remoteSheet(app, dev, H = http) {
       const stems = (S.stems || []).slice().sort((a, b) => PARTS.indexOf(a.part) - PARTS.indexOf(b.part));
       if (stems.length) h += '<div class="hdr">' + esc(t('rc.stems')) + '</div><div class="group">' + stems.map((x) => '<label class="cell rcstem"><span class="rcpart">' + esc(t('rc.part.' + x.part)) + '</span>' +
         '<input type="range" min="0" max="1.5" step="0.05" value="' + x.v + '" data-rcv="stem" data-part="' + esc(x.part) + '" aria-label="' + esc(t('rc.part.' + x.part)) + '"><span class="num rcpct">' + Math.round(x.v * 100) + '</span></label>').join('') + '</div>';
-    } else if (!err) h += '<p class="ftr">' + esc(t(S ? 'rc.none' : 'rc.wait')) + '</p>';
+    } else if (!err) h += '<p class="ftr keep">' + esc(t(S ? 'rc.none' : 'rc.wait')) + '</p>';
     const L = q ? list.filter((x) => x.name.toLowerCase().includes(q.toLowerCase())) : list;
     h += '<div class="hdr">' + esc(t('rc.list')) + '</div>' + (list.length > 8 ? '<input class="inp rcq" data-rcq value="' + esc(q) + '" placeholder="' + esc(t('rc.find')) + '" aria-label="' + esc(t('rc.find')) + '">' : '') +
       '<div class="group">' + (L.length ? L.slice(0, 100).map((x) => '<button class="cell act' + (S && S.id === x.id ? ' on' : '') + '" data-rcopen="' + esc(x.id) + '"><span class="grow">' + esc(x.name) + '</span><span class="l2 num">' + fmt(x.dur) + '</span></button>').join('') : '<div class="cellcol"><span class="l2">' + esc(t('rc.empty')) + '</span></div>') + '</div></div>';

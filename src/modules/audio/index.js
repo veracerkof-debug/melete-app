@@ -1018,7 +1018,7 @@ function libHTML() {
     }).join('') + '</div>';
     h += midiHTML;
   }
-  if (all.length) h += '<p class="ftr" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + (all.length > 1 && !sel ? '<br>' + t('holdSelect') : '') + '</p>';
+  if (all.length) h += '<p class="ftr keep" style="text-align:center">' + tn('files', all.length) + (totd ? ' · ' + fmtDur(totd) : '') + ' · ' + t('onDevice', { mb: ctx.num(tot / MB, 1) }) + (all.length > 1 && !sel ? '<br>' + t('holdSelect') : '') + '</p>';
   h += '</div>';
   if (sel) {
     const n = sel.size ? '' : ' disabled';

@@ -236,7 +236,11 @@ async function outSheet(app, done) {
 }
 function soundHTML(app) {
   const st = app.store.state.settings;
+  const ld = app.audio.load, lv = ld && ld.ready ? Math.min(1, ld.value) : 0;
   return '<div class="large">' + t('page.sound') + '</div>' +
+    // нагрузка звука — живая полоса всегда сверху (слово автора 22.11.2026: показания не прячем, они нужны сразу); число и цвет обновляются раз в секунду
+    '<div class="hdr">' + t('snd.load') + '</div><div class="group"><div class="cell sndld"><span class="sndbar" role="img" aria-label="' + esc(t('snd.load')) + '"><i data-sndbar data-lvl="' + (ld && ld.ready ? ld.level : '') + '" style="width:' + Math.round(lv * 100) + '%"></i></span><span class="val num" data-sndload style="color:var(--ink)">' + (ld && ld.ready ? Math.round(ld.value * 100) + ' %' : '–') + '</span></div></div>' +
+    '<p class="ftr">' + t('snd.loadHint') + '</p>' +
     // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
     (WEB ? '' : (
     '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + lseg('autostems', (fullStems() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : 'auto.stemsHintPhone') + '</div></div>' + (isDesktop() ? '' : '<div class="cellcol">' + lseg('pcstems', [['off', t('auto.off')], ['4', '4'], ['6', '6']], pcStems(st), t('auto.pcStems')) + '<div class="segcap">' + t('auto.pcStemsHint') + '</div></div>') + '<div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHintAsk') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
@@ -251,8 +255,6 @@ function soundHTML(app) {
     '<div class="cellcol">' + lseg('sndalgo', [['melete', 'Melete'], ['galactic', 'Galactic'], ['verbity', 'Verbity']], app.audio.mixer.verbAlgo, t('snd.algo')) + '<div class="segcap">' + t('snd.algoHint') + '</div></div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
     (app.audio.outputs && app.audio.outputs.supported() ? '<div class="group"><button class="cell act" data-act="sndout"><span class="grow">' + t('snd.out') + '</span><span class="val l2" data-sndoutn>' + esc(app.audio.outputs.id ? t('snd.outSel') : t('snd.outAuto')) + '</span></button></div><p class="ftr">' + t('snd.outHint') + '</p>' : '') +
-    '<div class="group"><div class="cell"><span class="grow">' + t('snd.load') + '</span><span class="val num" data-sndload style="color:var(--ink)">' + (app.audio.load && app.audio.load.ready ? Math.round(app.audio.load.value * 100) + ' %' : '–') + '</span></div></div>' +
-    '<p class="ftr">' + t('snd.loadHint') + '</p>' +
     '';
 }
 
@@ -628,9 +630,8 @@ function helpHTML(app) {
 const theoryFind = (st) => (st.theory || {}).find === true;
 function featHTML(app) {
   const st = app.store.state.settings, lang = getLang();
-  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span>' + esc(name) + extra +
+  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span' + (help ? ' class="hqt" data-help="' + id + '" role="button" tabindex="0" aria-label="' + esc(t('help.open') + ': ' + name) + '"' : '') + '>' + esc(name) + extra +
     '</span>' + (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
-    (help ? '<button class="ic sm" data-help="' + id + '" aria-label="' + esc(t('help.open') + ': ' + name) + '">' + icons.help + '</button>' : '') +
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
   return '<div class="large">' + t('feat.title') + '</div>' +
@@ -735,7 +736,12 @@ function rootHTML(app) {
 // Полноэкранная панель профиля; page — 'root' или ключ PAGES
 export function createPanel(app, onChange) {
   // нагрузка звука в настройках — живая строка, пока она на экране
-  setInterval(() => { const el = document.querySelector('[data-sndload]'); if (!el) return; const m = app.audio.load; if (m && m.ready) el.textContent = Math.round(m.value * 100) + ' %'; }, 1000);
+  setInterval(() => {
+    const el = document.querySelector('[data-sndload]'); if (!el) return; const m = app.audio.load;
+    if (!m || !m.ready) return;
+    el.textContent = Math.round(m.value * 100) + ' %';
+    const bar = document.querySelector('[data-sndbar]'); if (bar) { bar.style.width = Math.round(Math.min(1, m.value) * 100) + '%'; bar.dataset.lvl = m.level; }
+  }, 1000);
   let page = null, layer = null, input = null, lastPage = null;
   // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
   const relang = () => { const st = app.store.state.settings; loadLang(st.lang).then(() => { app.relang(); render(); onChange(); }); };

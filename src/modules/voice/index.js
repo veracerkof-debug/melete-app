@@ -343,7 +343,7 @@ function recsHTML() {
       (on ? '<input type="range" min="0" max="1000" value="0" class="vcr-bar" data-pbar="' + esc(x.id) + '" aria-label="' + esc(t('recs.pos')) + '">' : '') + '</div>' +
       '<button class="vcr-m" data-rmore="' + esc(x.id) + '" aria-label="' + esc(t('more')) + '">' + I.more + '</button></div>';
   }).join('');
-  return ctx.ui.snav(t('recs.title')) + (S.saving ? '<p class="ftr">' + t('recs.saving') + '</p>' : '') +
+  return ctx.ui.snav(t('recs.title')) + (S.saving ? '<p class="ftr keep">' + t('recs.saving') + '</p>' : '') +
     (L.length ? '<div class="group">' + rows + '</div>' : '<p class="ftr">' + t('recs.empty') + '</p>') + '<p class="ftr">' + t('recs.hint') + '</p>';
 }
 function recsSheet() {

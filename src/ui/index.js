@@ -61,9 +61,11 @@ export function leave(el, ms = 240) {
   setTimeout(() => el.remove(), reduced() ? 0 : ms);
 }
 
-// Пояснения — не текстом, а по запросу (слово автора 21.11.2026: «текст нужен один-два раза, а место занимает постоянно»).
-// Абзац-пояснение (.ftr, .segcap) прячется, а у названия раздела или параметра появляется маленький кружок «?»;
-// касание — окошко с пояснением. Только простой текст: пояснение со ссылкой или кнопкой остаётся как есть.
+// Пояснения — не текстом, а по запросу (слово автора 21.11.2026: «текст нужен один-два раза, а место занимает постоянно»;
+// 22.11.2026: без кружков «?» — кликабельные названия). Абзац-пояснение (.ftr, .segcap, подпись строки) прячется, а название
+// раздела или параметра становится кликабельным (вид не меняется): касание — окошко с пояснением. Нет названия рядом —
+// абзац остаётся одной строкой с «…», касание раскрывает его в окошко. Показания (статус, проценты, значения) пояснением не
+// считаются и не прячутся: у них класс .keep или data-keep. Только простой текст: со ссылкой или кнопкой — как есть.
 let hintPop = null;
 export function closeHint() { if (hintPop) { hintPop.remove(); hintPop = null; } }
 function openHint(btn) {
@@ -77,38 +79,36 @@ function openHint(btn) {
   const r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
   const w = Math.min(340, vw - 24);
   pop.style.width = w + 'px';
-  pop.style.left = Math.max(12, Math.min(vw - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+  pop.style.left = Math.max(12, Math.min(vw - w - 12, r.left + Math.min(r.width, 200) / 2 - w / 2)) + 'px';
   const h = pop.offsetHeight, below = r.bottom + 8 + h <= vh - 12;
   pop.style.top = (below ? r.bottom + 8 : Math.max(12, r.top - 8 - h)) + 'px';
 }
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') { // (в тестах без DOM — пропускаем)
-  document.addEventListener('pointerdown', (e) => { if (hintPop && !e.target.closest('.hintpop,.hq')) closeHint(); }, true);
+  document.addEventListener('pointerdown', (e) => { if (hintPop && !e.target.closest('.hintpop,.hqt,.hqline')) closeHint(); }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hintPop) { closeHint(); e.stopPropagation(); } }, true);
 }
 let hintId = 0;
+// Сделать элемент ссылкой на пояснение (повторно — пояснения склеиваются)
+export function hintLink(host, html) {
+  if (host._hint != null) { host._hint += '<br>' + html; return; }
+  host.classList.add('hqt'); host.tabIndex = 0; host.setAttribute('role', 'button'); host.setAttribute('aria-haspopup', 'dialog');
+  host.dataset.hid = 'h' + (++hintId); host._hint = html;
+  host.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(host); });
+  host.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); openHint(host); } });
+}
+const isReadout = (h) => h.classList.contains('keep') || h.classList.contains('danger') || h.hasAttribute('data-keep') || h.hasAttribute('data-bpsum') || h.hasAttribute('data-mcap') || h.style.color;
 export function foldHints(root, drop = false) {
-  const mk = (host, html) => {
-    if (drop) return;
-    let b = host.querySelector(':scope > .hq');
-    if (b) { b._hint += '<br>' + html; return; }
-    b = document.createElement('button');
-    b.type = 'button'; b.className = 'hq'; b.textContent = '?';
-    b.setAttribute('aria-label', t('ui.hint')); b.dataset.hid = 'h' + (++hintId); b._hint = html;
-    b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(b); });
-    host.appendChild(b);
-  };
-  // Длинное пояснение под названием строки (не однострочная подпись с «…») — «?» сразу после названия
+  // Длинное пояснение под названием строки (не однострочная подпись с «…») — название строки становится ссылкой
   root.querySelectorAll('.cell .bksub').forEach((h) => {
-    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 40 || getComputedStyle(h).whiteSpace === 'nowrap' || h.closest('.hintpop')) return;
-    if (drop) { h.hidden = true; return; }
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'hq hqi'; b.textContent = '?';
-    b.setAttribute('aria-label', t('ui.hint')); b.dataset.hid = 'h' + (++hintId); b._hint = h.innerHTML;
-    b.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); openHint(b); });
-    h.parentNode.insertBefore(b, h); h.hidden = true;
+    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 40 || getComputedStyle(h).whiteSpace === 'nowrap' || h.closest('.hintpop') || isReadout(h)) return;
+    const par = h.parentNode, before = [...par.childNodes].slice(0, [...par.childNodes].indexOf(h)).filter((n) => n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim()));
+    if (!before.length) { if (drop) h.hidden = true; else lineLink(h); return; }
+    let host = before[0].nodeType === 1 && before.length === 1 && !before[0].matches('button,a,input,label') ? before[0] : null;
+    if (!host) { host = document.createElement('span'); par.insertBefore(host, h); before.forEach((n) => host.appendChild(n)); }
+    hintLink(host, h.innerHTML); h.hidden = true;
   });
   root.querySelectorAll('.ftr, .segcap, .lphint, .hintx').forEach((h) => {
-    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop') || h.classList.contains('keep') || h.style.color) return; // .keep и цветные (ошибки) — остаются
+    if (h.querySelector('a,button,input,select') || h.textContent.trim().length < 25 || h.closest('.hintpop') || isReadout(h)) return; // показания и ошибки — как есть
     let host = null;
     if (h.classList.contains('segcap')) host = h.parentElement && h.parentElement.querySelector(':scope > .segttl');
     else {
@@ -117,13 +117,18 @@ export function foldHints(root, drop = false) {
       const hd = p && p.previousElementSibling;
       host = hd && hd.classList.contains('hdr') ? hd : p && p.classList.contains('hdr') ? p : null;
     }
-    if (!host && drop) { h.hidden = true; return; }
-    if (!host) { // нет названия рядом — сам кружок вместо абзаца
-      const row = document.createElement('div'); row.className = 'hqrow' + (h.classList.contains('lphint') || h.classList.contains('hintx') ? ' c' : ''); h.parentNode.insertBefore(row, h); host = row;
-    }
-    mk(host, h.innerHTML);
-    h.hidden = true;
+    if (host) { hintLink(host, h.innerHTML); h.hidden = true; return; }
+    if (drop) { h.hidden = true; return; }
+    lineLink(h); // нет названия рядом — абзац в одну строку, касание раскрывает
   });
+}
+function lineLink(h) {
+  if (h._hint != null) return;
+  h.classList.add('hqline'); h.tabIndex = 0; h.setAttribute('role', 'button'); h.setAttribute('aria-haspopup', 'dialog');
+  h.dataset.hid = 'h' + (++hintId); h._hint = h.innerHTML;
+  const go = (e) => { e.stopPropagation(); e.preventDefault(); openHint(h); };
+  h.addEventListener('click', go);
+  h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
 }
 
 export function sheet(render, init, { onClose, hints } = {}) {

@@ -19,7 +19,7 @@ export function scaleSelectHTML(t, s, attr) {
 export function folkInfoHTML(t, s, ui) {
   const c = folkCents(s.scale, s);
   if (!c) return '';
-  if (s.scale !== 'custom') return '<div class="segcap num">' + c.join(' · ') + ' ¢</div>';
+  if (s.scale !== 'custom') return '<div class="segcap num" data-keep>' + c.join(' · ') + ' ¢</div>';
   const row = (v, i) => '<div class="fcrow"><span class="grow num">' + (i + 1) + '</span>' + (i ? ui.icb('data-fcs="' + i + '" data-d="-10"', '−', t('folk.down'), 'sm txt') +
     '<input type="number" class="fcinp num" min="1" max="1199" step="1" value="' + v + '" data-fci="' + i + '" aria-label="' + esc(t('folk.step', { n: i + 1 })) + '">' +
     ui.icb('data-fcs="' + i + '" data-d="10"', '+', t('folk.up'), 'sm txt') + ui.icb('data-fcdel="' + i + '"', '×', t('folk.del'), 'sm txt') : '<b class="num fcinp">0</b>') + '</div>';

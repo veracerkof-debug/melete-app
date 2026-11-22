@@ -799,3 +799,25 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .group.tight .cell .st,.group.tight .cell .psub{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
 .group.tight .cell .ticon{width:26px;height:26px}.group.tight .cell .ticon svg{width:22px;height:22px}
 .hdr.featcat{margin-top:18px}
+
+/* статус обновления без новой сборки — карточка на виду (update.js: statusCard) */
+.updst{padding-bottom:16px}
+.updst.err .updfl-t b{color:var(--red)}
+.updst .updfl-t b::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:var(--ok)}
+.updst.wait .updfl-t b::before{background:var(--tint);animation:updpulse 1.4s ease-in-out infinite}
+.updst.err .updfl-t b::before{background:var(--red)}
+@keyframes updpulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.updst.wait .updfl-t b::before{animation:none}}
+
+/* название-ссылка в шапке инструмента и списка студии (кнопка без рамки) */
+button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min-height:40px;flex:1;min-width:0}
+.sthdr h2 .hqt{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left}
+
+/* нагрузка звука: живая полоса сверху страницы «Звук» (panel.js) */
+.sndld{gap:14px}
+.sndbar{flex:1;height:10px;border-radius:5px;background:var(--fill);overflow:hidden}
+.sndbar i{display:block;height:100%;border-radius:5px;background:var(--ok);transition:width .6s ease,background-color .3s}
+.sndbar i[data-lvl="mid"],.sndbar i[data-lvl="warn"]{background:var(--tint)}
+.sndbar i[data-lvl="high"]{background:var(--red)}
+.sndld .val{min-width:3.4em;text-align:right;font-weight:600}
+@media (prefers-reduced-motion:reduce){.sndbar i{transition:none}}
