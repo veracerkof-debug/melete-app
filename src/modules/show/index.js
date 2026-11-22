@@ -23,7 +23,8 @@ const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] 
 
 let host = null, ctx = null, size = 'full', S = null, eng = null, unsubEng = null, edit = false;
 let master = null, bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
-const PAGES = ['prog', 'desk', 'bed', 'pads'];
+const PAGES = ['desk', 'pads']; // два экрана звукаря (слово автора 22.11.2026): «Эфир» и «Звуки»; программа и фон — шторками
+let vsheet = null; // открытая шторка «Программа» / «Фон»: { kind, api }
 const held = new Map(); // касание → пад «пока держат»
 
 const t = (k, v) => ctx.t(k, v), esc = (s) => ctx.ui.esc(s);
@@ -71,7 +72,7 @@ function ensureBed() {
   if (!bed) { const bus = destNode(); if (!bus) return null; bed = createShowBed({ dest: bus, getBlob: blobOf });
     shareOut('sound', 'show.bed', bed, ['padOn', 'padOff', 'padTonic', 'padLevel', 'padSound', 'setNoise', 'stopNoise', 'noiseTrim', 'setLevel'], { ret: { setNoise: () => Promise.resolve() }, drop: () => { bed.padOff(0.4); bed.stopNoise(0.4); } });
   }
-  if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (S.page === 'bed') render(); }); }
+  if (!unsubBed) { bed.setLevel(S.bedLevel); unsubBed = bed.subscribe(() => { if (vsheet && vsheet.kind === 'bed') vsheet.api.update(); }); }
   return bed;
 }
 /* ---------- громкость записей (нормализация) ---------- */
@@ -82,7 +83,7 @@ const loudJobs = new Map();
 // Измерить громкость записи один раз и запомнить в записи медиатеки; повторные запросы ждут то же измерение
 function ensureLoud(id) {
   if (!id || loudOf(id) || !fileOf(id)) return Promise.resolve(loudOf(id));
-  if (!loudJobs.has(id)) loudJobs.set(id, measureBlob(blobOf(id)).then((m) => { saveLoud(id, m); return loudOf(id); }).catch((e) => { ctx.logErr(e); return null; }).finally(() => { loudJobs.delete(id); if (S && host && S.page === 'prog') render(); }));
+  if (!loudJobs.has(id)) loudJobs.set(id, measureBlob(blobOf(id)).then((m) => { saveLoud(id, m); return loudOf(id); }).catch((e) => { ctx.logErr(e); return null; }).finally(() => { loudJobs.delete(id); if (S && host && S.page === 'desk') render(); }));
   return loudJobs.get(id);
 }
 // Фоном, по одному и не при идущем треке: у всех номеров программы с треком измерить громкость заранее
@@ -111,7 +112,7 @@ async function noiseTo(id, n = M.currentNumber(S)) {
   const b = ensureBed(); if (!b) return;
   const r = noiseRec(id);
   try { if (r) await b.setNoise(r.file, noiseVol(r, n), S.bed.noise.xfade); else b.stopNoise(S.bed.noise.xfade); S.bed.noise.cur = r ? r.id : null; save(); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('bed.noiseErr')); }
-  if (S.page === 'bed') render();
+  if (vsheet && vsheet.kind === 'bed') vsheet.api.update();
 }
 // Фон номера при его запуске: заданное в номере; тональность пэда следует за номером, если не задана вручную
 async function applyBed(n) {
@@ -266,14 +267,27 @@ function render() {
   const tm = timerText();
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
-    (S.page === 'pads' || S.page === 'bed' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') : '') +
-    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : S.page === 'desk' ? deskHTML() : S.page === 'bed' ? bedHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
+    (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') + '<button class="shchip" data-x="bedsheet">' + esc(t('page.bed')) + '</button>' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : cur() ? deskHTML() : progHTML()) + (S.page !== 'desk' && S.ui.strip ? stripHTML() : '') + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   if (ctx.output) ctx.output.refresh(host);
+  if (vsheet) vsheet.api.update(); // открытая шторка «Программа» / «Фон» — в ногу со страницей
   paint();
   clearInterval(deskT); deskT = 0;
   if (S.page === 'desk') { deskPaint(); deskT = setInterval(() => deskPaint(), 100); }
+}
+// «Программа» и «Фон» — не вкладки, а шторки (раньше экраны): те же обработчики, что на странице
+function viewSheet(kind) {
+  ctx.ui.sheet(() => (kind === 'prog' ? progHTML() : bedHTML()), (el, sh) => {
+    vsheet = { kind, api: sh };
+    const later = (fn) => (e) => { fn(e); setTimeout(() => { if (vsheet && vsheet.api === sh) sh.update(); }, 40); };
+    el.addEventListener('click', later(onClick));
+    el.addEventListener('input', onInput);
+    el.addEventListener('change', later(onChange));
+    const list = el.querySelector('.shlist');
+    if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); sh.update(); render(); });
+  }, { onClose: () => { vsheet = null; render(); } });
 }
 function go(page) { if (S.page === page) return; S.page = page; save(); render(); }
 
@@ -312,6 +326,8 @@ function onClick(e) {
   const x = g('[data-x]'); if (!x) return;
   switch (x.dataset.x) {
     case 'edit': edit = !edit; render(); break;
+    case 'progsheet': viewSheet('prog'); break;
+    case 'bedsheet': viewSheet('bed'); break;
     case 'set': settingsSheet(); break;
     case 'bankadd': addBank(); break;
     case 'stopall': stopAll(); break;
@@ -341,7 +357,7 @@ function onChange(e) {
 function onInput(e) {
   const sk = e.target.dataset && e.target.dataset.s;
   if (sk && ['padlvl', 'noiselvl', 'xfade'].includes(sk)) {
-    const v = +e.target.value, o = host.querySelector('[data-o="' + sk + '"]');
+    const v = +e.target.value, o = (e.target.closest('.shprog') || host).querySelector('[data-o="' + sk + '"]');
     if (sk === 'padlvl') { S.bed.pad.level = v; if (bed) bed.padLevel(v); if (o) o.textContent = lvTxt(v); }
     else if (sk === 'noiselvl') { S.bed.noise.level = v; const r = noiseRec(S.bed.noise.cur); if (bed && r) bed.noiseTrim(noiseVol(r)); if (o) o.textContent = lvTxt(v); }
     else { S.bed.noise.xfade = v; if (o) o.textContent = secTxt(v); }
@@ -463,7 +479,7 @@ function addBank() {
   const b = M.newBank('', { cols: 3, rows: 4 }); S.banks.push(b); S.bank = b.id; save(); render(); bankSheet(b);
 }
 function newEvent() {
-  const e = M.newEvent({ title: '' }); S.events.push(e); S.event = e.id; S.page = 'prog'; save(); render(); eventSheet(e);
+  const e = M.newEvent({ title: '' }); S.events.push(e); S.event = e.id; S.page = 'desk'; save(); render(); eventSheet(e);
 }
 function newNumber() {
   const e = cur(); if (!e) return;
@@ -773,6 +789,7 @@ export default {
     host = el; ctx = c; size = sz;
     const ns = ctx.store.all(); // хранилище модуля — device.show: данные лежат прямо в нём
     S = Object.assign(ns, M.normalizeShow(ns));
+    if (!PAGES.includes(S.page)) S.page = S.page === 'bed' ? 'pads' : 'desk';
     host.addEventListener('click', onClick);
     host.addEventListener('pointerdown', onDown);
     host.addEventListener('pointerup', onUp);

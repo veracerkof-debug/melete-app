@@ -42,7 +42,7 @@ describe('пэды и банки', () => {
   it('умолчания хранилища: пустые банки, закреплённые «верно/неверно» без файлов', () => {
     const s = normalizeShow({});
     expect(s.banks.length).toBe(3); expect(s.banks.filter((b) => b.preset === 'drums').length).toBe(1); expect(s.banks.find((b) => b.preset === 'drums').pads.every((p) => p.synth)).toBe(true); expect(dockOf(s).pads.length).toBe(2); expect(dockOf(s).pads.every((p) => p.file === null)).toBe(true);
-    expect(bankOf(s).pinned).toBe(false); expect(s.page).toBe('prog'); expect(s.event).toBeNull();
+    expect(bankOf(s).pinned).toBe(false); expect(s.page).toBe('desk'); expect(s.event).toBeNull();
   });
   it('поиск пада по id и повторная нормализация без потерь', () => {
     const s = normalizeShow({}); const p = newPad({ name: 'x' }); bankOf(s).pads[0] = p;

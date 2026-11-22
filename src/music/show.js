@@ -153,7 +153,7 @@ export function normalizeShow(s = {}) {
   o.v = 1;
   o.ui = { ...DEFAULT_UI, ...(o.ui || {}) };
   Object.keys(DEFAULT_UI).forEach((k) => { o.ui[k] = !!o.ui[k]; });
-  o.page = pick(o.page, ['prog', 'desk', 'bed', 'pads'], 'prog');
+  o.page = pick(o.page === 'bed' ? 'pads' : o.page === 'prog' ? 'desk' : o.page, ['desk', 'pads'], 'desk'); // два экрана; прежние «Программа» и «Фон» — шторки
   o.bedLevel = clamp(o.bedLevel, 0, 100, 70);            // фейдер фона (пэд и шум вместе)
   o.noises = (Array.isArray(o.noises) ? o.noises : []).filter((x) => x && typeof x.file === 'string').map((x) => ({ id: x.id || uid('s'), name: String(x.name || '').slice(0, 40), file: x.file, level: clamp(x.level, 0, 100, 100) })).slice(0, 40);
   const bd = o.bed && typeof o.bed === 'object' ? o.bed : {}, bp = bd.pad || {}, bn = bd.noise || {};

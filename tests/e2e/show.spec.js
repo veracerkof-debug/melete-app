@@ -24,7 +24,7 @@ test('пульт: выступление, номер с меткой, пад с�
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await expect(page.locator(T + '.evt')).toContainText('День студента');
   // номер без трека: время, заметка, метка
-  await page.click(T + '[data-x="numnew"]');
+  await page.click(T + '[data-x="progsheet"]'); await page.click('.sheet [data-x="numnew"]');
   await page.fill('.sheet [data-f="title"]', 'Конкурс 2');
   await page.fill('.sheet [data-f="at"]', '19:50'); await page.press('.sheet [data-f="at"]', 'Tab');
   await page.fill('.sheet [data-f="note"]', 'Ведущий выходит справа');
@@ -32,13 +32,14 @@ test('пульт: выступление, номер с меткой, пад с�
   await page.fill('.sheet [data-ct]', '0:42'); await page.press('.sheet [data-ct]', 'Tab');
   await page.fill('.sheet [data-cx]', 'Свет на сцену'); await page.press('.sheet [data-cx]', 'Tab');
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
-  await expect(page.locator(T + '.shnum')).toContainText('Конкурс 2');
-  await expect(page.locator(T + '.shnum .ntm')).toHaveText('19:50');
+  await expect(page.locator('.sheet .shnum')).toContainText('Конкурс 2');
+  await expect(page.locator('.sheet .shnum .ntm')).toHaveText('19:50');
   const sh = (await melete.toolsNow()).show;
   expect(sh.events[0]).toMatchObject({ title: 'День студента', timer: 'length', length: 5400 });
   expect(sh.events[0].numbers[0]).toMatchObject({ title: 'Конкурс 2', at: 1190, note: 'Ведущий выходит справа', kind: 'none' });
   expect(sh.events[0].numbers[0].cues).toMatchObject([{ t: 42, text: 'Свет на сцену' }]);
   // звуки: пустой пад → редактор → свой файл
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await page.click(T + '[data-page="pads"]');
   await expect(page.locator(T + '.shdock .shpad')).toHaveCount(2);
   await page.click(T + '.shpads .shpad[data-cell="0"]');
@@ -81,7 +82,7 @@ test('пульт: ГО запускает номер с треком, метка
   const T = '.session .pane[data-tool="show"] ';
   await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // номер 1: трек + метка на 2-й секунде
-  await page.click(T + '[data-x="numnew"]');
+  await page.click(T + '[data-x="progsheet"]'); await page.click('.sheet [data-x="numnew"]');
   await page.fill('.sheet [data-f="title"]', 'Танец');
   await page.click('.sheet [data-seg="nkind"] [data-v="track"]');
   await page.click('.sheet [data-x="pick"]');
@@ -92,11 +93,12 @@ test('пульт: ГО запускает номер с треком, метка
   await page.fill('.sheet [data-cx]', 'Свет на сцену'); await page.press('.sheet [data-cx]', 'Tab');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // номер 2: без трека
-  await page.click(T + '[data-x="numnew"]');
+  await page.click('.sheet [data-x="numnew"]');
   await page.fill('.sheet [data-f="title"]', 'Ведущие');
   await page.fill('.sheet [data-f="note"]', 'Выход справа');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // пульт: ГО
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-page="desk"]');
   await page.click(T + '[data-x="go"]');
   await expect(page.locator(T + '.shnow b')).toHaveText('Танец', { timeout: 10_000 });
@@ -116,25 +118,25 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   await melete.free('F', ['show']);
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   const T = '.session .pane[data-tool="show"] ';
-  await page.click(T + '[data-page="bed"]');
-  await expect(page.locator(T + '.shbedp')).toBeVisible();
+  await page.click(T + '[data-page="pads"]'); await page.click(T + '[data-x="bedsheet"]');
+  await expect(page.locator('.sheet .shbedp')).toBeVisible();
   // шум: свой файл, касание включает (наплыв), повторное — убирает
   await page.click(T + '[data-x="noiseadd"]');
   await page.setInputFiles('.sheet input[type="file"]', { name: 'hall.wav', mimeType: 'audio/wav', buffer: wav(3) });
-  await expect(page.locator(T + '.shnoise')).toContainText('hall', { timeout: 8000 });
-  await page.click(T + '.shnoise');
-  await expect(page.locator(T + '.shnoise.on')).toHaveCount(1, { timeout: 8000 });
-  await page.click(T + '.shnoise');
-  await expect(page.locator(T + '.shnoise.on')).toHaveCount(0, { timeout: 8000 });
+  await expect(page.locator('.sheet .shnoise')).toContainText('hall', { timeout: 8000 });
+  await page.click('.sheet .shnoise');
+  await expect(page.locator('.sheet .shnoise.on')).toHaveCount(1, { timeout: 8000 });
+  await page.click('.sheet .shnoise');
+  await expect(page.locator('.sheet .shnoise.on')).toHaveCount(0, { timeout: 8000 });
   // пэд: включить, тональность вручную — подпись сменилась
-  await page.click(T + '[data-sw="bpad"] + i, ' + T + 'label:has([data-sw="bpad"])');
-  await page.click(T + '[data-tonic="8"]');
-  await expect(page.locator(T + '.shbk')).toContainText('A♭');
-  await page.click(T + '[data-bsnd="air"]');
+  await page.click('.sheet [data-sw="bpad"] + i, .sheet label:has([data-sw="bpad"])');
+  await page.click('.sheet [data-tonic="8"]');
+  await expect(page.locator('.sheet .shbk')).toContainText('A♭');
+  await page.click('.sheet [data-bsnd="air"]');
   // фон номера: задан в шторке номера
-  await page.click(T + '[data-page="prog"]');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300); await page.click(T + '[data-page="desk"]');
   await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.click(T + '[data-x="numnew"]');
+  await page.click(T + '[data-x="progsheet"]'); await page.click('.sheet [data-x="numnew"]');
   await page.fill('.sheet [data-f="title"]', 'Тихий момент');
   await page.click('.sheet [data-seg="nbed"] [data-v="set"]');
   await page.click('.sheet [data-nnoise]:not([data-nnoise=""])');
@@ -143,11 +145,12 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   expect(sh.bed.pad).toMatchObject({ on: true, tonic: 8, sound: 'air' });
   expect(sh.noises.length).toBe(1);
   expect(sh.events[0].numbers[0].bed).toMatchObject({ noise: sh.noises[0].id });
-  // ГО запускает номер и включает его шум
-  await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
+  // ГО запускает номер и включает его шум (шторка «Программа» закрывается)
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click(T + '[data-x="go"]');
   await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(4);
-  await page.click(T + '[data-page="bed"]');
-  await expect(page.locator(T + '.shnoise.on')).toHaveCount(1, { timeout: 8000 });
+  await page.click(T + '[data-page="pads"]'); await page.click(T + '[data-x="bedsheet"]');
+  await expect(page.locator('.sheet .shnoise.on')).toHaveCount(1, { timeout: 8000 });
   expect(errors).toEqual([]);
 });
 
@@ -156,12 +159,15 @@ test('громкость: крутилки внизу «Программы» и 
   await melete.free('F', ['show']);
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   const T = '.session .pane[data-tool="show"] ';
-  await expect(page.locator(T + '[data-knob]')).toHaveCount(4); // страница «Программа»
+  await page.click(T + '[data-page="pads"]');
+  await expect(page.locator(T + '[data-knob]')).toHaveCount(4); // страница «Звуки»
   const kn = T + '[data-knob="master"]', b = await page.locator(kn).boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + 42, { steps: 6 }); await page.mouse.up(); // вниз на 42 px ≈ −30
   const v = +(await page.locator(kn).getAttribute('aria-valuenow'));
   expect(v).toBeGreaterThan(60); expect(v).toBeLessThan(80);
+  await page.click(T + '[data-page="desk"]');
+  await expect(page.locator(T + '.shfaders .shtrack')).toHaveCount(4);
   await page.click(T + '[data-page="pads"]');
   await expect(page.locator(T + '[data-knob="master"]')).toHaveAttribute('aria-valuenow', String(v)); // то же значение на другой странице
   await page.locator(T + '[data-knob="pads"]').focus(); await page.keyboard.press('ArrowDown');
@@ -180,7 +186,7 @@ test('нормализация и громкости номера: запись 
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   const T = '.session .pane[data-tool="show"] ';
   await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.click(T + '[data-x="numnew"]');
+  await page.click(T + '[data-x="progsheet"]'); await page.click('.sheet [data-x="numnew"]');
   await page.fill('.sheet [data-f="title"]', 'Тихий трек');
   await page.click('.sheet [data-seg="nkind"] [data-v="track"]');
   await page.click('.sheet [data-x="pick"]');

@@ -135,7 +135,7 @@ export function showData(f, lang = 'ru', now = Date.now()) {
     num(6, { kind: 'none', at: 20 * 60 + 45 }),
   ];
   const ev = newEvent({ title: N.event, start, timer: 'start', note: '', numbers });
-  return normalizeShow({ page: 'prog', events: [ev], event: ev.id, banks, noises, bed: { pad: { on: false, sound: 'warm', level: 55, tonic: null }, noise: { cur: null, level: 70, xfade: 6 } } });
+  return normalizeShow({ page: 'desk', events: [ev], event: ev.id, banks, noises, bed: { pad: { on: false, sound: 'warm', level: 55, tonic: null }, noise: { cur: null, level: 70, xfade: 6 } } });
 }
 
 /* ---------- студия: проект из мелодии ---------- */
