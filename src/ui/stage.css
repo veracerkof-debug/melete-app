@@ -90,7 +90,7 @@
   .stage.pads .sgpads{grid-column:2;grid-row:2/6;overflow:auto;padding-top:0}
   .stage.pads .sgbar{grid-column:3;grid-row:2/6}
   .stage.pads .sgpad{min-height:56px}
-  .sgseek,.sgtempo{grid-column:1}
+  .sgseek,.sgtempo,.sgreel{grid-column:1}
   .stage:not(.pads) .sgtempo,.stage:not(.pads) .sgseek{grid-column:1}
 }
 .stage.night .sgtempo .sgic,.stage.night .sgseek{display:none}
@@ -134,3 +134,12 @@
 /* фон (пэд) — внутри панели «Звуки» */
 .sgbg{display:flex;padding:0 0 2px}
 .sgpads .sgkeys{padding:6px 0 8px}
+/* лента программы: текущий номер выделен, пройденные тусклее */
+.sgreel{flex:none;display:flex;gap:6px;overflow-x:auto;padding:4px 12px;scrollbar-width:none;touch-action:pan-x}
+.sgreel::-webkit-scrollbar{display:none}
+.sgreeli{flex:none;max-width:44vw;display:flex;align-items:center;gap:6px;min-height:40px;padding:0 12px 0 8px;border-radius:20px;background:rgba(255,255,255,.07);border:1.5px solid transparent;font-size:14px;white-space:nowrap}
+.sgreeli i{font-style:normal;font-size:12px;opacity:.6;min-width:1.2em;text-align:center}
+.sgreeli b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.sgreeli.done{opacity:.5}
+.sgreeli.cur{background:color-mix(in srgb,var(--gold) 30%,transparent);border-color:var(--gold);color:var(--gold)}
+.sgreeli.cur i{opacity:1}

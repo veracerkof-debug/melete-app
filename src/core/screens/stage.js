@@ -495,6 +495,8 @@ export function openStage(app, evId, i = 0) {
     const trName = it && it.track ? (audioFiles(app).find((r) => r.id === it.track) || {}).name || '' : '';
     const bpm = Math.round(curBpm()), run = !!audio.metro.running, pad = droneOn(), pc = keyPc();
     S.el.classList.toggle('night', !!S.night);
+    const oldReel = S.el.querySelector('.sgreel'), reelLeft = oldReel ? oldReel.scrollLeft : 0, reelI = S.reelI;
+    S.reelI = S.i;
     S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
       '<div class="sghead" data-sg="list" role="button" tabindex="0" aria-label="' + esc(t('stage.list')) + '"><b>' + esc(free ? t('stage.title') : s.title) + '</b><span>' + esc(free ? t('stage.freeSub') : [S.i + 1 + ' / ' + L.length, it.key ? keyLabel(it.key) : '', it.capo ? t('stage.capoN', { n: it.capo }) : '', it.bpm ? it.bpm + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span></div>' +
       '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
@@ -504,6 +506,8 @@ export function openStage(app, evId, i = 0) {
         '<div class="sgtext" style="font-size:' + S.fs + 'px">' + (it.text && s.notes ? (it.scroll ? '<i class="sgprog" aria-hidden="true"><i></i></i>' : '') + '<div class="lyr">' + lyricsHTML(chordsAbove(s.notes), it.tr - it.capo, it.srcKey) + '</div>' :
           '<div class="sgbig">' + esc(s.title) + (s.artist ? '<small>' + esc(s.artist) + '</small>' : '') + '</div>') + '</div>') +
       (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') +
+      // лента программы: весь список выступления всегда на виду; касание — выбрать номер (играет только ▶)
+      (L.length > 1 && !free && S.view !== 'list' ? '<div class="sgreel hscroll" role="list" aria-label="' + esc(t('stage.list')) + '">' + L.map((sg, j) => '<button class="sgreeli' + (j === S.i ? ' cur' : j < S.i ? ' done' : '') + '" role="listitem" data-sgreel="' + j + '"' + (j === S.i ? ' aria-current="true"' : '') + '><i class="num">' + (j + 1) + '</i><b>' + esc(sg.title) + '</b></button>').join('') + '</div>' : '') +
       // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
       '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
         '<button class="sgic txt" data-sgbpm="-1" aria-label="' + esc(t('stage.bpm') + ' −1') + '">−</button>' +
@@ -522,6 +526,8 @@ export function openStage(app, evId, i = 0) {
       '<input type="range" class="sgall" data-sgall min="0" max="100" value="' + allVal() + '" aria-label="' + esc(t('stage.vol')) + '">' +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
+    const reel = S.el.querySelector('.sgreel');
+    if (reel) { reel.scrollLeft = reelLeft; const cu = reel.querySelector('.cur'); if (cu && reelI !== S.i) reel.scrollTo({ left: cu.offsetLeft - (reel.clientWidth - cu.offsetWidth) / 2, behavior: 'smooth' }); }
     if (S.view === 'tab' && !free) {
       const hh = S.el.querySelector('.sgsurfhost');
       if (hh && S.score) { hh.appendChild(S.score.el); if (S.score.el.dataset.w !== String(hh.clientWidth)) { S.score.el.dataset.w = hh.clientWidth; S.score.relayout(); } }
@@ -571,6 +577,7 @@ export function openStage(app, evId, i = 0) {
     } else if ((b = e.target.closest('[data-sgt]'))) toggle(b.dataset.sgt);
     else if ((b = e.target.closest('[data-sgbank]'))) { sd().bank = b.dataset.sgbank; S.bank = b.dataset.sgbank; app.saveDevice(); render(); }
     else if ((b = e.target.closest('[data-sgtab]'))) { S.scoreId = b.dataset.sgtab; S.scoreKind = null; render(); }
+    else if ((b = e.target.closest('[data-sgreel]'))) { const j = +b.dataset.sgreel; if (j !== S.i) goTo(j); }
     else if ((b = e.target.closest('[data-sgrow]'))) rowTap(+b.dataset.sgrow);
     else if ((b = e.target.closest('[data-sgbpm]'))) setBpm(curBpm() + +b.dataset.sgbpm);
     else if ((b = e.target.closest('[data-sgseek]'))) { // перемотка минусовки касанием полосы
@@ -695,7 +702,7 @@ export function openStage(app, evId, i = 0) {
   // щипок по тексту — размер шрифта (как A− и A+)
   const offG = [pinch(S.el, { min: 4, max: 25, ok: (e) => !!e.target.closest('.sgscore') && !!S.score, get: () => Math.round(S.score.scale * 10),
       set: (v, live) => { S.score.setScale(v / 10); if (!live) sset('scoreScale', S.score.scale); } }),
-    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys, .sgall') }),
+    swipe(S.el, { min: 110, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !e.target.closest('.sgbar, .sgchips, .sgtop, .sgpads, .sgtempo, .sgseek, .sgkeys, .sgall, .sgreel') }),
     pinch(S.el, { min: 14, max: 64, ok: (e) => !!e.target.closest('.sgtext'), get: () => S.fs,
       set: (v, live) => { S.fs = v; fit(); if (!live) try { sessionStorage.setItem('melete.stage.fs', v); } catch { /* */ } } })];
   S.i = Math.max(0, Math.min(list().length - 1, i));
