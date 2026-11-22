@@ -42,6 +42,7 @@ test('пульт: выступление, номер с меткой, пад с�
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await page.click(T + '[data-page="pads"]');
   await expect(page.locator(T + '.shdock .shpad')).toHaveCount(2);
+  await page.locator(T + '.shbanks [data-bank]').nth(1).click(); // первый банк — готовые «Ударные», пустой — второй
   await page.click(T + '.shpads .shpad[data-cell="0"]');
   await page.fill('.sheet [data-f="name"]', 'Дробь');
   await page.click('.sheet [data-x="pick"]');
@@ -198,7 +199,8 @@ test('нормализация и громкости номера: запись 
   await page.click('.sheet [data-seg="nbed"] [data-v="set"]');
   await expect(page.locator('.sheet [data-s="padLevel"]')).toBeVisible();
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  // пульт: ГО, крутилки номера
+  // пульт: ГО, крутилки номера (шторка «Программа» закрывается)
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
   await expect(page.locator(T + '[data-knob="nlevel"]')).toBeVisible({ timeout: 10_000 });
   const kn = T + '[data-knob="nlevel"]', b = await page.locator(kn).boundingBox();
