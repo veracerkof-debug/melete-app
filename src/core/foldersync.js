@@ -28,7 +28,7 @@ export function initFolder(app) {
     removeFile: (id) => app.files.remove(id),
     songs: () => app.store.songs(),
     // Файл песни из папки, у которой уже есть такая же песня (название и исполнитель), новой песни не создаёт — привязывается к имеющейся: от дублей при повторном чтении папки
-    addSong: (p) => { const nm = (x) => String(x || '').trim().toLowerCase(), same = app.store.songs().find((x) => nm(x.title) === nm(p.title || 'Melete') && (nm(x.artist) === nm(p.artist) || !nm(p.artist) || !nm(x.artist))); // исполнитель в файле мог не сохраниться — тогда совпадения по названию достаточно if (same) return same.id; return saveSong(app.store, null, { ...emptySong(st()), title: p.title || 'Melete', artist: p.artist || '', key: normKey(p.key), targetBpm: p.bpm || '', notes: p.notes || '' }); },
+    addSong: (p) => { const nm = (x) => String(x || '').trim().toLowerCase(), same = app.store.songs().find((x) => nm(x.title) === nm(p.title || 'Melete') && (nm(x.artist) === nm(p.artist) || !nm(p.artist) || !nm(x.artist))); if (same) return same.id; return saveSong(app.store, null, { ...emptySong(st()), title: p.title || 'Melete', artist: p.artist || '', key: normKey(p.key), targetBpm: p.bpm || '', notes: p.notes || '' }); }, // исполнитель в файле мог не сохраниться — тогда совпадения по названию достаточно
     setNotes: (id, notes) => { const s = app.store.songById(id); if (!s) return; s.notes = notes; s.updatedAt = app.store.now(); app.store.save(); },
     parseText: (name, u8) => { try { return fromChordPro(new TextDecoder().decode(u8).replace(/^﻿/, ''), name); } catch { return null; } },
     backup: () => backupText(app),
