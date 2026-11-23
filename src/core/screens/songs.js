@@ -46,12 +46,17 @@ export function libraryHTML(app, view) {
     (st.church ? '<br><button class="btn" style="margin-top:10px" data-act="songImport">' + t('songs.import') + '</button>' : '') +
     // посмотреть, как всё устроено: демо-набор (убирается в «Данных и копиях»)
     '<br><button class="btn" style="margin-top:10px" data-act="demoAdd">' + t('demo.add') + '</button></div>';
-  const { list, usedGenres, usedTags } = listSongs(songs, app.store.sessions(), L, view, getLang());
+  const { list: list0, usedGenres, usedTags } = listSongs(songs, app.store.sessions(), L, view, getLang());
+  // дубли (слово автора 22.11.2026: после обновления песни множатся): одинаковые название и исполнитель; фильтр «Дубли» и кнопка «Выбрать лишние»
+  const nmz = (x) => String(x || '').trim().toLowerCase(), groups = new Map();
+  songs.forEach((x) => { if (isDemo(x.id)) return; const k = nmz(x.title) + '|' + nmz(x.artist); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+  const dupIds = new Set(); groups.forEach((g) => { if (g.length > 1) g.forEach((x) => dupIds.add(x.id)); });
+  const list = view.dup ? list0.filter(({ s }) => dupIds.has(s.id)).sort((a, b) => (nmz(a.s.title) + nmz(a.s.artist)).localeCompare(nmz(b.s.title) + nmz(b.s.artist)) || (a.s.createdAt || 0) - (b.s.createdAt || 0)) : list0;
   // категории, жанры и теги — не полосой над списком, а одним выбором рядом с поиском (экран не перегружен); категория песни — точка у названия
-  const cur = view.cat ? 'c:' + view.cat : view.genre ? 'g:' + view.genre : view.tag ? 't:' + view.tag : '';
+  const cur = view.dup ? 'x:dup' : view.cat ? 'c:' + view.cat : view.genre ? 'g:' + view.genre : view.tag ? 't:' + view.tag : '';
   const opt = (v, label) => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(label) + '</option>';
   const grp = (label, items) => items.length ? '<optgroup label="' + esc(label) + '">' + items.join('') + '</optgroup>' : '';
-  const fsel = '<select class="sortsel" data-input="flt" aria-label="' + t('songs.filter') + '">' + opt('', t('songs.all')) +
+  const fsel = '<select class="sortsel" data-input="flt" aria-label="' + t('songs.filter') + '">' + opt('', t('songs.all')) + (dupIds.size ? opt('x:dup', t('songs.dups') + ' · ' + dupIds.size) : '') +
     grp(t('libm.cats'), L.cats.map((c) => opt('c:' + c.id, c.name + ' · ' + countInCat(songs, c.id))).concat(countInCat(songs, '') && L.cats.length ? [opt('c:_none', t('songs.noCat') + ' · ' + countInCat(songs, ''))] : [])) +
     grp(t('libm.genres'), usedGenres.map((g) => opt('g:' + g.name, g.name))) +
     grp(t('libm.tags'), usedTags.map((x) => opt('t:' + x.id, '#' + x.name))) + '</select>';
@@ -64,9 +69,10 @@ export function libraryHTML(app, view) {
   const sel = view.sel instanceof Set ? view.sel : null;
   if (sel) [...sel].forEach((id) => { if (!app.store.songById(id)) sel.delete(id); });
   const allOn = !!sel && list.length > 0 && list.every(({ s }) => sel.has(s.id));
+  const dupBar = view.dup && !sel && list.length ? '<div class="selbar"><span class="selt">' + t('songs.dupsHint') + '</span><button class="link b" data-act="dupsel">' + t('songs.dupsPick') + '</button></div>' : '';
   const selBar = sel ? '<div class="selbar" role="group"><button class="link" data-act="selall">' + t(allOn ? 'songs.selNone' : 'songs.selAll') + '</button><b class="selt" aria-live="polite">' + t('songs.selN', { n: sel.size }) + '</b><button class="link b" data-act="seldone">' + t('songs.selDone') + '</button></div>' : '';
   const selAct = sel ? '<div class="selacts"><button class="cell act" data-act="selsend"' + (sel.size ? '' : ' disabled') + '>' + t('share.title') + '</button><button class="cell act" data-act="selcat"' + (sel.size ? '' : ' disabled') + '>' + t('songs.selCat') + '</button><button class="cell act danger" data-act="seldel"' + (sel.size ? '' : ' disabled') + '>' + t('song.delete') + '</button></div>' : '';
-  return h + selBar + '<div class="slist">' + list.map(({ s, st: ss }) => {
+  return h + dupBar + selBar + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
     return '<button class="stile3' + (sel && sel.has(s.id) ? ' sel' : '') + '" data-song="' + s.id + '"' + (sel ? ' role="checkbox" aria-checked="' + sel.has(s.id) + '"' : '') + ' style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' + (sel ? '<i class="selmk" aria-hidden="true">' + (sel.has(s.id) ? '✓' : '') + '</i>' : '') +
       (c ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +

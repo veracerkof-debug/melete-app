@@ -182,6 +182,13 @@ export function createShell(app, root) {
     else if (d.song && view.sel instanceof Set) { if (view.sel.has(d.song)) view.sel.delete(d.song); else view.sel.add(d.song); render(); } // выбор нескольких песен
     else if (d.song) go('library', d.song);
     else if (d.act === 'selall') { const L = listSongs(app.store.songs(), app.store.sessions(), ensureLib(app.store.state, t), view, getLang()).list; const on = L.length && L.every(({ s }) => view.sel.has(s.id)); L.forEach(({ s }) => { if (on) view.sel.delete(s.id); else view.sel.add(s.id); }); render(); }
+    else if (d.act === 'dupsel') { // «Выбрать лишние»: в каждой группе остаётся песня, где больше занятий (при равенстве — старшая)
+      const st2 = app.store.sessions(), nm = (x) => String(x || '').trim().toLowerCase(), g = new Map(), sel = new Set();
+      app.store.songs().forEach((x) => { const k = nm(x.title) + '|' + nm(x.artist); if (!g.has(k)) g.set(k, []); g.get(k).push(x); });
+      const used = (id) => st2.filter((r) => r.songId === id).length;
+      g.forEach((arr) => { if (arr.length < 2) return; const keep = arr.slice().sort((a, b) => used(b.id) - used(a.id) || (a.createdAt || 0) - (b.createdAt || 0))[0]; arr.forEach((x) => { if (x !== keep) sel.add(x.id); }); });
+      view.sel = sel; render();
+    }
     else if (d.act === 'seldone') { view.sel = null; render(); }
     else if (d.act === 'selsend') { if (view.sel && view.sel.size) shareSheet(app, { songIds: [...view.sel] }); }
     else if (d.act === 'selcat') { if (view.sel && view.sel.size) selCatSheet(app, [...view.sel], () => { view.sel = null; render(); }); }
@@ -308,6 +315,7 @@ export function createShell(app, root) {
     if (!k) return;
     if (k === 'flt') { // фильтр песен: c:<категория> / g:<жанр> / t:<тег>
       const v = e.target.value;
+      view.dup = v === 'x:dup'; if (!view.dup) view.sel = null;
       view.cat = v.startsWith('c:') ? v.slice(2) : ''; view.genre = v.startsWith('g:') ? v.slice(2) : ''; view.tag = v.startsWith('t:') ? v.slice(2) : '';
       render(); return;
     }

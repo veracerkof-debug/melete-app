@@ -25,3 +25,22 @@ test('песни: выбор нескольких — отметить, выбр
   await expect(page.locator('button.stile3')).toHaveCount(2);
   expect(errors).toEqual([]);
 });
+
+test('песни: дубли — фильтр, «Выбрать лишние» оставляет по одной', async ({ page, melete, errors }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const songs = [['q0', 'Альфа'], ['q1', 'Альфа'], ['q2', 'Бета'], ['q3', 'Альфа']].map(([id, n], i) => ({ id, title: n, artist: 'Автор', created: Date.now() + i, createdAt: Date.now() + i }));
+  await melete.open({ songs });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-tab="library"], [data-go="library"]')][0]; b && b.click(); });
+  await page.waitForTimeout(600);
+  await expect(page.locator('button.stile3')).toHaveCount(4);
+  await page.selectOption('[data-input="flt"]', 'x:dup'); await page.waitForTimeout(300);
+  await expect(page.locator('button.stile3')).toHaveCount(3); // три «Альфы»
+  await page.click('[data-act="dupsel"]'); await page.waitForTimeout(300);
+  await expect(page.locator('.selbar .selt')).toContainText('2'); // лишних две
+  await page.click('[data-act="seldel"]'); await page.waitForTimeout(300);
+  await page.click('.ask [data-k="yes"]'); await page.waitForTimeout(500);
+  await page.selectOption('[data-input="flt"]', ''); await page.waitForTimeout(300);
+  await expect(page.locator('button.stile3')).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
