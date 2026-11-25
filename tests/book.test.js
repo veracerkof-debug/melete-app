@@ -193,3 +193,22 @@ describe('«Гитара с нуля»: барре, арпеджио, септа
     ['gboxb', 'gboxf', 'gboxbm', 'gboxm7', 'gprogj'].forEach((k) => expect(L[k].render(JSON.parse(JSON.stringify(L[k].st)))).not.toMatch(/undefined|NaN/));
   });
 });
+
+describe('«Гитара с нуля»: гаммы на грифе', () => {
+  it('ноты гамм сходятся с названиями; формулы шагов верны', async () => {
+    const { guitarLabs } = await import('../src/modules/book/book/labs9.js');
+    const played = [], T = (k) => k, L = guitarLabs({ T, snd: { hits: (l) => played.push(l) } });
+    const mids = (lab, id) => { const st = JSON.parse(JSON.stringify(L[lab].st)); st.id = id; L[lab].on(st, 'hear'); return played.at(-1).map((x) => x[1][0]); };
+    const up = (lab, id, n) => mids(lab, id).slice(0, n);
+    expect(up('gscmaj', 'cmaj', 8)).toEqual([48, 50, 52, 53, 55, 57, 59, 60]);          // до мажор: C D E F G A B C
+    expect(up('gscmaj', 'gmaj', 8)).toEqual([43, 45, 47, 48, 50, 52, 54, 55]);           // соль мажор: …F♯ G
+    expect(up('gscmin', 'amin', 8)).toEqual([45, 47, 48, 50, 52, 53, 55, 57]);           // ля минор: A B C D E F G A
+    expect(up('gscpent', 'apent', 12)).toEqual([45, 48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72]); // A C D E G A C D E G A C
+    expect(up('gscchrom', 'chrom', 13)).toEqual(Array.from({ length: 13 }, (_, i) => 40 + i)); // E2…E3 по полутонам
+    const diff = (a) => a.slice(1).map((m, i) => m - a[i]);
+    expect(diff(up('gscmaj', 'cmaj', 8))).toEqual([2, 2, 1, 2, 2, 2, 1]); // тон тон полутон тон тон тон полутон
+    expect(diff(up('gscmin', 'amin', 8))).toEqual([2, 1, 2, 2, 1, 2, 2]);
+    ['gscmaj', 'gscmin', 'gscpent', 'gscchrom'].forEach((k) => expect(L[k].render(JSON.parse(JSON.stringify(L[k].st)))).not.toMatch(/undefined|NaN/));
+    expect(played.at(-1)).toBeTruthy();
+  });
+});

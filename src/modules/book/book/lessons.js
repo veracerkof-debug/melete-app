@@ -69,6 +69,10 @@ export const LESSONS = {
   g25: [{ id: 'g25', secs: [0], ex: [chord({ g: 'Bm' }, 'g')] }],
   g26: [{ id: 'g26', secs: [0], ex: [chord({ g: 'Am7 Em7 Dm7' }, 'g')] }],
   g27: [{ id: 'g27', secs: [0], ex: [tool('metro', 60), chord({ g: 'Dm7 G7 Cmaj7 Am7' }, 'g')] }],
+  g28: [{ id: 'g28', secs: [0], ex: [tool('metro', 60), play({ g: 'C3 D3 E3 F3 G3 A3 B3 C4' }, 'g')] }],
+  g29: [{ id: 'g29', secs: [0], ex: [tool('metro', 60), play({ g: 'A2 B2 C3 D3 E3 F3 G3 A3' }, 'g')] }],
+  g30: [{ id: 'g30', secs: [0], ex: [tool('metro', 60), play({ g: 'A2 C3 D3 E3 G3 A3 C4 D4 E4 G4 A4 C5' }, 'g')] }],
+  g31: [{ id: 'g31', secs: [0], ex: [tool('metro', 60), play({ g: 'E2 F2 F#2 G2 G#2 A2 A#2 B2 C3 C#3 D3 D#3 E3' }, 'g')] }],
   play: [
     { id: 'play1', secs: [0, 1, 2], ex: [tool('tuner'), play({ p: 'C4 D4 E4 F4 G4', g: 'E2 A2 D3 G3 B3 E4', b: 'E1 A1 D2 G2' })] },
     { id: 'play2', secs: [3], ex: [chord({ p: 'C F G C', g: 'A D E A' }, 'pg'), play({ b: 'A1 E2 D2 A2 E1 B1' }, 'b'), tool('metro', 60), piece('rising')] },
@@ -224,7 +228,7 @@ export const LESSONS = {
 // (всё остальное: напряжения, расположения, реармонизация, аранжировка, формы, тема)
 export const PATHS = {
   first: Array.from({ length: 24 }, (_, i) => 'f' + (i + 1)),
-  guitar: Array.from({ length: 27 }, (_, i) => 'g' + (i + 1)),
+  guitar: Array.from({ length: 31 }, (_, i) => 'g' + (i + 1)),
   start: ['play1', 'rhythm1', 'sound2', 'rhythm2', 'meter1', 'pitch1', 'mode1', 'chords1', 'play2', 'play3',
     'iv1', 'keys1', 'keys2', 'key1', 'mode3', 'play4', 'meter2', 'meter3', 'play5', 'play6'],
   mid: ['sound1', 'sound3', 'rhythm3', 'rhythm4', 'pitch2', 'mode2', 'keys3', 'melody1', 'melody2', 'perform1',

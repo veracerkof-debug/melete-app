@@ -218,5 +218,53 @@ export function guitarLabs({ T, snd }) {
   });
   LABS.garp = arpLab('Am', 'p4');
   LABS.garp6 = arpLab('C', 'p6');
+
+  // Гаммы на грифе (слово автора 25.11.2026: базовые гаммы и хроматическая): позиция, пальцы по ладам, порядок нот, формула из тонов
+  // и полутонов (½ — полутон, 1 — тон, 1½ — полтора тона), «Послушать» вверх и вниз. Записи: [струна 0=6-я…5=1-я, лад, палец]
+  const SC = {
+    cmaj: { from: 0, to: 4, notes: [[1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 0, 0], [3, 2, 2], [4, 0, 0], [4, 1, 1]] },
+    gmaj: { from: 0, to: 4, notes: [[0, 3, 3], [1, 0, 0], [1, 2, 2], [1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 4, 4], [3, 0, 0]] },
+    amin: { from: 0, to: 4, notes: [[1, 0, 0], [1, 2, 2], [1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 0, 0], [3, 2, 2]] },
+    apent: { from: 5, to: 8, notes: [[0, 5, 1], [0, 8, 4], [1, 5, 1], [1, 7, 3], [2, 5, 1], [2, 7, 3], [3, 5, 1], [3, 7, 3], [4, 5, 1], [4, 8, 4], [5, 5, 1], [5, 8, 4]] },
+    chrom: { from: 0, to: 4, notes: [[0, 0, 0], [0, 1, 1], [0, 2, 2], [0, 3, 3], [0, 4, 4], [1, 0, 0], [1, 1, 1], [1, 2, 2], [1, 3, 3], [1, 4, 4], [2, 0, 0], [2, 1, 1], [2, 2, 2]] },
+  };
+  const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const midiAt = (n) => OPEN[n[0]] + n[1];
+  const stepOf = (d) => (d === 1 ? '½' : d === 2 ? '1' : d === 3 ? '1½' : String(d / 2));
+  const scaleMidis = (id) => SC[id].notes.map(midiAt);
+  const scaleSVG = (id, aria) => {
+    const sc = SC[id], open = sc.from === 0, n = open ? sc.to : sc.to - sc.from + 1, cw = 52, x0 = open ? 40 : 30, y0 = 24, dy = 20, W = x0 + n * cw + 8, H = y0 + 5 * dy + 14;
+    const cx = (f) => x0 + (open ? f - 0.5 : f - sc.from + 0.5) * cw, tonicPc = midiAt(sc.notes[0]) % 12;
+    let g = '<svg class="bkgscale" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + aria + '">';
+    for (let k = 0; k < 6; k++) { const y = y0 + (5 - k) * dy; g += '<line class="str" x1="' + x0 + '" x2="' + (W - 6) + '" y1="' + y + '" y2="' + y + '"/><text class="sn" x="6" y="' + (y + 3.6) + '">' + (6 - k) + '</text>'; }
+    if (open) g += '<line class="nut" x1="' + x0 + '" x2="' + x0 + '" y1="' + y0 + '" y2="' + (y0 + 5 * dy) + '"/>';
+    for (let f = open ? 1 : sc.from; f <= sc.to; f++) g += '<text class="fnum" x="' + cx(f) + '" y="14" text-anchor="middle">' + f + '</text><line class="fw" x1="' + (cx(f) + cw / 2) + '" x2="' + (cx(f) + cw / 2) + '" y1="' + y0 + '" y2="' + (y0 + 5 * dy) + '"/>';
+    sc.notes.forEach((nt, i) => {
+      const y = y0 + (5 - nt[0]) * dy, isOpen = nt[1] === 0, x = isOpen ? x0 - 14 : cx(nt[1]), tonic = midiAt(nt) % 12 === tonicPc;
+      g += isOpen ? '<circle class="op" cx="' + x + '" cy="' + y + '" r="7"/><text class="on0" x="' + x + '" y="' + (y + 3.4) + '" text-anchor="middle">' + (i + 1) + '</text>'
+        : '<circle class="dot' + (tonic ? ' root' : '') + '" cx="' + x + '" cy="' + y + '" r="8"/><text class="fn" x="' + x + '" y="' + (y + 3.6) + '" text-anchor="middle">' + (i + 1) + '</text>';
+    });
+    return g + '</svg>';
+  };
+  const scaleLab = (list, start) => ({
+    st: { id: start },
+    render(sx) {
+      const sc = SC[sx.id], mids = scaleMidis(sx.id), steps = mids.slice(1).map((m, i) => stepOf(m - mids[i]));
+      const btns = list.length > 1 ? '<div class="bkgrow">' + list.map((k) => '<button type="button" class="bkgch' + (k === sx.id ? ' on' : '') + '" data-a="s:' + k + '" aria-pressed="' + (k === sx.id) + '">' + T('gp.sc.' + k) + '</button>').join('') + '</div>' : '';
+      return btns + '<div class="bkgwrap">' + scaleSVG(sx.id, T('gp.sc.aria')) + '</div>' +
+        '<div class="bkginfo"><b>' + T('gp.sc.' + sx.id) + '</b><span>' + T('gp.sc.notes') + ': ' + mids.map((m) => NAMES[m % 12]).join(' ') + '</span><span>' + T('gp.sc.steps') + ': ' + steps.join(' – ') + '</span></div>' +
+        '<p class="bkhint">' + T('gp.sc.hint') + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
+    },
+    on(sx, a) {
+      if (a.startsWith('s:') && SC[a.slice(2)]) { sx.id = a.slice(2); return; }
+      if (a !== 'hear') return false;
+      const mids = scaleMidis(sx.id), up = mids.concat(mids.slice(0, -1).reverse()), list = up.map((m, i) => [i * 0.42, [m], 0.5]);
+      snd.hits(list); return false;
+    },
+  });
+  LABS.gscmaj = scaleLab(['cmaj', 'gmaj'], 'cmaj');
+  LABS.gscmin = scaleLab(['amin'], 'amin');
+  LABS.gscpent = scaleLab(['apent'], 'apent');
+  LABS.gscchrom = scaleLab(['chrom'], 'chrom');
   return LABS;
 }

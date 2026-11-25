@@ -6,8 +6,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 export const S = {
   'ls.teacherLock': 'Bu darsni oʻqituvchi ochadi',
   'bk.part9': 'Noldan gitara',
-  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '27 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, arpedjio, barre, bogʻlamlar',
-  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy, arpedjio, barre va akkord bogʻlamlari.',
+  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '31 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, arpedjio, barre, bogʻlamlar, gammalar',
+  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy, arpedjio, barre, akkord bogʻlamlari va gammalar.',
   'ls.g1': 'Oʻtirish', 'ls.g2': 'Gitara tuzilishi', 'ls.g3': 'Sozlash', 'ls.g4': 'Ogʻriqsiz qoʻllar', 'ls.g5': 'Akkord sxemasini oʻqish',
   'ls.g6': 'C akkordi', 'ls.g7': 'G akkordi', 'ls.g8': 'D akkordi', 'ls.g9': 'Akkord almashish va birinchi qoʻshiq',
 
@@ -174,6 +174,36 @@ export const S = {
   'gp.prog.ii': 'ii–V–I',
   'gp.prog.vi': 'vi–ii–V–I',
   'gp.prog.bal': 'I–vi–ii–V',
+  // гаммы (25.11.2026)
+  'ls.g28': 'Gammalar: do major va sol major',
+  'ls.g29': 'Gamma: lya minor',
+  'ls.g30': 'Pentatonika',
+  'ls.g31': 'Xromatik gamma',
+  'lx.g28.g': '<ul><li>Do majorni birinchi pozitsiyada yuqoriga va pastga chaling: 8 nota, metronom 60 da har hisobga bittadan. Barmoqlar — ladlar boʻyicha: 1-barmoq 1-ladda, 2-barmoq 2-ladda, 3-barmoq 3-ladda; ochiq tor — barmoqsiz.</li><li>Notalarni ovoz chiqarib ayting: do, re, mi, fa, sol, lya, si, do.</li><li>Keyin sol major — xuddi shu formula, lekin ettinchi nota fa-diyez (F♯).</li></ul>',
+  'lx.g28.t': 'Gammani gitara bilan birga kuylang: har tovush oʻz notasida.',
+  'lx.g28.easy': 'Major gamma — «ton, ton, yarim ton, ton, ton, ton, yarim ton» formulasi boʻyicha yuqoriga sakkizta nota. Har qanday notadan bu formula oʻzining major gammasini beradi.',
+  'lx.g28.fix': '<ul><li>Tovush uziladi — keyingi notagacha barmoqni koʻtarmang.</li><li>Hisob adashadi — avval sekin (metronom 50) va teng chaling, keyin tezlashtiring.</li></ul>',
+  'lx.g29.g': '<ul><li>Lya minorni birinchi pozitsiyada chaling: do majordagi oq notalar, lekin lya dan — keyingi oktavadagi lya gacha.</li><li>Metronom 60 da har hisobga bitta nota, yuqoriga va pastga.</li><li>Do majordan qanchalik qaygʻuliroq ekanini tinglang.</li></ul>',
+  'lx.g29.t': 'Do major va lya minorni ketma-ket kuylab, kayfiyat farqini eshiting.',
+  'lx.g29.easy': 'Lya minor (tabiiy) — do major notalari, lekin lya dan boshlangan. Formula: «ton, yarim ton, ton, ton, yarim ton, ton, ton». Lya minor va do major — «qarindosh».',
+  'lx.g29.fix': '<ul><li>«Minor» ekani sezilmayapti — gammadan keyin Am akkordini, keyin yana gammani chaling.</li><li>Barmoqlar aralashadi — ularni ladlar ustida oldindan tuting: tor boʻylab 0–2–3.</li></ul>',
+  'lx.g30.g': '<ul><li>Lya minor pentatonikasini 5–8 lad pozitsiyasida chaling: har torda ikki nota — 5-ladda koʻrsatkich (1), 7-ladda nomsiz (3) yoki 8-ladda jimjiloq (4).</li><li>Yuqoriga va pastga, har hisobga bitta nota, metronom 60.</li><li>Keyin Am akkordi ustida istalgan tartibda chaling: bu yerda xato nota yoʻq.</li></ul>',
+  'lx.g30.t': 'Shu besh notadan istalgan qisqa kuyni chalib, eslab qoling.',
+  'lx.g30.easy': 'Pentatonika — besh notali gamma. Unda «oʻtkir» pogʻonalar yoʻq, shuning uchun istalgan tartibda chiroyli jaranglaydi. Kuy va soʻlolar unga quriladi.',
+  'lx.g30.fix': '<ul><li>Qoʻl uzoqda — bu yuqori pozitsiya: butun qoʻlni 5-ladga surib, bosh barmoq boʻyin orqasida.</li><li>Shaqillaydi — ladga yaqin, barmoq uchi bilan bosing.</li></ul>',
+  'lx.g31.g': '<ul><li>Xromatik gammani mi dan (6-tor) chaling: har lad ketma-ket — ochiq tor, keyin 1, 2, 3, 4-ladlar va hokazo torlar boʻylab bir oktava yuqori mi gacha.</li><li>«Bir barmoq — bir lad» qoidasi: 1-barmoq 1-ladda, 2-barmoq 2-ladda, 3-barmoq 3-ladda, 4-barmoq 4-ladda.</li><li>Metronom 60, har hisobga bitta nota, yuqoriga va pastga.</li></ul>',
+  'lx.g31.t': 'Oktavaning barcha 12 tovushini ovoz chiqarib ayting: do, do-diyez, re, re-diyez, mi, fa, fa-diyez, sol, sol-diyez, lya, lya-diyez, si.',
+  'lx.g31.easy': 'Xromatik gamma — barcha tovushlar ketma-ket, har biri oldingisidan yarim ton yuqori. Gitarada bu oddiygina lad ortidan lad.',
+  'lx.g31.fix': '<ul><li>Barmoqlar charchaydi — har tordan keyin tanaffus qiling va qoʻlni silkitib oling.</li><li>Tovush oʻchadi — barmoqlarni uchiga qoʻying va qoʻshni torlarga tegmang.</li></ul>',
+  'gp.sc.cmaj': 'Do major',
+  'gp.sc.gmaj': 'Sol major',
+  'gp.sc.amin': 'Lya minor',
+  'gp.sc.apent': 'Lya minor: pentatonika',
+  'gp.sc.chrom': 'Xromatik (mi dan)',
+  'gp.sc.aria': 'Boʻyindagi gamma: raqamlar — notalar tartibi, porogdan chapdagi doira — ochiq tor',
+  'gp.sc.notes': 'Notalar',
+  'gp.sc.steps': 'Qadamlar (½ — yarim ton, 1 — ton)',
+  'gp.sc.hint': 'Doiralardagi raqamlar — notalar tartibi; chiziqli doira — asosiy nota (tonika). «Tinglash» yuqoriga va pastga chaladi.',
 };
 export const TERMS = {};
 export const CH = [
@@ -370,5 +400,33 @@ ${tip('Am, keyin Am7 ni chaling — farqni eshiting.')}
 <p>Septakkordli eng mashhur bogʻlam — <b>ii–V–I</b>: Dm7 – G7 – Cmaj7. G7 tarangilik yaratadi, Cmaj7 uni hal qiladi — xotirjamlik. Bu bogʻlam qoʻshiqlarda, balladalarda va jazzda uchraydi.</p>
 ${key('Dm7 – G7 – Cmaj7: yon tomonga qadam, tarangilik va uyga qaytish.')}
 ${tip('Dm7 – G7 – Cmaj7 ni boy yoki arpedjio bilan metronom 60 da chalib, oʻzingizni yozib oling.')}
+` },
+  { id: 'g28', t: 'Gammalar: do major va sol major', s: 'Formula boʻyicha ketma-ket notalar', src: '', h: `
+<p>Gamma — asosiy notadan (tonikadan) bir oktava yuqoridagi xuddi shu notagacha ketma-ket notalar. Major gamma «yorqin» jaranglaydi. U ton va yarim tonlar formulasi boʻyicha quriladi: <b>1 – 1 – ½ – 1 – 1 – 1 – ½</b>.</p>
+{{lab:gscmaj}}
+<p>Birinchi pozitsiyadagi do major diyez va bemolsiz: sakkizta nota, ladlarda 0–1–2–3 barmoqlar. Sol major — sol dan xuddi shu formula; shu sababli ettinchi nota fa-diyez (F♯) boʻladi.</p>
+${key('«Ton, ton, yarim ton, ton, ton, ton, yarim ton» formulasi har qanday notadan oʻzining major gammasini beradi.')}
+${tip('Do majorni metronom 60 da yuqoriga va pastga, har hisobga bitta nota, notalarni ovoz chiqarib aytib chaling.')}
+` },
+  { id: 'g29', t: 'Gamma: lya minor', s: 'Xuddi shu notalar, boshqa markaz', src: '', h: `
+<p>Lya minor (tabiiy) — do major notalari, lekin lya dan. Formula: <b>1 – ½ – 1 – 1 – ½ – 1 – 1</b>. Majordan yumshoqroq va qaygʻuliroq jaranglaydi.</p>
+{{lab:gscmin}}
+<p>Lya minor va do major — «qarindosh» gammalar: ularning notalari bir xil. Farq — qaysi nota asosiy, tonika hisoblanishida.</p>
+${key('Minor gamma — yangi notalar emas, yangi markaz: tonika — lya.')}
+${tip('Gammadan keyin Am akkordini va yana gammani chaling: ular bir-biriga qanday mos kelishini eshiting.')}
+` },
+  { id: 'g30', t: 'Pentatonika', s: 'Har holat uchun besh nota', src: '', h: `
+<p>Pentatonika — besh notali gamma. Unda «oʻtkir» pogʻonalar yoʻq, shuning uchun istalgan tartibda chiroyli jaranglaydi; kuy va soʻlolar unga quriladi. Lya minor pentatonikasi: <b>lya, do, re, mi, sol</b>.</p>
+{{lab:gscpent}}
+<p>Gitarada u 5–8 lad pozitsiyasida chalinadi: har torda ikki nota. Barmoqlar: 5-ladda — 1, 7-ladda — 3, 8-ladda — 4.</p>
+${key('Xato qilmaydigan besh nota: ularni Am akkordi ustida istalgan tartibda chalish mumkin.')}
+${tip('Shu besh notadan qisqa kuy oʻylab topib, metronomga chaling.')}
+` },
+  { id: 'g31', t: 'Xromatik gamma', s: 'Barcha oʻn ikki tovush ketma-ket', src: '', h: `
+<p>Xromatik gamma — barcha tovushlar ketma-ket, har biri oldingisidan yarim ton yuqori («½ – ½ – ½ …» formulasi). Gitarada bu oddiygina lad ortidan lad.</p>
+{{lab:gscchrom}}
+<p>Bu barmoqlar uchun eng yaxshi mashq: <b>bir barmoq — bir lad</b>. Birinchi barmoq 1-ladda, ikkinchi 2-ladda, uchinchi 3-ladda, toʻrtinchi 4-ladda; keyin keyingi tor.</p>
+${key('Oktavada oʻn ikki tovush bor; qolgan barcha gammalar — ulardan formula boʻyicha tanlov.')}
+${tip('Xromatik gammani metronom 60 da yuqoriga va pastga chalib, notalarni ovoz chiqarib ayting.')}
 ` },
 ];

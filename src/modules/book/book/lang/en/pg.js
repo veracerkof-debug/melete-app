@@ -6,8 +6,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 export const S = {
   'ls.teacherLock': 'The teacher will open this lesson',
   'bk.part9': 'Guitar from scratch',
-  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '27 lessons: posture, parts, tuning, chords, strumming, arpeggios, barre, progressions',
-  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming, arpeggios, barre and chord progressions.',
+  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '31 lessons: posture, parts, tuning, chords, strumming, arpeggios, barre, progressions, scales',
+  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming, arpeggios, barre, chord progressions and scales.',
   'ls.g1': 'Posture', 'ls.g2': 'Parts of the guitar', 'ls.g3': 'Tuning', 'ls.g4': 'Pain-free hands', 'ls.g5': 'Reading a chord diagram',
   'ls.g6': 'Chord C', 'ls.g7': 'Chord G', 'ls.g8': 'Chord D', 'ls.g9': 'Chord changes and a first song',
 
@@ -174,6 +174,36 @@ export const S = {
   'gp.prog.ii': 'ii–V–I',
   'gp.prog.vi': 'vi–ii–V–I',
   'gp.prog.bal': 'I–vi–ii–V',
+  // гаммы (25.11.2026)
+  'ls.g28': 'Scales: C major and G major',
+  'ls.g29': 'Scale: A minor',
+  'ls.g30': 'Pentatonic',
+  'ls.g31': 'Chromatic scale',
+  'lx.g28.g': '<ul><li>Play C major in first position up and down: 8 notes, one per beat at 60. Fingers follow the frets: finger 1 on fret 1, 2 on fret 2, 3 on fret 3; an open string takes no finger.</li><li>Say the notes aloud: C, D, E, F, G, A, B, C.</li><li>Then G major — the same formula, but the seventh note is F♯.</li></ul>',
+  'lx.g28.t': 'Sing the scale with the guitar: each sound on its own note.',
+  'lx.g28.easy': 'A major scale is eight notes going up by the formula "whole, whole, half, whole, whole, whole, half". From any note this formula gives that note\'s major scale.',
+  'lx.g28.fix': '<ul><li>The sound cuts off — do not lift the finger until the next note.</li><li>The count slips — play slowly first (metronome 50) and evenly, then speed up.</li></ul>',
+  'lx.g29.g': '<ul><li>Play A minor in first position: the same white notes as C major, but from A — up to the next A.</li><li>One note per beat at 60, up and down.</li><li>Listen to how it is sadder than C major.</li></ul>',
+  'lx.g29.t': 'Sing C major and A minor in a row and hear the difference in mood.',
+  'lx.g29.easy': 'A natural minor is the notes of C major, but starting from A. Formula: "whole, half, whole, whole, half, whole, whole". A minor and C major are "relatives".',
+  'lx.g29.fix': '<ul><li>Cannot hear it is "minor" — after the scale play chord Am, then the scale again.</li><li>Fingers get mixed up — keep them over the frets in advance: 0–2–3 on a string.</li></ul>',
+  'lx.g30.g': '<ul><li>Play the A minor pentatonic in the 5th–8th fret position: two notes on each string — index (1) at fret 5, ring (3) at fret 7 or little (4) at fret 8.</li><li>Up and down, one note per beat, metronome 60.</li><li>Then play the notes in any order over chord Am: there are no wrong notes here.</li></ul>',
+  'lx.g30.t': 'Play any short melody from these five notes and remember it.',
+  'lx.g30.easy': 'A pentatonic is a scale of five notes. It has no "sharp" degrees, so it sounds good in any order. Melodies and solos are built on it.',
+  'lx.g30.fix': '<ul><li>The hand is far — it is a high position: move the whole hand to the 5th fret, thumb behind the neck.</li><li>It buzzes — press right next to the fret, on the fingertip.</li></ul>',
+  'lx.g31.g': '<ul><li>Play the chromatic scale from E (6th string): every fret in turn — open string, then frets 1, 2, 3, 4, and so on across the strings up to E an octave higher.</li><li>The rule "one finger — one fret": finger 1 on fret 1, 2 on fret 2, 3 on fret 3, 4 on fret 4.</li><li>Metronome 60, one note per beat, up and down.</li></ul>',
+  'lx.g31.t': 'Say all 12 sounds of the octave aloud: C, C♯, D, D♯, E, F, F♯, G, G♯, A, A♯, B.',
+  'lx.g31.easy': 'The chromatic scale is all the sounds in a row, each a half step higher than the last. On the guitar it is simply fret after fret.',
+  'lx.g31.fix': '<ul><li>Fingers tire — pause after each string and shake the hand out.</li><li>The sound dies — set the fingers on the tips and do not touch the neighbouring strings.</li></ul>',
+  'gp.sc.cmaj': 'C major',
+  'gp.sc.gmaj': 'G major',
+  'gp.sc.amin': 'A minor',
+  'gp.sc.apent': 'A minor: pentatonic',
+  'gp.sc.chrom': 'Chromatic (from E)',
+  'gp.sc.aria': 'Scale on the neck: numbers are the order of notes, a circle left of the nut is an open string',
+  'gp.sc.notes': 'Notes',
+  'gp.sc.steps': 'Steps (½ half step, 1 whole step)',
+  'gp.sc.hint': 'The numbers in the circles are the order of the notes; the outlined circle is the main note (tonic). "Listen" plays up and down.',
 };
 export const TERMS = {};
 export const CH = [
@@ -370,5 +400,33 @@ ${tip('Play Am, then Am7 — hear the difference.')}
 <p>The best-known progression with sevenths is <b>ii–V–I</b>: Dm7 – G7 – Cmaj7. G7 creates tension, Cmaj7 resolves it — rest. This progression is in songs, ballads and jazz.</p>
 ${key('Dm7 – G7 – Cmaj7: a step aside, tension, and back home.')}
 ${tip('Play Dm7 – G7 – Cmaj7 strummed or arpeggiated at 60 and record yourself.')}
+` },
+  { id: 'g28', t: 'Scales: C major and G major', s: 'Notes in a row by a formula', src: '', h: `
+<p>A scale is notes in a row going up from the main note (the tonic) to the same note an octave higher. A major scale sounds "bright". It is built by a formula of whole and half steps: <b>1 – 1 – ½ – 1 – 1 – 1 – ½</b>.</p>
+{{lab:gscmaj}}
+<p>C major in first position has no sharps or flats: eight notes, fingers 0–1–2–3 on the frets. G major uses the same formula from G; because of it the seventh note becomes F♯.</p>
+${key('The formula "whole, whole, half, whole, whole, whole, half" from any note gives that note\'s major scale.')}
+${tip('Play C major up and down at 60, one note per beat, saying the notes aloud.')}
+` },
+  { id: 'g29', t: 'Scale: A minor', s: 'The same notes, a different centre', src: '', h: `
+<p>A natural minor is the notes of C major, but from A. Formula: <b>1 – ½ – 1 – 1 – ½ – 1 – 1</b>. It sounds softer and sadder than major.</p>
+{{lab:gscmin}}
+<p>A minor and C major are "related" scales: they have the same notes. The difference is which note is the main one, the tonic.</p>
+${key('A minor scale is not new notes, but a new centre: the tonic is A.')}
+${tip('After the scale play chord Am and the scale again: hear how they fit each other.')}
+` },
+  { id: 'g30', t: 'Pentatonic', s: 'Five notes for every occasion', src: '', h: `
+<p>A pentatonic is a scale of five notes. It has no "sharp" degrees, so it sounds good in any order; melodies and solos are built on it. A minor pentatonic: <b>A, C, D, E, G</b>.</p>
+{{lab:gscpent}}
+<p>On the guitar it is played in a position on frets 5–8: two notes on each string. Fingers: 1 at fret 5, 3 at fret 7, 4 at fret 8.</p>
+${key('Five notes that do not go wrong: play them in any order over chord Am.')}
+${tip('Make up a short melody from these five notes and play it to the metronome.')}
+` },
+  { id: 'g31', t: 'Chromatic scale', s: 'All twelve sounds in a row', src: '', h: `
+<p>The chromatic scale is all the sounds in a row, each a half step above the last (formula "½ – ½ – ½ …"). On the guitar it is simply fret after fret.</p>
+{{lab:gscchrom}}
+<p>It is also the best exercise for the fingers: <b>one finger — one fret</b>. First finger on fret 1, second on fret 2, third on fret 3, fourth on fret 4; then the next string.</p>
+${key('An octave has twelve sounds; every other scale is a choice among them by a formula.')}
+${tip('Play the chromatic scale up and down at 60 and say the notes aloud.')}
 ` },
 ];
