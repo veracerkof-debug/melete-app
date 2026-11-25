@@ -209,6 +209,21 @@ export const S = {
   "gp.prog.cavg": "C Am F G",
   "gp.prog.gevd": "G Em C D",
   "gp.prog.amfc": "Am F C G",
+  "gm.hint": "Drag a finger to rotate freely; two fingers zoom, move and twist; double-tap to take apart or put together.",
+  "gp.g.body.a.n": "Body (“the drum”)",
+  "gp.g.body.a.d": "The hollow wooden part. The top, together with the air inside, amplifies the strings, and the sound hole lets the sound out.",
+  "gp.g.body.e.n": "Body (“the drum”)",
+  "gp.g.body.e.d": "A wooden slab that carries everything else: pickups, volume and tone knobs, the pickguard. The pickups pick up the sound.",
+  "gp.g.neck.n": "Neck",
+  "gp.g.neck.d": "The long part where the fingers press the strings. It has the headstock at the top, the fingerboard and the frets; the closer to the body, the higher the sound.",
+  "gp.g.pegs.n": "Tuning pegs",
+  "gp.g.pegs.d": "They turn and tighten the strings: the pitch depends on the tension. Tuning is turning the pegs.",
+  "gp.g.strings.n": "Strings",
+  "gp.g.strings.d": "Six strings: the 1st is the thinnest and highest, the 6th the thickest and lowest. They sound E, B, G, D, A, E (1st to 6th).",
+  "gp.g.bridge.a.n": "Bridge",
+  "gp.g.bridge.a.d": "A plate on the top that anchors the ends of the strings. Through the saddle it passes the vibration to the top.",
+  "gp.g.bridge.e.n": "Bridge",
+  "gp.g.bridge.e.d": "A metal block with saddles that anchors the strings; screws set the length and height of each.",
 };
 export const TERMS = {};
 export const CH = [

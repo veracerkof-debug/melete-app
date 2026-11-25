@@ -209,6 +209,21 @@ export const S = {
   "gp.prog.cavg": "C Am F G",
   "gp.prog.gevd": "G Em C D",
   "gp.prog.amfc": "Am F C G",
+  "gm.hint": "Barmoq bilan tortib istalgancha aylantirish; ikki barmoq bilan masshtab, siljitish va burish; ikki marta tegib ajratish yoki yig‘ish.",
+  "gp.g.body.a.n": "Korpus («baraban»)",
+  "gp.g.body.a.d": "Ichi bo‘sh yog‘och qism. Yuqori deka ichidagi havo bilan birga tor tovushini kuchaytiradi, teshik esa uni tashqariga chiqaradi.",
+  "gp.g.body.e.n": "Korpus («baraban»)",
+  "gp.g.body.e.d": "Qolgan hamma narsa o‘rnatilgan yog‘och plita: datchiklar, ovoz va tembr tugmalari, himoya plastinka. Tovushni datchiklar ushlaydi.",
+  "gp.g.neck.n": "Grit",
+  "gp.g.neck.d": "Barmoqlar torlarni bosadigan uzun qism. Tepasida boshcha, qoplama va ladlar bor; korpusga yaqinlashgan sari tovush balandlashadi.",
+  "gp.g.pegs.n": "Kolkalar",
+  "gp.g.pegs.d": "Torlarni burab tortadi: tovush balandligi tarangligiga bog‘liq. Sozlash — kolkalarni burash.",
+  "gp.g.strings.n": "Torlar",
+  "gp.g.strings.d": "Oltita tor: 1-tor eng ingichka va baland, 6-tor eng yo‘g‘on va past. Ular mi, si, sol, re, lya, mi (1-dan 6-gacha) jaranglaydi.",
+  "gp.g.bridge.a.n": "Koʻprik (tagtayanch)",
+  "gp.g.bridge.a.d": "Yuqori dekadagi planka, torlarning uchlari unga mahkamlanadi. Egar orqali tebranishni dekaga uzatadi.",
+  "gp.g.bridge.e.n": "Koʻprik",
+  "gp.g.bridge.e.d": "Torlar mahkamlanadigan egarli metall blok; vintlar bilan har bir torning uzunligi va balandligi sozlanadi.",
 };
 export const TERMS = {};
 export const CH = [

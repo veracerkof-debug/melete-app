@@ -7,21 +7,21 @@ import glbElectric from './assets/guitar-electric.glb?url';
 import texAlbedo from './assets/electric-albedo.jpg?url';
 import texAO from './assets/electric-ao.jpg?url';
 export const TYPES = ['acoustic', 'electric'];
-export const PARTS = {
-  acoustic: ['head', 'pegs', 'neck', 'fret', 'strings', 'hole', 'top', 'body', 'bridge', 'pickguard'],
-  electric: ['head', 'pegs', 'neck', 'fret', 'strings', 'body', 'pickguard', 'pickups', 'controls', 'bridge'],
-};
-// Особые тексты: у типа — свой ключ вместо общего
-const ALT = { acoustic: { body: 'sides', bridge: 'bridge.a', strings: 'strings.s' }, electric: { body: 'body.e', bridge: 'bridge.e', strings: 'strings.s' } };
-export const partKey = (type, id) => 'gp.' + ((ALT[type] && ALT[type][id]) || id);
-// Виды: [наклон, поворот] в радианах
+// Части для ученика — пять крупных (слово автора 25.11.2026): корпус («барабан») целиком, гриф целиком (с головой и ладами), колки, струны, бридж.
+export const PARTS = { acoustic: ['body', 'neck', 'pegs', 'strings', 'bridge'], electric: ['body', 'neck', 'pegs', 'strings', 'bridge'] };
+// Какая крупная часть включает мелкие детали модели
+export const GROUP = { top: 'body', hole: 'body', pickguard: 'body', pickups: 'body', controls: 'body', head: 'neck', fret: 'neck' };
+const ALT = { acoustic: { body: 'gp.g.body.a', bridge: 'gp.g.bridge.a' }, electric: { body: 'gp.g.body.e', bridge: 'gp.g.bridge.e' } };
+export const partKey = (type, id) => (ALT[type] && ALT[type][id]) || 'gp.g.' + id;
+// Виды: [наклон, поворот] в радианах (вид 0 — стартовый)
 export const VIEWS = [[0.2, -0.5], [0, 0], [0, Math.PI / 2], [0.2, Math.PI + 0.5], [1.2, 0]];
 export const FILES = { acoustic: glbAcoustic, electric: glbElectric };
-// Разнос деталей при «Разобрать», мм (x — вбок, y — по грифу к голове, z — к зрителю)
-export const OFFS = {
-  acoustic: { top: [0, 0, 80], body: [0, 0, -70], hole: [0, 0, 130], pickguard: [0, 0, 160], bridge: [0, 0, 190], strings: [0, 0, 240], neck: [0, 70, 20], fret: [0, 70, 100], head: [0, 170, -40], pegs: [0, 170, 70] },
-  electric: { body: [0, 0, -40], pickguard: [0, 0, 60], pickups: [0, 0, 110], controls: [0, 0, 130], bridge: [0, 0, 150], strings: [0, 0, 210], neck: [0, 70, 0], fret: [0, 70, 80], head: [0, 170, -50], pegs: [0, 170, 70] },
-};
+// Разнос деталей при «Разобрать», мм (x — вбок, y — по грифу к голове, z — к зрителю): не слоями, а в разные стороны, пропорции сохраняются.
+// Гриф — немного вверх; колки — в стороны от грифа (каждый в свою: знак по положению колка); струны — в сторону и вперёд;
+// корпус — вниз и назад; бридж — вперёд, но ближе к корпусу, чем гриф (корпус назад на 100, бридж вперёд на 160 от него).
+export const OFFS = { body: [0, -90, -100], neck: [0, 110, 25], pegs: [130, 150, 35], strings: [150, 40, 110], bridge: [0, -90, 60] };
+// Задержка начала движения (доля общего времени): детали стартуют не разом — движение живее
+export const DELAY = { neck: 0, body: 0.05, pegs: 0.1, strings: 0.16, bridge: 0.22 };
 export const hasWebGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } };
 
 // Текстуры дерева: цвет, волокна и (для декы электро/акустики) переход «санбёрст» запекаются в холст.
@@ -67,7 +67,7 @@ async function loadGLB(type) {
 }
 // Детали из GLB в свои материалы. Акустика: цвет по материалу исходной модели (суффикс .N в имени); электро: текстуры автора + карта затенения.
 export async function buildGuitar(THREE, type) {
-  const scene = await loadGLB(type), g = new THREE.Group(), set = [], reps = {}, materials = [], textures = [], OFF = OFFS[type];
+  const scene = await loadGLB(type), g = new THREE.Group(), set = [], reps = {}, materials = [], textures = [];
   const col = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.SRGBColorSpace);
   const std = (c, o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: col(c), roughness: 0.45, metalness: 0, ...o }); materials.push(m); return m; };
   const wood = (w, gloss, tex) => { const t = woodTex(THREE, { ...w, ...tex, seed: textures.length + 3 }); textures.push(t); return std([1, 1, 1], { map: t, roughness: 0.35, clearcoat: gloss ? 0.85 : 0.1, clearcoatRoughness: 0.18 }); };
@@ -87,9 +87,11 @@ export async function buildGuitar(THREE, type) {
     if (!o.isMesh) return;
     const [part] = o.name.split('_'), geo = o.geometry.clone(), mt = type === 'acoustic' ? byPart(o.name).clone() : byPart(o.name); if (type === 'acoustic') materials.push(mt);
     if (type === 'acoustic') { const p = geo.attributes.position, uv = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i); uv[i * 2 + 1] = p.getY(i); } geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); }
-    const m = new THREE.Mesh(geo, mt); m.userData.part = part; m.userData.off = OFF[part] || [0, 0, 0]; m.userData.base = new THREE.Vector3(); geo.computeBoundingBox();
-    const sz = geo.boundingBox.getSize(new THREE.Vector3()), vol = sz.x * sz.y * sz.z;
-    m.userData.vol = vol; g.add(m); set.push(m); if (!reps[part] || vol > reps[part].userData.vol) reps[part] = m;
+    const grp = GROUP[part] || part, m = new THREE.Mesh(geo, mt); m.userData.part = grp; m.userData.base = new THREE.Vector3(); geo.computeBoundingBox();
+    const sz = geo.boundingBox.getSize(new THREE.Vector3()), ctr = geo.boundingBox.getCenter(new THREE.Vector3()), vol = sz.x * sz.y * sz.z;
+    // колки уходят в сторону от грифа: знак — по положению колка относительно оси гитары (все с одной стороны — все в одну)
+    const of = OFFS[grp] || [0, 0, 0]; m.userData.off = grp === 'pegs' ? [(ctr.x >= 0 ? 1 : -1) * of[0], of[1], of[2]] : of;
+    m.userData.vol = vol; g.add(m); set.push(m); if (!reps[grp] || vol > reps[grp].userData.vol) reps[grp] = m;
   });
   return { group: g, meshes: set, reps, materials, textures, len: 1050 };
 }
@@ -106,7 +108,7 @@ export function modelLabs({ T }) {
   const LABS = {};
   const lab = (type, id) => T(partKey(type, id) + '.n'), desc = (type, id) => T(partKey(type, id) + '.d');
   LABS.gmodel = {
-    st: { rx: VIEWS[0][0], ry: VIEWS[0][1], ex: false, sel: '', view: 0, zoom: 1, type: 'acoustic' },
+    st: { q: null, pan: [0, 0], ex: false, sel: '', view: 0, zoom: 1, type: 'acoustic', goal: null },
     render(s) {
       return '<div class="gm-wrap"><div class="gm-types" role="group" aria-label="' + T('gm.types') + '">' + TYPES.map((k) => '<button type="button" class="gm-type" data-gm-type="' + k + '" aria-pressed="' + (s.type === k) + '">' + T('gm.t.' + k) + '</button>').join('') + '</div>' +
         '<div class="gm3" data-gm3 role="img" aria-label="' + T('gm.aria') + '"></div>' +
@@ -129,7 +131,7 @@ export function modelLabs({ T }) {
         el.querySelectorAll('[data-gm-sel]').forEach((b) => { const on = b.dataset.gmSel === s.sel; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); });
         showInfo(); if (api) api.kick();
       };
-      const toggleEx = () => { s.ex = !s.ex; s.goal = s.ex ? [0.3, -0.95] : [VIEWS[s.view][0], VIEWS[s.view][1]]; };
+      const toggleEx = () => { s.ex = !s.ex; s.goal = s.ex ? [0.3, -0.95] : [VIEWS[s.view][0], VIEWS[s.view][1]]; s.goalQ = null; s.pan = [0, 0]; };
       const select = (id) => { s.sel = s.sel === id ? '' : id; sync(); };
       drawChips();
       el.addEventListener('click', (e) => {
@@ -137,9 +139,10 @@ export function modelLabs({ T }) {
         if (ty) { if (ty.dataset.gmType !== s.type) { s.type = ty.dataset.gmType; s.sel = ''; drawChips(); if (api) api.rebuild(); sync(); } return; }
         if (c) { select(c.dataset.gmSel); return; }
         if (!b) return;
-        if (b.dataset.gm === 'ex') toggleEx(); else { s.view = (s.view + 1) % VIEWS.length; s.goal = [VIEWS[s.view][0], VIEWS[s.view][1]]; }
+        if (b.dataset.gm === 'ex') toggleEx(); else { s.view = (s.view + 1) % VIEWS.length; s.goal = [VIEWS[s.view][0], VIEWS[s.view][1]]; s.goalQ = null; s.pan = [0, 0]; s.zoom = 1; zoomReset(); }
         sync();
       });
+      const zoomReset = () => { if (api) api.zoom(1); };
       sync();
       if (!hasWebGL()) { root.classList.add('nogl'); root.textContent = T('gm.nogl'); return; }
       Promise.all([import('three'), import('three/addons/environments/RoomEnvironment.js').catch(() => null)]).then(([THREE, env]) => {
@@ -157,8 +160,8 @@ export function modelLabs({ T }) {
         root.textContent = ''; root.appendChild(renderer.domElement);
         const dots = document.createElement('div'); dots.className = 'gm-dots'; root.appendChild(dots);
         const cam = new THREE.PerspectiveCamera(28, 1, 0.5, 80), ray = new THREE.Raycaster(), P = new THREE.Vector2(), tmp = new THREE.Vector3();
-        let gt = null, t = s.ex ? 1 : 0, raf = 0, zoom = s.zoom, dragging = false, centers = {};
-        const freeGt = () => { if (!gt) return; pivot.remove(gt.group); gt.meshes.forEach((m) => m.geometry.dispose()); gt.materials.forEach((m) => m.dispose()); gt.textures.forEach((x) => x.dispose()); gt = null; };
+        let gt = null, raf = 0, zoom = s.zoom, dragging = false, centers = {};
+        const freeGt = () => { if (!gt) return; pivot.remove(gt.group); gt.meshes.forEach((m) => m.geometry.dispose()); (gt.lines || []).forEach((l) => { l.line.geometry.dispose(); l.line.material.dispose(); }); gt.materials.forEach((m) => m.dispose()); gt.textures.forEach((x) => x.dispose()); gt = null; };
         let buildTok = 0;
         const rebuild = async () => {
           const tok = ++buildTok; let nx;
@@ -166,19 +169,41 @@ export function modelLabs({ T }) {
           if (tok !== buildTok || dead) { nx.meshes.forEach((m) => m.geometry.dispose()); return; }
           freeGt(); gt = nx;
           gt.group.scale.setScalar(K); pivot.add(gt.group);
+          // пунктирные «следы» разбора: из центра части в её место при разборе
+          gt.lines = []; const ln = new THREE.Group(); gt.group.add(ln);
+          for (const id of PARTS[s.type]) {
+            const ms = gt.meshes.filter((m) => m.userData.part === id); if (!ms.length) continue;
+            const bb = new THREE.Box3(); ms.forEach((m) => bb.union(m.geometry.boundingBox)); const c0 = bb.getCenter(new THREE.Vector3()), off = ms[0].userData.off;
+            const geo = new THREE.BufferGeometry().setFromPoints([c0, c0.clone()]), line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: C0, dashSize: 26, gapSize: 22, transparent: true, opacity: 0 }));
+            line.visible = false; ln.add(line); gt.lines.push({ g: id, c0, off, line });
+          }
           dots.innerHTML = PARTS[s.type].map((id, i) => '<button type="button" class="gm-dot" data-gm-sel="' + id + '" aria-label="' + lab(s.type, id) + '">' + (i + 1) + '</button>').join('');
           centers = {}; for (const id of PARTS[s.type]) { const m = gt.reps[id]; if (m) { const b = m.geometry.boundingBox; centers[id] = [m, b.getCenter(new THREE.Vector3())]; } }
           kick();
         };
         const size = () => { const w = root.clientWidth || 300, h = root.clientHeight || 400; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
-        const frame = () => {
+        // прогресс разбора идёт по времени; у каждой части своя задержка и мягкое «пружинящее» замедление
+        const easeOut = (x) => { const c1 = 1.25, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+        const eul = (a) => new THREE.Quaternion().setFromEuler(new THREE.Euler(a[0], a[1], 0, 'XYZ'));
+        const qs = () => { if (!s.q) s.q = eul(VIEWS[0]).toArray(); return new THREE.Quaternion().fromArray(s.q); };
+        let prog = s.ex ? 1 : 0, lastT = 0, vel = null; // vel: { axis, w } — угловая скорость после отпускания
+        const frame = (now) => {
           raf = 0;
           if (dead || !root.isConnected) { dispose(); return; }
-          const tg = s.ex ? 1 : 0; t += (tg - t) * 0.14; if (Math.abs(tg - t) < 0.002) t = tg;
-          for (const m of gt.meshes) { const o = m.userData.off, b = m.userData.base; m.position.set(b.x + o[0] * t, b.y + o[1] * t, b.z + o[2] * t); }
-          let busy = false; if (s.goal) { s.rx += (s.goal[0] - s.rx) * 0.12; s.ry += (s.goal[1] - s.ry) * 0.12; if (Math.abs(s.goal[0] - s.rx) + Math.abs(s.goal[1] - s.ry) < 0.004) { s.rx = s.goal[0]; s.ry = s.goal[1]; s.goal = null; } else busy = true; }
-          pivot.rotation.set(s.rx, s.ry, 0);
-          const asp = cam.aspect, dist = ((gt.len * K / 2) / Math.tan(14 * Math.PI / 180) * 1.08) * (1 + 0.3 * t) / Math.min(1, asp * 1.6) / zoom;
+          const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016); lastT = now;
+          const tg = s.ex ? 1 : 0, step = dt / 1.0; prog += Math.sign(tg - prog) * Math.min(Math.abs(tg - prog), step);
+          let busy = prog !== tg, fmax = 0;
+          const fOf = (g) => { const d = DELAY[g] || 0, x = Math.max(0, Math.min(1, (prog - d) / (1 - d))); return prog === tg ? tg : (tg ? easeOut(x) : 1 - easeOut(1 - x)); };
+          const fs = {}; for (const m of gt.meshes) { const g = m.userData.part; if (fs[g] == null) fs[g] = fOf(g); const f = fs[g], o = m.userData.off, b = m.userData.base; m.position.set(b.x + o[0] * f, b.y + o[1] * f, b.z + o[2] * f); fmax = Math.max(fmax, f); }
+          // пунктирные линии «откуда — куда»
+          for (const l of gt.lines) { const f = fs[l.g] || 0, a = l.c0, o = l.off, pa = l.line.geometry.attributes.position; pa.setXYZ(0, a.x, a.y, a.z); pa.setXYZ(1, a.x + o[0] * f, a.y + o[1] * f, a.z + o[2] * f); pa.needsUpdate = true; l.line.computeLineDistances(); l.line.material.opacity = 0.55 * Math.min(1, f * 3); l.line.visible = f > 0.02; }
+          // поворот: цель-вид (плавно), инерция, обычный жест
+          let q = qs();
+          if (s.goal) { if (!s.goalQ) s.goalQ = eul(s.goal).toArray(); const gq = new THREE.Quaternion().fromArray(s.goalQ); q.slerp(gq, 1 - Math.exp(-dt * 7)); if (q.angleTo(gq) < 0.004) { q.copy(gq); s.goal = null; s.goalQ = null; } else busy = true; vel = null; }
+          if (vel && !dragging) { const ang = vel.w * dt; q.premultiply(new THREE.Quaternion().setFromAxisAngle(vel.axis, ang)); vel.w *= Math.exp(-dt * 3.4); if (Math.abs(vel.w) < 0.05) vel = null; else busy = true; }
+          q.normalize(); s.q = q.toArray(); pivot.quaternion.copy(q);
+          pivot.position.set(s.pan[0], s.pan[1], 0);
+          const asp = cam.aspect, dist = ((gt.len * K / 2) / Math.tan(14 * Math.PI / 180) * 1.08) * (1 + 0.28 * fmax) / Math.min(1, asp * 1.6) / zoom;
           cam.position.set(0, 0, dist); cam.lookAt(0, 0, 0);
           gt.meshes.forEach((m) => { const on = m.userData.part === s.sel, mm = m.material; if (mm.emissive) { mm.emissive.copy(C0); mm.emissiveIntensity = on ? 0.5 : 0; } });
           renderer.render(scene, cam);
@@ -187,35 +212,55 @@ export function modelLabs({ T }) {
           const ds = [...dots.querySelectorAll('.gm-dot')], pos = ds.map((d) => { const c = centers[d.dataset.gmSel]; if (!c) return [0, 0]; tmp.copy(c[1]); c[0].localToWorld(tmp); tmp.project(cam); return [(tmp.x * 0.5 + 0.5) * W, (-tmp.y * 0.5 + 0.5) * H]; });
           for (let it = 0; it < 14; it++) for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) { const dx = pos[j][0] - pos[i][0], dy = pos[j][1] - pos[i][1], dd = Math.hypot(dx, dy) || 0.01; if (dd < 25) { const k = (25 - dd) / 2 / dd; pos[i][0] -= dx * k; pos[i][1] -= dy * k; pos[j][0] += dx * k; pos[j][1] += dy * k; } }
           ds.forEach((d, i) => { d.style.transform = 'translate(' + (Math.max(11, Math.min(W - 11, pos[i][0])) - 11) + 'px,' + (Math.max(11, Math.min(H - 11, pos[i][1])) - 11) + 'px)'; d.classList.toggle('on', d.dataset.gmSel === s.sel); });
-          if (t !== tg || dragging || busy) raf = requestAnimationFrame(frame);
+          if (busy || dragging) raf = requestAnimationFrame(frame);
         };
         const C0 = rgb ? mix('--tint', '--tint', 0) : null;
         const kick = () => { if (!raf && !dead && gt) raf = requestAnimationFrame(frame); };
         const dispose = () => { dead = true; if (raf) cancelAnimationFrame(raf); raf = 0; ro && ro.disconnect(); freeGt(); if (envTex) envTex.dispose(); renderer.dispose(); };
-        api = { kick, rebuild }; const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { size(); kick(); }) : null; if (ro) ro.observe(root);
+        api = { kick, rebuild, zoom: (z) => { zoom = z; } }; const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { size(); kick(); }) : null; if (ro) ro.observe(root);
         size(); rebuild();
-        // жесты: тянуть — вращать (на касании только вбок: вертикаль — прокрутка страницы), щипок/Ctrl+колесо — приблизить, касание — деталь, два касания — разобрать
-        const pts = new Map(); let d0 = 0, z0 = 1, st = null, last = 0;
-        const cv = renderer.domElement;
-        cv.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = zoom; st = null; } else st = { x: e.clientX, y: e.clientY, ry: s.ry, rx: s.rx, moved: false, t: e.pointerType }; });
+        // жесты: один палец — свободное вращение по всем осям (с инерцией, как у камня на главной); два пальца — масштаб, сдвиг и поворот вокруг оси взгляда;
+        // касание — деталь; два касания подряд — «Разобрать/Собрать»; Ctrl+колесо — масштаб
+        const pts = new Map(); let st = null, last = 0, two = null, lastMove = 0;
+        const cv = renderer.domElement, SENS = 0.011;
+        const rotDrag = (dx, dy, dtm) => {
+          const len = Math.hypot(dx, dy); if (!len) return; const axis = new THREE.Vector3(dy, dx, 0).normalize(), ang = len * SENS, q = qs();
+          q.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, ang)).normalize(); s.q = q.toArray();
+          vel = { axis, w: Math.min(14, ang / Math.max(0.008, dtm)) };
+        };
+        cv.addEventListener('pointerdown', (e) => {
+          pts.set(e.pointerId, [e.clientX, e.clientY]); s.goal = null; s.goalQ = null; vel = null;
+          if (pts.size === 2) { const [a, b] = [...pts.values()]; two = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), ang: Math.atan2(b[1] - a[1], b[0] - a[0]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; st = null; dragging = true; }
+          else st = { x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, moved: false };
+          kick();
+        });
         cv.addEventListener('pointermove', (e) => {
           if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
-          if (pts.size === 2) { const [a, b] = [...pts.values()]; zoom = s.zoom = Math.max(0.6, Math.min(2.2, z0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / (d0 || 1))); kick(); return; }
-          if (!st) return; const dx = e.clientX - st.x, dy = e.clientY - st.y;
-          if (!st.moved && Math.abs(dx) < 6 && (st.t === 'touch' || Math.abs(dy) < 6)) return;
-          if (!st.moved) { st.moved = true; dragging = true; s.goal = null; try { cv.setPointerCapture(e.pointerId); } catch { /* */ } }
-          s.ry = st.ry + dx * 0.008; if (st.t !== 'touch') s.rx = Math.max(-1.4, Math.min(1.4, st.rx + dy * 0.008)); kick();
+          if (pts.size === 2 && two) {
+            const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), ang = Math.atan2(b[1] - a[1], b[0] - a[0]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+            zoom = s.zoom = Math.max(0.5, Math.min(3, zoom * d / (two.d || 1)));
+            const wpp = (cam.position.z * 2 * Math.tan(14 * Math.PI / 180)) / (cv.clientHeight || 1); // мировых единиц на пиксель
+            s.pan = [s.pan[0] + (mx - two.mx) * wpp, s.pan[1] - (my - two.my) * wpp];
+            const q = qs(); q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -(ang - two.ang))).normalize(); s.q = q.toArray();
+            two = { d, ang, mx, my }; kick(); return;
+          }
+          if (!st) return; const dx = e.clientX - st.px, dy = e.clientY - st.py;
+          if (!st.moved && Math.hypot(e.clientX - st.x, e.clientY - st.y) < 5) return;
+          if (!st.moved) { st.moved = true; dragging = true; try { cv.setPointerCapture(e.pointerId); } catch { /* */ } lastMove = e.timeStamp; }
+          rotDrag(dx, dy, (e.timeStamp - lastMove) / 1000); lastMove = e.timeStamp; st.px = e.clientX; st.py = e.clientY; kick();
         });
         const up = (e) => {
-          pts.delete(e.pointerId); if (pts.size) return; dragging = false;
-          const was = st; st = null; if (!was || was.moved || e.type === 'pointercancel') return;
+          pts.delete(e.pointerId); if (pts.size === 1) { two = null; const [x, y] = [...pts.values()][0]; st = { x, y, px: x, py: y, moved: true }; return; }
+          if (pts.size) return; dragging = false; two = null;
+          const was = st; st = null; if (vel && e.timeStamp - lastMove > 90) vel = null; kick();
+          if (!was || was.moved || e.type === 'pointercancel') return;
           const r = cv.getBoundingClientRect(); P.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(P, cam);
           const hit = ray.intersectObjects(gt.meshes, false)[0], now = Date.now();
           if (now - last < 320) { last = 0; toggleEx(); sync(); return; }
           last = now; const id = hit ? hit.object.userData.part : ''; if (id !== s.sel) select(id); else if (!id) { s.sel = ''; sync(); }
         };
         cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-        cv.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); zoom = s.zoom = Math.max(0.6, Math.min(2.2, zoom * (e.deltaY < 0 ? 1.1 : 0.9))); kick(); }, { passive: false });
+        cv.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); zoom = s.zoom = Math.max(0.5, Math.min(3, zoom * (e.deltaY < 0 ? 1.1 : 0.9))); kick(); }, { passive: false });
         root.__gm = { s, dispose, get gt() { return gt; } };
       }).catch((err) => { console.error('gm3', err && err.message); root.classList.add('nogl'); root.textContent = T('gm.nogl'); });
     },

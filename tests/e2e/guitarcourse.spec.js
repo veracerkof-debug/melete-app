@@ -16,13 +16,13 @@ test('гитара с нуля: путь, устройство гитары, с�
   await page.locator('.gm-chip[data-gm-sel="pegs"]').click();
   await expect(page.locator('[data-gm-info] b')).toContainText('Колки');
   await page.locator('.gm-chip[data-gm-sel="bridge"]').click();
-  await expect(page.locator('[data-gm-info] b')).toContainText('Подставка');
+  await expect(page.locator('[data-gm-info] b')).toContainText('Бридж');
   await page.locator('[data-gm="ex"]').click();
   await expect(page.locator('.gm3.ex')).toHaveCount(1);
   // электро: звукосниматели
   await page.locator('[data-gm-type="electric"]').click();
-  await page.locator('.gm-chip[data-gm-sel="pickups"]').click();
-  await expect(page.locator('[data-gm-info] b')).toContainText('Звукосниматели');
+  await page.locator('.gm-chip[data-gm-sel="body"]').click();
+  await expect(page.locator('[data-gm-info] span')).toContainText('звукосниматели');
   // схема аккорда: C → G, шесть строк разбора
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g5"]').click();
