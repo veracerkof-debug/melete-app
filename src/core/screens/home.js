@@ -14,6 +14,7 @@ import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { studyCard } from './study.js';
+import { updSlot } from './update.js';
 import { dueSongs } from '../review.js';
 
 // Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
@@ -285,7 +286,7 @@ export function homeHTML(app) {
       return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
         '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
     }).join('') + '</div>');
-  return topbar(logoHTML(), leftBtns(app)) + '<div class="hlist">' + levelUpHTML(app) + blocks(st, P) + '</div>';
+  return topbar(logoHTML(), leftBtns(app)) + '<div class="hlist">' + updSlot(app) + levelUpHTML(app) + blocks(st, P) + '</div>';
 }
 
 // Одно предложение повысить уровень (слово автора 25.11.2026): без давления, «Не сейчас» больше не спрашивает про этот уровень

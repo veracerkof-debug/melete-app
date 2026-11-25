@@ -1,3 +1,18 @@
 .hlvl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; }
 .hlvl .grow { min-width: 200px; }
 .hlvl .hlvlb { display: flex; align-items: center; gap: 12px; }
+
+/* Карточка обновления на главной (screens/update.js: updSlot); пока она видна, нижняя полоса прячется; красная точка на значке настроек */
+.updcard { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.updcard[hidden], .updcard:empty { display: none; }
+body:has(.updcard:not([hidden])) .updbar { display: none; }
+.updc-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.updc-t b { font-size: 17px; line-height: 1.25; }
+.updc-t span { font-size: 14px; color: var(--l2); }
+.updc-act { display: flex; align-items: center; gap: 12px; }
+.updc-act .btn { flex: 1; min-height: 44px; }
+.updc-bar { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.updc-bar i { display: block; height: 100%; background: var(--tint); transition: width .4s; }
+body[data-upd] .avatar { position: relative; }
+body[data-upd] .avatar::after { content: ''; position: absolute; top: 2px; right: 2px; width: 11px; height: 11px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--bg); }
+.rdot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); margin-right: 6px; flex: none; }

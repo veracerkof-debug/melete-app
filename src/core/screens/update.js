@@ -14,6 +14,30 @@ function barHTML(s, U) {
   return '';
 }
 
+// Карточка на главной (слово автора 25.11.2026): один виджет проводит по всем шагам — «Обновить» → «Скачивается» → «Установить»;
+// пока она на экране, нижняя полоса прячется. Пустая — скрыта
+function cardHTML(s, U) {
+  const head = (a, b) => '<div class="updc-t"><b>' + esc(a) + '</b>' + (b ? '<span>' + esc(b) + '</span>' : '') + '</div>';
+  if (s.st === 'avail' && s.info && !U.skipped) {
+    return head(t('upd.card.avail', { n: s.info.build }), t('upd.card.availSub')) + '<div class="updc-act"><button class="btn fill" data-upd="get">' + t('upd.get') + '</button><button class="link" data-upd="skip">' + t('upd.later') + '</button></div>';
+  }
+  if (s.st === 'down') {
+    return head(t('upd.card.down'), s.wait ? t('upd.wait') : pct(s.f) + ' %') + '<div class="updc-bar"><i style="width:' + pct(s.f) + '%"></i></div>' + (s.wait ? '<div class="updc-act"><button class="link" data-upd="now">' + t('upd.mobileNow') + '</button></div>' : '');
+  }
+  if (s.st === 'ready' && s.info) {
+    return head(t('upd.card.ready', { n: s.info.build }), t(s.onClose ? 'upd.onClose' : 'upd.card.readySub')) + '<div class="updc-act"><button class="btn fill" data-upd="install">' + t(s.onClose ? 'upd.now' : 'upd.install') + '</button></div>';
+  }
+  if (s.building && s.st === 'none') return head(t('upd.card.build', { n: s.building.n }), buildingLine(s.building));
+  return '';
+}
+// Место под карточку в разметке главной (заполняется и обновляется mountUpdateBar)
+export function updSlot(app) {
+  const U = app.updater;
+  if (!U || !U.platform) return '';
+  const h = cardHTML(U.state, U);
+  return '<div class="updcard hcard" role="status"' + (h ? '' : ' hidden') + '>' + h + '</div>';
+}
+
 export function mountUpdateBar(app) {
   const U = app.updater;
   if (!U || !U.platform) return;
@@ -21,11 +45,16 @@ export function mountUpdateBar(app) {
   el.className = 'updbar';
   el.setAttribute('role', 'status');
   document.body.appendChild(el);
-  const draw = (s) => { const h = barHTML(s, U); el.innerHTML = h; el.hidden = !h; };
+  const draw = (s) => {
+    const h = barHTML(s, U); el.innerHTML = h; el.hidden = !h;
+    document.querySelectorAll('.updcard').forEach((c) => { const x = cardHTML(s, U); if (c.innerHTML !== x) c.innerHTML = x; c.hidden = !x; });
+    // красная точка на значке настроек: новая версия есть, скачивается или ждёт установки
+    document.body.toggleAttribute('data-upd', (s.st === 'avail' && !U.skipped) || s.st === 'down' || s.st === 'ready');
+  };
   U.subscribe(draw);
   draw(U.state);
-  el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-upd]'); if (!b) return;
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.updbar [data-upd], .updcard [data-upd]'); if (!b) return;
     if (b.dataset.upd === 'skip') U.skip();
     else if (b.dataset.upd === 'get') U.download();
     else if (b.dataset.upd === 'now') U.now();
@@ -113,7 +142,7 @@ export function updateSheet(app) {
     tick = setInterval(() => { if (!U.state.building) return; if (++k % 4 === 0) U.fresh(); sh.update(); }, 60000);
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-u]'); if (!b) return;
-      if (b.dataset.u === 'check') U.check();
+      if (b.dataset.u === 'check') U.check({ building: true });
       else if (b.dataset.u === 'get') U.download();
       else if (b.dataset.u === 'install') U.install().then((r) => { if (r === 'allow') toast(t('upd.allow')); }).catch(() => toast(t('upd.err')));
     });

@@ -1,4 +1,10 @@
 {
+  "upd.card.avail": "Melete’ning yangi versiyasi · {n}-yigʻma",
+  "upd.card.availSub": "Maʼlumotlar joyida qoladi",
+  "upd.card.down": "Yangi versiya yuklanmoqda",
+  "upd.card.ready": "{n}-yigʻma yuklandi",
+  "upd.card.readySub": "Oʻrnatish qoldi, maʼlumotlar saqlanadi",
+  "upd.card.build": "{n}-yigʻma tayyorlanmoqda",
   "page.gdrive": "Google Drive",
   "page.gdrive.sub": "Oʻz qurilmalarni sinxronlash",
   "gd.how": "Barcha maʼlumot va fayllar Google Drive’dagi Melete jildida. Xuddi shu kirishli boshqa qurilmada ham shu tarix paydo boʻladi. Tarmoqsiz hammasi odatdagidek ishlaydi, almashinuv keyin boʻladi.",

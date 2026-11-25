@@ -59,8 +59,15 @@ export const isNewer = (info, build) => !!info && build > 0 && info.build > buil
 export const MODES = ['auto', 'button'];
 export const modeOf = (st) => (st && st.updMode === 'button' ? 'button' : 'auto');
 // Пора ли проверять самой: только в «автоматически» и раз в сутки
-export const due = (mem, now, mode) => mode === 'auto' && now - ((mem && mem.at) || 0) >= DAY;
+// Проверка — раз в полчаса (слово автора 25.11.2026): при запуске, при возвращении в приложение и раз в 10 минут, пока оно открыто.
+// У GitHub 60 запросов в час на адрес, поэтому запрос условный (ETag: ответ «не менялось» в лимит не идёт), а ход сборки спрашивается
+// только когда открыты «Обновления». Режим «только по кнопке» тоже проверяет (карточка и точка сообщают), но сам ничего не скачивает
+export const CHECK_EVERY = 30 * 60000;
+export const due = (mem, now) => now - ((mem && mem.at) || 0) >= CHECK_EVERY;
 
+const REL = 'melete.upd.rel'; // последний ответ GitHub о релизе канала и его ETag — для условного запроса
+const readRel = () => { try { const r = JSON.parse(localStorage.getItem(REL)); return r && r.etag && r.body ? r : null; } catch { return null; } };
+const writeRel = (r) => { try { localStorage.setItem(REL, JSON.stringify(r)); } catch { /* без памяти — полный запрос */ } };
 const readMem = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 const writeMem = (m) => { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch { /* память недоступна */ } };
 
@@ -81,8 +88,10 @@ export function createUpdater(app) {
   async function fetchRelease() {
     for (let k = 0; ; k++) {
       try {
-        const r = await fetch('https://api.github.com/repos/' + REPO + '/releases/tags/' + CHANNEL + '?t=' + Date.now(), { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
-        if (r.ok) return r.json();
+        const cached = readRel();
+        const r = await fetch('https://api.github.com/repos/' + REPO + '/releases/tags/' + CHANNEL, { headers: { Accept: 'application/vnd.github+json', ...(cached ? { 'If-None-Match': cached.etag } : {}) }, cache: 'no-store' });
+        if (r.status === 304 && cached) return cached.body;
+        if (r.ok) { const body = await r.json(), etag = r.headers.get('etag'); if (etag) writeRel({ etag, body }); return body; }
         const left = r.headers.get('x-ratelimit-remaining'), reset = +r.headers.get('x-ratelimit-reset') || 0;
         if (r.status === 429 || (r.status === 403 && left === '0')) throw Object.assign(new Error('GitHub: лимит запросов этой сети, до ' + new Date(reset * 1000).toLocaleTimeString()), { limit: reset * 1000 });
         if (r.status < 500 || k >= 2) throw new Error('GitHub ' + r.status);
@@ -100,8 +109,8 @@ export function createUpdater(app) {
     } catch { return null; }
   }
 
-  async function check() {
-    if (!platform || s.st === 'checking' || s.st === 'down') return s;
+  async function check({ building: withBuild = false } = {}) {
+    if (!platform || s.st === 'checking' || s.st === 'down' || s.st === 'ready') return s; // скачано — ждёт установки, не сбрасывать
     // лимит GitHub ещё действует (помнится и после перезапуска) — не спрашивать зря, ответ всё равно «лимит»
     const lim = Math.max(s.limit || 0, readMem().limit || 0);
     if (lim > Date.now()) { set({ st: 'err', limit: lim }); return s; }
@@ -112,8 +121,8 @@ export function createUpdater(app) {
       const fresh = isNewer(info, BUILD);
       log('upd', 'проверка ' + CHANNEL + ': у нас ' + BUILD + ', на GitHub ' + (info ? info.build : '—') + (fresh ? ' — есть новая' : ''));
       set({ st: fresh ? 'avail' : 'none', info: fresh ? info : null, at });
-      const building = await fetchBuilding();
-      if (building) log('upd', 'на GitHub собирается сборка ' + building.n + ', осталось около ' + Math.round(building.left / 60000) + ' мин');
+      const building = withBuild ? await fetchBuilding() : (fresh ? null : s.building || null);
+      if (withBuild && building) log('upd', 'на GitHub собирается сборка ' + building.n + ', осталось около ' + Math.round(building.left / 60000) + ' мин');
       set({ building });
     } catch (e) {
       // лимит запросов — не ошибка приложения: запомнить срок и подождать (предупреждение, не ошибка в диагностике)
@@ -188,13 +197,16 @@ export function createUpdater(app) {
     // при запуске: тихо, раз в сутки, не мешая звуку и занятию — через полминуты после старта
     // «автоматически»: найдено новое — сразу скачать (Android ждёт Wi-Fi сам)
     auto() {
-      if (!platform || !BUILD || !due(readMem(), Date.now(), mode())) return;
-      setTimeout(() => { check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); }, 30000);
+      if (!platform || !BUILD) return;
+      const go = () => { if (!due(readMem(), Date.now()) || s.st === 'ready' || s.st === 'down') return; check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); };
+      setTimeout(go, 30000);
+      setInterval(go, 10 * 60000);
+      if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(go, 2000); });
     },
     // Проверка не удалась (нет сети, сеть переключилась) — повторить, когда сеть вернулась или приложение снова на экране;
     // «Обновления» открыты — проверить, если последняя проверка старше пары минут
     retry() { if (platform && BUILD && s.st === 'err' && !(s.limit > Date.now())) check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); },
-    fresh() { if (platform && (s.st === 'idle' || s.st === 'none' || (s.st === 'err' && !(s.limit > Date.now()))) && Date.now() - (s.at || 0) > 120000) check(); },
+    fresh() { if (platform && (s.st === 'idle' || s.st === 'none' || (s.st === 'err' && !(s.limit > Date.now()))) && Date.now() - (s.at || 0) > 120000) check({ building: true }); },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };
   if (platform && typeof window !== 'undefined') {

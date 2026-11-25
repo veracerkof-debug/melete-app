@@ -1,4 +1,10 @@
 {
+  "upd.card.avail": "New Melete version · build {n}",
+  "upd.card.availSub": "Your data stays in place",
+  "upd.card.down": "Downloading the new version",
+  "upd.card.ready": "Build {n} downloaded",
+  "upd.card.readySub": "Just install it, your data stays",
+  "upd.card.build": "Build {n} is being built",
   "page.gdrive": "Google Drive",
   "page.gdrive.sub": "Sync your own devices",
   "gd.how": "All data and files live in the Melete folder on Google Drive. Another device signed in the same way gets the same history. Everything works offline; syncing happens later.",

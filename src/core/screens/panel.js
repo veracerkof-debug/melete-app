@@ -709,6 +709,14 @@ function dockHTML(st) {
     (st.dockOrder ? '<button class="cell act center" data-dockreset>' + t('dock.resetDef') + '</button>' : '') + '</div><p class="ftr">' + t('dock.ftr') + '</p>';
 }
 
+function updCell(app) {
+  const U = app.updater;
+  if (!U || !U.platform) return '';
+  const st = U.state, news = (st.st === 'avail' && !U.skipped) || st.st === 'down' || st.st === 'ready';
+  const sub = st.st === 'ready' ? t('upd.card.ready', { n: st.info.build }) : st.st === 'down' ? t('upd.card.down') : news ? t('upd.card.avail', { n: st.info.build }) : t('upd.sub', { b: U.build || '—', ch: t(U.channel === 'dev' ? 'upd.dev' : 'upd.pre') });
+  return '<div class="group"><button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + esc(sub) + '</span></span>' + (news ? '<i class="rdot" aria-hidden="true"></i>' : '') + CHEV + '</button></div>';
+}
+
 function rootHTML(app) {
   const cellA = (act, hue, ic, name, sub) => '<button class="cell" data-act="' + act + '"><span class="ticon" style="' + iconBg(app.store.state.settings, hue) + '">' + ic + '</span><span class="grow">' + name + '<span class="psub">' + sub + '</span></span>' + CHEV + '</button>';
   const all = app.store.sessions(), n = app.store.songs().length, weeks = streakInfo(all, app.store.state.settings).weeks;
@@ -724,6 +732,8 @@ function rootHTML(app) {
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
+    // обновление — наверху, под профилем (слово автора 25.11.2026: раньше было в самом низу); точка — есть новая версия
+    updCell(app) +
     // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
     (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
@@ -732,9 +742,8 @@ function rootHTML(app) {
       return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +
     (short ? '<div class="group" style="margin-top:12px"><button class="cell act center" data-act="moreset" aria-expanded="' + moreOpen + '">' + t(moreOpen ? 'panel.less' : 'panel.more') + '</button></div>' : '') +
-    ((DEV && VARIANTS.length) || (app.updater && app.updater.platform) ? '<div class="group" style="margin-top:20px">' +
+    (DEV && VARIANTS.length ? '<div class="group" style="margin-top:20px">' +
       (DEV && VARIANTS.length ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
-      (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
       '</div>' : '') +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : isDesktop() ? 'panel.kindWin' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';

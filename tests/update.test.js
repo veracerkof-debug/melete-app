@@ -33,12 +33,11 @@ describe('update: релиз канала', () => {
     expect(isNewer({ build: 251 }, 0)).toBe(false);
     expect(isNewer(null, 250)).toBe(false);
   });
-  it('проверка сама — раз в сутки и только в «автоматически»', () => {
+  it('проверка сама — раз в полчаса, в любом режиме', () => {
     const now = Date.now();
-    expect(due({}, now, 'auto')).toBe(true);
-    expect(due({ at: now - 3600e3 }, now, 'auto')).toBe(false);
-    expect(due({ at: now - 25 * 3600e3 }, now, 'auto')).toBe(true);
-    expect(due({}, now, 'button')).toBe(false);
+    expect(due({}, now)).toBe(true);
+    expect(due({ at: now - 10 * 60e3 }, now)).toBe(false); // раз в полчаса
+    expect(due({ at: now - 31 * 60e3 }, now)).toBe(true);
     expect(modeOf({})).toBe('auto');
     expect(modeOf({ updMode: 'button' })).toBe('button');
   });
