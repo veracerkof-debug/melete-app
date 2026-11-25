@@ -2907,6 +2907,8 @@
   "ai.instr": "Extra instruction",
   "ai.instrPh": "For example: answer briefly, write genres in English",
   "ai.open": "Open chat",
+  "ai.setup": "Chat with the AI",
+  "ai.settingsBtn": "AI settings",
   "ai.wipe": "Erase key and history",
   "ai.wipeAsk": "The address, key, settings and chat history will be deleted from this device.",
   "ai.wipeYes": "Erase",

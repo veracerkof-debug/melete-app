@@ -15,10 +15,13 @@ test('нейросеть: чат с предложением — примени�
     app.render();
   }, REPLY);
   await page.waitForTimeout(500);
-  // лицо маскота ведёт в чат, когда он подключён
-  const face = page.locator('.mascotb[data-act="aichat"]'); await expect(face).toBeVisible();
+  // лицо маскота рядом с таймером ведёт в чат, когда он подключён; в шапке чата — кнопка настроек нейросети
+  const face = page.locator('.topbar .hai[data-act="aichat"]'); await expect(face).toBeVisible();
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/home-ai.png' });
   await face.click(); await page.waitForTimeout(500);
   await expect(page.locator('.aichat')).toBeVisible();
+  await expect(page.locator('.snav [data-ai="settings"]')).toBeVisible();
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/chat-head.png' });
   await expect(page.locator('[data-aictx]')).toContainText('Песни'); // видно, что уйдёт в запрос
   await page.fill('[data-aiin]', 'Поправь жанр у песни'); await page.click('[data-ai="send"]');
   await expect(page.locator('.aip')).toBeVisible({ timeout: 8000 });

@@ -2868,6 +2868,8 @@
   "ai.instr": "Qoʻshimcha koʻrsatma",
   "ai.instrPh": "Masalan: qisqa javob berish, janrlarni oʻzbekcha yozish",
   "ai.open": "Chatni ochish",
+  "ai.setup": "Neyrotarmoq bilan suhbat",
+  "ai.settingsBtn": "Neyrotarmoq sozlamalari",
   "ai.wipe": "Kalit va tarixni oʻchirish",
   "ai.wipeAsk": "Manzil, kalit, sozlamalar va chat tarixi shu qurilmadan oʻchiriladi.",
   "ai.wipeYes": "Oʻchirish",

@@ -17,6 +17,17 @@ import { studyCard } from './study.js';
 import { dueSongs } from '../review.js';
 
 // Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
+// Лицо маскота рядом с таймером (слово автора 25.11.2026): касание открывает чат с нейросетью (если ИИ на этом устройстве доступен; не подключён —
+// сразу настройки нейросети). Настроение лица — как у маскота на главной
+function aiBtn(app) {
+  const st = app.store.state.settings;
+  if (!app.ai || !app.ai.avail || st.toolsOnly) return '';
+  const face = hasMascot() ? mascotSVG(moodNow(app), { size: 30, ring: false }) : '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6l-4 3.5V17H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>';
+  return '<button class="hai" data-act="aichat" aria-label="' + esc(t(app.ai.ready() ? 'ai.open' : 'ai.setup')) + '">' + face + '</button>';
+}
+// Кнопки рядом с профилем: таймер и чат с нейросетью
+const leftBtns = (app) => pomoBtn(app) + aiBtn(app);
+
 function pomoBtn(app) {
   const st = app.store.state.settings, po = app.pomodoro, m = moduleById('timer');
   if (!m || !isOn(st, 'timer') || st.toolsOnly) return '';
@@ -205,7 +216,7 @@ function homeMonoHTML(app) {
     (!plain && ss.total ? '<span class="mm num">' + fmtDur(ss.total) + '</span>' : s.artist ? '<span class="mm">' + esc(s.artist) + '</span>' : '') + '</button>' +
     '<button class="mplay" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + ARROW + '</button></div>').join('') + '</div>'
     : '');
-  return '<div class="mono-home">' + topbar(logoHTML(), pomoBtn(app)) + blocks(st, P) + '</div>';
+  return '<div class="mono-home">' + topbar(logoHTML(), leftBtns(app)) + blocks(st, P) + '</div>';
 }
 
 // Перерыв по расписанию: «Перерыв до 20 нояб.» (или своё название перерыва)
@@ -271,7 +282,7 @@ export function homeHTML(app) {
       return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
         '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
     }).join('') + '</div>');
-  return topbar(logoHTML(), pomoBtn(app)) + '<div class="hlist">' + blocks(st, P) + '</div>';
+  return topbar(logoHTML(), leftBtns(app)) + '<div class="hlist">' + blocks(st, P) + '</div>';
 }
 
 // Долгое нажатие на инструмент (главная — быстрый доступ, вкладка «Инструменты»): меню у кнопки —
