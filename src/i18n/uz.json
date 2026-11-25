@@ -2988,5 +2988,7 @@
   "ai.by": "Javob beryapti: {name}",
   "ai.cat.media": "Mediateka yozuvlari",
   "ai.cat.media.sub": "Nomi, tonallik, temp, akkordlar va boʻlimlar — ovozsiz va matnsiz",
-  "ai.prop.rec": "Taklif: yozuv tahrirlari"
+  "ai.prop.rec": "Taklif: yozuv tahrirlari",
+  "home.freeStart": "Erkin mashq",
+  "home.ringOpen": "Maqsad va hafta kunlari"
 }

@@ -506,7 +506,7 @@ function exportICS(app) {
 /* ---------- на других экранах ---------- */
 
 // Главная: ближайшие события на неделю (до двух)
-export function nextEventsHTML(app) {
+export function nextEventsHTML(app, { stage: withStage = true } = {}) {
   const all = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i);
   // сцена одной кнопкой (есть сет-лист с песнями)
   // кнопка «Сцена» — всегда, когда есть песни: событие не обязательно, без него открывается рабочая сцена (слово автора 22.11.2026)
@@ -515,7 +515,7 @@ export function nextEventsHTML(app) {
   const o = all[0], c = cal(app);
   const line = o ? '<b>' + esc(titleOf(c, o.ev)) + '</b><small>' + esc(relDate(o.start) + ', ' + timeTxt(o)) + '</small>' : '<b>' + esc(t('cal.title')) + '</b><small>' + esc(t('cal.emptyTitle')) + '</small>';
   const more = all.length > 1 ? '<i class="hcalmore">+' + (all.length - 1) + '</i>' : '';
-  return '<div class="hcalrow"><button class="hcal" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><span class="hcali" aria-hidden="true">' + TAB_ICONS.calendar + '</span><span class="hcalt">' + line + '</span>' + more + '<span class="hcalgo" aria-hidden="true">›</span></button>' + stage + '</div>';
+  return '<div class="hcalrow"><button class="hcal" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><span class="hcali" aria-hidden="true">' + TAB_ICONS.calendar + '</span><span class="hcalt">' + line + '</span>' + more + '<span class="hcalgo" aria-hidden="true">›</span></button>' + (withStage ? stage : '') + '</div>';
 }
 
 // Песня: её события (ближайшие полгода) и «+ событие» с этой песней

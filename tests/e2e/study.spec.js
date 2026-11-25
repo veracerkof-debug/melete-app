@@ -43,7 +43,7 @@ test('главная: между быстрым доступом и учёбой
   await melete.open({ settings: { study: { goals: { ear: 60 } } } });
   const gap = await page.evaluate(() => {
     const q = document.querySelector('.qgrid').getBoundingClientRect(), s = document.querySelector('.hstudy').getBoundingClientRect();
-    return s.top - q.bottom;
+    return Math.max(s.top - q.bottom, q.top - s.bottom); // блоки могут стоять в любом порядке: зазор между ними, а не знак
   });
   expect(gap).toBeGreaterThanOrEqual(10);
   void errors;

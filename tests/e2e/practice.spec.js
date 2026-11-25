@@ -141,7 +141,7 @@ test('отчёт для педагога: из статистики — карт
   await melete.open({ songs: [{ id: 's1', title: 'Этюд', createdAt: 1 }] });
   await page.evaluate(() => { const S = window.__melete.store; S.addSession({ id: 'x1', type: 'song', songId: 's1', start: Date.now() - 3600000, end: Date.now() - 1800000, dur: 1800, bpm: 90, note: 'Ровнее', mode: 'normal' }); });
   await melete.tab('home');
-  await melete.click('.hlink[data-pp="stats"]');
+  await melete.click('.htb[data-pp="stats"]');
   await page.waitForSelector('[data-teacher]', { timeout: 5000 });
   await melete.click('[data-teacher]');
   await expect(page.locator('.trimg')).toHaveAttribute('src', /blob:/, { timeout: 5000 });
