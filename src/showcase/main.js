@@ -2,7 +2,7 @@
 // табами, нотами, записями, видео, календарём и историей занятий почти за два года, — чтобы посмотреть, как приложение
 // выглядит в работе. В APK и в обычную веб-версию не попадает (vite.config.js, .github/workflows/web.yml), данные —
 // отдельно от настоящих (ns.js), всё помечено как демонстрация. Решение автора — DECISIONS.md, 2026-10.
-import './ns.js';
+import { scenario } from './ns.js';
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../ui/session.css';
@@ -17,6 +17,7 @@ import { t } from '../i18n/index.js';
 import { toast } from '../ui/index.js';
 import { wavBlob, SR } from './showdemo.js';
 import { runSeeds, seedFlag } from './seeds/index.js';
+import { studentSettings, teacherSettings, studentBook, STUDENT_CODE } from './scenarios.js';
 
 const LS = 'practice.v1', DONE = 'showcase.seeded.v1', DONE_SHOW = 'showcase.seeded.show.v1'; // второй признак — пульт выступления и студия: у тех, кто заходил раньше, набор добавится один раз
 const lang = (() => { const l = (navigator.language || 'ru').slice(0, 2); return l === 'uz' ? 'uz' : l === 'en' ? 'en' : 'ru'; })();
@@ -25,10 +26,15 @@ const NAME = { ru: 'Анна', en: 'Anna', uz: 'Anna' };
 // До запуска: музыкант уже «зарегистрирован» — сразу главный экран, без вопросов
 function preseed() {
   if (localStorage.getItem(LS)) return;
-  const createdAt = new Date(2025, 0, 2).getTime();
-  const profile = { name: NAME[lang], instruments: ['guitar', 'vocal'], level: 'amateur', priorHours: 420, createdAt };
+  const now = Date.now(), DAYMS = 86400000;
+  // сценарии демонстрации (слово автора 25.11.2026): профессионал (по умолчанию), ученик, учитель; у каждого своё хранилище (ns.js)
+  const sc = scenario === 'student' ? studentSettings(lang, now) : scenario === 'teacher' ? teacherSettings(lang, now) : null;
+  const createdAt = scenario === 'student' ? now - 56 * DAYMS : new Date(2025, 0, 2).getTime();
+  const profile = sc ? { ...sc.profile, createdAt } : { name: NAME[lang], instruments: ['guitar', 'vocal'], level: 'amateur', priorHours: 420, createdAt };
   profile.sig = profileSeal(profile);
-  localStorage.setItem(LS, JSON.stringify({ version: 1, songs: [], sessions: [], updatedAt: 0, settings: { configured: true, tosOk: TOS_VER, lang, webHello: true, upOk: 2, profile, goalMin: 300, showcase: true } }));
+  const extra = sc ? Object.fromEntries(Object.entries(sc).filter(([k]) => k !== 'profile')) : {};
+  localStorage.setItem(LS, JSON.stringify({ version: 1, songs: [], sessions: [], updatedAt: 0, settings: { configured: true, tosOk: TOS_VER, lang, webHello: true, upOk: 2, profile, goalMin: 300, showcase: true, ...extra } }));
+  if (scenario === 'student') localStorage.setItem('practice.v1.tools', JSON.stringify({ book: { book: studentBook() } }));
 }
 
 /* ---------- история занятий (выдуманная, но живая на вид) ---------- */
@@ -44,7 +50,7 @@ const TOOLS = [['metro', 5], ['tuner', 3], ['piano', 2], ['theory', 2], ['drone'
 const pick = (r, list) => { const tot = list.reduce((a, x) => a + x[1], 0); let v = r() * tot; for (const x of list) { v -= x[1]; if (v <= 0) return x[0]; } return list[0][0]; };
 
 // Сессии с from по to (мс). songs — [{ id, since (доля пути, когда начали учить), weight, targetBpm, currentBpm }]
-function demoSessions(songs, from, to, seed = 7) {
+function demoSessions(songs, from, to, seed = 7, tools = TOOLS) {
   const r = rng(seed), out = [], span = to - from;
   // отпуска и болезни: несколько пауз по 5–16 дней
   // (не в последние три недели: на главной и в неделе должно быть видно живое занятие)
@@ -79,7 +85,7 @@ function demoSessions(songs, from, to, seed = 7) {
         // темп растёт от 70 % целевого к нынешнему
         const k2 = Math.min(1, (prog - s.since) / Math.max(0.05, 1 - s.since)), bpm = Math.round(s.targetBpm * 0.7 + (s.currentBpm - s.targetBpm * 0.7) * k2 + (r() - 0.5) * 4);
         rec = { type: 'song', songId: s.id, tool: null, bpm };
-      } else if (kind < 0.8) rec = { type: 'tool', songId: null, tool: pick(r, TOOLS), bpm: null };
+      } else if (kind < 0.8) rec = { type: 'tool', songId: null, tool: pick(r, tools), bpm: null };
       else rec = { type: 'free', songId: null, tool: null, bpm: null, tag: null };
       // занятие инструментом — до 40 минут; конец сдвигается вместе с длительностью, чтобы история и статистика сходились
       const d = rec.type === 'tool' ? Math.min(dur, 40 * 60) : dur, e2 = end - (dur - d) * 1000;
@@ -113,10 +119,11 @@ async function seed(app) {
   const store = app.store, st = store.state, now = Date.now();
   await addDemo(app, t);
   const songs = st.songs.filter((s) => isDemo(s.id) && !s.deleted);
-  const from = Math.max(EARLIEST + DAY, new Date(2025, 0, 3).getTime());
+  const from = scenario === 'student' ? Math.max(EARLIEST + DAY, now - 55 * DAY) : Math.max(EARLIEST + DAY, new Date(2025, 0, 3).getTime());
+  const toolsFor = scenario === 'student' ? [['metro', 6], ['tuner', 3], ['piano', 1], ['theory', 1], ['voice', 1]] : TOOLS;
   if (songs.length && !st.sessions.some((x) => isDemo(x.id))) {
     const def = (s) => DEMO_SONGS.find((x) => x.title === s.title) || {};
-    st.sessions.push(...demoSessions(songs.map((s) => ({ id: s.id, since: def(s).since ?? 0.5, weight: def(s).weight ?? 1, targetBpm: s.targetBpm, currentBpm: s.currentBpm })), from, now - 3600000));
+    st.sessions.push(...demoSessions(songs.map((s) => ({ id: s.id, since: def(s).since ?? 0.5, weight: def(s).weight ?? 1, targetBpm: s.targetBpm, currentBpm: s.currentBpm })), from, now - 3600000, 7, toolsFor));
     songs.forEach((s) => { s.createdAt = from + (def(s).since ?? 0.5) * (now - from); });
   }
   // видео — духовный гимн, поэтому только в церковном режиме (по умолчанию демонстрация светская, как и приложение)
@@ -157,4 +164,4 @@ else {
   // флаг — только после удачного посева: иначе сбой посреди оставлял демо полупустым навсегда (аудит 13.11.2026)
   seed(app).then(() => seedToolsOnce()).then(() => { localStorage.setItem(DONE, '1'); location.reload(); }, (e) => { console.error('showcase seed', e); });
 }
-if (localStorage.getItem(DONE)) setTimeout(() => toast(t('show.hello')), 1200);
+if (localStorage.getItem(DONE)) setTimeout(() => toast(scenario === 'student' ? t('show.helloStudent', { code: STUDENT_CODE }) : scenario === 'teacher' ? t('show.helloTeacher') : t('show.hello')), 1200);

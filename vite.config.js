@@ -52,6 +52,12 @@ function showcase(mode) {
   };
 }
 
+// Чистая веб-версия ученика (vite build --mode student): точка входа src/student/main.js — режим «Ученик» включён, данных нет
+function studentEntry(mode) {
+  if (mode !== 'student') return null;
+  return { name: 'student-entry', transformIndexHtml: { order: 'pre', handler: (html) => html.replace('/src/main.js', '/src/student/main.js').replace('<title>Melete</title>', '<title>Melete — ученик</title>') } };
+}
+
 // Веб-версия (vite build --mode web): тяжёлые файлы (модели, банки звуков) из public/models/ в сборку не идут —
 // такие модули (heavy: true) показывают заглушку, сами они есть в APK и Windows (DECISIONS: размер и тяжёлые модули)
 // ONNX Runtime Web (разделение на дорожки): файлы WebAssembly пакета кладутся в сборку по пути ort/…; в режиме
@@ -108,7 +114,8 @@ const lightWeb = (mode) => {
 };
 // …и сам рабочий поток (собирается отдельной сборкой — свой список плагинов, worker.plugins)
 const lightWebWorker = (mode) => (mode !== 'web' ? null : { name: 'light-web-worker', load(id) { if (id.endsWith('/src/audio/stems.worker.js') || id.endsWith('/src/audio/mir.worker.js')) return "self.onmessage = () => self.postMessage({ k: 'error', msg: 'web' });"; } }); // public/ копируется целиком — лишнее убираем после сборки
-export default defineConfig(({ mode }) => ({
+// «student» — чистая веб-версия ученика (своя точка входа, src/student/): во всём остальном та же лёгкая веб-сборка, поэтому для плагинов она «web»
+export default defineConfig(({ mode: rawMode }) => { const mode = rawMode === 'student' ? 'web' : rawMode; return ({
   // относительные пути — нужны для Capacitor (этап 3)
   base: './',
   // дата сборки: часы устройства раньше неё — сбиты (src/core/clock.js)
@@ -119,7 +126,7 @@ export default defineConfig(({ mode }) => ({
     // пакеты, которых нет в этой сборке (скачиваются по кнопке)
     __PACKED__: JSON.stringify(PACKED.map((p) => p.id)) },
   // alphaTab: воркеры для отрисовки и звука; шрифт и звуковой банк подключает модуль «Табы» сам (только нужные файлы)
-  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), prodCsp(), showcase(mode), lightWeb(mode), ortAssets(mode), packsOut()],
+  plugins: [alphaTab({ assetOutputDir: false }), pdfjsAssets(), mediapipe(), prodCsp(), showcase(mode), studentEntry(rawMode), lightWeb(mode), ortAssets(mode), packsOut()],
   // onnxruntime-web грузит свои .wasm сам (ort/…), предсборка Vite ему не нужна
   optimizeDeps: { exclude: ['@mediapipe/tasks-vision', 'onnxruntime-web', '@ffmpeg/ffmpeg', '@ffmpeg/util'] }, // FFmpeg: рабочий поток обёртки — своим файлом
   // MediaPipe не собирается заранее: иначе в режиме разработки вырезка статистики (build/mediapipe.js) не сработает
@@ -143,4 +150,4 @@ export default defineConfig(({ mode }) => ({
     // вторая страница — гостевая страница раздачи в своей сети (docs/guest-web.md): её отдаёт программа для Windows
     rollupOptions: { input: { main: 'index.html', guest: 'guest.html' } },
   },
-}));
+}); });

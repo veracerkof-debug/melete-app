@@ -53,7 +53,7 @@ import { planSheet } from './bibleplan.js';
 import { pcOf, pair, syncNow, forgetPc, oldPc, fpCheck, PORT, devsOf, forgetDev, meshClient, setLinkMode } from '../sync.js';
 import { modeOf, modeName } from '../linkmode.js';
 import { setlistsOf } from '../guest.js';
-import { WEB } from '../platform.js';
+import { WEB, SHOWCASE } from '../platform.js';
 import { studentHTML, studentClick } from './studentpage.js';
 import { classHTML, classClick } from './classpage.js';
 import { normHTML, normClick, normChange } from './bibleread.js';
@@ -720,6 +720,8 @@ function rootHTML(app) {
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
+    // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
+    (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
       const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)));
       const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
@@ -896,6 +898,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="ens"]')) { app.ensemble(); return; }
       if (g('[data-act="sndout"]')) { outSheet(app, () => render()); return; }
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
+      if (g('[data-act="scen"]')) { globalThis.__SCEN__.set(g('[data-act="scen"]').dataset.v); location.reload(); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }

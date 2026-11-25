@@ -1,0 +1,43 @@
+# Чистая веб-версия ученика (слово автора 25.11.2026): приложение сразу в режиме «Ученик», без выдуманных данных — как будет у настоящего ученика:
+# https://veracerkof-debug.github.io/melete-app/student/
+# Собирается из main на каждую отправку. Меняет только student/ в gh-pages (build/pages-deploy.sh), корень и show/ не трогает.
+name: Student web (GitHub Pages /student)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', 'android/**', 'src-tauri/**', 'launcher/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# общая очередь с web.yml и showcase.yml: все выкладки пишут в одну ветку gh-pages
+concurrency:
+  group: web-pages
+  cancel-in-progress: false
+
+jobs:
+  student:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости
+        run: npm ci
+
+      - name: Сборка (ученик)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx vite build --mode student --outDir dist-student
+
+      - name: Выложить в gh-pages (student/; корень и show/ остаются)
+        env:
+          PAGES_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          build/pages-deploy.sh dist-student student "Ученик: сборка ${{ github.run_number }} (${GITHUB_SHA::7})"
