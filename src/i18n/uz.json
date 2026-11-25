@@ -1,4 +1,8 @@
 {
+  "upd.nt.ready": "Yangi versiya yuklandi · {n}-yigʻma",
+  "upd.nt.readyBody": "Oʻrnatish uchun bosing. Maʼlumotlar joyida qoladi.",
+  "upd.nt.avail": "Yangi versiya mavjud · {n}-yigʻma",
+  "upd.nt.availBody": "Melete’ni oching va «Yangilash»ni bosing.",
   "upd.card.avail": "Melete’ning yangi versiyasi · {n}-yigʻma",
   "upd.card.availSub": "Maʼlumotlar joyida qoladi",
   "upd.card.down": "Yangi versiya yuklanmoqda",

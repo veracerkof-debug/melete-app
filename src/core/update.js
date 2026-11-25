@@ -13,6 +13,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isDesktop } from './desktop.js';
 import { log, logErr, markUpdateQuit } from './log.js';
+import { showUpdateNotice, hideUpdateNotice } from './updnotify.js';
 
 export const REPO = 'veracerkof-debug/melete-app';
 export const CHANNEL = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? 'pre' : 'dev';
@@ -79,7 +80,16 @@ export function createUpdater(app) {
   const subs = new Set();
   // st: idle | checking | none | avail | down | ready | err; f — доля скачанного; wait — ждёт Wi-Fi
   let s = { st: 'idle', info: null, f: 0, wait: false, at: readMem().at || 0 };
-  const set = (p) => { s = { ...s, ...p }; subs.forEach((fn) => { try { fn(s); } catch { /* */ } }); };
+  const hidden = () => typeof document !== 'undefined' && document.visibilityState !== 'visible';
+  // Свёрнутое приложение: скачано — уведомление «установите» (касание ставит сразу); есть новая, а режим «по кнопке» — «откройте и обновите».
+  // На экране — карточка и красная точка. Вернулись в приложение или версия ушла из «скачана» — уведомление убирается
+  const onStage = (was) => {
+    if (platform !== 'android') return;
+    if (s.st === 'ready' && was !== 'ready' && hidden() && s.info) showUpdateNotice('ready', s.info.build);
+    else if (s.st === 'avail' && was !== 'avail' && hidden() && mode() === 'button' && s.info && !(readMem().skip === s.info.build)) showUpdateNotice('avail', s.info.build);
+    else if (was === 'ready' && s.st !== 'ready') hideUpdateNotice();
+  };
+  const set = (p) => { const was = s.st; s = { ...s, ...p }; if (s.st !== was) onStage(was); subs.forEach((fn) => { try { fn(s); } catch { /* */ } }); };
   const mode = () => modeOf(app.store.state.settings);
   let poll = 0, path = '';
 
@@ -207,11 +217,17 @@ export function createUpdater(app) {
     // «Обновления» открыты — проверить, если последняя проверка старше пары минут
     retry() { if (platform && BUILD && s.st === 'err' && !(s.limit > Date.now())) check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); },
     fresh() { if (platform && (s.st === 'idle' || s.st === 'none' || (s.st === 'err' && !(s.limit > Date.now()))) && Date.now() - (s.at || 0) > 120000) check({ building: true }); },
+    // Касание уведомления: скачано — ставить сразу; иначе просто главная (там карточка). → 'allow' | 'ok' | null
+    async tap() {
+      hideUpdateNotice();
+      if (s.st !== 'ready') return null;
+      try { return await install(); } catch (e) { logErr('upd', e); return null; }
+    },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   };
   if (platform && typeof window !== 'undefined') {
     window.addEventListener('online', () => setTimeout(() => api.retry(), 3000));
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) api.retry(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { api.retry(); hideUpdateNotice(); } });
     const nc = typeof navigator !== 'undefined' && navigator.connection;
     if (nc && nc.addEventListener) nc.addEventListener('change', () => setTimeout(() => api.retry(), 3000));
   }

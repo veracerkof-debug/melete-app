@@ -1,4 +1,8 @@
 {
+  "upd.nt.ready": "New version downloaded · build {n}",
+  "upd.nt.readyBody": "Tap to install. Your data stays in place.",
+  "upd.nt.avail": "A new version is available · build {n}",
+  "upd.nt.availBody": "Open Melete and tap “Update”.",
   "upd.card.avail": "New Melete version · build {n}",
   "upd.card.availSub": "Your data stays in place",
   "upd.card.down": "Downloading the new version",
