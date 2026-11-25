@@ -21,6 +21,7 @@ export const SPEC = {
 // Контуры корпуса: [x — половина ширины, yd — вниз от верха], мм
 export const CLASSIC_R = [[0, 0], [40, 2], [75, 12], [110, 35], [132, 75], [140, 120], [133, 165], [118, 205], [112, 240], [122, 275], [150, 315], [175, 355], [183, 400], [165, 445], [110, 473], [0, 480]];
 export const DREAD_R = [[0, 0], [45, 3], [90, 15], [125, 40], [144, 85], [146, 130], [135, 170], [124, 205], [122, 235], [132, 270], [160, 315], [190, 360], [200, 410], [185, 465], [120, 500], [0, 508]];
+export const DREAD_CUT_R = [[0, 0], [34, 4], [56, 24], [66, 54], [80, 86], [106, 114], [132, 138], [140, 165], [132, 195], [124, 215], [122, 235], [132, 270], [160, 315], [190, 360], [200, 410], [185, 465], [120, 500], [0, 508]];
 export const ELEC_R = [[0, 40], [30, 36], [66, 18], [92, 2], [112, -6], [124, 6], [122, 36], [114, 66], [118, 98], [140, 128], [158, 170], [163, 225], [156, 285], [132, 335], [88, 372], [0, 386]];
 export const ELEC_L = [[-30, 36], [-70, 12], [-112, -28], [-138, -42], [-148, -24], [-138, 14], [-122, 56], [-114, 92], [-126, 122], [-152, 158], [-162, 208], [-160, 262], [-146, 312], [-118, 350], [-84, 372]];
 export const fretPos = (n, S = 650) => S * (1 - Math.pow(2, -n / 12)); // расстояние лада от порожка
@@ -59,7 +60,7 @@ function woodTex(THREE, o) {
 
 // Свои цвета дерева и железа: реальные породы, не зависят от темы (на тёмном и светлом фоне читаются одинаково)
 const WOOD = {
-  spruce: { base: [0.91, 0.78, 0.55], dark: [0.55, 0.38, 0.2] }, sunTop: [[0.93, 0.8, 0.55], [0.86, 0.52, 0.18], [0.22, 0.07, 0.03]],
+  spruce: { base: [0.91, 0.78, 0.55], dark: [0.55, 0.38, 0.2] }, sunTop: [[0.93, 0.8, 0.55], [0.9, 0.68, 0.4], [0.5, 0.28, 0.12]],
   mahogany: { base: [0.43, 0.21, 0.12], dark: [0.14, 0.06, 0.03], amp: 0.6 }, rosewood: { base: [0.35, 0.17, 0.1], dark: [0.1, 0.04, 0.03], amp: 0.6 },
   cedar: { base: [0.66, 0.4, 0.24], dark: [0.35, 0.18, 0.1] }, maple: { base: [0.88, 0.74, 0.5], dark: [0.6, 0.4, 0.18], amp: 0.3 },
   ebony: { base: [0.13, 0.09, 0.07], dark: [0.02, 0.01, 0.01], amp: 0.5 }, tort: { base: [0.28, 0.1, 0.04], dark: [0.05, 0.02, 0.01], blobs: [0.85, 0.45, 0.1] },
@@ -83,8 +84,8 @@ export function buildGuitar(THREE, _C, type) {
   const bbox = (pts) => { const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]; };
   const metal = mat(CHROME, { metalness: 0.95, roughness: 0.22 }), pale = mat(CREAM, { roughness: 0.4 }), blk = mat(BLACK, { roughness: 0.35 }), ink = mat([0.02, 0.02, 0.02], { roughness: 1 });
   const neckW = type === 'classic' ? WOOD.cedar : type === 'acoustic' ? WOOD.mahogany : WOOD.maple;
-  const neckM = wmat(neckW, { gloss: type === 'electric' }, { tile: [60, 420] }), headM = wmat(type === 'classic' ? WOOD.rosewood : type === 'acoustic' ? WOOD.rosewood : WOOD.maple, { gloss: true }, { tile: [70, 300] });
-  const fbM = wmat(type === 'classic' ? WOOD.ebony : WOOD.rosewood, {}, { tile: [60, 400] });
+  const neckM = wmat(neckW, { gloss: type === 'electric' }, { tile: [60, 420] }), headM = wmat(type === 'electric' ? WOOD.maple : WOOD.ebony, { gloss: true }, { tile: [70, 300] });
+  const fbM = wmat(type === 'electric' ? WOOD.rosewood : WOOD.ebony, {}, { tile: [60, 400] });
   // — геометрия грифа: наклон назад так, чтобы струна шла над ладами с зазором
   const fbTop = sp.zfj - 1.7, woodTop = fbTop - 5, zj = sp.zfj + 2.2, zn = (zj - sp.zs * J / S) / (1 - J / S), ang = ((zn - 1.2) - sp.zfj) / J;
   const tp = (x, y, z) => { const dy = y + J, cs = Math.cos(ang), sn = Math.sin(ang); return new V3(x, -J + dy * cs - z * sn, dy * sn + z * cs); };
@@ -116,7 +117,7 @@ export function buildGuitar(THREE, _C, type) {
   const hd = (m, x, y, z, off) => { m.position.set(x, y, z); m.userData = { part: 'head', off }; headG.add(m); set.push(m); return m; };
   if (type === 'acoustic') { const inl = new THREE.Mesh(new THREE.CircleGeometry(11, 4), pale); inl.rotation.z = Math.PI / 4; hd(inl, 0, 170, woodTop + 0.35, [0, 150, -70]); }
   const peg = (m, x, y, z) => { m.position.set(x, y, z); m.userData = { part: 'pegs', off: [0, 150, 70] }; pegG.add(m); set.push(m); if (!reps.pegs) reps.pegs = m; return m; };
-  const knob = mat(type === 'classic' ? CREAM : [0.9, 0.88, 0.8], { roughness: 0.3 });
+  const knob = mat(type === 'classic' ? CREAM : type === 'acoustic' ? CHROME : [0.9, 0.88, 0.8], type === 'acoustic' ? { metalness: 0.9, roughness: 0.25 } : { roughness: 0.3 });
   if (type === 'classic') {
     [-1, 1].forEach((sd) => [55, 100, 145].forEach((y) => {
       const sh = cyl(2.2, 52, metal, 12); sh.rotation.z = Math.PI / 2; peg(sh, sd * 38, y, woodTop - 7);
@@ -155,7 +156,7 @@ export function buildGuitar(THREE, _C, type) {
   // — корпус
   const bodyTop = J, dk = mat([0.1, 0.06, 0.05], { roughness: 0.35 });
   if (type === 'classic' || type === 'acoustic') {
-    const dd = type === 'classic', O = outlinePts(THREE, bodyTop, dd ? CLASSIC_R : DREAD_R), dep = dd ? 95 : 108, th = 3.2, cy = -bodyTop - (dd ? 165 : 150), hr = dd ? 43 : 50, bb = bbox(O);
+    const dd = type === 'classic', O = dd ? outlinePts(THREE, bodyTop, CLASSIC_R) : outlinePts(THREE, bodyTop, DREAD_CUT_R, DREAD_R.slice(1, -1).map(([x, y]) => [-x, y])), dep = dd ? 95 : 108, th = 3.2, cy = -bodyTop - (dd ? 165 : 150), hr = dd ? 43 : 50, bb = bbox(O);
     const topS = new THREE.Shape(O), hole = new THREE.Path(); hole.absarc(0, cy, hr, 0, Math.PI * 2, true); topS.holes.push(hole);
     const topM = wmat(WOOD.spruce, { gloss: !dd }, dd ? { box: bb, amp: 0.3 } : { box: bb, sun: WOOD.sunTop, amp: 0.3 });
     const sideM = wmat(dd ? WOOD.rosewood : WOOD.mahogany, { gloss: true }, { tile: [140, 260] });
@@ -165,18 +166,19 @@ export function buildGuitar(THREE, _C, type) {
     // кант и вставка: кремовый кант с тёмной линией
     add('top', at(ring(O, 0.988, 0.9, pale), 0, 0, 0), dd ? [0, 0, 55] : [0, 0, 70]); add('top', at(ring(scaled(O, 0.988), 0.992, 0.95, dk), 0, 0, 0.05), dd ? [0, 0, 55] : [0, 0, 70]);
     add('body', at(ring(O, 0.988, 0.9, pale), 0, 0, -dep - 0.9), dd ? [0, 0, -135] : [0, 0, -150]);
+    if (!dd) add('body', at(cyl(4, 8, metal, 16), 0, -bodyTop - 508 + 1, -dep / 2), [0, -40, -150]).rotation.z = 0;
     const z = dd ? 110 : 125;
     [[hr, hr + 3, dk], [hr + 3, hr + 6, pale], [hr + 6, hr + 8, dk], [hr + 8, hr + 12, mat([0.8, 0.62, 0.32], { roughness: 0.5 })], [hr + 12, hr + 14, dk]].forEach(([a, b, m], i) => add('hole', at(new THREE.Mesh(new THREE.RingGeometry(a, b, 72), m), 0, cy, 0.25 + i * 0.02), [0, 0, z], i === 0));
     add('hole', at(new THREE.Mesh(new THREE.CircleGeometry(hr + 14, 48), ink), 0, cy, -dep + th + 0.5), [0, 0, dd ? 0 : -150]);
     if (!dd) { // пружины: X-образные, поперечные, кольцо у отверстия
       const wd = wmat(WOOD.spruce, {}, { tile: [60, 200] }), bar = (x1, y1, x2, y2, w, h) => { const len = Math.hypot(x2 - x1, y2 - y1), m = box(len, w, h, wd); m.position.set((x1 + x2) / 2, -bodyTop - (y1 + y2) / 2, -th - h / 2); m.rotation.z = Math.atan2(-(y2 - y1), x2 - x1); return add('braces', m, [0, 0, 25]); };
-      bar(-112, 330, 112, 100, 14, 8); bar(112, 330, -112, 100, 14, 8); bar(-40, 345, -115, 440, 10, 6); bar(40, 345, 115, 440, 10, 6); bar(-100, 45, 100, 45, 12, 6); bar(-125, 295, 125, 295, 9, 5);
+      bar(-108, 100, 108, 330, 14, 8); bar(96, 104, -108, 330, 14, 8); bar(-40, 345, -115, 440, 10, 6); bar(40, 345, 115, 440, 10, 6); bar(-100, 45, 45, 45, 12, 6); bar(-125, 295, 125, 295, 9, 5);
       add('braces', at(new THREE.Mesh(new THREE.RingGeometry(hr + 2, hr + 12, 48), wd), 0, cy, -th - 0.5), [0, 0, 25]);
       const pg = new THREE.Shape(new THREE.SplineCurve([[60, 130], [88, 124], [112, 146], [120, 190], [106, 232], [80, 248], [62, 222], [57, 170]].map(([x, yd]) => new THREE.Vector2(x, -bodyTop - yd))).getPoints(40));
-      add('pickguard', at(new THREE.Mesh(ext(pg, 0.9, 0.25), wmat(WOOD.tort, { gloss: true }, { tile: [120, 120] })), 0, 0, 0.1), [0, 0, 135], true);
+      add('pickguard', at(new THREE.Mesh(ext(pg, 0.9, 0.25), wmat({ base: [0.04, 0.04, 0.045], dark: [0, 0, 0], amp: 0.1 }, { gloss: true }, { tile: [120, 120] })), 0, 0, 0.1), [0, 0, 135], true);
     }
     const bw = dd ? 190 : 175, bs = new THREE.Shape(); bs.moveTo(-bw / 2, -S - 24); bs.lineTo(bw / 2, -S - 24); bs.quadraticCurveTo(bw / 2 + 10, -S - 2, bw / 2 - 14, -S + 9); bs.lineTo(-bw / 2 + 14, -S + 9); bs.quadraticCurveTo(-bw / 2 - 10, -S - 2, -bw / 2, -S - 24);
-    add('bridge', at(new THREE.Mesh(ext(bs, 7, 1, 3), wmat(WOOD.rosewood, { gloss: true }, { tile: [100, 100] })), 0, 0, 0), dd ? [0, 0, 150] : [0, 0, 175], true);
+    add('bridge', at(new THREE.Mesh(ext(bs, 7, 1, 3), wmat(WOOD.ebony, { gloss: true }, { tile: [100, 100] })), 0, 0, 0), dd ? [0, 0, 150] : [0, 0, 175], true);
     add('bridge', at(box(dd ? 80 : 76, 3, 5.5, pale), 0, -S, 10.5), dd ? [0, 0, 160] : [0, 0, 185]);
     if (!dd) for (let i = 0; i < 6; i++) { add('bridge', at(cyl(2.8, 9, pale, 12), -27 + i * 10.8, -S - 14, 11), [0, 0, 185]); add('bridge', at(cyl(0.9, 9.4, dk, 8), -27 + i * 10.8, -S - 14, 11.1), [0, 0, 186]); }
     else for (let i = 0; i < 6; i++) add('bridge', at(box(3, 8, 1.4, pale), -29 + i * 11.6, -S - 15, 7.5), [0, 0, 155]);

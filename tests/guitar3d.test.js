@@ -1,6 +1,6 @@
 // 3D-модель гитары (book/labs10.js): размеры по спецификациям, тексты частей есть во всех языках
 import { describe, it, expect } from 'vitest';
-import { TYPES, PARTS, SPEC, partKey, fretPos, widthAt, outlinePts, CLASSIC_R, DREAD_R, ELEC_R, ELEC_L } from '../src/modules/book/book/labs10.js';
+import { TYPES, PARTS, SPEC, partKey, fretPos, widthAt, outlinePts, CLASSIC_R, DREAD_R, DREAD_CUT_R, ELEC_R, ELEC_L } from '../src/modules/book/book/labs10.js';
 import * as THREE from 'three';
 import { S as ru } from '../src/modules/book/book/lang/ru/pg.js';
 import { S as en } from '../src/modules/book/book/lang/en/pg.js';
@@ -11,7 +11,7 @@ describe('гитара в 3D', () => {
   it('ширина грифа растёт от порожка', () => { for (const k of TYPES) { const s = SPEC[k]; expect(widthAt(s, 0)).toBe(s.nutW); expect(widthAt(s, s.endAt)).toBe(s.endW); } });
   it('контуры корпуса: длина и ширины по спецификациям', () => {
     const ext = (R, L) => { const p = outlinePts(THREE, 0, R, L, 200); const xs = p.map((v) => v.x), ys = p.map((v) => v.y); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }; };
-    const c = ext(CLASSIC_R), a = ext(DREAD_R), e = ext(ELEC_R, ELEC_L);
+    const c = ext(CLASSIC_R), a = ext(DREAD_CUT_R, DREAD_R.slice(1, -1).map(([x, y]) => [-x, y])), e = ext(ELEC_R, ELEC_L);
     expect(c.h).toBeGreaterThan(470); expect(c.h).toBeLessThan(490); expect(c.w).toBeGreaterThan(360); expect(c.w).toBeLessThan(375);
     expect(a.h).toBeGreaterThan(500); expect(a.h).toBeLessThan(515); expect(a.w).toBeGreaterThan(395); expect(a.w).toBeLessThan(410);
     expect(e.w).toBeGreaterThan(310); expect(e.w).toBeLessThan(330); expect(e.h).toBeGreaterThan(410); expect(e.h).toBeLessThan(440);
