@@ -311,6 +311,10 @@ export function createShell(app, root) {
   // Переходы с главного экрана Ἐλάχιστον (bridge.js): занятие — идущее или сразу свободная практика; Библия — на чтении дня
   app.route = (r) => {
     if (r === 'free' || r === 'session') { if (app.active) app.session.open(); else app.startSession('free'); return true; }
+    if (r === 'update') { // касание уведомления «Новая версия скачана»: установка сразу
+      if (app.updater && app.updater.tap) app.updater.tap().then((x) => { if (x === 'allow') toast(t('upd.allow')); });
+      return true;
+    }
     if (r === 'bible' && app.store.state.settings.church) {
       const rd = readingFor(app.store.state.settings.bible, Date.now());
       if (rd && rd.keys[0]) { const [code, ch] = rd.keys[0].split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }

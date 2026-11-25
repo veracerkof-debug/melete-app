@@ -26,7 +26,4 @@ describe('касание уведомления', () => {
     expect(resolveTarget(null, byId)).toBeNull();
     expect(resolveTarget({ go: 'xx' }, byId)).toEqual({ do: 'home' });
   });
-  it('уведомление об обновлении: касание — установка', () => {
-    expect(resolveTarget({ go: 'update' }, () => null)).toEqual({ do: 'update' });
-  });
 });

@@ -150,7 +150,7 @@ export function updateSheet(app) {
     el.addEventListener('change', (e) => { if (e.target.dataset.sw === 'updMobile') { st.updMobile = e.target.checked; app.store.settingsChanged(); if (st.updMobile && U.state.st === 'down' && U.state.wait) U.now(); } });
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-seg="updMode"] [data-v]'); if (!b) return;
-      st.updMode = b.dataset.v; app.store.settingsChanged(); sh.update();
+      st.updMode = b.dataset.v; app.store.settingsChanged(); U.configure(); sh.update();
     });
   }, { onClose: () => { if (un) un(); clearInterval(tick); } });
   return sh;

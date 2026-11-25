@@ -13,7 +13,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isDesktop } from './desktop.js';
 import { log, logErr, markUpdateQuit } from './log.js';
-import { showUpdateNotice, hideUpdateNotice } from './updnotify.js';
+import { t } from '../i18n/index.js';
 
 export const REPO = 'veracerkof-debug/melete-app';
 export const CHANNEL = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? 'pre' : 'dev';
@@ -80,16 +80,15 @@ export function createUpdater(app) {
   const subs = new Set();
   // st: idle | checking | none | avail | down | ready | err; f — доля скачанного; wait — ждёт Wi-Fi
   let s = { st: 'idle', info: null, f: 0, wait: false, at: readMem().at || 0 };
-  const hidden = () => typeof document !== 'undefined' && document.visibilityState !== 'visible';
-  // Свёрнутое приложение: скачано — уведомление «установите» (касание ставит сразу); есть новая, а режим «по кнопке» — «откройте и обновите».
-  // На экране — карточка и красная точка. Вернулись в приложение или версия ушла из «скачана» — уведомление убирается
-  const onStage = (was) => {
-    if (platform !== 'android') return;
-    if (s.st === 'ready' && was !== 'ready' && hidden() && s.info) showUpdateNotice('ready', s.info.build);
-    else if (s.st === 'avail' && was !== 'avail' && hidden() && mode() === 'button' && s.info && !(readMem().skip === s.info.build)) showUpdateNotice('avail', s.info.build);
-    else if (was === 'ready' && s.st !== 'ready') hideUpdateNotice();
+  // Уведомления об обновлении шлёт Android сам, и при закрытом приложении (UpdateBg.java, UpdateReceiver). Разрешение на них — один раз,
+  // когда на глазах пошло скачивание (системное окно; позже уведомление «скачано» без него не придёт)
+  const askNotify = async () => {
+    if (platform !== 'android' || readMem().nperm) return;
+    writeMem({ ...readMem(), nperm: 1 });
+    try { const { LocalNotifications: LN } = await import('@capacitor/local-notifications'); const p = await LN.checkPermissions(); if (p.display === 'prompt' || p.display === 'prompt-with-rationale') await LN.requestPermissions(); } catch { /* нет плагина */ }
   };
-  const set = (p) => { const was = s.st; s = { ...s, ...p }; if (s.st !== was) onStage(was); subs.forEach((fn) => { try { fn(s); } catch { /* */ } }); };
+  const onStage = () => { if (s.st === 'down' && typeof document !== 'undefined' && document.visibilityState === 'visible') askNotify(); };
+  const set = (p) => { const was = s.st; s = { ...s, ...p }; if (s.st !== was) onStage(); subs.forEach((fn) => { try { fn(s); } catch { /* */ } }); };
   const mode = () => modeOf(app.store.state.settings);
   let poll = 0, path = '';
 
@@ -144,21 +143,39 @@ export function createUpdater(app) {
 
   // mobile — качать и по мобильной сети: настройка «Мобильная сеть» (settings.updMobile) или «Сейчас» на полосе ожидания Wi-Fi
   let dlId = null;
+  // Android: фон мог уже скачать (или качает) эту сборку при закрытом приложении — подхватить, не качая заново
+  async function adopt() {
+    if (platform !== 'android') return null;
+    try { return await Native.pending(); } catch { return null; }
+  }
+  // Настройки для фона (Android): канал, номер, режим, тексты уведомлений на языке приложения — проверка раз в 30 минут идёт и при закрытом приложении
+  function configure() {
+    if (platform !== 'android' || !BUILD) return;
+    const x = (k) => t(k, { n: '{n}' });
+    Native.configure({ channel: CHANNEL, build: BUILD, apkName: FILES.android[CHANNEL], auto: mode() === 'auto',
+      texts: { txtReadyT: x('upd.nt.ready'), txtReadyB: t('upd.nt.readyBody'), txtAvailT: x('upd.nt.avail'), txtAvailB: t('upd.nt.availBody'), chName: 'Melete · ' + t('upd.title') } }).catch(() => {});
+  }
+  function watch(id) {
+    clearInterval(poll);
+    poll = setInterval(async () => {
+      let r; try { r = await Native.status({ id }); } catch (e) { clearInterval(poll); logErr('upd', e); set({ st: 'avail' }); return; }
+      if (r.status === 'done') { clearInterval(poll); log('upd', 'скачано: сборка ' + (s.info && s.info.build)); set({ st: 'ready', f: 1 }); }
+      else if (r.status === 'fail') { clearInterval(poll); log('upd', 'скачивание не удалось: ' + (r.reason || ''), 'w'); set({ st: 'err' }); }
+      else set({ f: r.total > 0 ? r.got / r.total : 0, wait: r.status === 'wait' });
+    }, 1000);
+  }
   async function download({ mobile = !!app.store.state.settings.updMobile } = {}) {
     if (s.st !== 'avail' || !s.info) return;
+    const pend = await adopt();
+    if (pend && pend.build === s.info.build && pend.state === 'ready') { log('upd', 'сборка ' + pend.build + ' уже скачана фоном'); set({ st: 'ready', f: 1 }); return; }
+    if (pend && pend.build === s.info.build && pend.state === 'down' && !mobile) { log('upd', 'сборка ' + pend.build + ' качается фоном — подхватываю'); set({ st: 'down', f: 0, wait: false }); dlId = pend.id; watch(pend.id); return; }
     set({ st: 'down', f: 0, wait: false });
     try {
       if (platform === 'android') {
         log('upd', 'скачивание: ' + (mobile ? 'любая сеть (своё)' : 'только Wi-Fi (системный загрузчик)'));
-        const { id } = await Native.download({ url: s.info.url, wifi: !mobile });
+        const { id } = await Native.download({ url: s.info.url, wifi: !mobile, build: s.info.build });
         dlId = id;
-        clearInterval(poll);
-        poll = setInterval(async () => {
-          let r; try { r = await Native.status({ id }); } catch (e) { clearInterval(poll); logErr('upd', e); set({ st: 'avail' }); return; }
-          if (r.status === 'done') { clearInterval(poll); log('upd', 'скачано: сборка ' + s.info.build); set({ st: 'ready', f: 1 }); }
-          else if (r.status === 'fail') { clearInterval(poll); log('upd', 'скачивание не удалось: ' + (r.reason || ''), 'w'); set({ st: 'err' }); }
-          else set({ f: r.total > 0 ? r.got / r.total : 0, wait: r.status === 'wait' });
-        }, 1000);
+        watch(id);
       } else {
         const { invoke } = await import('@tauri-apps/api/core'), { listen } = await import('@tauri-apps/api/event');
         const un = await listen('update-progress', (e) => set({ f: +e.payload || 0 }));
@@ -206,8 +223,11 @@ export function createUpdater(app) {
     async now() { if (platform !== 'android' || s.st !== 'down' || !s.wait) return; clearInterval(poll); try { await Native.cancel({ id: dlId }); } catch { /* уже нет */ } set({ st: 'avail' }); log('upd', 'скачивание по мобильной сети'); return download({ mobile: true }); },
     // при запуске: тихо, раз в сутки, не мешая звуку и занятию — через полминуты после старта
     // «автоматически»: найдено новое — сразу скачать (Android ждёт Wi-Fi сам)
+    configure,
     auto() {
       if (!platform || !BUILD) return;
+      configure();
+      adopt().then((pend) => { if (pend && pend.state === 'ready' && s.st === 'idle') set({ st: 'ready', f: 1, info: { build: pend.build, url: '', size: 0 } }); });
       const go = () => { if (!due(readMem(), Date.now()) || s.st === 'ready' || s.st === 'down') return; check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); };
       setTimeout(go, 30000);
       setInterval(go, 10 * 60000);
@@ -219,7 +239,11 @@ export function createUpdater(app) {
     fresh() { if (platform && (s.st === 'idle' || s.st === 'none' || (s.st === 'err' && !(s.limit > Date.now()))) && Date.now() - (s.at || 0) > 120000) check({ building: true }); },
     // Касание уведомления: скачано — ставить сразу; иначе просто главная (там карточка). → 'allow' | 'ok' | null
     async tap() {
-      hideUpdateNotice();
+      if (platform === 'android') { try { Native.hideNotice(); } catch { /* */ } }
+      if (s.st !== 'ready') { // приложение запущено касанием, а своя проверка ещё не было: скачанное фоном берём из файла
+        const pend = await adopt();
+        if (pend && pend.state === 'ready') set({ st: 'ready', f: 1, info: { build: pend.build, url: '', size: 0 } });
+      }
       if (s.st !== 'ready') return null;
       try { return await install(); } catch (e) { logErr('upd', e); return null; }
     },
@@ -227,7 +251,7 @@ export function createUpdater(app) {
   };
   if (platform && typeof window !== 'undefined') {
     window.addEventListener('online', () => setTimeout(() => api.retry(), 3000));
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) { api.retry(); hideUpdateNotice(); } });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) api.retry(); });
     const nc = typeof navigator !== 'undefined' && navigator.connection;
     if (nc && nc.addEventListener) nc.addEventListener('change', () => setTimeout(() => api.retry(), 3000));
   }

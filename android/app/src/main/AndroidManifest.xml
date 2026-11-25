@@ -60,6 +60,13 @@
 
         </activity>
 
+        <!-- Скачивание обновления закончилось (UpdateReceiver): уведомление «Новая версия скачана» -->
+        <receiver android:name=".UpdateReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
         <!-- Мост с главным экраном: запрос состояния и ▶/❚❚ (адресные рассылки; данных наружу не отдаёт) -->
         <receiver android:name=".BridgeReceiver" android:exported="true">
             <intent-filter>

@@ -1,4 +1,5 @@
 {
+  "lic.work.sub": "Android: background update check while the app is closed",
   "upd.nt.ready": "New version downloaded · build {n}",
   "upd.nt.readyBody": "Tap to install. Your data stays in place.",
   "upd.nt.avail": "A new version is available · build {n}",

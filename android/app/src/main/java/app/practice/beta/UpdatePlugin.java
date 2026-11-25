@@ -14,11 +14,17 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 // Обновление из GitHub (src/core/update.js): по Wi-Fi APK скачивает системный загрузчик (ход — в уведомлении,
 // переживает сворачивание); по мобильной сети — само приложение (системный держит большие файлы до Wi-Fi), ставит системный установщик — одно касание «Установить» (молча ставить себя вне Play
@@ -26,6 +32,46 @@ import java.net.URL;
 @CapacitorPlugin(name = "Update")
 public class UpdatePlugin extends Plugin {
     private static final String NAME = "melete-update.apk";
+
+    // Своё скачивание идёт (мобильная сеть): фоновой проверке не мешать
+    static boolean ownBusy() { return ownState == 1; }
+
+    @Override
+    protected void handleOnResume() { super.handleOnResume(); UpdateBg.foreground = true; UpdateBg.hideNotice(getContext()); }
+    @Override
+    protected void handleOnPause() { super.handleOnPause(); UpdateBg.foreground = false; }
+
+    // Настройки для фона (приложение закрыто — страницы нет): { channel, build, apkName, auto, texts{…} } → ставит проверку раз в 30 минут
+    @PluginMethod
+    public void configure(PluginCall call) {
+        try {
+            android.content.SharedPreferences.Editor e = UpdateBg.prefs(getContext()).edit();
+            e.putString("channel", call.getString("channel", "")).putString("apkName", call.getString("apkName", ""))
+             .putInt("build", call.getInt("build", 0)).putBoolean("auto", !Boolean.FALSE.equals(call.getBoolean("auto", true)));
+            JSObject t = call.getObject("texts");
+            if (t != null) {
+                String[] keys = { "txtReadyT", "txtReadyB", "txtAvailT", "txtAvailB", "chName" };
+                for (String k : keys) { String v = t.getString(k); if (v != null) e.putString(k, v); }
+            }
+            e.apply();
+            PeriodicWorkRequest w = new PeriodicWorkRequest.Builder(UpdateWorker.class, 30, TimeUnit.MINUTES)
+                .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build();
+            WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork("melete-update", ExistingPeriodicWorkPolicy.KEEP, w);
+            call.resolve();
+        } catch (Exception ex) { call.reject(String.valueOf(ex.getMessage())); }
+    }
+
+    // → { state: ready | down | none, build, id }: скачано фоном (или идёт) — страница подхватывает, не качая заново
+    @PluginMethod
+    public void pending(PluginCall call) {
+        String[] s = UpdateBg.pending(getContext());
+        JSObject o = new JSObject();
+        o.put("state", s[0]); o.put("build", Long.parseLong(s[1])); o.put("id", Long.parseLong(s[2]));
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void hideNotice(PluginCall call) { UpdateBg.hideNotice(getContext()); call.resolve(); }
 
     private File apk() { return new File(getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), NAME); }
     private DownloadManager dm() { return (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE); }
@@ -114,6 +160,8 @@ public class UpdatePlugin extends Plugin {
             r.setDestinationInExternalFilesDir(getContext(), Environment.DIRECTORY_DOWNLOADS, NAME);
             r.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
             long id = dm().enqueue(r);
+            Integer b = call.getInt("build");
+            if (b != null && b > 0) UpdateBg.prefs(getContext()).edit().putLong("dlId", id).putLong("dlBuild", b).apply(); // приёмник покажет «скачано», даже если приложение свернули
             JSObject o = new JSObject();
             o.put("id", id);
             call.resolve(o);

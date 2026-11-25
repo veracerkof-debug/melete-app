@@ -35,7 +35,7 @@ public class BridgePlugin extends Plugin {
         String r = i.getStringExtra("melete.route");
         Uri u = i.getData();
         if (r == null && u != null && "melete".equals(u.getScheme())) r = u.getHost();
-        return r == null || !r.matches("free|session|bible") ? null : r;
+        return r == null || !r.matches("free|session|bible|update") ? null : r;
     }
 
     @Override

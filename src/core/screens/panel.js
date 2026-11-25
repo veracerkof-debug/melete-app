@@ -1157,6 +1157,7 @@ export function legalSheet(kind) {
       lic('qrcode-generator', t('lic.qr.sub'), '<p>© Kazuhiko Arase</p><p>' + t('lic.mit') + '</p><p>' + t('lic.qr.tm') + '</p>') +
       lic('Signalsmith Stretch', t('lic.stretch.sub'), '<p>© Signalsmith Audio Ltd</p><p>' + t('lic.mit') + '</p>') +
       lic('ONNX Runtime', t('lic.ort.sub'), '<p>© Microsoft Corporation</p><p>' + t('lic.mit') + '</p>') +
+      lic('AndroidX WorkManager', t('lic.work.sub'), '<p>© The Android Open Source Project</p><p>Apache License 2.0</p>') +
       lic('HTDemucs', t('lic.dm.sub'), '<p>© Meta Platforms, Inc. ' + t('lic.andContrib') + '</p><p>' + t('lic.dm.text') + '</p>') +
       lic('Basic Pitch', t('lic.bp.sub'), '<p>© Spotify AB</p><p>' + t('lic.bp.text') + '</p>') +
       lic('S-KEY', t('lic.skey.sub'), '<p>© Deezer SA</p><p>' + t('lic.mit') + '</p>') +
