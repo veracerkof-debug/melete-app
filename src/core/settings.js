@@ -79,10 +79,11 @@ export const mascotOf = (settings) => (['m', 'f', 'none'].includes(settings && s
 // Размер всех элементов: 'auto' (по короткой стороне экрана) или число от SCALE_MIN до SCALE_MAX.
 // Делается через ширину области просмотра (meta viewport): шире область — мельче элементы, уже — крупнее;
 // раскладка, касания и холсты работают как обычно (на Android нужен useWideViewPort — MainActivity).
-export const SCALE_MIN = 0.8, SCALE_MAX = 1.3, SCALE_STEP = 0.05;
-// Авто: маленькие телефоны — мельче, обычные — как задумано, планшеты — чуть крупнее (смотрят издалека)
-// (обычные телефоны 340–600 — без подмены области просмотра: она давала сдвиг экрана на телефонах с кнопками навигации)
-export const autoScale = (short) => (short < 340 ? 0.9 : short < 600 ? 1 : 1.1);
+export const SCALE_MIN = 0.7, SCALE_MAX = 1.4, SCALE_STEP = 0.05;
+// Авто (слово автора 25.11.2026: «в целом на 10 % мельче»): на экране помещается больше — абзац и схема не уходят за экран.
+// Маленькие телефоны — 80 %, обычные — 90 %, планшеты — 100 %; вручную от 70 до 140 % (Оформление → Размер интерфейса).
+// Ширина раскладки считается по видимой области (без полосы кнопок навигации) и пересчитывается — экран не «едет»
+export const autoScale = (short) => (short < 340 ? 0.8 : short < 600 ? 0.9 : 1);
 export const screenShort = () => (typeof screen !== 'undefined' ? Math.min(screen.width, screen.height) : 390);
 export function uiScale(settings, short = screenShort()) {
   const s = +settings.uiScale;
