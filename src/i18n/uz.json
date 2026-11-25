@@ -2711,5 +2711,19 @@
   "stage.p.clap": "Chapak",
   "stage.p.hat": "Xet",
   "stage.p.crash": "Krash",
-  "stage.err.pads": "zarbli"
+  "stage.err.pads": "zarbli",
+  "page.student": "Oʻquvchi",
+  "page.student.sub": "Oʻqituvchi kodi bilan bloklash",
+  "stu.code": "Oʻqituvchi kodi (4–12 raqam)",
+  "stu.gen": "Tasodifiy kod",
+  "stu.lock": "Oʻquvchi rejimini yoqish",
+  "stu.hint": "Kodsiz rejimdan chiqib boʻlmaydi. Kodni yozib qoʻying: u blokni ochadi.",
+  "stu.on": "Oʻquvchi rejimi yoqilgan. Mavjud: {base}. Qolganini oʻqituvchi ochadi.",
+  "stu.opened": "Oʻqituvchi ochgan",
+  "stu.unlock": "Blokni ochish",
+  "stu.unlockBtn": "Ochish",
+  "stu.bad": "Kod: 4 dan 12 gacha raqam",
+  "stu.locked": "Rejim yoqildi. Kod: {code}",
+  "stu.unlocked": "Blok ochildi",
+  "stu.wrong": "Kod notoʻgʻri"
 }

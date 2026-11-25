@@ -2,6 +2,7 @@
 import { setBare, setMascotGender } from '../i18n/index.js';
 import { setMascotLook } from '../ui/mascot.js';
 import { watchMarks } from '../ui/marks.js';
+import { studentAllows } from './student.js';
 import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText, bgVars } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
@@ -14,7 +15,7 @@ export const toolsOnly = (settings) => !!settings.toolsOnly;
 // В режиме «Только инструменты» функции ядра (ударный режим, значок мастерства) выключены
 // Модули церковного режима (settings.church) — видны только в нём
 export const CHURCH_MODULES = ['bible', 'together'];
-export const isOn = (settings, id) => !((settings.off || {})[id]) && !(settings.toolsOnly && CORE_FEATURES.includes(id)) && !(CHURCH_MODULES.includes(id) && !settings.church);
+export const isOn = (settings, id) => !((settings.off || {})[id]) && !(settings.toolsOnly && CORE_FEATURES.includes(id)) && !(CHURCH_MODULES.includes(id) && !settings.church) && studentAllows(settings, id);
 
 export function setFeature(store, id, on) {
   const st = store.state.settings, off = st.off || (st.off = {});

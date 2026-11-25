@@ -2750,5 +2750,19 @@
   "stage.p.clap": "Clap",
   "stage.p.hat": "Hat",
   "stage.p.crash": "Crash",
-  "stage.err.pads": "drums"
+  "stage.err.pads": "drums",
+  "page.student": "Student",
+  "page.student.sub": "Locked with a teacher code",
+  "stu.code": "Teacher code (4–12 digits)",
+  "stu.gen": "Random code",
+  "stu.lock": "Turn on student mode",
+  "stu.hint": "Without the code the mode cannot be left. Write the code down: it unlocks the app.",
+  "stu.on": "Student mode is on. Available: {base}. The rest is opened by the teacher.",
+  "stu.opened": "Opened by teacher",
+  "stu.unlock": "Unlock",
+  "stu.unlockBtn": "Unlock",
+  "stu.bad": "Code: 4 to 12 digits",
+  "stu.locked": "Mode on. Code: {code}",
+  "stu.unlocked": "Unlocked",
+  "stu.wrong": "Wrong code"
 }
