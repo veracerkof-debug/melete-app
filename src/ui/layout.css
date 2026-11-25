@@ -17,6 +17,20 @@
 .lyx button{width:38px;height:28px;border-radius:9px;font-size:15px;background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink)}
 .lyh{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);width:96px;height:28px;border-radius:14px;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);touch-action:none;cursor:ns-resize;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .lyh i{width:30px;height:8px;border-top:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.9}
+/* Ряд из двух блоков (только когда пользователь поставил блоки рядом; один блок в ряду — разметка прежняя) */
+.lyr{display:flex;flex:none;min-width:0;align-items:stretch}
+.lyr.lyg{flex:1 1 auto;min-height:0}
+.lyr>.lyb{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.lyr>.lyb:first-child{flex:0 0 calc(var(--lw,.5) * 100%)}
+.lyr>.lyb:last-child{flex:1 1 0}
+@media (orientation:landscape) and (max-height:520px){.lyr:not(.ed),.lyr:not(.ed)>.lyb{display:contents}} /* сетка сцены на боку — блоки по одному, как были */
+.lyr.ed{position:relative;gap:8px;margin:8px 10px 16px}
+.lyr.ed>.lyb.ed{margin:0;overflow:visible}
+.lyr.ed>.lyb.ed:first-child{flex-basis:calc(var(--lw,.5) * 100% - 4px)}
+.lyv{position:absolute;top:0;bottom:0;left:calc(var(--lw,.5) * 100%);width:32px;margin-left:-16px;display:grid;place-items:center;z-index:4;touch-action:none;cursor:ew-resize}
+.lyv i{width:22px;height:60px;border-radius:11px;background:var(--tint);box-shadow:0 2px 8px rgba(0,0,0,.25);position:relative}
+.lyv i::before,.lyv i::after{content:"";position:absolute;top:18px;bottom:18px;width:2px;border-radius:1px;background:var(--on-tint);opacity:.9}
+.lyv i::before{left:7px}.lyv i::after{right:7px}
 /* подсказка общей громкости при жесте двумя пальцами */
 .volhud{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + var(--sp-5));transform:translateX(-50%);z-index:200;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-pill);background:var(--ink);color:var(--bg);font:600 var(--fs-5) var(--font);pointer-events:none;opacity:0;transition:opacity var(--t-fast, .15s)}
 .volhud.on{opacity:.92}

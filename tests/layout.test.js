@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scaleOf, clampScale, normLay, arrange, moveBlock, isEditing, setEditing, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
+import { scaleOf, clampScale, normLay, arrange, moveBlock, isEditing, setEditing, rowsOf, togglePair, clampRatio, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
 
 const B = [{ id: 'a', html: '<i>A</i>' }, { id: 'b', html: '<i>B</i>' }, { id: 'c', html: '<i>C</i>' }, { id: 'd', html: '' }];
 const ids = ['a', 'b', 'c', 'd'];
@@ -43,5 +43,43 @@ describe('порядок', () => {
     expect(moveBlock(lay, ids, 'a', 1)).toBe(true);
     expect(lay.order).toEqual(['c', 'a', 'd', 'b']);
     expect(moveBlock(lay, ids, 'c', -1)).toBe(false); // выше некуда
+  });
+});
+
+describe('несколько блоков рядом', () => {
+  it('ряды: пара встаёт в ряд с предыдущим, если тот один; третий — новая строка', () => {
+    const lay = { pair: { b: 0.4, c: 0.5 } };
+    expect(rowsOf(lay, ids)).toEqual([['a', 'b'], ['c'], ['d']]); // у c запись есть, но предыдущий ряд уже на двоих
+    expect(rowsOf({ pair: { d: 0.5 } }, ids)).toEqual([['a'], ['b'], ['c', 'd']]);
+    expect(rowsOf({}, ids)).toEqual([['a'], ['b'], ['c'], ['d']]);
+    expect(rowsOf({ pair: { a: 0.5 } }, ids)).toEqual([['a'], ['b'], ['c'], ['d']]); // у первого предыдущего нет
+  });
+  it('togglePair: встать рядом, разделить; нельзя к парному и первому', () => {
+    const lay = {};
+    expect(togglePair(lay, ids, 'a')).toBe(false);
+    expect(togglePair(lay, ids, 'b')).toBe(true); expect(lay.pair).toEqual({ b: 0.5 });
+    expect(togglePair(lay, ids, 'c')).toBe(false); // предыдущий ряд уже на двоих
+    expect(togglePair(lay, ids, 'a')).toBe(true); expect(lay.pair).toEqual({}); // с первого члена — разделить
+    expect(togglePair(lay, ids, 'c')).toBe(true); expect(togglePair(lay, ids, 'c')).toBe(true); expect(lay.pair).toEqual({});
+  });
+  it('доля ширины: 25–75 %, мусор отбрасывается', () => {
+    expect(clampRatio(0.1)).toBe(0.25); expect(clampRatio(0.9)).toBe(0.75); expect(clampRatio(0.456)).toBe(0.46);
+    expect(normLay({ pair: { b: 'x', c: 0.9, d: 0.5 } }).pair).toEqual({ c: 0.75, d: 0.5 });
+  });
+  it('ряд сдвигается целиком', () => {
+    const lay = { pair: { b: 0.5 } }; // [a b] [c] [d]
+    expect(moveBlock(lay, ids, 'b', 1)).toBe(true); expect(lay.order).toEqual(['c', 'a', 'b', 'd']);
+    expect(moveBlock(lay, ids, 'd', -1)).toBe(true); expect(lay.order).toEqual(['c', 'd', 'a', 'b']);
+  });
+  it('arrange: без пар разметка прежняя (нет рядов); пара — один ряд с долей', () => {
+    expect(arrange(B, {})).not.toContain('lyr');
+    const h = arrange(B, { pair: { b: 0.4 } }, { grow: ['b'] });
+    expect(h).toContain('<div class="lyr lyg" style="--lw:0.4">'); expect((h.match(/class="lyb"/g) || []).length).toBe(3);
+    expect(h.indexOf('data-lb="a"')).toBeLessThan(h.indexOf('data-lb="b"'));
+  });
+  it('arrange в правке: планка ширины и кнопка «рядом/разделить»', () => {
+    const lay = { pair: { b: 0.5 } }; setEditing(lay, true);
+    const h = arrange(B, lay, { t: (k) => k });
+    expect(h).toContain('data-ly="width"'); expect(h).toContain('lay.unpair'); expect(h).toContain('lay.pair');
   });
 });

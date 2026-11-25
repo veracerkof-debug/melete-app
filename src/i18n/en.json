@@ -3034,5 +3034,9 @@
   "lay.done": "Done",
   "lay.grip": "Block size",
   "lay.hiddenList": "Hidden — bring back",
-  "lay.busy": "Stop the sound first: the layout can be changed only in silence"
+  "lay.busy": "Stop the sound first: the layout can be changed only in silence",
+  "lay.pair": "Next to the previous one",
+  "lay.unpair": "Split the row",
+  "lay.width": "Width of the blocks in the row",
+  "lay.rotate": "Turn the phone upright: the layout is edited in portrait"
 }

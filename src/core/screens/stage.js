@@ -663,7 +663,7 @@ export function openStage(app, evId, i = 0) {
       '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
       '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      arrange(stageBlocks, stageLay, { t, name: (id) => t('lay.s.' + id) }) +
+      arrange(stageBlocks, stageLay, { t, name: (id) => t('lay.s.' + id), grow: ['main'] }) +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
     const ls = S.el.querySelector('.sgsongs');
