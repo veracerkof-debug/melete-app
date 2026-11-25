@@ -1,8 +1,22 @@
-/* блоки раскладки: обёртка не участвует в сетке; размер блока — переменная --lz */
+/* Раскладка сцены и пульта (ui/layout.js). Обычный вид: обёртка блока не участвует в сетке, размер — переменная --lz. */
 .lyb{display:contents}
-.lyb[data-lz="s"]{--lz:.8}
-.lyb[data-lz="m"]{--lz:1}
-.lyb[data-lz="l"]{--lz:1.25}
+/* Правка: блоки — рамки с планкой размера внизу; содержимое не нажимается, всё остальное экрана остаётся как есть */
+.lyedit{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.lybar{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 10%,transparent)}
+.lybar span{flex:1;min-width:0;font-size:13px;line-height:1.3;color:color-mix(in srgb,var(--ink) 65%,transparent)}
+.lybar button,.lytray button{flex:none;min-height:40px;padding:0 14px;border-radius:12px;font-weight:700;font-size:14px;background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
+.lybar .done{background:var(--tint);color:var(--on-tint)}
+.lytray{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 10px 18px}
+.lytray span{width:100%;font-size:12px;color:color-mix(in srgb,var(--ink) 55%,transparent)}
+.lytray button{border-radius:20px;font-weight:600}
+.lyb.ed{display:flex;flex-direction:column;position:relative;flex:none;margin:8px 10px 16px;padding-top:30px;min-height:70px;border-radius:14px;outline:2px dashed color-mix(in srgb,var(--tint) 70%,transparent);outline-offset:-1px;background:color-mix(in srgb,var(--tint) 7%,transparent)}
+.lyb.ed>.lyi{display:flex;flex-direction:column;min-height:0;pointer-events:none;opacity:.6;overflow:hidden}
+.lyc{position:absolute;top:0;left:0;right:0;height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 12px}
+.lyn{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--tint-text,var(--tint));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lyx{display:flex;gap:4px;flex:none}
+.lyx button{width:38px;height:28px;border-radius:9px;font-size:15px;background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink)}
+.lyh{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);width:96px;height:28px;border-radius:14px;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);touch-action:none;cursor:ns-resize;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.lyh i{width:30px;height:8px;border-top:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.9}
 /* подсказка общей громкости при жесте двумя пальцами */
 .volhud{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + var(--sp-5));transform:translateX(-50%);z-index:200;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-pill);background:var(--ink);color:var(--bg);font:600 var(--fs-5) var(--font);pointer-events:none;opacity:0;transition:opacity var(--t-fast, .15s)}
 .volhud.on{opacity:.92}

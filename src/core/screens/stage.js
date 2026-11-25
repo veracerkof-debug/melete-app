@@ -663,7 +663,7 @@ export function openStage(app, evId, i = 0) {
       '<i class="sgbeat" aria-hidden="true"></i>' + outBtnHTML(app, 'sgout') +
       '<button class="sgic" data-sg="lock" aria-label="' + esc(t('stage.lock')) + '">' + I.lock + '</button>' +
       '<button class="sgic txt" data-sgfs="-2" aria-label="' + esc(t('stage.smaller')) + '">A−</button><button class="sgic txt" data-sgfs="2" aria-label="' + esc(t('stage.bigger')) + '">A+</button></div>' +
-      arrange(stageBlocks, stageLay) +
+      arrange(stageBlocks, stageLay, { t, name: (id) => t('lay.s.' + id) }) +
       (S.locked ? '<div class="sglock"><button class="sgunlock" data-sgunlock aria-label="' + esc(t('stage.unlockHold')) + '">' + I.lock + '<span>' + esc(t('stage.unlockHold')) + '</span></button></div>' : '');
     S.el.classList.toggle('pads', !!S.showPads);
     const ls = S.el.querySelector('.sgsongs');
@@ -835,7 +835,7 @@ export function openStage(app, evId, i = 0) {
   S.el.addEventListener('scroll', onUserScroll, true);
   onHold(S.el, '.sgsongs, .sghead', (el) => stageMenu(el));
   // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js); пэды, клавиши, крутилки, темп, перемотка — со своими жестами, меню у них не открывается
-  bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], input, [role="slider"]');
+  bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t, busy: () => !!(S.playing || audio.metro.running || droneOn() || (app.sounding && app.sounding())) }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], input, [role="slider"]');
   // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
   const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
   let vg = null;

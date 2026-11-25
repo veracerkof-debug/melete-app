@@ -216,7 +216,7 @@ function padsBlocks() {
   return blocks;
 }
 const layOf = (page) => { const L = (S.layout ||= {}); return (L[page] ||= { order: [], hidden: [], size: {} }); };
-const padsHTML = () => arrange(padsBlocks(), layOf('pads'));
+const padsHTML = () => arrange(padsBlocks(), layOf('pads'), { t, name: (id) => t('lay.b.' + id) });
 function numHTML(n, i) {
   const f = fileOf(n.file), a = effAna(n);
   const meta = [
@@ -327,7 +327,7 @@ function deskHTML() {
     { id: 'knobs', html: stripHTML() },
     { id: 'next', html: '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b>' + (nx ? '<span class="shtrn">' + esc([numKey(n) && numKey(nx) ? numKey(n) + ' → ' + numKey(nx) : numKey(nx), numBpm(n) && numBpm(nx) ? numBpm(n) + ' → ' + numBpm(nx) : numBpm(nx) ? numBpm(nx) + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div>' },
   ];
-  return '<div class="shdesk">' + arrange(blocks, layOf('desk')) + '</div>';
+  return '<div class="shdesk">' + arrange(blocks, layOf('desk'), { t, name: (id) => t('lay.b.' + id) }) + '</div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
 function deskPaint(force) {
@@ -932,7 +932,7 @@ export default {
     host.addEventListener('keydown', onKey);
     if (ctx.output) offs.push(ctx.output.bind(host, { cat: 'media' })); // вывод на другое устройство — та же шторка, что в сессии
     // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js)
-    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'now', 'wave', 'cues', 'ctl', 'nknobs', 'knobs', 'next'], name: (id) => t('lay.b.' + id), save, render, t }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
+    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'now', 'wave', 'cues', 'ctl', 'nknobs', 'knobs', 'next'], name: (id) => t('lay.b.' + id), save, render, t, busy: () => !!(ctx.sounding && ctx.sounding()) }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
     // список выступления: влево — плавно перейти к номеру, вправо по проигранному — вернуть; удержать — настройки номера
     offs.push(swipe(host, { min: 50, ok: (e) => { const r = e.target.closest && e.target.closest('[data-pick]'); pickRow = r ? r.dataset.pick : null; return !!r; },
       left: () => { const n = pickRow && pickById(pickRow); if (n) glideTo(n).catch((er) => ctx.logErr(er)); },

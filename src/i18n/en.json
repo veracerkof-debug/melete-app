@@ -3029,5 +3029,10 @@
   "ai.cat.media.sub": "Names, key, tempo, chords and sections — no audio, no lyrics",
   "ai.prop.rec": "Proposal: recording edits",
   "home.freeStart": "Free practice",
-  "home.ringOpen": "Goal and days of the week"
+  "home.ringOpen": "Goal and days of the week",
+  "lay.editHint": "Handle under a block — size; ↑ ↓ — order; ✕ — hide",
+  "lay.done": "Done",
+  "lay.grip": "Block size",
+  "lay.hiddenList": "Hidden — bring back",
+  "lay.busy": "Stop the sound first: the layout can be changed only in silence"
 }

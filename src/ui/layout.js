@@ -1,44 +1,117 @@
-// Раскладка экрана по долгому нажатию (слово автора 22.11.2026): у блока — выше / ниже, мельче / крупнее, скрыть; вернуть скрытое и сбросить вид.
-// Один механизм для сцены и пульта. Хранится в `lay` = { order: [id], hidden: [id], size: { id: 's'|'m'|'l' } } там, где экран хранит свои данные.
-// Блок обёрнут в display:contents — раскладка CSS не меняется, а размер приходит переменной --lz (s .8 · m 1 · l 1.25), которую блок использует сам.
+// Раскладка экрана сцены и пульта звукаря (слова автора 22.11 и 25.11.2026). Один механизм для обоих экранов.
+// Два режима, и граница между ними жёсткая — на сцене надёжность важнее удобства:
+//  • обычный (выступление): раскладка ЗАМОРОЖЕНА — меню у блока нет, размер и порядок не меняются ни случайным касанием,
+//    ни на ходу; вывод разметки такой же, как был до правки (никаких лишних обёрток);
+//  • правка: включается удержанием блока и только в тишине (api.busy — что-то звучит → «остановите звук»). У блока:
+//    размер — тянуть планку внизу (плавно, 0,5–2,2), «выше» / «ниже», «скрыть»; сверху — «Как было» и «Готово»,
+//    внизу — скрытые блоки (касание возвращает). Содержимое блоков в правке не нажимается. «Готово» — вид сохранён и заморожен.
+// Хранится в `lay` = { order: [id], hidden: [id], size: { id: 's'|'m'|'l' | число } } там, где экран хранит свои данные.
+// Блок обёрнут в display:contents — раскладка CSS не меняется, а размер приходит переменной --lz, которую блок использует сам.
 import './layout.css';
-import { holdMenu, onHold } from './hold.js';
+import { onHold } from './hold.js';
+import { toast } from './index.js';
 
-export const SIZES = ['s', 'm', 'l'];
-export const normLay = (lay) => { const o = lay && typeof lay === 'object' ? lay : {}; o.order = Array.isArray(o.order) ? o.order : []; o.hidden = Array.isArray(o.hidden) ? o.hidden : []; o.size = o.size && typeof o.size === 'object' ? o.size : {}; return o; };
+export const SIZES = ['s', 'm', 'l']; // прежние три ступени (остаются в данных и читаются как числа)
+const STEP = { s: 0.8, m: 1, l: 1.25 };
+export const SCALE_MIN = 0.5, SCALE_MAX = 2.2;
+export const clampScale = (v) => Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round(v * 100) / 100));
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? clampScale(v) : STEP[v]);
+// Размер блока числом: ступень или своё значение; нет — 1
+export const scaleOf = (lay, id) => (lay && lay.size && num(lay.size[id])) || 1;
 
-// blocks — [{ id, html }] в порядке по умолчанию → HTML: в порядке пользователя, без скрытых
-export function arrange(blocks, lay) {
+export const normLay = (lay) => {
+  const o = lay && typeof lay === 'object' ? lay : {};
+  o.order = Array.isArray(o.order) ? o.order : [];
+  o.hidden = Array.isArray(o.hidden) ? o.hidden : [];
+  o.size = o.size && typeof o.size === 'object' ? o.size : {};
+  for (const k of Object.keys(o.size)) if (num(o.size[k]) === undefined) delete o.size[k]; // мусор в данных не ломает экран
+  return o;
+};
+
+// Какие экраны сейчас в правке (не хранится: после перезапуска вид всегда заморожен)
+const EDIT = new WeakSet();
+export const isEditing = (lay) => EDIT.has(normLay(lay));
+export const setEditing = (lay, on) => { const o = normLay(lay); if (on) EDIT.add(o); else EDIT.delete(o); };
+
+// Порядок: сохранённый, затем новые блоки по умолчанию
+const orderOf = (lay, ids) => [...lay.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !lay.order.includes(i))];
+
+// blocks — [{ id, html }] в порядке по умолчанию → HTML: в порядке пользователя, без скрытых.
+// opts: { t, name(id) } — подписи нужны только в правке
+export function arrange(blocks, lay, opts = {}) {
   lay = normLay(lay);
-  const ids = blocks.map((b) => b.id), order = [...lay.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !lay.order.includes(i))];
-  return order.map((id) => blocks.find((b) => b.id === id)).filter((b) => b && b.html && !lay.hidden.includes(b.id))
-    .map((b) => '<div class="lyb" data-lb="' + b.id + '" data-lz="' + (lay.size[b.id] || 'm') + '">' + b.html + '</div>').join('');
+  const ids = blocks.map((b) => b.id), editing = EDIT.has(lay), t = opts.t || ((k) => k), name = opts.name || ((id) => id);
+  const shown = orderOf(lay, ids).map((id) => blocks.find((b) => b.id === id)).filter((b) => b && b.html && !lay.hidden.includes(b.id));
+  if (!editing) return shown.map((b) => '<div class="lyb" data-lb="' + b.id + '" style="--lz:' + scaleOf(lay, b.id) + '">' + b.html + '</div>').join('');
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hid = lay.hidden.filter((i) => ids.includes(i) && blocks.find((b) => b.id === i && b.html));
+  return '<div class="lybar" role="toolbar" data-lybar><span>' + esc(t('lay.editHint')) + '</span><button data-ly="reset">' + esc(t('lay.reset')) + '</button><button class="done" data-ly="done">' + esc(t('lay.done')) + '</button></div>' +
+    shown.map((b) => { const z = scaleOf(lay, b.id);
+      return '<div class="lyb ed" data-lb="' + b.id + '" style="--lz:' + z + '"><div class="lyi">' + b.html + '</div>' +
+        '<div class="lyc"><span class="lyn">' + esc(name(b.id)) + '</span><span class="lyx"><button data-ly="up" aria-label="' + esc(t('lay.up')) + '">↑</button><button data-ly="down" aria-label="' + esc(t('lay.down')) + '">↓</button><button data-ly="hide" aria-label="' + esc(t('lay.hide')) + '">✕</button></span></div>' +
+        '<div class="lyh" data-ly="grip" role="slider" aria-label="' + esc(t('lay.grip')) + '" aria-valuemin="' + SCALE_MIN + '" aria-valuemax="' + SCALE_MAX + '" aria-valuenow="' + z + '"><i></i></div></div>'; }).join('') +
+    (hid.length ? '<div class="lytray" data-lybar><span>' + esc(t('lay.hiddenList')) + '</span>' + hid.map((i) => '<button data-ly="show" data-id="' + i + '">＋ ' + esc(name(i)) + '</button>').join('') + '</div>' : '');
 }
 
-// Меню блока. api: { lay (объект раскладки), ids (все блоки экрана по умолчанию), name(id) → подпись, save(), render(), t }
-export function layoutMenu(anchor, id, api) {
-  const lay = normLay(api.lay), t = api.t, ids = api.ids;
-  const order = [...lay.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !lay.order.includes(i))].filter((i) => !lay.hidden.includes(i));
-  const pos = order.indexOf(id), sz = SIZES.indexOf(lay.size[id] || 'm');
-  const done = () => { api.save(); api.render(); };
-  const move = (d) => { const o = order.slice(), j = pos + d; if (j < 0 || j >= o.length) return; [o[pos], o[j]] = [o[j], o[pos]]; lay.order = [...o, ...lay.hidden]; done(); };
-  const items = [];
-  if (pos > 0) items.push({ icon: '↑', label: t('lay.up'), run: () => move(-1) });
-  if (pos < order.length - 1) items.push({ icon: '↓', label: t('lay.down'), run: () => move(1) });
-  if (sz < 2) items.push({ icon: '＋', label: t('lay.bigger'), run: () => { lay.size[id] = SIZES[sz + 1]; done(); } });
-  if (sz > 0) items.push({ icon: '－', label: t('lay.smaller'), run: () => { lay.size[id] = SIZES[sz - 1]; done(); } });
-  items.push({ icon: '✕', label: t('lay.hide'), run: () => { lay.hidden = [...lay.hidden, id]; done(); } });
-  const hid = lay.hidden.filter((i) => ids.includes(i));
-  if (hid.length) items.push({ icon: '◌', label: t('lay.showHidden', { n: hid.length }), run: () => { lay.hidden = lay.hidden.filter((i) => !ids.includes(i)); done(); } });
-  if (lay.order.length || lay.hidden.length || Object.keys(lay.size).length) items.push({ icon: '↺', label: t('lay.reset'), run: () => { lay.order = []; lay.hidden = []; lay.size = {}; done(); }, danger: true });
-  return holdMenu(anchor, items, api.name(id));
+// Порядок видимых блоков после сдвига блока id на d (−1 вверх, +1 вниз); скрытые остаются в конце
+export function moveBlock(lay, ids, id, d) {
+  lay = normLay(lay);
+  const order = orderOf(lay, ids).filter((i) => !lay.hidden.includes(i)), pos = order.indexOf(id), j = pos + d;
+  if (pos < 0 || j < 0 || j >= order.length) return false;
+  [order[pos], order[j]] = [order[j], order[pos]];
+  lay.order = [...order, ...lay.hidden];
+  return true;
 }
 
-// Удержание блока → меню. skip — элементы со своим удержанием или перетаскиванием (пэды, крутилки, строки списка): на них меню не открывается
+// Правка экрана. root — корень экрана (на нём слушаются события); apiOrFn → { lay, ids, name(id), save(), render(), t, busy?() }.
+// skip — элементы со своим удержанием или перетаскиванием (пэды, крутилки, строки списка): на них правка не включается.
 export function bindLayout(root, apiOrFn, skip = '') {
+  const A = () => (typeof apiOrFn === 'function' ? apiOrFn() : apiOrFn);
+  const leave = (api, lay) => { setEditing(lay, false); root.classList.remove('lyedit'); api.save(); api.render(); };
+  // вход — удержание блока, только в тишине
   onHold(root, '[data-lb]', (el, e) => {
+    const api = A(), lay = normLay(api.lay);
+    if (EDIT.has(lay)) return;
     if (skip && e && e.target && e.target.closest && e.target.closest(skip)) return;
-    const api = typeof apiOrFn === 'function' ? apiOrFn() : apiOrFn;
-    layoutMenu(el.firstElementChild || el, el.dataset.lb, api); // у display:contents нет своей рамки — меню у первого элемента блока
+    if (api.busy && api.busy()) { toast(api.t('lay.busy')); return; }
+    setEditing(lay, true); root.classList.add('lyedit'); api.render();
   });
+  // в правке события управления забираем себе (capture), чтобы они не доходили до жестов и кнопок экрана
+  root.addEventListener('click', (e) => {
+    const api = A(), lay = normLay(api.lay);
+    if (!EDIT.has(lay)) return;
+    const b = e.target.closest && e.target.closest('[data-ly]');
+    if (!b || !root.contains(b)) return;
+    e.preventDefault(); e.stopPropagation();
+    const k = b.dataset.ly, blk = b.closest('.lyb'), id = blk ? blk.dataset.lb : b.dataset.id;
+    const done = () => { api.save(); api.render(); };
+    if (k === 'done') { leave(api, lay); return; }
+    if (k === 'reset') { lay.order = []; lay.hidden = []; lay.size = {}; done(); return; }
+    if (k === 'up' || k === 'down') { if (moveBlock(lay, api.ids, id, k === 'up' ? -1 : 1)) done(); return; }
+    if (k === 'hide') { const vis = orderOf(lay, api.ids).filter((i) => !lay.hidden.includes(i)); if (vis.length > 1) { lay.hidden = [...lay.hidden, id]; done(); } return; }
+    if (k === 'show') { lay.hidden = lay.hidden.filter((i) => i !== id); done(); }
+  }, true);
+  // размер — тянуть планку внизу блока; блок следует за пальцем (высота подгоняется несколькими шагами), значение сохраняется на отпускании
+  root.addEventListener('pointerdown', (e) => {
+    const api = A(), lay = normLay(api.lay);
+    if (!EDIT.has(lay) || e.button > 0) return;
+    const g = e.target.closest && e.target.closest('.lyh');
+    if (!g || !root.contains(g)) return;
+    e.preventDefault(); e.stopPropagation();
+    const blk = g.closest('.lyb'), inner = blk.querySelector(':scope > .lyi'), id = blk.dataset.lb;
+    const h0 = inner.getBoundingClientRect().height, y0 = e.clientY;
+    let s = scaleOf(lay, id);
+    try { g.setPointerCapture(e.pointerId); } catch { /* без захвата — события идут по окну */ }
+    const move = (ev) => {
+      const want = Math.max(40, h0 + (ev.clientY - y0)), cur = inner.getBoundingClientRect().height || h0;
+      s = clampScale(s * Math.pow(want / cur, 1.4)); // высота растёт не пропорционально размеру — подгоняем по факту
+      blk.style.setProperty('--lz', s);
+    };
+    const end = () => {
+      g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', end); g.removeEventListener('pointercancel', end);
+      if (Math.abs(s - 1) < 0.03) delete lay.size[id]; else lay.size[id] = s;
+      api.save(); api.render();
+    };
+    g.addEventListener('pointermove', move); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  }, true);
 }

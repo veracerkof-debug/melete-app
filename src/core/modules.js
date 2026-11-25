@@ -123,6 +123,7 @@ export function makeCtx(app, mod) {
     num: fmtNum,
     store: moduleStore(app, mod.id),
     audio: app.audio,
+    sounding: () => (app.sounding ? app.sounding() : false), // звучит ли что-нибудь сейчас (раскладку на сцене и в пульте меняют только в тишине)
     output: app.output, // вывод на другое устройство: get/set цели категории, share для движков (core/output.js)
     mic: {
       request: (deviceId) => app.audio.openMic(deviceId),
