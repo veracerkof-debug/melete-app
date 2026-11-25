@@ -22,6 +22,7 @@ import { dueSongs } from '../review.js';
 function aiBtn(app) {
   const st = app.store.state.settings;
   if (!app.ai || !app.ai.avail || st.toolsOnly) return '';
+  if (((st.profile || {}).level) === 'beginner') return ''; // новичку чат не нужен (слово автора 25.11.2026)
   const face = hasMascot() ? mascotSVG(moodNow(app), { size: 30, ring: false }) : '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6l-4 3.5V17H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>';
   return '<button class="hai" data-act="aichat" aria-label="' + esc(t(app.ai.ready() ? 'ai.open' : 'ai.setup')) + '">' + face + '</button>';
 }
