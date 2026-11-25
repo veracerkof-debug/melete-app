@@ -96,7 +96,10 @@ export function streakPill(app, extra = '') {
 /* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
 // Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
 export const HOME_BLOCKS = ['voice', 'week', 'study', 'start', 'quick', 'league', 'reading', 'review', 'events', 'songs'];
-export const HOME_SIZES = ['s', 'm', 'l'];
+export const HOME_SIZES = ['s', 'm', 'l']; // прежние три ступени читаются как масштаб; ручка в правке пишет число
+const ZMIN = 0.7, ZMAX = 1.4, ZSTEP = { s: 0.86, m: 1, l: 1.16 };
+export const clampZoom = (v) => Math.min(ZMAX, Math.max(ZMIN, Math.round(v * 100) / 100));
+export const zoomOf = (v) => (typeof v === 'number' && Number.isFinite(v) ? clampZoom(v) : ZSTEP[v] || 1);
 export function homeLayout(st) {
   const h = st.home || {}, order = (h.order || []).filter((k) => HOME_BLOCKS.includes(k));
   // новые блоки — на своё место по умолчанию
@@ -105,7 +108,7 @@ export function homeLayout(st) {
   return { order, off: new Set((h.off || (beginnerOf(st) ? ['voice', 'league', 'review', 'events', 'reading'] : ['voice'])).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
 }
 export function setHomeLayout(st, L) {
-  st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };
+  st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && (typeof v === 'number' ? Math.abs(zoomOf(v) - 1) >= 0.03 : v !== 'm'))) };
 }
 // Правка главной прямо на ней (как рабочий стол телефона): удержание любого блока — режим правки; у каждого блока —
 // меньше, больше, убрать; блоки переставляются пальцем, щипок двумя пальцами — размер; внизу — убранные блоки
@@ -113,26 +116,38 @@ export function setHomeLayout(st, L) {
 let EDIT = false;
 export const homeEditing = () => EDIT;
 export const setHomeEdit = (on) => { EDIT = !!on; };
-const ctl = (k, sz) => '<div class="hbctl">' +
-  '<button data-hbe="smaller:' + k + '"' + (sz === 's' ? ' disabled' : '') + ' aria-label="' + esc(t('hb.smaller') + ': ' + t('hb.' + k)) + '">A−</button>' +
-  '<button data-hbe="bigger:' + k + '"' + (sz === 'l' ? ' disabled' : '') + ' aria-label="' + esc(t('hb.bigger') + ': ' + t('hb.' + k)) + '">A+</button>' +
-  '<button class="x" data-hbe="hide:' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '">×</button></div>';
+const ctl = (k, z) => '<div class="hbctl">' +
+  '<button data-hbe="smaller:' + k + '"' + (z <= ZMIN + 0.01 ? ' disabled' : '') + ' aria-label="' + esc(t('hb.smaller') + ': ' + t('hb.' + k)) + '">A−</button>' +
+  '<button data-hbe="bigger:' + k + '"' + (z >= ZMAX - 0.01 ? ' disabled' : '') + ' aria-label="' + esc(t('hb.bigger') + ': ' + t('hb.' + k)) + '">A+</button>' +
+  '<button class="x" data-hbe="hide:' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '">×</button></div>' +
+  // ручка размера: тянуть вниз/вверх — блок растёт и уменьшается прямо под пальцем, соседние блоки перестраиваются сразу (слово автора 25.11.2026)
+  '<div class="hbgrip" role="slider" aria-label="' + esc(t('hb.size') + ': ' + t('hb.' + k)) + '" aria-valuemin="' + Math.round(ZMIN * 100) + '" aria-valuemax="' + Math.round(ZMAX * 100) + '" aria-valuenow="' + Math.round(z * 100) + '"><i></i></div>';
 const blocks = (st, parts) => {
-  const L = homeLayout(st), sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
-  const shown = L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk hb-' + sz(k) + '" data-hb="' + k + '">' + (EDIT ? ctl(k, sz(k)) : '') + parts[k] + '</section>').join('');
+  const L = homeLayout(st), zm = (k) => zoomOf(L.size[k]), sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
+  // размер блока: ступень — классом hb-s/hb-l (как было), число — прямо в zoom; --hz нужна ручкам, чтобы не масштабироваться вместе с блоком
+  const attr = (k) => (typeof L.size[k] === 'number' ? ' hb-n" style="zoom:' + zm(k) + ';--hz:' + zm(k) : ' hb-' + sz(k) + (zm(k) !== 1 ? '" style="--hz:' + zm(k) : ''));
+  const shown = L.order.filter((k) => !L.off.has(k) && parts[k]).map((k) => '<section class="hblk' + attr(k) + '" data-hb="' + k + '">' + (EDIT ? ctl(k, zm(k)) : '') + parts[k] + '</section>').join('');
   if (!EDIT) return shown;
   const hidden = L.order.filter((k) => L.off.has(k) && parts[k]);
   return '<div class="hbedit"><span>' + esc(t('hb.editHint')) + '</span><button class="btn sm" data-hbe="reset">' + esc(t('hb.reset')) + '</button><button class="btn sm fill" data-hbe="done">' + esc(t('hb.done')) + '</button></div>' + shown +
     (hidden.length ? '<div class="hbtray"><div class="hdr">' + esc(t('hb.hiddenList')) + '</div>' + hidden.map((k) => '<button class="lchip pick" data-hbe="show:' + k + '">＋ ' + esc(t('hb.' + k)) + '</button>').join('') + '</div>' : '');
 };
+// Масштаб блока ручкой (shell.js): число 0,7–1,4; около единицы — как по умолчанию
+export function homeSetZoom(app, id, z) {
+  const st = app.store.state.settings, L = homeLayout(st);
+  if (!HOME_BLOCKS.includes(id)) return;
+  L.size[id] = clampZoom(z);
+  setHomeLayout(st, L);
+  app.store.settingsChanged();
+}
+export function homeZoomOf(app, id) { return zoomOf(homeLayout(app.store.state.settings).size[id]); }
 // Действие правки: 'smaller:week' | 'bigger:…' | 'hide:…' | 'show:…' | 'done' → true, если что-то изменилось
 export function homeEditAct(app, a) {
   const st = app.store.state.settings, L = homeLayout(st), [op, id] = a.split(':');
   if (op === 'done') { EDIT = false; return true; }
   if (op === 'reset') { delete st.home; app.store.settingsChanged(); return true; }
-  const sz = HOME_SIZES.includes(L.size[id]) ? L.size[id] : 'm';
-  if (op === 'smaller') L.size[id] = sz === 'l' ? 'm' : 's';
-  else if (op === 'bigger') L.size[id] = sz === 's' ? 'm' : 'l';
+  if (op === 'smaller') L.size[id] = clampZoom(zoomOf(L.size[id]) - 0.1);
+  else if (op === 'bigger') L.size[id] = clampZoom(zoomOf(L.size[id]) + 0.1);
   else if (op === 'hide') L.off.add(id);
   else if (op === 'show') L.off.delete(id);
   else return false;

@@ -12,7 +12,7 @@ import { moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
 import { listSongs, ensureLib } from '../library.js';
 import { getLang } from '../../i18n/index.js';
@@ -285,6 +285,23 @@ export function createShell(app, root) {
       { icon: SM.del, label: t('song.delete'), danger: true, run: () => confirm(t('song.delTitle', { title: s.title }), t('song.delText'), t('song.delYes')).then((ok) => { if (ok) { deleteSong(app.store, id); render(); } }) },
     ], s.title);
   });
+  // Правка главной: ручка внизу блока — тянуть вниз/вверх, блок растёт и уменьшается под пальцем (zoom), соседи перестраиваются сразу;
+  // значение пишется на отпускании. Событие забираем в capture-фазе: щипок и прочие жесты экрана его не видят
+  root.addEventListener('pointerdown', (e) => {
+    if (!homeEditing() || e.button > 0) return;
+    const g = e.target.closest && e.target.closest('.hbgrip');
+    if (!g) return;
+    e.preventDefault(); e.stopPropagation();
+    const blk = g.closest('.hblk'), id = blk.dataset.hb, h0 = blk.getBoundingClientRect().height, y0 = e.clientY, z0 = homeZoomOf(app, id);
+    let z = z0;
+    try { g.setPointerCapture(e.pointerId); } catch { /* без захвата — события идут по окну */ }
+    const move = (ev) => {
+      z = Math.min(1.4, Math.max(0.7, z0 * Math.max(0.2, (h0 + (ev.clientY - y0)) / h0)));
+      blk.style.zoom = z; blk.style.setProperty('--hz', z);
+    };
+    const end = () => { g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', end); g.removeEventListener('pointercancel', end); homeSetZoom(app, id, z); render(); };
+    g.addEventListener('pointermove', move); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  }, true);
   // Правка главной: щипок двумя пальцами по блоку — больше (развести) или меньше (свести)
   const pinch = new Map();
   let pinchBase = 0, pinchId = null;

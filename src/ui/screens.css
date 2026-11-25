@@ -940,3 +940,10 @@ html.desk .qgrid2 .qbtn{width:64px;height:64px;max-height:none}
 .hsrb b{font-size:15px;font-weight:650;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hsrb small{font-size:12px;line-height:1.25;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hsrb .m{flex:none;font-size:13px;color:var(--tint);font-variant-numeric:tabular-nums}
+
+/* Правка главной: ручка размера блока (shell.js) — как ручка разделителя окон; не масштабируется вместе с блоком (--hz) */
+.hblk.hb-n{position:relative}
+.hbctl,.hbgrip{zoom:calc(1 / var(--hz, 1))}
+.hbgrip{position:absolute;left:50%;bottom:-16px;margin-left:-48px;width:96px;height:32px;border-radius:16px;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);touch-action:none;cursor:ns-resize;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.hbgrip i{width:30px;height:8px;border-top:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.9}
+.hbedit ~ .hblk > .hbgrip{pointer-events:auto}

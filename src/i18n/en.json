@@ -3038,5 +3038,6 @@
   "lay.pair": "Next to the previous one",
   "lay.unpair": "Split the row",
   "lay.width": "Width of the blocks in the row",
-  "lay.rotate": "Turn the phone upright: the layout is edited in portrait"
+  "lay.rotate": "Turn the phone upright: the layout is edited in portrait",
+  "hb.size": "Size"
 }
