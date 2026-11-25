@@ -44,6 +44,7 @@ button.cell:active{background:var(--fill)}
 .pill[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .sortsel{appearance:none;-webkit-appearance:none;border:0;background:none;color:var(--tint-text);font-size:15px;padding:0}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+#sheetLayer .scrim{padding-bottom:var(--kb,0px)} /* шторка над экранной клавиатурой (ui/index.js: trackKeyboard) */
 .sheet{background:var(--bg);width:100%;max-width:600px;max-height:94%;overflow:auto;border-radius:14px 14px 0 0;padding:0 16px calc(28px + env(safe-area-inset-bottom,0px));animation:up .28s cubic-bezier(.2,.8,.2,1)}
 .grab{width:36px;height:5px;border-radius:3px;background:var(--l3);margin:6px auto 0}
 .snav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:52px;position:sticky;top:0;background:var(--bg);z-index:2;margin:0 -16px;padding:0 16px}

@@ -834,7 +834,7 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .selacts .cell{flex:1;justify-content:center;text-align:center}
 
 /* Чат с нейросетью (screens/aichat.js): шторка на весь экран, лента, карточки предложений */
-.aichat{display:flex;flex-direction:column;height:calc(100dvh - 120px);min-height:320px}
+.aichat{display:flex;flex-direction:column;height:calc((100dvh - var(--kb,0px)) * .94 - 140px);min-height:200px}
 .aimsgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}
 .aihint{color:var(--l2);font-size:14px;text-align:center;margin:24px 12px}
 .aim{max-width:86%;padding:10px 12px;border-radius:14px;font-size:15px;line-height:1.4;word-break:break-word}

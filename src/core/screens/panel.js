@@ -732,8 +732,6 @@ function rootHTML(app) {
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
-    // обновление — наверху, под профилем (слово автора 25.11.2026: раньше было в самом низу); точка — есть новая версия
-    updCell(app) +
     // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
     (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
@@ -745,6 +743,8 @@ function rootHTML(app) {
     (DEV && VARIANTS.length ? '<div class="group" style="margin-top:20px">' +
       (DEV && VARIANTS.length ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
       '</div>' : '') +
+    // обновление — внизу, как и было (слово автора 25.11.2026: наверх не вытаскивать); красная точка и карточка на главной остались
+    updCell(app).replace('<div class="group">', '<div class="group" style="margin-top:12px">') +
     '<div class="group" style="margin-top:12px">' + ['about', 'tos', 'priv', 'lic'].map((k) => '<button class="cell" data-act="legal" data-v="' + k + '"><span class="grow">' + t('legal.' + k) + '</span>' + CHEV + '</button>').join('') + '</div>' +
     '<div class="about"><b>Melete</b> · ' + t('panel.version', { v: VERSION }) + ' · ' + t(Capacitor.isNativePlatform() ? 'panel.kindApk' : isDesktop() ? 'panel.kindWin' : import.meta.env.MODE === 'showcase' ? 'panel.kindShow' : 'panel.kindWeb') + '<br>' + t('panel.author') + '<br>' + t('panel.madeWith') + '</div>';
 }

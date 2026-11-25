@@ -131,11 +131,28 @@ function lineLink(h) {
   h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
 }
 
+// Экранная клавиатура на Android не сжимает страницу, а закрывает её (видимая область vv сжимается, раскладка — нет): высота
+// клавиатуры идёт в --kb, шторки поднимаются над ней (ui.css: .scrim), поле ввода остаётся на виду. Без visualViewport — 0
+let kbOn = false;
+function trackKeyboard() {
+  const vv = typeof window !== 'undefined' && window.visualViewport;
+  if (kbOn || !vv) return;
+  kbOn = true;
+  const set = () => {
+    const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', (kb > 80 ? kb : 0) + 'px'); // меньше 80 — не клавиатура (адресная строка, жесты)
+    const a = document.activeElement;
+    if (kb > 80 && a && a.closest && a.closest('.sheet') && a.scrollIntoView) setTimeout(() => { try { a.scrollIntoView({ block: 'nearest' }); } catch { /* */ } }, 60);
+  };
+  vv.addEventListener('resize', set); vv.addEventListener('scroll', set); set();
+}
+
 export function sheet(render, init, { onClose, hints } = {}) {
   if (!layer) {
     layer = document.createElement('div');
     layer.id = 'sheetLayer';
     document.body.appendChild(layer);
+    trackKeyboard();
   }
   const prevFocus = document.activeElement;
   const scrim = document.createElement('div');

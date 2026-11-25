@@ -139,3 +139,21 @@ test('нейросеть: значок и название — Claude и Gemini 
   await expect(page.locator('.aibrand')).toContainText('Отвечает: Gemini'); await expect(page.locator('.aibrand .aibadge')).toHaveText('G');
   void errors;
 });
+
+test('нейросеть: экранная клавиатура не закрывает поле ввода и кнопку отправки (--kb поднимает шторку)', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, CFG);
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => { window.__melete.ai.__test({ avail: true, post: async () => ({ status: 200, data: '{}' }) }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(600);
+  const KB = 380;
+  await page.evaluate((k) => document.documentElement.style.setProperty('--kb', k + 'px'), KB); await page.waitForTimeout(300);
+  const box = async (sel) => page.locator(sel).first().boundingBox();
+  const ta = await box('[data-aiin]'), send = await box('[data-ai="send"]');
+
+  expect(ta.y + ta.height).toBeLessThanOrEqual(844 - KB + 1); // поле выше клавиатуры
+  expect(send.y + send.height).toBeLessThanOrEqual(844 - KB + 1); // и кнопка отправки тоже
+  expect(ta.y).toBeGreaterThan(0);
+  void errors;
+});
