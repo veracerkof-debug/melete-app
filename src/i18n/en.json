@@ -2808,5 +2808,22 @@
   "stu.qrHint": "The teacher scans the QR on their phone on the same Wi-Fi.",
   "stu.synced": "data from teacher: {w}",
   "stu.sees": "The teacher sees: this week's sessions (date, length), songs and tempo, completed tasks. Recordings and notes are not sent.",
-  "stu.hw": "Homework"
+  "stu.hw": "Homework",
+  "cls.kind": "Task type",
+  "cls.kind.free": "Own task",
+  "cls.kind.lesson": "Course lesson",
+  "cls.kind.tool": "Tool",
+  "cls.kind.song": "Song",
+  "cls.lesson": "Lesson {n}",
+  "cls.ref": "What to open",
+  "cls.noSongs": "No songs yet",
+  "cls.goal": "Weekly goal",
+  "cls.goalMin": "Minutes per week (0 — keep)",
+  "cls.release": "Release student",
+  "cls.releaseAsk": "The student stops receiving tasks and no report will be sent. The student can pair with another teacher.",
+  "cls.releaseYes": "Release",
+  "cls.released": "Student released",
+  "stu.go": "Open",
+  "stu.noSong": "The song has not arrived yet: the teacher needs to send it",
+  "stu.newTask": "New task from the teacher"
 }

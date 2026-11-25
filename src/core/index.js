@@ -339,6 +339,11 @@ export function boot(root) {
   webIcon(iconOf(sti));
   app.startSession = (type, songId, tool, opts) => session.start(type, songId, tool, opts);
   // Язык и вид поменялись (Оформление, доступ к «Минимал»): строки и стили — на месте, без перезапуска и без ухода с экрана
+  // Новое задание от учителя (classroom.js): плашка в приложении и уведомление; касание ведёт на главную с «Домашкой»
+  app.notifyNew = (n, text) => {
+    toast(t('stu.newTask') + (text ? ': ' + text : ''));
+    import('./reminders.js').then((m) => m.notifyNow({ title: t('stu.newTask'), body: text || t('stu.hw'), channel: { id: 'melete-teacher', name: 'Melete · ' + t('stu.teacher') }, extra: { go: 'home' } })).catch(() => {});
+  };
   app.relang = () => {
     const st = store.state.settings;
     initI18n(st.uiStyle === 'mono' && st.monoLang !== false ? 'el' : st.lang);

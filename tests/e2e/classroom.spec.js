@@ -58,3 +58,33 @@ test('ученик с учителем: урок курса закрыт, отк
   await expect(page.locator('.bkles.locked')).toHaveCount(0);
   void errors;
 });
+
+test('учитель: задание-урок открывает урок, цель недели, сводка на главной; ученик: «Открыть»', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => { try { if (!localStorage.getItem('melete.sync')) localStorage.setItem('melete.sync', JSON.stringify({ devs: { 'https://192.168.1.9:53329': { addr: 'https://192.168.1.9:53329', key: 'k', name: 'Брат', phone: true, last: 0, ids: [] } } })); } catch { /* */ } });
+  await melete.open();
+  await melete.click('.avatar'); await page.waitForTimeout(500);
+  await page.click('[data-pp="class"]'); await page.waitForTimeout(500);
+  await page.click('[data-cls="open"]'); await page.waitForTimeout(500);
+  await page.selectOption('[data-cs-kind]', 'lesson'); await page.waitForTimeout(200);
+  await page.selectOption('[data-cs-ref]', 'g5');
+  await page.click('[data-cs="add"]'); await page.waitForTimeout(300);
+  await expect(page.locator('.sheet').getByText('Урок 5').first()).toBeVisible();
+  await expect(page.locator('.sheet').getByText('Открыто уроков: 5 из 20')).toBeVisible(); // задание открыло уроки до пятого
+  await page.fill('[data-cs-goal]', '240'); await page.locator('[data-cs-goal]').blur();
+  const s = await melete.settings(), rec = Object.values(s.classroom.students)[0];
+  expect(rec.goal).toBe(240); expect(rec.tasks[0]).toMatchObject({ kind: 'lesson', ref: 'g5' });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await page.click('[data-act="pclose"]'); await page.waitForTimeout(500);
+  await expect(page.locator('.hstudy', { hasText: 'Ученики' })).toBeVisible(); // сводка на главной учителя
+  void errors;
+});
+
+test('ученик: задание-инструмент — кнопка «Открыть» открывает инструмент', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ settings: { student: { on: true, salt: '1', hash: 'x', open: [], openLessons: [], tasks: [{ id: 't1', text: 'Настроить гитару', kind: 'tool', ref: 'tuner', due: 0, at: 1, done: false, doneAt: 0 }], teacher: { key: 'k', name: 'У', at: 1 } } } });
+  await expect(page.locator('[data-act="hwgo"]')).toHaveCount(1);
+  await page.click('[data-act="hwgo"]'); await page.waitForTimeout(1200);
+  await expect(page.locator('.tview, .pane').first()).toBeVisible();
+  void errors;
+});

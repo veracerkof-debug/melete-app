@@ -227,13 +227,14 @@ export async function rescheduleBible(remind, text, now = Date.now()) {
 }
 
 // Показать уведомление сразу (партнёр по совместному чтению что-то прислал): { title, body, extra }
-export async function notifyNow({ title, body, extra }) {
+export async function notifyNow({ title, body, extra, channel }) {
+  const ch = channel || { id: BIB_CH, name: 'Melete · ' + t('church.title') };
   const { P } = await plugin();
   if (!P) return false;
   try {
     if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) return false;
-    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: BIB_CH, name: 'Melete · ' + t('church.title'), importance: 4, visibility: 1, vibration: false }).catch(() => {});
-    await P.schedule({ notifications: [{ id: 7400 + (Date.now() % 90), ...note({ title, body }), schedule: { at: new Date(Date.now() + 1000) }, channelId: BIB_CH, autoCancel: true, extra: extra || { go: 'home' } }] });
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: ch.id, name: ch.name, importance: 4, visibility: 1, vibration: false }).catch(() => {});
+    await P.schedule({ notifications: [{ id: 7400 + (Date.now() % 90), ...note({ title, body }), schedule: { at: new Date(Date.now() + 1000) }, channelId: ch.id, autoCancel: true, extra: extra || { go: 'home' } }] });
     return true;
   } catch (e) { log('remind', 'уведомление не показалось: ' + errText(e), 'e'); return false; }
 }

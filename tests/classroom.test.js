@@ -130,3 +130,48 @@ describe('уроки: «Первые шаги» не запираются', () =
     expect(lessonOpen(st, 'f5')).toBe(true); expect(lessonOpen(st, 'g1')).toBe(false);
   });
 });
+
+import { openFor, releaseStudent, summaryOf, shareOf } from '../src/core/classroom.js';
+describe('учитель и ученик: песни, цель, отвязка', () => {
+  const setup2 = () => {
+    const ss = student(); const songs = [];
+    const sApp = { store: { state: { settings: ss, sessions: [], songs }, settingsChanged() {}, now: () => NOW }, render() {}, notified: [], notifyNew(n, t) { this.notified.push([n, t]); } };
+    const mem = { peers: {} }, ctx = { app: sApp, mem, code: '1', name: 'У', now: () => NOW, paired: (k, n) => { bindTeacher(ss, k, n); }, ts: (p, j, peer) => tsHandle(sApp, p, j, peer, NOW) };
+    const H = async (method, url, { key = '', json = null } = {}) => { const r = await handleRequest(ctx, { method, path: new URL(url).pathname, query: {}, key, json }); if (r.status >= 400) throw Object.assign(new Error('http'), { status: r.status }); return r.json; };
+    return { ss, sApp, songs, H };
+  };
+  it('задание «песня» везёт песню; повтор не плодит дубли; цель недели и уведомление', async () => {
+    const { ss, sApp, songs, H } = setup2();
+    const { key } = await H('POST', 'https://x/melete/v1/pair', { json: { code: '1', name: 'Т' } });
+    const tSet = {}, tApp = { store: { state: { settings: tSet, songs: [{ id: 'sg1', title: 'Saints', artist: 'Trad', key: 'C', targetBpm: 90, notes: 'C  G\nWhen the saints' }] }, settingsChanged() {} } };
+    const dev = { addr: 'https://x', key, name: 'Брат' };
+    const rec = studentOf(tSet, dev.addr, dev.name); rec.goal = 240;
+    const task = addTask(rec, 'Выучить Saints', { kind: 'song', ref: 'sg1' }, NOW); openFor(rec, task);
+    await pushPack(tApp, dev, H, NOW);
+    expect(songs).toHaveLength(1); expect(songs[0].title).toBe('Saints'); expect(songs[0].notes).toContain('saints');
+    expect(ss.goalMin).toBe(240); expect(sApp.notified[0]).toEqual([1, 'Выучить Saints']);
+    await pushPack(tApp, dev, H, NOW + 1); // повтор
+    expect(songs).toHaveLength(1); expect(sApp.notified).toHaveLength(1); // не дубль и не новое уведомление
+  });
+  it('открытие по заданию: урок и инструмент открываются сами', () => {
+    const rec = studentOf({}, 'a');
+    openFor(rec, { kind: 'lesson', ref: 'g4' }); expect(rec.lessons).toEqual(['g1', 'g2', 'g3', 'g4']);
+    openFor(rec, { kind: 'tool', ref: 'ear' }); expect(rec.open).toEqual(['ear']);
+    openFor(rec, { kind: 'lesson', ref: 'g2' }); expect(lessonsCount(rec)).toBe(4); // не сужает
+    expect(shareOf(rec, [])).toBeNull();
+  });
+  it('отвязка: учитель отпускает ученика, ученик может сопрягаться заново', async () => {
+    const { ss, H } = setup2();
+    const { key } = await H('POST', 'https://x/melete/v1/pair', { json: { code: '1', name: 'Т' } });
+    const tSet = {}, tApp = { store: { state: { settings: tSet, songs: [] }, settingsChanged() {} } };
+    studentOf(tSet, 'https://x', 'Б');
+    expect(ss.student.teacher.key).toBe(key);
+    await releaseStudent(tApp, { addr: 'https://x', key }, H);
+    expect(ss.student.teacher).toBeUndefined(); expect(tSet.classroom.students['https://x']).toBeUndefined();
+    expect(summaryOf(tSet)).toEqual([]);
+  });
+  it('сводка: больше заданий — выше', () => {
+    const s = {}; const a = studentOf(s, 'a', 'А'), b = studentOf(s, 'b', 'Б'); addTask(b, 'x', {}, NOW); addTask(b, 'y', {}, NOW + 1);
+    expect(summaryOf(s).map((x) => x.name)).toEqual(['Б', 'А']); void a;
+  });
+});

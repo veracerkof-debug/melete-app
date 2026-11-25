@@ -6,6 +6,9 @@
 // Ничего не уходит наружу, кроме отчёта учителю, с которым ученик сопряжён сам (его ключ — единственный допущенный).
 import { weekReport } from './teacher.js';
 import { STUDENT_OPENABLE, studentOn } from './student.js';
+import { unpack, planImport, applyImport } from './share.js';
+import { GOAL_MIN, GOAL_MAX } from './settings.js';
+import { log } from './log.js';
 
 export const VERSION = 1;
 export const TASK_MAX = 60, TEXT_MAX = 400, NOTE_MAX = 600;
@@ -38,7 +41,19 @@ export function toggleOpen(rec, kind, id, on) {
 export const COURSE_LESSONS = 20;
 export function setLessons(rec, n) { n = Math.max(0, Math.min(COURSE_LESSONS, Math.round(+n) || 0)); rec.lessons = Array.from({ length: n }, (_, i) => 'g' + (i + 1)); return n; }
 export const lessonsCount = (rec) => rec.lessons.filter((x) => /^g\d+$/.test(x)).length;
-export const packOf = (rec) => ({ v: VERSION, tasks: rec.tasks.map(plain), open: { tools: [...rec.open], lessons: [...rec.lessons] }, note: clip(rec.note, NOTE_MAX) });
+// Песни из заданий-«песен»: файл `.melete` обычным JSON (share.js) — ученик принимает его теми же правилами, что присланный файл
+export const SONGS_MAX = 40;
+export function shareOf(rec, songs) {
+  const ids = [...new Set(rec.tasks.filter((t) => t.kind === 'song' && t.ref).map((t) => t.ref))].slice(0, SONGS_MAX);
+  const list = ids.map((id) => songs.find((x) => x.id === id)).filter(Boolean).map((x) => ({ ref: x.id, title: x.title, artist: x.artist || '', genre: x.genre || '', key: x.key || '', targetBpm: x.targetBpm || x.currentBpm || 0, notes: x.notes || '', capo: x.capo || 0 }));
+  return list.length ? { format: 'melete', v: 1, songs: list } : null;
+}
+export const packOf = (rec, songs = []) => ({ v: VERSION, tasks: rec.tasks.map(plain), open: { tools: [...rec.open], lessons: [...rec.lessons] }, note: clip(rec.note, NOTE_MAX), goal: Math.round(+rec.goal) || 0, share: shareOf(rec, songs) });
+// Новое задание-ссылка открывает то, что нужно: урок — и сам урок, инструмент — и сам инструмент
+export function openFor(rec, task) {
+  if (task.kind === 'lesson' && /^g\d+$/.test(task.ref || '')) { const n = +task.ref.slice(1); if (n > lessonsCount(rec)) setLessons(rec, n); }
+  if (task.kind === 'tool' && task.ref) toggleOpen(rec, 'tool', task.ref, true);
+}
 
 /* ---------- ученик ---------- */
 // Учитель сопрягается сам: ключ первого сопряжённого, пока открыто окно сопряжения, запоминается как «учитель»
@@ -69,7 +84,10 @@ export function applyPack(settings, pack, now = Date.now()) {
   s.openLessons = (Array.isArray(o.lessons) ? o.lessons : []).filter((x) => typeof x === 'string' && LESSON_ID.test(x)).slice(0, 300);
   s.note = clip(pack.note, NOTE_MAX);
   s.syncedAt = now;
-  return { ok: true, tasks: tasks.length, added: tasks.filter((t) => !old.has(t.id)).length };
+  const g = Math.round(+pack.goal);
+  if (g >= GOAL_MIN && g <= GOAL_MAX) settings.goalMin = g; // цель недели от учителя
+  const fresh = tasks.filter((t) => !old.has(t.id));
+  return { ok: true, tasks: tasks.length, added: fresh.length, first: fresh[0] ? fresh[0].text : '' };
 }
 export function markDone(settings, id, done = true, now = Date.now()) {
   const t = ((settings.student && settings.student.tasks) || []).find((x) => x.id === id);
@@ -96,6 +114,13 @@ export function mergeReport(rec, report, now = Date.now()) {
 }
 export const tasksLeft = (rec) => rec.tasks.filter((t) => !t.done).length;
 
+// Песни учителя → в песни ученика (дубль по названию и исполнителю обновляется, а не множится)
+export async function applyShare(app, share) {
+  const u = unpack(new TextEncoder().encode(JSON.stringify(share))), plan = planImport(app.store.state.songs || [], u.manifest);
+  const r = await applyImport({ store: app.store, files: null, unpacked: u, plan, set: false, quotes: false, profile: false });
+  return r.added + r.updated;
+}
+
 /* ---------- маршруты ученика: /melete/v1/ts/* ---------- */
 // app.store.state.settings, app.store.state.sessions / songs. peer: { key, name }. Допущен только сопряжённый учитель.
 export async function tsHandle(app, path, json, peer, now = Date.now()) {
@@ -108,10 +133,14 @@ export async function tsHandle(app, path, json, peer, now = Date.now()) {
   if (path === '/melete/v1/ts/pack') {
     const r = applyPack(settings, json, now);
     if (!r.ok) return { status: r.why === 'off' ? 409 : 400, json: { error: r.why } };
+    let songs = 0;
+    if (json.share) { try { songs = await applyShare(app, json.share); } catch (e) { log('sync', 'песни от учителя не приняты: ' + (e && e.message), 'w'); } }
     app.store.settingsChanged();
     if (app.render) app.render();
-    return { status: 200, json: { ok: true, tasks: r.tasks, added: r.added } };
+    if (r.added && app.notifyNew) app.notifyNew(r.added, r.first); // «Новое задание от учителя»
+    return { status: 200, json: { ok: true, tasks: r.tasks, added: r.added, songs } };
   }
+  if (path === '/melete/v1/ts/bye') { unbindTeacher(settings); app.store.settingsChanged(); if (app.render) app.render(); return { status: 200, json: { ok: true } }; } // учитель отпустил ученика
   return { status: 404, json: {} };
 }
 
@@ -125,9 +154,18 @@ export async function pullReport(app, dev, H, now = Date.now()) {
 }
 export async function pushPack(app, dev, H, now = Date.now()) {
   const settings = app.store.state.settings, rec = studentOf(settings, dev.addr, dev.name);
-  const r = await H('POST', dev.addr + '/melete/v1/ts/pack', { key: dev.key, json: packOf(rec) });
+  const r = await H('POST', dev.addr + '/melete/v1/ts/pack', { key: dev.key, json: packOf(rec, app.store.state.songs || []) });
   if (!r || !r.ok) throw Object.assign(new Error('pack'), { reason: 'off' });
   rec.sentAt = now;
   app.store.settingsChanged();
   return rec;
 }
+
+// Отпустить ученика: сказать ему (если на связи) и забыть у себя; ученик снова может сопрягаться с любым учителем
+export async function releaseStudent(app, dev, H) {
+  try { await H('POST', dev.addr + '/melete/v1/ts/bye', { key: dev.key, json: {}, timeout: 5000 }); } catch { /* ученика нет в сети — отвяжется кодом на его телефоне */ }
+  const c = app.store.state.settings.classroom; if (c && c.students) delete c.students[dev.addr];
+  app.store.settingsChanged();
+}
+// Сводка для главной учителя: ученики с неделей и заданиями
+export const summaryOf = (settings) => studentsOf(settings).map((r) => ({ addr: r.addr, name: r.name, total: r.report ? r.report.total : null, left: tasksLeft(r), at: r.reportAt })).sort((a, b) => b.left - a.left);

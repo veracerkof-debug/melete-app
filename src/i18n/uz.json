@@ -2769,5 +2769,22 @@
   "stu.qrHint": "Oʻqituvchi QR ni oʻz telefonida, shu Wi-Fi da skanerlaydi.",
   "stu.synced": "oʻqituvchidan maʼlumot: {w}",
   "stu.sees": "Oʻqituvchi koʻradi: hafta mashgʻulotlari (sana, davomiyligi), qoʻshiqlar va temp, bajarilgan topshiriqlar. Ovoz yozuvlari va qaydlar yuborilmaydi.",
-  "stu.hw": "Uy vazifasi"
+  "stu.hw": "Uy vazifasi",
+  "cls.kind": "Topshiriq turi",
+  "cls.kind.free": "Oʻz topshiriqi",
+  "cls.kind.lesson": "Kurs darsi",
+  "cls.kind.tool": "Asbob",
+  "cls.kind.song": "Qoʻshiq",
+  "cls.lesson": "{n}-dars",
+  "cls.ref": "Nimani ochish",
+  "cls.noSongs": "Qoʻshiqlar hali yoʻq",
+  "cls.goal": "Hafta maqsadi",
+  "cls.goalMin": "Haftasiga daqiqa (0 — oʻzgartirmaslik)",
+  "cls.release": "Oʻquvchini qoʻyib yuborish",
+  "cls.releaseAsk": "Oʻquvchi topshiriq olmaydi va hisobot yuborilmaydi. Oʻquvchi boshqa oʻqituvchi bilan ulanishi mumkin.",
+  "cls.releaseYes": "Qoʻyib yuborish",
+  "cls.released": "Oʻquvchi qoʻyib yuborildi",
+  "stu.go": "Ochish",
+  "stu.noSong": "Qoʻshiq hali kelmadi: oʻqituvchi yuborishi kerak",
+  "stu.newTask": "Oʻqituvchidan yangi topshiriq"
 }

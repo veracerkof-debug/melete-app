@@ -39,7 +39,18 @@ export function homeworkCard(app) {
   if (!studentOn(st)) return '';
   const left = (st.student.tasks || []).filter((x) => !x.done);
   if (!left.length) return '';
-  return '<div class="hstudy"><div class="hhdr"><span>' + t('stu.hw') + '</span></div>' + left.slice(0, 4).map((x) => '<button class="hsrow" data-act="hw" data-k="' + esc(x.id) + '"><span class="grow"><b>' + esc(x.text) + '</b></span></button>').join('') + '</div>';
+  return '<div class="hstudy"><div class="hhdr"><span>' + t('stu.hw') + '</span></div>' + left.slice(0, 4).map((x) => '<div class="hsrow"><button class="grow" data-act="hw" data-k="' + esc(x.id) + '" style="text-align:left;background:none;border:0;color:inherit;font:inherit"><b>' + esc(x.text) + '</b></button>' +
+    (hasLink(x) ? '<button class="link b" data-act="hwgo" data-k="' + esc(x.id) + '">' + t('stu.go') + '</button>' : '') + '</div>').join('') + '</div>';
+}
+const hasLink = (x) => ['lesson', 'tool', 'song'].includes(x.kind) && !!x.ref;
+// «Открыть» у задания: урок курса — в учебнике на этом уроке, инструмент — сам инструмент, песня — в «Песнях»
+export function homeworkGo(app, id, go) {
+  const st = app.store.state.settings, x = ((st.student && st.student.tasks) || []).find((q) => q.id === id);
+  if (!x || !hasLink(x)) return;
+  if (x.kind === 'tool') { app.showTool(x.ref); return; }
+  if (x.kind === 'lesson') { const d = (app.device.book ??= {}), b = (d.book ??= {}); Object.assign(b, { ch: x.ref, sec: 'first', mode: 'lessons', view: null }); app.saveDevice(); app.showTool('book'); return; }
+  const s = (app.store.state.songs || []).find((q) => q.from === x.ref || q.id === x.ref);
+  if (s) go('library', s.id); else toast(t('stu.noSong'));
 }
 export function homeworkDone(app, id) { const st = app.store.state.settings; if (markDone(st, id, true)) { app.store.settingsChanged(); return true; } return false; }
 

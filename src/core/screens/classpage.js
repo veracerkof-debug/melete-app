@@ -9,11 +9,32 @@ import { fmtDur } from '../format.js';
 import { studentOn, STUDENT_OPENABLE } from '../student.js';
 import { devsOf, pair, http, meshAvail, meshClient } from '../sync.js';
 import { scanQR, parsePair } from './qrscan.js';
-import { studentOf, studentsOf, addTask, removeTask, toggleOpen, setLessons, lessonsCount, COURSE_LESSONS, pullReport, pushPack, tasksLeft } from '../classroom.js';
+import { studentOf, studentsOf, addTask, removeTask, toggleOpen, setLessons, lessonsCount, COURSE_LESSONS, pullReport, pushPack, tasksLeft, openFor, releaseStudent, summaryOf } from '../classroom.js';
+import { confirm } from '../../ui/index.js';
 
 const ago = (ms) => { if (!ms) return t('cls.never'); const m = Math.round((Date.now() - ms) / 60000); return m < 2 ? t('cls.now') : m < 90 ? t('cls.min', { n: m }) : m < 2880 ? t('cls.hours', { n: Math.round(m / 60) }) : t('cls.days', { n: Math.round(m / 1440) }); };
 const devOf = (addr) => devsOf().find((d) => d.addr === addr);
 let busy = '', msg = '';
+const tried = new Map(); // адрес → когда последний раз пробовали обновить отчёт сами (не чаще раза в 5 минут)
+
+// Сводка на главной учителя: ученики, неделя, задания; касание — страница «Ученики»
+export function classCard(app) {
+  const st = app.store.state.settings;
+  if (studentOn(st)) return '';
+  const rows = summaryOf(st); if (!rows.length) return '';
+  return '<div class="hstudy"><div class="hhdr"><span>' + t('page.class') + '</span></div>' + rows.slice(0, 4).map((r) => '<button class="hsrow" data-pp="class"><span class="grow"><b>' + esc(r.name || '—') + '</b><span class="hsub">' + (r.total != null ? t('cls.week', { t: fmtDur(r.total) }) + ' · ' : '') + t('cls.left', { n: r.left }) + '</span></span></button>').join('') + '</div>';
+}
+// Тихое обновление отчётов при открытии страницы: только давние (старше 5 минут), без сообщений об ошибках
+export function autoPull(app, rerender) {
+  if (!(meshAvail() || meshClient())) return; // связи телефон ↔ телефон нет (веб, pre) — и ходить некуда
+  const now = Date.now();
+  devsOf().forEach((d) => {
+    const r = studentOf(app.store.state.settings, d.addr, d.name);
+    if (now - (r.reportAt || 0) < 300000 || now - (tried.get(d.addr) || 0) < 300000) return;
+    tried.set(d.addr, now);
+    pullReport(app, d, http).then(rerender).catch(() => {});
+  });
+}
 
 export function classHTML(app) {
   const st = app.store.state.settings;
@@ -48,6 +69,17 @@ export function classClick(app, target, rerender) {
 function studentSheet(app, addr, rerender) {
   const st = app.store.state.settings, dev = devOf(addr); if (!dev) return;
   const rec = studentOf(st, addr, dev.name), save = () => { app.store.settingsChanged(); };
+  const pick = { kind: 'free', ref: '' };
+  const songsOf = () => app.store.state.songs || [];
+  const refHTML = () => {
+    if (pick.kind === 'free') return '';
+    const opts = pick.kind === 'lesson' ? Array.from({ length: COURSE_LESSONS }, (_, i) => ['g' + (i + 1), t('cls.lesson', { n: i + 1 })])
+      : pick.kind === 'tool' ? STUDENT_OPENABLE.filter(moduleById).map((id) => [id, moduleName(moduleById(id))]) : songsOf().map((s) => [s.id, s.title]);
+    if (!opts.length) return '<p class="ftr keep">' + t('cls.noSongs') + '</p>';
+    if (!opts.some(([v]) => v === pick.ref)) pick.ref = opts[0][0];
+    return '<label class="cell"><select class="sortsel" data-cs-ref aria-label="' + esc(t('cls.ref')) + '">' + opts.map(([v, n]) => '<option value="' + esc(v) + '"' + (pick.ref === v ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></label>';
+  };
+  const refName = () => { const o = document.querySelector('[data-cs-ref] option:checked'); return o ? o.textContent : ''; };
   const html = () => {
     const rep = rec.report, songs = rep && rep.songs ? rep.songs.slice(0, 4) : [];
     return snav(rec.name || dev.name) +
@@ -57,11 +89,14 @@ function studentSheet(app, addr, rerender) {
       '<div class="cell"><button class="link" data-cs="pull"' + (busy ? ' disabled' : '') + '>' + t('cls.pull') + '</button><span class="grow"></span><button class="link b" data-cs="push"' + (busy ? ' disabled' : '') + '>' + t('cls.push') + '</button></div></div>' +
     '<div class="hdr">' + t('cls.tasks') + '</div><div class="group">' +
       rec.tasks.map((x) => '<div class="cell"><span class="grow' + (x.done ? ' l2' : '') + '">' + (x.done ? '✓ ' : '') + esc(x.text) + '</span><button class="link danger" data-cs="rm" data-k="' + esc(x.id) + '" aria-label="' + esc(t('cls.rm')) + '">✕</button></div>').join('') +
+      '<label class="cell"><select class="sortsel" data-cs-kind aria-label="' + esc(t('cls.kind')) + '">' + ['free', 'lesson', 'tool', 'song'].map((k) => '<option value="' + k + '"' + (pick.kind === k ? ' selected' : '') + '>' + t('cls.kind.' + k) + '</option>').join('') + '</select></label>' + refHTML() +
       '<label class="cell"><input class="inp" data-cs-text maxlength="400" placeholder="' + esc(t('cls.taskPh')) + '" aria-label="' + esc(t('cls.taskPh')) + '" style="width:100%"></label><button class="cell act" data-cs="add">' + t('cls.addTask') + '</button></div>' +
+    '<div class="hdr">' + t('cls.goal') + '</div><div class="group"><label class="cell"><span class="grow">' + t('cls.goalMin') + '</span><input class="inp num" type="number" inputmode="numeric" min="30" max="3000" step="30" data-cs-goal value="' + (rec.goal || '') + '" aria-label="' + esc(t('cls.goal')) + '" style="width:90px"></label></div>' +
     '<div class="hdr">' + t('cls.lessons') + '</div><div class="group"><div class="cell"><span class="grow">' + t('cls.lessonsN', { n: lessonsCount(rec), m: COURSE_LESSONS }) + '</span>' +
       '<button class="ic sm" data-cs="ldec" aria-label="−">−</button><button class="ic sm" data-cs="linc" aria-label="+">+</button></div></div>' +
     '<div class="hdr">' + t('cls.tools') + '</div><div class="group">' + STUDENT_OPENABLE.filter(moduleById).map((id) => '<div class="cell"><span class="grow">' + esc(moduleName(moduleById(id))) + '</span><label class="sw"><input type="checkbox" data-cs-tool="' + id + '"' + (rec.open.includes(id) ? ' checked' : '') + ' aria-label="' + esc(moduleName(moduleById(id))) + '"><i></i></label></div>').join('') + '</div>' +
     '<div class="hdr">' + t('cls.note') + '</div><div class="group"><label class="cell"><textarea class="inp" data-cs-note maxlength="600" rows="3" style="width:100%" aria-label="' + esc(t('cls.note')) + '">' + esc(rec.note) + '</textarea></label></div>' +
+    '<div class="group"><button class="cell act danger" data-cs="release">' + t('cls.release') + '</button></div>' +
     '<p class="ftr keep">' + t('cls.sendHint') + '</p>';
   };
   sheet(html, (el, api) => {
@@ -78,13 +113,23 @@ function studentSheet(app, addr, rerender) {
       const a = b.dataset.cs;
       if (a === 'pull' || a === 'push') { call(a); return; }
       if (a === 'rm') { removeTask(rec, b.dataset.k); save(); redraw(); return; }
-      if (a === 'add') { const i = el.querySelector('[data-cs-text]'); if (i && i.value.trim()) { addTask(rec, i.value.trim(), {}, Date.now()); save(); redraw(); } return; }
+      if (a === 'add') {
+        const i = el.querySelector('[data-cs-text]'), link = pick.kind !== 'free' && pick.ref, text = (i && i.value.trim()) || (link ? refName() : '');
+        if (!text) return;
+        const task = addTask(rec, text, { kind: link ? pick.kind : 'free', ref: link ? pick.ref : null }, Date.now());
+        if (task) openFor(rec, task); // урок или инструмент из задания открывается сам
+        save(); redraw(); return;
+      }
+      if (a === 'release') { confirm(t('cls.release'), t('cls.releaseAsk'), t('cls.releaseYes')).then((ok) => { if (!ok) return; releaseStudent(app, devOf(addr) || { addr }, http).then(() => { toast(t('cls.released')); api.close(); }); }); return; }
       if (a === 'linc') { setLessons(rec, lessonsCount(rec) + 1); save(); redraw(); return; }
       if (a === 'ldec') { setLessons(rec, lessonsCount(rec) - 1); save(); redraw(); }
     });
     el.addEventListener('change', (e) => {
       if (e.target.matches('[data-cs-tool]')) { toggleOpen(rec, 'tool', e.target.dataset.csTool, e.target.checked); save(); }
       if (e.target.matches('[data-cs-note]')) { rec.note = e.target.value; save(); }
+      if (e.target.matches('[data-cs-goal]')) { rec.goal = Math.max(0, Math.min(3000, Math.round(+e.target.value) || 0)); save(); }
+      if (e.target.matches('[data-cs-kind]')) { pick.kind = e.target.value; pick.ref = ''; redraw(); }
+      if (e.target.matches('[data-cs-ref]')) pick.ref = e.target.value;
     });
   }, { onClose: () => { save(); rerender(); } });
 }

@@ -40,6 +40,7 @@ import { holdMenu, sortable } from '../../ui/hold.js';
 import { toolsTab, setToolsTab } from './tools.js';
 import { showHelp } from '../help.js';
 import { homeworkCard } from './studentpage.js';
+import { classCard } from './classpage.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
@@ -248,7 +249,7 @@ export function homeHTML(app) {
     (st.configured ? (wp.now ? offText(wp.now) : plan[today] ? t('home.todayPlan') : t('home.todayRest')) + ' · ' + t('home.stats') : t('home.setup')) + ' ›</button></div>';
   P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
-  P.study = (plain ? '' : studyCard(app)) + homeworkCard(app); // у ученика — ещё «Домашка» от учителя // учёба: учебник, слух, ритм — часы в неделю
+  P.study = (plain ? '' : studyCard(app)) + homeworkCard(app) + classCard(app); // у ученика — «Домашка» от учителя, у учителя — сводка по ученикам // учёба: учебник, слух, ритм — часы в неделю
   P.start = '<button class="hcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.start') + '</span></button>';
   const q = quickList(st);
   P.quick = '<div class="hhdr"><span>' + t('home.quick') + '</span><button class="link" data-act="quickedit">' + t('home.edit') + '</button></div>' +

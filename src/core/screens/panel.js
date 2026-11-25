@@ -776,6 +776,7 @@ export function createPanel(app, onChange) {
     // инструкции к разделам: папка Melete — на «Данных», характер Мелеты — на «Уведомлениях»
     if (page === 'data') { fillStorage(layer); coreHelp(app, 'folder'); if (copies === null) loadCopies(app, () => { if (page === 'data') render(); }); if (snaps === null) loadSnaps(app, () => { if (page === 'data') render(); }); }
     if (page === 'mascot') coreHelp(app, 'melete');
+    if (page === 'class') import('./classpage.js').then((m) => m.autoPull(app, () => { if (page === 'class') render(); }));
     if (page === 'notif') mountMelete(layer);
     if (page === 'week' || shown === 'week') mountPlan(layer, app);
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
