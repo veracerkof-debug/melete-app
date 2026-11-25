@@ -90,7 +90,7 @@ describe('учебник: уроки', () => {
             }
           }
           // упражнения по инструменту: все три или ни одного
-          const has = INSTS.map((i) => ('lx.' + l.id + '.' + i) in L.S);
+          const has = INSTS.filter((i) => !/^g\d+$/.test(l.id) || i === 'g').map((i) => ('lx.' + l.id + '.' + i) in L.S); // «Гитара с нуля» (g1…g9) — только гитара
           expect(has.every(Boolean) || !has.some(Boolean), code + ' ' + l.id + ' упражнения по инструментам').toBe(true);
         }
       }
@@ -159,5 +159,19 @@ describe('учебник: «Аккорд над басом» — аккорд с
   it('септаккорды над G: у каждой строки есть ступени от баса (Fmaj7/G → ♭7 9 11 13)', () => {
     const t = text(mk().slash7.render({ i: 0 }));
     expect(t).toContain('Ступени от G'); expect(t).toContain('♭7 9 11 13');
+  });
+});
+
+describe('«Гитара с нуля»: схемы аккордов', () => {
+  it('аккорды: лады и пальцы согласованы, звуки — от шести струн', async () => {
+    const { GCH, midisOf, chordBoxSVG } = await import('../src/modules/book/book/labs9.js');
+    for (const [name, c] of Object.entries(GCH)) {
+      expect(c.f.length, name).toBe(6); expect(c.p.length, name).toBe(6);
+      c.f.forEach((f, i) => { expect(f >= 0 && f <= 4 ? true : f === -1, name + i).toBe(true); expect((f > 0) === (c.p[i] > 0), name + ' палец ' + i).toBe(true); });
+      expect(midisOf(name).length, name).toBeGreaterThanOrEqual(4);
+      expect(chordBoxSVG(name, 'x'), name).not.toMatch(/NaN|undefined/);
+    }
+    expect(midisOf('C')).toEqual([48, 52, 55, 60, 64]); // C: до ми соль до ми
+    expect(midisOf('G')).toEqual([43, 47, 50, 55, 59, 67]);
   });
 });

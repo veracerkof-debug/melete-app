@@ -29,11 +29,12 @@ export const PARTS = [
   ['slash', 'melmin'],
   ['play'],
   Array.from({ length: 24 }, (_, i) => 'f' + (i + 1)),
+  Array.from({ length: 9 }, (_, i) => 'g' + (i + 1)), // «Гитара с нуля» (классическая гитара, 25.11.2026)
 ];
 // Два раздела учебника (решение автора 30.10.2026): академическая теория (программа музыкальной школы) и джазовая;
 // «Практика и справка» — общая, в конце обоих
 // «Первые шаги» (first) — книга новичка: короткие главы-уроки простым языком (решение автора 31.10.2026)
-export const SECTIONS = { first: [8], school: [0, 1, 7, 5], jazz: [6, 2, 3, 4, 5] };
+export const SECTIONS = { first: [8, 9], school: [0, 1, 7, 5], jazz: [6, 2, 3, 4, 5] };
 const SECS = Object.keys(SECTIONS);
 // Главы в порядке частей (все разделы)
 export const ordered = (L) => PARTS.flat().map((id) => L.CH.find((c) => c.id === id)).filter(Boolean);
@@ -74,7 +75,7 @@ export function createBook(ctx, L, { save }) {
   const lvlI = () => LEVELS.indexOf(lvl());
   const secsShown = () => (lvl() === 'beginner' ? ['first'] : ['school', 'jazz']);
   const curSec = () => { const b = ctx.store.all().book || {}, sh = secsShown(), sec = sh.includes(b.sec) ? b.sec : sh[0]; return b.ch ? sectionOf(b.ch, sec) : sec; };
-  const PATH_LVL = { first: 0, start: 1, mid: 1, jazz: 2, pro: 3 };
+  const PATH_LVL = { first: 0, guitar: 0, start: 1, mid: 1, jazz: 2, pro: 3 };
   // пути раздела по уровню: свои — первыми, выше уровня больше чем на ступень — не показываются
   const pathsFor = (sec) => { const own = LEVEL_PATHS[lvl()] || []; return SEC_PATHS[sec].filter((x) => PATH_LVL[x] <= lvlI() + 1).sort((a, b) => (own.includes(b) ? 1 : 0) - (own.includes(a) ? 1 : 0)); };
   const lvlSeg = () => '<div class="bklvl" role="group" aria-label="' + T('bk.lvl') + '"><span>' + T('bk.lvl') + '</span>' + LEVELS.map((k) => '<button data-blvl="' + k + '" aria-pressed="' + (k === lvl()) + '"' + (k === lvl() ? ' class="on"' : '') + '>' + T('bk.lvl.' + k) + '</button>').join('') + '</div>';
@@ -125,9 +126,9 @@ export function createBook(ctx, L, { save }) {
       l.secs.map((k) => segs[k] || '').join('') + exHTML(l) + '</section>').join('');
   }
   function exHTML(l) {
-    const inst = curInst(), has = (k) => L.S[k] != null, done = !!doneMap()[l.id];
+    const gOnly = /^g\d+$/.test(l.id), inst = gOnly ? 'g' : curInst(), has = (k) => L.S[k] != null, done = !!doneMap()[l.id];
     const checks = l.ex.filter((x) => !x.only || x.only.includes(inst)).map((x, i) => '<div class="blab" data-lab="' + x.lab + '" data-k="x:' + l.id + ':' + i + ':' + inst + '" data-cfg="' + encodeURIComponent(JSON.stringify({ ...x.cfg, inst })) + '"></div>').join('');
-    return '<div class="bklex"><div class="bklexh"><b>' + T('lx.title') + '</b>' + instSeg() + '</div>' +
+    return '<div class="bklex"><div class="bklexh"><b>' + T('lx.title') + '</b>' + (gOnly ? '' : instSeg()) + '</div>' +
       (has('lx.' + l.id + '.' + inst) ? '<div class="bklext">' + T('lx.' + l.id + '.' + inst) + '</div>' : '') + checks +
       (has('lx.' + l.id + '.t') ? '<div class="bklphone"><b>' + T('lx.phone') + '</b><div>' + T('lx.' + l.id + '.t') + '</div></div>' : '') +
       // без учителя: то же другими словами и частые ошибки — по касанию
