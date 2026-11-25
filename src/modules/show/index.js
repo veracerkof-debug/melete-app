@@ -9,12 +9,12 @@ import { createShowDeck } from '../../audio/showdeck.js';
 import { createShowBed } from '../../audio/showbed.js';
 import { measureBlob, normGainDb } from '../../audio/loudness.js';
 import { swipe } from '../../ui/gestures.js';
-import { sortable, buzz, onHold } from '../../ui/hold.js';
+import { sortable, dragSort, buzz, onHold } from '../../ui/hold.js';
 import { arrange, bindLayout } from '../../ui/layout.js';
 import * as M from '../../music/show.js';
 
 const I = {
-  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
   pen: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4 9.5-9.5a2 2 0 0 1 3 3L9 18z"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12"/></svg>',
@@ -207,10 +207,10 @@ function padsBlocks() {
   if (!b) b = sound[0] || drum || null;
   const blocks = [{ id: 'bed', html: bedBarHTML() }];
   if (drum) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
-  blocks.push({ id: 'sounds', html: '<div class="shbanks hscroll" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + '</button>').join('') +
+  blocks.push({ id: 'sounds', html: '<div class="shbanks" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + '</button>').join('') +
     '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
     (b && b !== drum ? '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => padCell(p, i)).join('') + '</div>' : '') });
-  const foot = (h) => '<div class="shfoot">' + h + (S.ui.strip ? stripHTML() : '') + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
+  const foot = (h) => '<div class="shfoot">' + h + barHTML() + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
   blocks.push({ id: 'dock', html: foot(d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => padCell(p, i, true)).join('') + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>'
     : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') });
   return blocks;
@@ -259,6 +259,11 @@ const KNOBS = [['master', 'desk.master'], ['deck', 'desk.track'], ['bed', 'desk.
 function knobHTML(k, lb) {
   const v = volOf(k); return '<div class="shkn"><div class="shknob" data-knob="' + k + '" role="slider" tabindex="0" aria-label="' + esc(t(lb)) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + v + '">' +
     '<svg viewBox="0 0 44 44" aria-hidden="true"><path class="kt" pathLength="100" stroke-dasharray="99 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/><path class="kv" pathLength="100" stroke-dasharray="' + v * 0.99 + ' 100" d="M9.98 34.02A17 17 0 1 1 34.02 34.02"/></svg><b>' + v + '</b></div><span class="shkl">' + esc(t(lb)) + '</span></div>';
+}
+// Нижняя полоса «Эфира»: одна кнопка пауза/играть и общие крутилки рядом («ГО» и «Дальше» убраны — переход смахиванием по номеру)
+function barHTML() {
+  const n = M.currentNumber(S), own = !!(deck && n && n.kind === 'track' && deck.state.file === n.file && deck.state.playing);
+  return '<div class="shstrip shbar" role="group" aria-label="' + esc(t('desk.levels')) + '"><button class="shplay' + (own ? ' on' : '') + '" id="shpp" data-x="pp" aria-label="' + esc(t(own ? 'desk.pause' : 'desk.play')) + '">' + esc(own ? '❚❚' : '▶') + '</button>' + KNOBS.map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
 }
 function stripHTML() {
   return '<div class="shstrip" role="group" aria-label="' + esc(t('desk.levels')) + '">' + KNOBS.map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
@@ -319,13 +324,11 @@ function deskHTML() {
   const blocks = [
     { id: 'event', html: evl },
     { id: 'picks', html: pickHTML() },
-    { id: 'now', html: '<div class="shnow"><b>' + esc(n ? (n.title || t('num.untitled', { n: idx })) : '—') + '</b><span>' + esc(sub) + '</span></div>' },
     { id: 'wave', html: n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>' : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>' },
     { id: 'cues', html: '<div class="shcueln" id="shcueln" aria-live="polite"></div>' + tcHTML(n) },
     { id: 'ctl', html: n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '' },
     { id: 'nknobs', html: n ? numKnobsHTML() : '' },
-    { id: 'knobs', html: stripHTML() },
-    { id: 'next', html: '<div class="shgo"><div class="nx">' + esc(t('desk.next')) + '<b>' + esc(nx ? (nx.title || t('num.untitled', { n: e.numbers.indexOf(nx) + 1 })) : t('desk.noNext')) + '</b>' + (nx ? '<span class="shtrn">' + esc([numKey(n) && numKey(nx) ? numKey(n) + ' → ' + numKey(nx) : numKey(nx), numBpm(n) && numBpm(nx) ? numBpm(n) + ' → ' + numBpm(nx) : numBpm(nx) ? numBpm(nx) + ' bpm' : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</div><button class="shgobtn" data-x="go"' + (nx ? '' : ' disabled') + '>' + esc(t('desk.go')) + '</button></div>' },
+    { id: 'knobs', html: barHTML() },
   ];
   return '<div class="shdesk">' + arrange(blocks, layOf('desk'), { t, name: (id) => t('lay.b.' + id), grow: ['picks'] }) + '</div>';
 }
@@ -342,7 +345,7 @@ function deskPaint(force) {
   const own = n && n.kind === 'track' && st && st.file === n.file;
   const time = own ? st.time : 0, dur = own ? st.dur : (n && n.dur) || 0;
   if (tm) tm.textContent = M.mmss(time) + ' / ' + M.mmss(dur || (fileOf(n.file) || {}).dur || 0);
-  if (pp) pp.textContent = t(own && st.playing ? 'desk.pause' : 'desk.play');
+  if (pp) { const on = !!(own && st.playing); pp.textContent = on ? '❚❚' : '▶'; pp.classList.toggle('on', on); pp.setAttribute('aria-label', t(on ? 'desk.pause' : 'desk.play')); }
   if (cn && n) {
     const c = M.cueNow({ cues: tcOf(n) }, time);
     const live = c.prev && own && st.playing && time - c.prev.t < 5 ? c.prev : null;
@@ -378,7 +381,7 @@ function render() {
   const oldPk = host.querySelector('.shpicks'), pkTop = oldPk ? oldPk.scrollTop : 0, pkCur = S.pickCur; S.pickCur = S.cur;
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
-    (S.page === 'pads' ? ctx.ui.icb('data-x="edit"', I.pen, t(edit ? 'editDone' : 'edit'), edit ? 'on' : 'plain') + '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
+    (S.page === 'pads' ? '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
     (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + '</div></div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
@@ -511,7 +514,8 @@ async function goNext() {
   await startNumber(nx);
 }
 function playPause() {
-  const n = M.currentNumber(S); if (!n || n.kind !== 'track' || !n.file) return;
+  const n = M.currentNumber(S) || M.nextNumber(S); if (!n) return;
+  if (n.kind !== 'track' || !n.file) { startNumber(n); return; } // без трека — включает фон номера (пэд, шум)
   if (deck && deck.state.file === n.file && deck.state.playing) deck.pause();
   else if (deck && deck.state.file === n.file) deck.resume();
   else startNumber(n);
@@ -698,24 +702,34 @@ function bankSheet(b) {
   }, { onClose: render });
 }
 
+// «Вид и работа»: плитки-переключатели (значок, короткое имя, пояснение — включено залито), громкость с шагами, приглушение с живым рисунком
+const TILES = [
+  ['timer', '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2M9.5 3h5"/>'],
+  ['strip', '<circle cx="12" cy="12" r="7"/><path d="M12 12l3-4"/>'],
+  ['info', '<rect x="4" y="6" width="16" height="12" rx="1"/><path d="M8 14h5"/>'],
+  ['dock', '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 15h18"/>'],
+  ['buzz', '<path d="M8 6v12M16 6v12M4 9v6M20 9v6"/>'],
+  ['awake', '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17h2"/>'],
+  ['confirmStop', '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'],
+];
+const duckSvg = (amt, sec) => { const w = 220, h = 46, y = 6 + (h - 12) * (amt / 100), x1 = 70, x2 = Math.min(150, x1 + 14 + sec * 22); return '<svg class="shduck" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><path d="M4 6H' + x1 + 'L' + (x1 + 12) + ' ' + y + 'H' + x2 + 'L' + (x2 + 12) + ' 6H' + (w - 4) + '"/></svg>'; };
 function settingsSheet() {
-  const sw = (k) => '<div class="cell"><span class="grow">' + esc(t('view.' + k)) + '</span>' + ctx.ui.sw('v-' + k, S.ui[k], t('view.' + k)) + '</div>';
+  const tile = (k, ic) => { const on = !!S.ui[k]; return '<button class="shtile' + (on ? ' on' : '') + '" data-tg="' + k + '" aria-pressed="' + on + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ic + '</svg><b>' + esc(t('view.' + k)) + '</b><small>' + esc(t('view.h.' + k)) + '</small></button>'; };
   const body = () => ctx.ui.snav(t('settings'), { right: '<button class="link b r" data-close>' + esc(t('editDone')) + '</button>' }) +
-    '<div class="group">' + ['info', 'timer', 'strip', 'buzz', 'awake', 'confirmStop'].map(sw).join('') + '</div>' +
-    '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow">' + esc(t('bank.dock')) + '</span>' + ctx.ui.sw('v-dock', S.ui.dock, t('bank.dock')) + '</div>' +
-      (S.ui.dock && M.dockOf(S) ? '<button class="cell" data-x="dock"><span class="grow">' + esc(t('bank.title')) + '</span><span class="val">' + M.dockOf(S).cols + '</span></button>' : '') + '</div>' +
-    '<div class="hdr">' + esc(t('view.norm')) + '</div><div class="group"><div class="cell"><span class="grow">' + esc(t('view.norm')) + '</span>' + ctx.ui.sw('v-normon', S.norm.on, t('view.norm')) + '</div>' +
-      (S.norm.on ? row(t('view.normTarget'), ctx.ui.seg('ntarget', [-14, -16, -19, -23].map((v) => [String(v), v + ' LUFS']), String(S.norm.target), t('view.normTarget'))) + '<div class="cell"><span class="grow">' + esc(t('view.normPads')) + '</span>' + ctx.ui.sw('v-normpads', S.norm.pads, t('view.normPads')) + '</div>' : '') + '</div><p class="ftr">' + esc(t('view.normHint')) + '</p>' +
-    '<div class="group sgroup" style="margin-top:12px">' + slider('goFade', t('view.goFade'), S.goFade, 0, 10, 0.5, secTxt(S.goFade)) + '</div><p class="ftr">' + esc(t('view.goFadeHint')) + '</p>' +
-    '<div class="hdr">' + esc(t('view.duck')) + '</div><div class="group sgroup">' + slider('duckAmount', t('view.duckAmount'), S.duckAmount, 0, 100, 5, S.duckAmount + '%') + slider('duckTime', t('view.duckTime'), S.duckTime, 0.05, 3, 0.05, secTxt(S.duckTime)) + '</div><p class="ftr">' + esc(t('view.hint')) + '</p>';
+    '<div class="shtiles">' + TILES.map(([k, ic]) => tile(k, ic)).join('') + '</div>' +
+    (S.ui.dock && M.dockOf(S) ? '<div class="group" style="margin-top:10px"><button class="cell" data-x="dock"><span class="grow">' + esc(t('view.dockSet')) + '</span><span class="val">' + M.dockOf(S).cols + '×' + M.dockOf(S).rows + '</span></button></div>' : '') +
+    '<div class="hdr">' + esc(t('view.g.level')) + '</div><div class="group"><div class="cell"><span class="grow">' + esc(t('view.norm')) + '<span class="st l2" style="display:block;font-size:13px">' + esc(t('view.normShort')) + '</span></span>' + ctx.ui.sw('v-normon', S.norm.on, t('view.norm')) + '</div>' +
+      (S.norm.on ? row(t('view.normTarget'), ctx.ui.seg('ntarget', [-14, -16, -19, -23].map((v) => [String(v), String(v)]), String(S.norm.target), t('view.normTarget'))) + '<div class="cell"><span class="grow">' + esc(t('view.normPads')) + '</span>' + ctx.ui.sw('v-normpads', S.norm.pads, t('view.normPads')) + '</div>' : '') + '</div>' +
+    '<div class="hdr">' + esc(t('view.duck')) + '</div><div class="group sgroup"><div class="shduckw" id="shduckw">' + duckSvg(S.duckAmount, S.duckTime) + '<span>' + esc(t('view.duckPic')) + '</span></div>' + slider('duckAmount', t('view.duckAmount'), S.duckAmount, 0, 100, 5, S.duckAmount + '%') + slider('duckTime', t('view.duckTime'), S.duckTime, 0.05, 3, 0.05, secTxt(S.duckTime)) + '</div>' +
+    '<div class="hdr">' + esc(t('view.fade')) + '</div><div class="group sgroup">' + slider('goFade', t('view.fadeLen'), S.goFade, 0, 10, 0.5, secTxt(S.goFade)) + '</div><p class="ftr">' + esc(t('view.goFadeHint')) + '</p>';
   ctx.ui.sheet(body, (el, sh) => {
     el.addEventListener('change', (e) => {
       const k = e.target.dataset.sw; if (!k || !k.startsWith('v-')) return;
-      if (k === 'v-normon' || k === 'v-normpads') { if (k === 'v-normon') S.norm.on = e.target.checked; else S.norm.pads = e.target.checked; save(); applyNorm(); sh.update(); return; }
-      S.ui[k.slice(2)] = e.target.checked; save();
-      if (k === 'v-awake') awake(); if (k === 'v-dock') sh.update();
+      if (k === 'v-normon' || k === 'v-normpads') { if (k === 'v-normon') S.norm.on = e.target.checked; else S.norm.pads = e.target.checked; save(); applyNorm(); sh.update(); }
     });
     el.addEventListener('click', (e) => {
+      const tg = e.target.closest('[data-tg]');
+      if (tg) { const k = tg.dataset.tg; S.ui[k] = !S.ui[k]; save(); if (k === 'awake') awake(); sh.update(); return; }
       const sg = e.target.closest('[data-seg="ntarget"] [data-v]');
       if (sg) { S.norm.target = +sg.dataset.v; save(); applyNorm(); sh.update(); return; }
       if (e.target.closest('[data-x="dock"]')) bankSheet(M.dockOf(S));
@@ -724,7 +738,7 @@ function settingsSheet() {
       const s = e.target.dataset.s; if (!s) return;
       const v = +e.target.value; S[s] = v; save();
       const o = el.querySelector('[data-o="' + s + '"]'); if (o) o.textContent = s === 'duckAmount' ? v + '%' : secTxt(v);
-      if (eng) eng.setDuck(S.duckAmount, S.duckTime);
+      if (s === 'duckAmount' || s === 'duckTime') { const w = el.querySelector('#shduckw svg'); if (w) w.outerHTML = duckSvg(S.duckAmount, S.duckTime); if (eng) eng.setDuck(S.duckAmount, S.duckTime); }
     });
   }, { onClose: render });
 }
@@ -932,13 +946,18 @@ export default {
     host.addEventListener('keydown', onKey);
     if (ctx.output) offs.push(ctx.output.bind(host, { cat: 'media' })); // вывод на другое устройство — та же шторка, что в сессии
     // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js)
-    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'now', 'wave', 'cues', 'ctl', 'nknobs', 'knobs', 'next'], name: (id) => t('lay.b.' + id), save, render, t, busy: () => !!(ctx.sounding && ctx.sounding()) }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
+    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'wave', 'cues', 'ctl', 'nknobs', 'knobs'], name: (id) => t('lay.b.' + id), save, render, t, busy: () => !!(ctx.sounding && ctx.sounding()) }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
     // список выступления: влево — плавно перейти к номеру, вправо по проигранному — вернуть; удержать — настройки номера
     offs.push(swipe(host, { min: 50, ok: (e) => { const r = e.target.closest && e.target.closest('[data-pick]'); pickRow = r ? r.dataset.pick : null; return !!r; },
       left: () => { const n = pickRow && pickById(pickRow); if (n) glideTo(n).catch((er) => ctx.logErr(er)); },
       right: () => { const n = pickRow && pickById(pickRow); if (n && n.done) { n.done = false; const e = cur(); if (e) e.updatedAt = Date.now(); save(); ctx.ui.toast(t('pick.restored')); render(); } } }));
-    offs.push(onHold(host, '[data-pick]', (el) => { const n = pickById(el.dataset.pick); if (n) numSheet(n); }) || (() => {}));
-    offs.push(swipe(host, { ok: (e) => !(e.target.closest && e.target.closest('[data-pick]')), left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
+    offs.push(onHold(host, '[data-bank]', (el) => { const b = S.banks.find((x) => x.id === el.dataset.bank); if (b) bankSheet(b); }) || (() => {}));
+    // удержать обложку (значок слева) — вести номер по списку; удержать в другом месте строки — настройки номера
+    offs.push(onHold(host, '[data-pick]', (el, e) => { if (e && e.target && e.target.closest && e.target.closest('.shpick > i')) return; const n = pickById(el.dataset.pick); if (n) numSheet(n); }) || (() => {}));
+    offs.push(dragSort(host, '[data-pick]', 'data-pick', { skip: (e) => !(e.target && e.target.closest && e.target.closest('.shpick > i')), onDrop: (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); const ord = ids.map((i) => by.get(i)).filter(Boolean); if (ord.length !== e.numbers.length) { render(); return; } e.numbers = ord; e.updatedAt = Date.now(); save(); render(); } }) || (() => {}));
+    const bankStep = (d) => { const bs = S.banks.filter((x) => !x.pinned && x.preset !== 'drums'); const i = bs.findIndex((x) => x.id === S.bank); const nb = bs[i + d]; if (nb) { S.bank = nb.id; save(); render(); preload(); } };
+    offs.push(swipe(host, { min: 40, ok: (e) => !!(e.target.closest && e.target.closest('.shbanks')), left: () => bankStep(1), right: () => bankStep(-1) }));
+    offs.push(swipe(host, { ok: (e) => !(e.target.closest && e.target.closest('[data-pick], .shbanks')), left: () => { const i = PAGES.indexOf(S.page); if (i < PAGES.length - 1) go(PAGES[i + 1]); }, right: () => { const i = PAGES.indexOf(S.page); if (i > 0) go(PAGES[i - 1]); } }));
     const vis = () => { if (document.visibilityState === 'visible') awake(); };
     document.addEventListener('visibilitychange', vis);
     offs.push(() => document.removeEventListener('visibilitychange', vis));

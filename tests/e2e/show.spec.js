@@ -101,16 +101,16 @@ test('пульт: ГО запускает номер с треком, метка
   // пульт: ГО
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-page="desk"]');
-  await page.click(T + '[data-x="go"]');
-  await expect(page.locator(T + '.shnow b')).toHaveText('Танец', { timeout: 10_000 });
+  await page.click(T + '[data-x="pp"]');
+  await expect(page.locator(T + '.shpick.cur b')).toHaveText('Танец', { timeout: 10_000 });
   await expect(page.locator(T + '#shcueln')).toContainText('Свет на сцену', { timeout: 8000 });
   await expect.poll(async () => (await page.locator(T + '#shtime').textContent()) || '', { timeout: 10_000 }).not.toMatch(/^0:00 /);
-  // следующий номер: ГО — трек уходит, на пульте заметка
-  await page.click(T + '[data-x="go"]');
-  await expect(page.locator(T + '.shnow b')).toHaveText('Ведущие', { timeout: 8000 });
+  // следующий номер: касание строки выбирает его, на пульте заметка
+  await page.click(T + '[data-pick]:nth-of-type(2)');
+  await expect(page.locator(T + '.shpick.cur b')).toHaveText('Ведущие', { timeout: 8000 });
   await expect(page.locator(T + '#shnote')).toContainText('Выход справа');
   const sh = (await melete.toolsNow()).show, ev = sh.events[0];
-  expect(ev.numbers[0].done).toBe(true); expect(sh.cur).toBe(ev.numbers[1].id);
+  expect(sh.cur).toBe(ev.numbers[1].id);
   expect(errors).toEqual([]);
 });
 
@@ -148,7 +148,7 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   expect(sh.events[0].numbers[0].bed).toMatchObject({ noise: sh.noises[0].id });
   // ГО запускает номер и включает его шум (шторка «Программа» закрывается)
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.click(T + '[data-x="go"]');
+  await page.click(T + '[data-x="pp"]');
   await expect(page.locator(T + '.shstrip:not(.shnk) [data-knob]')).toHaveCount(4);
   await page.click(T + '[data-page="pads"]'); await page.click(T + '[data-x="bedsheet"]');
   await expect(page.locator('.sheet .shnoise.on')).toHaveCount(1, { timeout: 8000 });
@@ -200,7 +200,7 @@ test('нормализация и громкости номера: запись 
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // пульт: ГО, крутилки номера (шторка «Программа» закрывается)
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="go"]');
+  await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="pp"]');
   await expect(page.locator(T + '[data-knob="nlevel"]')).toBeVisible({ timeout: 10_000 });
   const kn = T + '[data-knob="nlevel"]', b = await page.locator(kn).boundingBox();
   const v0 = +(await page.locator(kn).getAttribute('aria-valuenow'));
