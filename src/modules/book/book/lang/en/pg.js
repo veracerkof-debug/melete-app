@@ -4,6 +4,7 @@ const key = (t) => '<aside class="bkey"><b>Remember</b>' + t + '</aside>';
 const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '</ul>';
 
 export const S = {
+  'ls.teacherLock': 'The teacher will open this lesson',
   'bk.part9': 'Guitar from scratch',
   'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '20 lessons: posture, parts, tuning, chords, strumming, progressions',
   'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming and chord progressions.',

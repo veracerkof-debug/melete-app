@@ -4,6 +4,7 @@ const key = (t) => '<aside class="bkey"><b>Eslab qoling</b>' + t + '</aside>';
 const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '</ul>';
 
 export const S = {
+  'ls.teacherLock': 'Bu darsni oʻqituvchi ochadi',
   'bk.part9': 'Noldan gitara',
   'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '20 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, bogʻlamlar',
   'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy va akkord bogʻlamlari.',

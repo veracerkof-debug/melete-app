@@ -57,3 +57,14 @@ export function scanQR(accept = () => true) {
     }, { onClose: () => finish(null) });
   });
 }
+
+// QR-код как SVG (генератор подгружается по требованию; пока не загружен — пусто, потом элементы [data-qr] заполняются сами)
+let qrSvg = null; // генератор QR-кода — по требованию (лёгкий, MIT)
+export function qrHTML(text) {
+  if (!qrSvg) { import('qrcode-generator').then((m) => { qrSvg = m.default || m; document.querySelectorAll('[data-qr]').forEach((el) => { el.innerHTML = qrHTML(el.dataset.qr); }); }); return ''; }
+  const q = qrSvg(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), c = 6, m = 4 * c, W = n * c + 2 * m;
+  let d = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += 'M' + (m + x * c) + ' ' + (m + y * c) + 'h' + c + 'v' + c + 'h-' + c + 'z';
+  return '<svg viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="QR"><rect width="' + W + '" height="' + W + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}

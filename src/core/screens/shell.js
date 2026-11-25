@@ -213,6 +213,7 @@ export function createShell(app, root) {
     }
     else if (d.act === 'pomo') openToolView(app, 'timer', render);
     else if (d.act === 'study') import('./study.js').then((m) => m.openStudy(app, d.k, openToolView, render));
+    else if (d.act === 'hw') import('./studentpage.js').then((m) => { if (m.homeworkDone(app, d.k)) render(); });
     else if (d.act === 'studyset') import('./study.js').then((m) => m.studySetSheet(app, render));
     else if (d.act === 'report') reportSheet(app);
     else if (d.act === 'idea') ideaSheet(app);

@@ -21,6 +21,7 @@ import { firstHelp, showHelp } from './help.js';
 import { guardOpen, guardClose } from './guard.js';
 import * as MF from './mediafolders.js';
 import { isOn, setFeature } from './settings.js';
+import { lessonOpen } from './classroom.js';
 import { moduleById } from '../modules/index.js';
 import { createSetlists } from './metrosets.js';
 import { outBtnHTML, bindOutput, outRefresh } from './screens/outputsheet.js';
@@ -135,6 +136,8 @@ export function makeCtx(app, mod) {
     get mono() { return app.store.state.settings.uiStyle === 'mono'; },
     // профиль музыканта (инструменты) — умолчания модулей: строй, инструмент партии
     get profile() { return app.store.state.settings.profile || null; },
+    // урок закрыт учителем (режим «Ученик», classroom.js: lessonOpen)
+    lessonLocked: (id) => !lessonOpen(app.store.state.settings, id),
     presets: (kind) => presetsApi(app, kind),
     // Стих-эпиграф (Пс 89:12) — помодоро и секундомер
     epigraph: () => epigraphHTML(),

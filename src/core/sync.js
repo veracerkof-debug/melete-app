@@ -13,6 +13,7 @@
 // компьютер (он сообщает, что умеет), а сам синхронизируется в фоне (settings.syncAuto, вкл) — только в тишине;
 // компьютер берёт записи телефона в свою фоновую очередь (autostems.js, режим — как просил телефон: rec.want) и
 // результаты приходят при следующей синхронизации. Компьютера нет дольше суток — телефон считает сам.
+import { bindTeacher, tsHandle } from './classroom.js';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { pickParts, applyParts } from './backupparts.js';
 import { stripDemo, isDemoFile } from './demo.js';
@@ -121,6 +122,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     const t = (ctx.now || Date.now)();
     if (t < pairGuard.until) return { status: 429, json: { error: 'wait' } };
     const code = String((req.json && req.json.code) || '').replace(/\D/g, '');
+    if (ctx.pairBlocked && ctx.pairBlocked()) return { status: 403, json: { error: 'locked' } }; // у ученика уже есть учитель (classroom.js)
     if (!ctx.code || code !== ctx.code) {
       if (++pairGuard.fails >= PAIR_TRIES) { pairGuard.fails = 0; pairGuard.until = t + PAIR_LOCK; log('sync', 'неверный код ' + PAIR_TRIES + ' раз — пауза', 'w'); }
       return { status: 403, json: { error: 'code' } };
@@ -129,6 +131,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     const key = newKey();
     mem.peers = { ...(mem.peers || {}), [key]: { name: String((req.json && req.json.name) || 'Телефон').slice(0, 60), at: Date.now() } };
     log('sync', 'сопряжение: устройство ' + String(key).slice(0, 6));
+    if (ctx.paired) ctx.paired(key, mem.peers[key].name); // ученик: первый сопряжённый — учитель
     return { status: 200, json: { key, name: ctx.name || 'PC' } };
   }
   const peer = mem.peers && mem.peers[req.key];
@@ -151,6 +154,8 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   // ансамбль (ensemble.js): опрос участника и сверка часов — без ожидания тишины
   // пульт с сопряжённого устройства (netctl.js) — без ожидания тишины
   if (req.path.startsWith('/melete/v1/rc/')) return ctx.rc ? ctx.rc(req.path, req.json, { key: req.key, name: peer.name }) : { status: 404, json: {} };
+  // учитель ↔ ученик (classroom.js): задания, пакет, отчёт — только сопряжённый учитель
+  if (req.path.startsWith('/melete/v1/ts/')) return ctx.ts ? ctx.ts(req.path, req.json, { key: req.key, name: peer.name }) : { status: 404, json: {} };
   if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
@@ -229,7 +234,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
       const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, got: (meta, peer) => import('../ui/index.js').then((U) => U.toast(i18nT('net.got', { name: meta.name || '', from: peer.name || '' }))), rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      res = await handleRequest({ app, mem, got: (meta, peer) => import('../ui/index.js').then((U) => U.toast(i18nT('net.got', { name: meta.name || '', from: peer.name || '' }))), ts: (path, j, peer) => tsHandle(app, path, j, peer), pairBlocked: () => !!(mesh && (app.store.state.settings.student || {}).teacher), paired: (key, name) => { if (mesh && bindTeacher(app.store.state.settings, key, name)) { app.store.settingsChanged(); state.code = ''; emit(); } }, rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
       if (!u.pathname.startsWith('/melete/v1/rc/')) save(); // пульт опрашивает раз в секунду — хранить нечего
       if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta' || u.pathname === '/melete/v1/pair') { if (app.render && u.pathname !== '/melete/v1/pair') app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }

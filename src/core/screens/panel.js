@@ -55,8 +55,9 @@ import { modeOf, modeName } from '../linkmode.js';
 import { setlistsOf } from '../guest.js';
 import { WEB } from '../platform.js';
 import { studentHTML, studentClick } from './studentpage.js';
+import { classHTML, classClick } from './classpage.js';
 import { studentOn } from '../student.js';
-import { scanQR, parsePair, pairPayload } from './qrscan.js';
+import { scanQR, parsePair, pairPayload, qrHTML } from './qrscan.js';
 
 // Значки страниц — оттенки палитры (settings.palette)
 const iconBg = (st, hue) => '--tc:' + hueColor(st, hue);
@@ -74,16 +75,17 @@ const PAGES = {
   link: ['blue', '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="13" height="9.5" rx="1.6"/><path d="M6 18h6M9 14.5V18"/><rect x="16.5" y="8" width="5" height="10" rx="1.4"/></svg>'],
   sound: ['teal', '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>'],
   bible: ['brown', '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>'],
+  class: ['blue', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="10" r="2.4"/><path d="M3.5 19c.5-3 2.6-4.5 5.5-4.5s5 1.5 5.5 4.5M15 15.2c2.4-.3 4.7.7 5.5 3.4"/></svg>'],
   student: ['blue', '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>'],
   data: ['graphite', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
 // Карта настроек (решение автора 06.11.2026): практика · экран · звук, маскот, Библия · связь · помощь
-const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'student']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
+const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'student', 'class']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'notif', 'mascot'];
 // Ученик под блокировкой: страницы, через которые её можно обойти (данные и копии, модули, вкладки, связь)
-const STUDENT_HIDE = ['data', 'feat', 'tabs', 'link', 'bible'];
+const STUDENT_HIDE = ['data', 'feat', 'tabs', 'link', 'bible', 'class'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 // Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
@@ -589,15 +591,6 @@ function meshHTML(app) {
 }
 // Раздача в своей сети (src/core/guest.js, docs/guest-web.md): гости открывают песни в браузере телефона.
 // Открытая — вбил адрес, и внутри; закрытая — только по QR-коду и с подтверждением здесь. Ведёт хозяин, можно передать гостю
-let qrSvg = null; // генератор QR-кода — по требованию (лёгкий, MIT)
-function qrHTML(text) {
-  if (!qrSvg) { import('qrcode-generator').then((m) => { qrSvg = m.default || m; document.querySelectorAll('[data-qr]').forEach((el) => { el.innerHTML = qrHTML(el.dataset.qr); }); }); return ''; }
-  const q = qrSvg(0, 'M'); q.addData(text); q.make();
-  const n = q.getModuleCount(), c = 6, m = 4 * c, W = n * c + 2 * m;
-  let d = '';
-  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) d += 'M' + (m + x * c) + ' ' + (m + y * c) + 'h' + c + 'v' + c + 'h-' + c + 'z';
-  return '<svg viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="QR"><rect width="' + W + '" height="' + W + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
-}
 function guestHTML(app) {
   const G = app.guest;
   if (!G || !G.avail) return '';
@@ -763,7 +756,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML };
     // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
     const TIGHT = { week: 1, feat: 1, tabs: 1, help: 1 };
     for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
@@ -800,7 +793,7 @@ export function createPanel(app, onChange) {
     // папка Melete: состояние синхронизации — на странице «Данные и копии»
     if (app.folder) app.folder.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.localSend) app.localSend.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
-    if (app.mesh) app.mesh.subscribe(() => { if (page === 'link' && layer && layer.isConnected && !syncBusy) render(); });
+    if (app.mesh) app.mesh.subscribe(() => { if ((page === 'link' || page === 'student') && layer && layer.isConnected && !syncBusy) render(); });
     if (app.syncSrv) app.syncSrv.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.guest) app.guest.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected) render(); });
     if (app.syncCli) app.syncCli.subscribe(() => { if ((page === 'data' || page === 'link') && layer && layer.isConnected && !syncBusy) render(); });
@@ -821,6 +814,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-pp]'))) { page = b.dataset.pp; render(); layer.scrollTop = 0; return; }
       if (g('[data-act="pclose"]')) { panel.close(); return; }
       if (studentClick(app, e.target, () => { render(); onChange(); })) return;
+      if (classClick(app, e.target, () => { render(); onChange(); })) return;
       if ((b = g('[data-dockup]'))) { const st = app.store.state.settings, l = dockGroups(st), i = l.indexOf(b.dataset.dockup); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; st.dockOrder = l; app.store.settingsChanged(); render(); } return; }
       if (g('[data-dockreset]')) { delete app.store.state.settings.dockOrder; app.store.settingsChanged(); render(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }

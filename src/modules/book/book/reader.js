@@ -120,7 +120,7 @@ export function createBook(ctx, L, { save }) {
     const html = chapterHTML(textOf(c), L.TERMS), segs = html.split(/(?=<h3>)/);
     if (/^\s*<h3>/.test(html)) segs.unshift('');
     const opened = BS().opened || {};
-    return LESSONS[c.id].map((l, i) => lessonLevel(l.id) > lvlI() && !opened[l.id] && !doneMap()[l.id]
+    return LESSONS[c.id].map((l, i) => (ctx.lessonLocked && ctx.lessonLocked(l.id)) ? '<section class="bkles locked" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b></div><p class="bknote">' + T('ls.teacherLock') + '</p></section>' : lessonLevel(l.id) > lvlI() && !opened[l.id] && !doneMap()[l.id]
       ? '<section class="bkles locked" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b></div><button class="bklopen" data-lopen="' + l.id + '">' + T('bk.lvlMore', { l: T('bk.lvl.' + LEVELS[lessonLevel(l.id)]) }) + '</button></section>'
       : '<section class="bkles" id="les-' + l.id + '"><div class="bklh"><span>' + T('ls.n', { n: i + 1 }) + '</span><b>' + lsTitle(l.id) + '</b>' + (doneMap()[l.id] ? '<i class="bkldok" aria-label="' + T('lx.isDone') + '">✓</i>' : '') + '</div>' +
       l.secs.map((k) => segs[k] || '').join('') + exHTML(l) + '</section>').join('');
