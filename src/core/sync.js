@@ -59,7 +59,7 @@ export function mergeMeta(a, b) {
   if (b.want && !a.want) p.want = b.want;
   return Object.keys(p).length ? p : null;
 }
-const metaFields = (r) => { const o = { id: r.id }; ['ana', 'lyr', 'stemsAbsent', 'songs', 'want'].forEach((k) => { if (r[k] != null) o[k] = r[k]; }); return o; };
+export const metaFields = (r) => { const o = { id: r.id }; ['ana', 'lyr', 'stemsAbsent', 'songs', 'want'].forEach((k) => { if (r[k] != null) o[k] = r[k]; }); return o; };
 export const manifestOf = (list) => list.filter(syncable).map((r) => { const k = derivedKey(r); return { id: r.id, size: r.size || (r.blob && r.blob.size) || 0, name: r.name || '', h: metaHash(r), ...(k ? { k } : {}) }; });
 // Без содержимого и служебного — то, что уходит вместе с файлом
 export function metaOf(r) { const m = { ...r }; delete m.blob; delete m._busy; return m; }
@@ -207,7 +207,7 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   return { status: 404, json: {} };
 }
 // демо-набор между устройствами не ходит (demo.js)
-const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.list(k)).filter((r) => !isDemoFile(r, CORE_DICTS)) : []);
+export const allFiles = (F) => (F ? ['audio', 'tab', 'midi', 'daw'].flatMap((k) => F.list(k)).filter((r) => !isDemoFile(r, CORE_DICTS)) : []);
 
 // Связь всех со всеми (Melete DEV, слово автора 07.11.2026): телефон тоже принимает подключения — плагин Mesh
 // (MeshServer.java: TLS, свой сертификат), тот же протокол и обработчик, что у компьютера. В pre — только компьютер.

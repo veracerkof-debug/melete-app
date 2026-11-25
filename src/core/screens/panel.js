@@ -4,6 +4,7 @@
 // barsSVG, hbars, legalSheet, doExport, импорт копии).
 import { Capacitor } from '@capacitor/core';
 import { isDesktop } from '../desktop.js';
+import { gdriveHTML, gdriveAct, gdriveShown } from './gdrivepage.js';
 import { log, logErr } from '../log.js';
 import { updateSheet, variantsSheet } from './update.js';
 import { DEV, VARIANTS } from '../variants.js';
@@ -74,6 +75,7 @@ const PAGES = {
   notif: ['orange', '<svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>'],
   look: ['graphite', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--on,#fff)"/></svg>'],
   help: ['blue', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg>'],
+  gdrive: ['blue', '<svg viewBox="0 0 24 24"><path d="M8.2 4h7.6l5 8.7-3.8 6.6H7l-3.8-6.6zM8.2 4l5 8.7h7.6M3.2 12.7h10M13.2 12.7L9.4 19.3"/></svg>'],
   link: ['blue', '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="13" height="9.5" rx="1.6"/><path d="M6 18h6M9 14.5V18"/><rect x="16.5" y="8" width="5" height="10" rx="1.4"/></svg>'],
   sound: ['teal', '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>'],
   bible: ['brown', '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>'],
@@ -84,7 +86,7 @@ const PAGES = {
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
 // Карта настроек (решение автора 06.11.2026): практика · экран · звук, маскот, Библия · связь · помощь
-const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'ai', 'student', 'class']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
+const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'ai', 'student', 'class']], ['link', ['link', 'gdrive']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'notif', 'mascot'];
 // Ученик под блокировкой: страницы, через которые её можно обойти (данные и копии, модули, вкладки, связь)
@@ -725,7 +727,7 @@ function rootHTML(app) {
     // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
     (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)) && !(short && !moreOpen && BEGINNER_MORE.includes(k)));
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'gdrive' || gdriveShown()) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)) && !(short && !moreOpen && BEGINNER_MORE.includes(k)));
       const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
       return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +
@@ -765,7 +767,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, gdrive: gdriveHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
     // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
     const TIGHT = { week: 1, feat: 1, tabs: 1, help: 1 };
     for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
@@ -902,6 +904,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="sndout"]')) { outSheet(app, () => render()); return; }
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="scen"]')) { globalThis.__SCEN__.set(g('[data-act="scen"]').dataset.v); location.reload(); return; }
+      if ((b = g('[data-act="gd"]'))) { gdriveAct(app, b.dataset.v, render); return; }
       if (g('[data-act="moreset"]')) { moreOpen = !moreOpen; render(); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
@@ -1057,6 +1060,7 @@ export function createPanel(app, onChange) {
       if (d.psw === 'guestOn') { (e.target.checked ? app.guest.start() : app.guest.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'guestAudio') { app.guest.set({ audio: e.target.checked }); return; }
       if (e.target.matches('[data-gset]')) { app.guest.set({ set: e.target.value }); return; }
+      if (d.psw === 'gdAuto') { app.store.state.settings.gdrive = !!e.target.checked; app.store.settingsChanged(); if (e.target.checked && app.gdrive) app.gdrive.kick(500); return; }
       if (d.psw === 'helpOn') { app.store.state.settings.helpOff = !e.target.checked; app.store.settingsChanged(); return; }
       if (d.psw === 'meshOn') { (e.target.checked ? app.mesh.start() : app.mesh.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }

@@ -57,6 +57,8 @@ import { packsApi } from './screens/packs.js';
 import { createAutoStems } from './autostems.js';
 import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
+import { createDriveClient } from './gdrive.js';
+import { SHOWCASE } from './platform.js';
 import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
 import { reschedule, rescheduleEvents, rescheduleBible, rescheduleBibleNotes, notifyNow } from './reminders.js';
@@ -425,6 +427,9 @@ export function boot(root) {
   // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
   app.syncCli = createSyncClient(app);
   if (!app.syncSrv.avail) app.syncCli.start();
+  // синхронизация своих устройств через Google Диск (gdrive.js): автоматически, без блокировки; без входа и без сети ничего не делает
+  app.gdrive = createDriveClient(app);
+  if (!SHOWCASE) app.gdrive.start();
   // ансамбль (ensemble.js): компьютер ведёт дубль и собирает записи, телефон пишет свою партию; модули — по требованию
   app.ensemble = async () => {
     const E = await import('./ensemble.js');

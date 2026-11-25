@@ -14,6 +14,13 @@ android {
         versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
         versionName(System.getenv('MELETE_CHANNEL') == 'dev' ? "1.2-dev" : "1.2-pre")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Схема возврата со страницы входа Google: com.googleusercontent.apps.<ключ без суффикса>; ключ клиента Android — в
+        // src/core/gconfig.js (androidPre / androidDev), пока не вписан — пустая заглушка, вход скрыт
+        def gcfg = file('../../src/core/gconfig.js').exists() ? file('../../src/core/gconfig.js').text : ''
+        def gkey = System.getenv('MELETE_CHANNEL') == 'dev' ? 'androidDev' : 'androidPre'
+        def gm = (gcfg =~ (gkey + /:\s*'([^']*)'/))
+        def gid = gm.find() ? gm.group(1).replace('.apps.googleusercontent.com', '') : ''
+        manifestPlaceholders = [gauthScheme: gid ? 'com.googleusercontent.apps.' + gid : 'app.melete.gauth']
         // Родной код (ONNX Runtime) — для телефонов и приставок ARM (64 и 32 бита) и x86_64 (эмулятор проверки
         // перед выкладкой, Chromebook); 32-битный x86 (старые эмуляторы) не нужен — минус 41 МБ (модульность, шаг 2)
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64' }

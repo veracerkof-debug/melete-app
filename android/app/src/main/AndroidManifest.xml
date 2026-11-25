@@ -50,6 +50,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="melete" />
             </intent-filter>
+            <!-- Возврат со страницы входа Google (core/gauth.js): схема — com.googleusercontent.apps.<ключ>, берётся из src/core/gconfig.js (build.gradle) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${gauthScheme}" />
+            </intent-filter>
 
         </activity>
 
