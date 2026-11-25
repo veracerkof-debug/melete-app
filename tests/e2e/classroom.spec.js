@@ -40,7 +40,7 @@ test('учитель: шторка ученика — задание, уроки
   await page.fill('[data-cs-text]', 'Выучить C'); await page.click('[data-cs="add"]'); await page.waitForTimeout(300);
   await expect(page.locator('.sheet').getByText('Выучить C')).toBeVisible();
   await page.click('[data-cs="linc"]'); await page.click('[data-cs="linc"]'); await page.waitForTimeout(200);
-  await expect(page.locator('.sheet').getByText('Открыто уроков: 2 из 20')).toBeVisible();
+  await expect(page.locator('.sheet').getByText('Открыто уроков: 2 из 31')).toBeVisible();
   const s = await melete.settings(), rec = Object.values(s.classroom.students)[0];
   expect(rec.tasks.map((x) => x.text)).toEqual(['Выучить C']); expect(rec.lessons).toEqual(['g1', 'g2']);
   void errors;
@@ -70,7 +70,7 @@ test('учитель: задание-урок открывает урок, це�
   await page.selectOption('[data-cs-ref]', 'g5');
   await page.click('[data-cs="add"]'); await page.waitForTimeout(300);
   await expect(page.locator('.sheet').getByText('Урок 5').first()).toBeVisible();
-  await expect(page.locator('.sheet').getByText('Открыто уроков: 5 из 20')).toBeVisible(); // задание открыло уроки до пятого
+  await expect(page.locator('.sheet').getByText('Открыто уроков: 5 из 31')).toBeVisible(); // задание открыло уроки до пятого
   await page.fill('[data-cs-goal]', '240'); await page.locator('[data-cs-goal]').blur();
   const s = await melete.settings(), rec = Object.values(s.classroom.students)[0];
   expect(rec.goal).toBe(240); expect(rec.tasks[0]).toMatchObject({ kind: 'lesson', ref: 'g5' });
