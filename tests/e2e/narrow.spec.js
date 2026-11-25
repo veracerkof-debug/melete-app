@@ -12,8 +12,8 @@ test('без горизонтального переполнения', async ({ 
   for (const tb of tabs) { await melete.tab(tb); await check('tab:' + tb); }
   await melete.tab('home');
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500); await check('panel');
-  const pages = await page.evaluate(() => [...document.querySelectorAll('[data-pp]')].map((x) => x.dataset.pp).filter((x) => x !== 'root'));
-  for (const pg of pages) { await melete.click('[data-pp="' + pg + '"]'); await page.waitForTimeout(450); await check('panel:' + pg); await melete.click('[data-pp="root"]'); await page.waitForTimeout(200); }
+  const pages = await page.evaluate(() => [...document.querySelectorAll('#panelLayer [data-pp]')].map((x) => x.dataset.pp).filter((x) => x !== 'root'));
+  for (const pg of pages) { await melete.click('#panelLayer [data-pp="' + pg + '"]'); await page.waitForTimeout(450); await check('panel:' + pg); await melete.click('[data-pp="root"]'); await page.waitForTimeout(200); }
   const ids = await melete.modules();
   for (const L of ['F', 'HH']) for (let i = 0; i < ids.length; i += (L === 'F' ? 1 : 2)) { const panes = ids.slice(i, i + (L === 'F' ? 1 : 2)); await melete.free(L, panes); await check(L + ':' + panes.join('+')); }
   expect(found).toEqual([]);

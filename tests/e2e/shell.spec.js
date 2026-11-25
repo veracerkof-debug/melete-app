@@ -9,10 +9,10 @@ test('вкладки и панель', async ({ page, melete, errors }) => {
   await melete.tab('home');
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   expect(await melete.count('#panelLayer')).toBe(1);
-  const pages = await page.evaluate(() => [...document.querySelectorAll('[data-pp]')].map((x) => x.dataset.pp).filter((x) => x !== 'root'));
+  const pages = await page.evaluate(() => [...document.querySelectorAll('#panelLayer [data-pp]')].map((x) => x.dataset.pp).filter((x) => x !== 'root'));
   expect(pages.length).toBeGreaterThan(5);
   for (const pg of pages) {
-    await melete.click('[data-pp="' + pg + '"]'); await page.waitForTimeout(450);
+    await melete.click('#panelLayer [data-pp="' + pg + '"]'); await page.waitForTimeout(450);
     expect(await melete.count('#panelLayer > .wrap'), pg).toBe(1);
     await melete.click('[data-pp="root"]'); await page.waitForTimeout(250);
   }

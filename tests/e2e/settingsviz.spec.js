@@ -13,7 +13,7 @@ test('данные и неделя: инфографика', async ({ page, mele
   await page.keyboard.press('Escape');
   await page.reload(); await page.waitForTimeout(800);
   await melete.click('.avatar'); await page.waitForTimeout(500);
-  await page.click('[data-pp="week"]'); await page.waitForTimeout(900);
+  await page.click('#panelLayer [data-pp="week"]'); await page.waitForTimeout(900);
   await expect(page.locator('.wkbars .wkc')).toHaveCount(7);
   await page.locator('.wkinfo').scrollIntoViewIfNeeded();
   const hs = await page.locator('.wkc i:not(.z)').evaluateAll((a) => a.map((e) => e.getBoundingClientRect().height));
@@ -25,7 +25,7 @@ test('данные и неделя: инфографика', async ({ page, mele
 test('звук, маскот, вкладки: карточки, значки, миниатюра панели', async ({ page, melete, errors }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await melete.open();
-  const go = async (k) => { await melete.click('.avatar'); await page.waitForTimeout(500); await page.click('[data-pp="' + k + '"]'); await page.waitForTimeout(800); };
+  const go = async (k) => { await melete.click('.avatar'); await page.waitForTimeout(500); await page.click('#panelLayer [data-pp="' + k + '"]'); await page.waitForTimeout(800); };
   await go('sound');
   await expect(page.locator('[data-seg="sndmode"] .scard')).toHaveCount(3);
   await page.click('[data-seg="sndmode"] .scard[data-v="smooth"]'); await page.waitForTimeout(300);
