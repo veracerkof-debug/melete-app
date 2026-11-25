@@ -83,3 +83,21 @@ describe('программа номера', () => {
     expect(made[0].playbackRate).toBeGreaterThan(1.1); expect(made[0].playbackRate).toBeLessThan(1.4);
   });
 });
+
+describe('дорожки в программе номера', () => {
+  const mk = () => { const c = fakeCtx(), dest = { context: c, connect() {} }, made = []; const deck = createShowDeck({ dest, getBlob: (id) => ({ id }), getParts: () => ({ vocals: {}, drums: {} }), makePlayer: async () => { const p = fakePlayer(); p.playbackRate = 1; p.mixes = []; p.loadParts = async (b, g) => { p.parted = Object.keys(b); p.mixes.push({ ...g }); }; p.setMix = (g) => p.mixes.push({ ...g }); made.push(p); return p; }, now: () => c.currentTime }); return { c, deck, made }; };
+  it('свод номера грузит дорожки; событие со сводом выключает вокал на ходу, назад — возвращает', async () => {
+    const { deck, made } = mk();
+    await deck.start({ file: 'a', parts: true, mix: { drums: 0.5 }, prog: [{ id: 'e', t: 10, mix: { vocals: 0 }, ramp: 0 }] });
+    expect(made[0].parted).toEqual(['vocals', 'drums']);
+    made[0].currentTime = 11; deck.tick();
+    expect(made[0].mixes[made[0].mixes.length - 1]).toEqual({ drums: 0.5, vocals: 0 });
+    made[0].currentTime = 1; deck.tick();
+    expect(made[0].mixes[made[0].mixes.length - 1]).toEqual({ drums: 0.5 });
+  });
+  it('без свода дорожки не грузятся — играет исходная запись', async () => {
+    const { deck, made } = mk();
+    await deck.start({ file: 'a' });
+    expect(made[0].parted).toBeUndefined();
+  });
+});

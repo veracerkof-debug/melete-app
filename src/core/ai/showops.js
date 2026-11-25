@@ -1,10 +1,10 @@
 // Программа выступления от нейросети (слово автора 25.11.2026): блок ```melete-show — правки номеров и падов Пульта по
 // текстовой инструкции человека: эквалайзер-пресет, темп, тональность, громкость, плавные входы/уходы, события по времени записи.
 // Чистые функции без DOM: очистка, применение к данным (device.show), откат, строки контекста и карточки.
-import { normalizeNumber, normalizePad, normalizeProg, EQ_IDS } from '../../music/show.js';
+import { normalizeNumber, normalizePad, normalizeProg, normalizeMix, EQ_IDS } from '../../music/show.js';
 
 export const SHOW_MAX = { ops: 30, prog: 64 };
-const NUM_SET = ['eq', 'tempo', 'shift', 'level', 'fadeIn', 'fadeOut', 'title', 'note'];
+const NUM_SET = ['eq', 'tempo', 'shift', 'level', 'fadeIn', 'fadeOut', 'title', 'note', 'mix'];
 const PAD_SET = ['level', 'speed', 'shift', 'eq', 'mode', 'again', 'fadeIn', 'fadeOut', 'from', 'to', 'duck', 'name'];
 const isNum = (v) => (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) && Number.isFinite(+v);
 
@@ -17,10 +17,12 @@ export function cleanShowOp(o) {
     const v = o.set[k];
     if (k === 'eq') { if (EQ_IDS.includes(v) || v === 'flat') set.eq = v === 'flat' ? '' : v; }
     else if (k === 'title' || k === 'name' || k === 'note') set[k] = String(v == null ? '' : v).slice(0, k === 'note' ? 4000 : 80);
+    else if (k === 'mix') continue;
     else if (k === 'mode' || k === 'again') set[k] = String(v);
     else if (k === 'duck') set.duck = !!v;
     else if (isNum(v)) set[k] = +v;
   }
+  if (o.op === 'number' && o.set && o.set.mix && typeof o.set.mix === 'object') { const m = normalizeMix(o.set.mix); if (Object.keys(m).length) set.mix = m; }
   const out = { op: o.op, ref: o.ref };
   if (Object.keys(set).length) out.set = set;
   if (o.op === 'number' && Array.isArray(o.prog)) out.prog = normalizeProg(o.prog.slice(0, SHOW_MAX.prog));

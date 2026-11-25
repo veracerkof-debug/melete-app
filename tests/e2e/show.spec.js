@@ -201,6 +201,8 @@ test('нормализация и громкости номера: запись 
   // пульт: ГО, крутилки номера (шторка «Программа» закрывается)
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="pp"]');
+  await expect(page.locator(T + '.shpick.playing')).toHaveCount(1, { timeout: 15_000 }); // трек пошёл — страница перерисована, крутилку не выдернет из-под пальца
+  await page.waitForTimeout(400);
   await expect(page.locator(T + '[data-knob="deck"]')).toBeVisible({ timeout: 10_000 });
   const kn = T + '.shstrip [data-knob="deck"]', b = await page.locator(kn).boundingBox();
   const v0 = +(await page.locator(kn).getAttribute('aria-valuenow'));

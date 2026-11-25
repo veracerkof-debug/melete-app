@@ -29,6 +29,13 @@ export const EQ_PRESETS = {
 };
 export const EQ_IDS = Object.keys(EQ_PRESETS);
 export const eqGains = (id) => EQ_PRESETS[id] || EQ_PRESETS[''];
+export const PARTS = ['vocals', 'inst', 'drums', 'bass', 'guitar', 'piano', 'other']; // дорожки разделённой записи
+// Свод дорожек { часть: усиление 0…1,5 }; пусто — как есть (исходная запись)
+export function normalizeMix(m) {
+  const o = {};
+  if (m && typeof m === 'object') for (const k of PARTS) if (m[k] != null && m[k] !== '' && Number.isFinite(+m[k])) o[k] = Math.round(clamp(m[k], 0, 1.5, 1) * 100) / 100;
+  return o;
+}
 export const PROG_MAX = 64; // событий программы у номера
 
 /* ---------- пэды и банки ---------- */
@@ -94,8 +101,9 @@ export function normalizeProg(list) {
     if (e.key != null && e.key !== '' && Number.isFinite(+e.key)) o.key = clamp(e.key, -12, 12, 0) | 0;
     if (e.tempo != null && e.tempo !== '' && Number.isFinite(+e.tempo)) o.tempo = clamp(e.tempo, 0.5, 1.5, 1);
     if (e.level != null && e.level !== '' && Number.isFinite(+e.level)) o.level = clamp(e.level, 0, 100, 80);
+    const mx = normalizeMix(e.mix); if (Object.keys(mx).length) o.mix = mx;
     return o;
-  }).filter((e) => e.key != null || e.tempo != null || e.level != null).sort((a, b) => a.t - b.t);
+  }).filter((e) => e.key != null || e.tempo != null || e.level != null || e.mix).sort((a, b) => a.t - b.t);
 }
 export function normalizeNumber(n) {
   const o = { ...n };
@@ -115,6 +123,7 @@ export function normalizeNumber(n) {
   // программа номера: свой эквалайзер-пресет, скорость (темп) и события по времени записи — смена тональности, темпа, громкости
   o.eq = pick(o.eq, EQ_IDS, '');
   o.tempo = clamp(o.tempo, 0.5, 1.5, 1);
+  o.mix = normalizeMix(o.mix); // дорожки: что звучит в номере (пусто — исходная запись)
   o.prog = normalizeProg(o.prog);
   // своя правка записи: тональность (0–11, null — как определено), лад и темп — сильнее автоматического разбора
   o.keyPc = Number.isFinite(+o.keyPc) && o.keyPc !== null && o.keyPc !== '' ? ((Math.round(+o.keyPc) % 12) + 12) % 12 : null;

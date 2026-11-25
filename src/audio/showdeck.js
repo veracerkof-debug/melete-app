@@ -13,7 +13,7 @@ import { createBufferPlayer } from './bufferplayer.js';
 const CLICK = 0.012;
 const realPlayer = (c, dest) => (stretchAvailable() ? createStretchPlayer(c, dest) : createBufferPlayer(c, dest));
 
-export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = () => dest.context.currentTime }) {
+export function createShowDeck({ dest, getBlob, getParts = () => null, makePlayer = realPlayer, now = () => dest.context.currentTime }) {
   const c = dest.context;
   // фейдер трека → эквалайзер номера (три полосы, создаются один раз; пресет меняет только усиление, плавно) → выход
   const trim = c.createGain(); trim.gain.value = 1;
@@ -29,14 +29,16 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
 
   // загрузить файл в место (один раз; тот же файл повторно не грузится)
-  function loadInto(slot, fileId) {
-    if (slot.file === fileId && slot.ready) return slot.ready;
-    slot.file = fileId; slot.fading = false;
+  // parts — собрать звук из дорожек записи (программа номера меняет их громкость на ходу); mix — начальные усиления
+  function loadInto(slot, fileId, parts = false, mix = {}) {
+    if (slot.file === fileId && slot.ready && !!slot.withParts === !!parts) return slot.ready;
+    slot.file = fileId; slot.fading = false; slot.withParts = false;
     slot.ready = (async () => {
       const blob = getBlob(fileId);
       if (!blob) throw new Error('нет файла');
       if (!slot.player) slot.player = await makePlayer(c, slot.env);
-      await slot.player.load(blob);
+      const pb = parts && slot.player.loadParts ? getParts(fileId) : null;
+      if (pb && Object.keys(pb).length) { await slot.player.loadParts(pb, mix); slot.withParts = true; } else await slot.player.load(blob);
       if (slot.file !== fileId) return null;
       slot.loadedFile = fileId;
       slot.player.addEventListener && slot.player.addEventListener('ended', () => { if (slot === active) { slot.opts = slot.opts && { ...slot.opts, ended: true }; emit(); } });
@@ -51,11 +53,11 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
   const api = {
     trim,
     // загрузить следующий трек заранее, пока идёт текущий
-    prepare(fileId) { if (!fileId) return Promise.resolve(null); const s = slotFor(fileId); return loadInto(s, fileId).catch(() => null); },
+    prepare(fileId, parts = false, mix = {}) { if (!fileId) return Promise.resolve(null); const s = slotFor(fileId); return loadInto(s, fileId, parts, mix).catch(() => null); },
     isReady: (fileId) => slots.some((s) => s.file === fileId && s.loadedFile === fileId),
     // opts: { file, level 0…100, fadeIn, fadeOut, shift, from } — запустить; → длительность
     async start(opts) {
-      const s = slotFor(opts.file), pl = await loadInto(s, opts.file);
+      const wantParts = !!(opts.parts), s = slotFor(opts.file), pl = await loadInto(s, opts.file, wantParts, opts.mix || {});
       if (!pl) return 0;
       const t = now(), lvl = faderGain(opts.level == null ? 100 : opts.level), fin = Math.max(CLICK, opts.fadeIn || 0);
       try { pl.setPitch && pl.setPitch(opts.shift || 0, 0, false); } catch { /* запасной движок без тональности */ }
@@ -64,7 +66,8 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
       pl.currentTime = opts.from || 0;
       holdAt(s.env.gain, t); s.env.gain.setValueAtTime(0, t); s.env.gain.linearRampToValueAtTime(lvl, t + fin);
       s.norm.gain.setValueAtTime(dbGain(opts.normDb || 0), t); // выравнивание громкости записей до одной цели
-      s.opts = { ...opts, lvl, fading: false }; s.fading = false; s.progI = -1; s.ramp = null; s.base = { shift: opts.shift || 0, tempo: opts.tempo || 1 };
+      s.opts = { ...opts, lvl, fading: false }; s.fading = false; s.progI = -1; s.ramp = null; s.base = { shift: opts.shift || 0, tempo: opts.tempo || 1, mix: { ...(opts.mix || {}) } }; s.curMix = { ...s.base.mix };
+      if (s.withParts && pl.setMix) { try { pl.setMix(s.base.mix); } catch { /* */ } }
       await pl.play();
       active = s;
       emit();
@@ -88,29 +91,43 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
     setNorm(db) { const s = active; if (s) s.norm.gain.setTargetAtTime(dbGain(db || 0), now(), 0.05); },
     setShift(semi) { const s = active; if (s && s.player && s.player.setPitch) { try { s.player.setPitch(semi, 0, false); } catch { /* */ } } },
     setEq(id) { setEq(id, false); },
+    // свод дорожек идущего номера (если звук собран из дорожек)
+    setMix(m) { const s = active; if (s && s.withParts && s.player && s.player.setMix && s.base) { s.base.mix = { ...m }; s.curMix = { ...m }; try { s.player.setMix(m); } catch { /* */ } } },
+    // программа идущего номера обновлена в редакторе: подхватывается сразу
+    setProg(list) { const s = active; if (s && s.opts) { s.opts.prog = list || []; s.progI = -2; } },
     setTempo(r) { const s = active; if (s && s.player) { try { s.player.playbackRate = r; } catch { /* */ } } },
     // программа номера: события по времени записи (key — полутоны, tempo, level; ramp — плавно за сколько секунд)
     applyProg(s, time) {
-      const L = s.opts && s.opts.prog; if (!L || !L.length) return;
+      const L = s.opts && s.opts.prog; if (!L || (!L.length && s.progI === -1)) return;
       let i = -1; while (i + 1 < L.length && L[i + 1].t <= time + 0.02) i++;
       if (i === s.progI) return;
       const back = i < s.progI; s.progI = i;
       // итог — по всем событиям до i (их немного): так и перемотка, и прыжок дают верное состояние
-      const st = { shift: s.base.shift, tempo: s.base.tempo, level: s.opts.level == null ? 100 : s.opts.level };
-      L.slice(0, i + 1).forEach((e) => { if (e.key != null) st.shift = e.key; if (e.tempo != null) st.tempo = e.tempo; if (e.level != null) st.level = e.level; });
+      const st = { shift: s.base.shift, tempo: s.base.tempo, level: s.opts.level == null ? 100 : s.opts.level, mix: { ...s.base.mix } };
+      L.slice(0, i + 1).forEach((e) => { if (e.key != null) st.shift = e.key; if (e.tempo != null) st.tempo = e.tempo; if (e.level != null) st.level = e.level; if (e.mix) Object.assign(st.mix, e.mix); });
       const ramp = back || i < 0 ? 0 : L[i].ramp || 0, t = now();
       if (s.player && s.player.setPitch) { try { s.player.setPitch(st.shift, 0, false); } catch { /* */ } }
       if (!s.fading) { const g = faderGain(st.level); s.opts.lvl = g; holdAt(s.env.gain, t); if (ramp > 0.05) s.env.gain.linearRampToValueAtTime(g, t + ramp); else s.env.gain.setTargetAtTime(g, t, 0.03); }
       const cur = (s.player && s.player.playbackRate) || 1;
       if (ramp > 0.05 && st.tempo !== cur) s.ramp = { from: cur, to: st.tempo, t0: t, dur: ramp };
       else { s.ramp = null; if (s.player) { try { s.player.playbackRate = st.tempo; } catch { /* */ } } }
+      // дорожки: плавно (шаги в tick) или сразу
+      if (s.withParts && s.player && s.player.setMix) {
+        if (ramp > 0.05) s.mixRamp = { from: { ...s.curMix }, to: st.mix, t0: t, dur: ramp };
+        else { s.mixRamp = null; s.curMix = { ...st.mix }; try { s.player.setMix(s.curMix); } catch { /* */ } }
+      }
     },
     setTrim(v) { trim.gain.setTargetAtTime(faderGain(v), now(), 0.03); },
     // вызывается часто (UI): плавный уход в конце трека по fadeOut номера
     tick() {
       const s = active; if (!s || !s.player || !s.opts || s.fading || s.player.paused) return;
-      if (s.opts.prog && s.opts.prog.length) api.applyProg(s, s.player.currentTime || 0);
+      if (s.opts.prog && (s.opts.prog.length || s.progI !== -1)) api.applyProg(s, s.player.currentTime || 0);
       if (s.ramp) { const k = Math.min(1, (now() - s.ramp.t0) / s.ramp.dur); try { s.player.playbackRate = s.ramp.from + (s.ramp.to - s.ramp.from) * k; } catch { /* */ } if (k >= 1) s.ramp = null; }
+      if (s.mixRamp && s.player.setMix) {
+        const r = s.mixRamp, k = Math.min(1, (now() - r.t0) / r.dur), m = {};
+        for (const p of new Set([...Object.keys(r.from), ...Object.keys(r.to)])) { const a = r.from[p] == null ? 1 : r.from[p], b = r.to[p] == null ? 1 : r.to[p]; m[p] = a + (b - a) * k; }
+        s.curMix = m; try { s.player.setMix(m); } catch { /* */ } if (k >= 1) s.mixRamp = null;
+      }
       const fo = s.opts.fadeOut, d = s.player.duration;
       if (fo > 0 && d && s.player.currentTime >= d - fo) { const t = now(), left = Math.max(CLICK, d - s.player.currentTime); holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(0, t + left); s.fading = true; }
     },

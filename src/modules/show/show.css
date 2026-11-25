@@ -227,7 +227,7 @@
 .shfavs{flex:none;width:84px;display:flex;flex-direction:column;gap:2px}
 .shfavs .shpad{flex:1;min-height:44px;padding:4px 6px}
 .shfavs .shpad b{font-size:12px}
-.shev2{display:grid;grid-template-columns:54px repeat(4,1fr) 36px;border-top:1px solid var(--fill);align-items:center}
+.shev2{display:grid;grid-template-columns:54px repeat(5,1fr) 36px;border-top:1px solid var(--fill);align-items:center}
 .shev2 input{padding:10px 4px;font:500 14px var(--font);background:transparent;color:var(--ink);border:0;width:100%;text-align:center}
 .shev2 .tt{color:var(--tint-text);font-weight:700}
 .shev2 button{min-height:44px;color:var(--l2)}

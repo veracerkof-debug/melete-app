@@ -298,6 +298,16 @@
   "prog.level": "level",
   "prog.ramp": "ramp, s",
   "prog.add": "+ Event (at current time)",
-  "prog.hint": "At the given track time pitch (semitones), tempo (0.5–1.5) and level (0–100) change; “ramp” is how many seconds to glide. Empty field — unchanged.",
-  "num.cueDel": "Delete"
+  "prog.hint": "At the given track time pitch (semitones), tempo (0.5–1.5), level (0–100) and stems (“vocals 0, drums 50” — percent) change; “ramp” is how many seconds to glide. Empty field — unchanged.",
+  "num.cueDel": "Delete",
+  "num.parts": "Stems",
+  "num.partsHint": "What plays in the number: 0 is off, 100 is as recorded. Needs a split recording (media library). Changes live.",
+  "prog.mix": "stems",
+  "part.vocals": "Vocals",
+  "part.inst": "Backing",
+  "part.drums": "Drums",
+  "part.bass": "Bass",
+  "part.guitar": "Guitar",
+  "part.piano": "Keys",
+  "part.other": "Other"
 }

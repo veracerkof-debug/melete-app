@@ -12,6 +12,7 @@ import { swipe } from '../../ui/gestures.js';
 import { sortable, dragSort, buzz, onHold } from '../../ui/hold.js';
 import { arrange, bindLayout } from '../../ui/layout.js';
 import * as M from '../../music/show.js';
+import { stemsOf } from '../../core/jobs.js';
 
 const I = {
   gear: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
@@ -33,6 +34,15 @@ const save = () => ctx.store.save();
 const fileOf = (id) => (id ? ctx.files.get(id) : null);
 const blobOf = (id) => { const f = fileOf(id); return f ? f.blob : null; };
 const cur = () => M.eventOf(S);
+// Дорожки разделённой записи: лучший набор (больше дорожек, улучшенный раньше) → { часть: Blob }; нет разделения — null
+function partSet(fileId) {
+  if (!ctx || !ctx.files) return [];
+  const by = {}; stemsOf(ctx.files, fileId).forEach((r) => { (by[(r.stem.mode || '4') + (r.stem.hq ? 'hq' : '')] ??= []).push(r); });
+  return Object.values(by).sort((a, b) => b.length - a.length || (b[0].stem.hq ? 1 : 0) - (a[0].stem.hq ? 1 : 0))[0] || [];
+}
+const partsOf = (fileId) => { const set = partSet(fileId).filter((r) => r.blob); if (!set.length) return null; const o = {}; set.forEach((r) => { o[r.stem.part] = r.blob; }); return o; };
+// Номеру нужны дорожки, если у него задан свод или в программе есть события со сводом
+const needParts = (n) => !!n && (Object.keys(n.mix || {}).length > 0 || (n.prog || []).some((e) => e.mix));
 const allPads = () => S.banks.flatMap((b) => b.pads.filter(Boolean));
 
 /* ---------- звук ---------- */
@@ -61,8 +71,8 @@ function ensureEng() {
 }
 function ensureDeck() {
   const en = ensureEng(); if (!en) return null;
-  if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf });
-    shareOut('media', 'show.deck', deck, ['start', 'stop', 'pause', 'resume', 'seek', 'setLevel', 'setNorm', 'setShift', 'setTrim'], { ret: { start: () => Promise.resolve(0), resume: () => Promise.resolve() }, drop: () => deck.stop(0.3) });
+  if (!deck) { deck = createShowDeck({ dest: en.duckNode, getBlob: blobOf, getParts: partsOf });
+    shareOut('media', 'show.deck', deck, ['start', 'stop', 'pause', 'resume', 'seek', 'setLevel', 'setNorm', 'setShift', 'setTrim', 'setEq', 'setTempo'], { ret: { start: () => Promise.resolve(0), resume: () => Promise.resolve() }, drop: () => deck.stop(0.3) });
   }
   if (!unsubDeck) { unsubDeck = deck.subscribe(() => deskPaint(true)); deck.setTrim(S.deckLevel); }
   return deck;
@@ -520,8 +530,8 @@ async function startNumber(n, from = 0) {
     const d = ensureDeck();
     if (!d) { render(); return; }
     if (S.norm.on && !loudOf(n.file)) await Promise.race([ensureLoud(n.file), new Promise((r) => setTimeout(r, 4000))]); // без измерения не задерживаем больше 4 с
-    try { await d.start({ file: n.file, level: n.level, fadeIn: n.fadeIn, fadeOut: n.fadeOut, shift: n.shift, from, normDb: normDb(n), eq: n.eq, tempo: n.tempo, prog: n.prog }); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('desk.trackErr')); }
-    const nx = M.nextNumber(S); if (nx && nx.kind === 'track' && nx.file) d.prepare(nx.file); // следующий — заранее, «ГО» не ждёт
+    try { await d.start({ file: n.file, level: n.level, fadeIn: n.fadeIn, fadeOut: n.fadeOut, shift: n.shift, from, normDb: normDb(n), eq: n.eq, tempo: n.tempo, prog: n.prog, mix: n.mix, parts: needParts(n) && !!partsOf(n.file) }); } catch (e) { ctx.logErr(e); ctx.ui.toast(t('desk.trackErr')); }
+    const nx = M.nextNumber(S); if (nx && nx.kind === 'track' && nx.file) d.prepare(nx.file, needParts(nx) && !!partsOf(nx.file), nx.mix); // следующий — заранее, «ГО» не ждёт
     if (nx && nx.kind === 'track' && nx.file) ensureLoud(nx.file);
   }
   render();
@@ -583,7 +593,7 @@ function onKnobDown(e) {
   let y0 = e.clientY, v0 = volOf(k), moved = false, glob = false, ht = 0;
   const target = () => (k === 'deck' && songKnob() && !glob ? 'nlevel' : k);
   // «Трек» песни: удержать без движения — крутилка переходит к общей громкости трека (песня остаётся как есть); отпустить — снова песня
-  if (k === 'deck' && songKnob()) ht = setTimeout(() => { if (moved) return; glob = true; kn.dataset.glob = '1'; kn.classList.add('glob'); y0 = lastY; v0 = S.deckLevel; fdSet('deck', v0); if (S.ui.buzz) buzz(); }, 380);
+  if (k === 'deck' && songKnob()) ht = setTimeout(() => { if (moved) return; glob = true; kn.dataset.glob = '1'; kn.classList.add('glob'); y0 = lastY; v0 = S.deckLevel; fdSet('deck', v0); if (S.ui.buzz) buzz(); }, 450);
   let lastY = e.clientY;
   const mv = (m) => { lastY = m.clientY; if (Math.abs(m.clientY - y0) > 3 && !glob) moved = true; fdSet(target(), v0 + (y0 - m.clientY) / 1.4); };
   const up = () => { clearTimeout(ht); kn.removeEventListener('pointermove', mv); kn.removeEventListener('pointerup', up); kn.removeEventListener('pointercancel', up); if (glob) { delete kn.dataset.glob; kn.classList.remove('glob'); const n = songKnob(); if (n) fdSet('nlevel', n.level); } save(); };
@@ -887,6 +897,9 @@ function eventSheet(ev) {
   }, { onClose: render });
 }
 
+// Свод дорожек в строке программы: «vocals 0, drums 50» (проценты) ↔ { vocals: 0, drums: 0.5 }
+const mixText = (m) => (m ? Object.entries(m).map(([k, v]) => k + ' ' + Math.round(v * 100)).join(', ') : '');
+const mixParse = (str) => { const o = {}; String(str || '').split(/[,;]+/).forEach((x) => { const [k, v] = x.trim().split(/[\s=:]+/); if (M.PARTS.includes(k) && v !== undefined && Number.isFinite(+v)) o[k] = +v / 100; }); return o; };
 function numSheet(n) {
   const e = cur(), touch = () => { if (e) e.updatedAt = Date.now(); save(); };
   const f = () => fileOf(n.file), a = () => (f() && f().ana) || null;
@@ -905,8 +918,9 @@ function numSheet(n) {
     (n.kind === 'track' ? '<p class="ftr keep" id="shloud" style="margin-top:12px">' + esc(loudLine()) + '</p>' : '') +
     (n.kind === 'track' ? '<div class="group sgroup" style="margin-top:12px">' + slider('shift', t('num.shift'), n.shift, -12, 12, 1, (n.shift > 0 ? '+' : n.shift < 0 ? '−' : '') + Math.abs(n.shift)) + slider('level', t('num.level'), n.level, 0, 100, 1, lvTxt(n.level)) + slider('fadeIn', t('num.fadeIn'), n.fadeIn, 0, 30, 0.5, secTxt(n.fadeIn)) + slider('fadeOut', t('num.fadeOut'), n.fadeOut, 0, 30, 0.5, secTxt(n.fadeOut)) + '</div><p class="ftr" id="shkey">' + esc(keyLine()) + '</p>' : '') +
     (n.kind === 'track' ? '<div class="hdr">' + esc(t('num.sound')) + '</div>' + chips('data-neq', M.EQ_IDS, n.eq, (v) => esc(t('eq.' + (v || 'flat')))) + '<div class="group sgroup" style="margin-top:8px">' + slider('tempo', t('num.tempo'), n.tempo, 0.5, 1.5, 0.05, spdTxt(n.tempo)) + '</div>' : '') +
+    (n.kind === 'track' && partSet(n.file).length ? '<div class="hdr">' + esc(t('num.parts')) + '</div><div class="group sgroup">' + partSet(n.file).map((r) => r.stem.part).filter((k, i, a) => M.PARTS.includes(k) && a.indexOf(k) === i).map((k) => slider('mix_' + k, t('part.' + k), Math.round((n.mix[k] == null ? 1 : n.mix[k]) * 100), 0, 150, 5, (Math.round((n.mix[k] == null ? 1 : n.mix[k]) * 100)) + '%')).join('') + '</div><p class="ftr">' + esc(t('num.partsHint')) + '</p>' : '') +
     (n.kind === 'track' ? '<div class="hdr">' + esc(t('num.prog')) + '</div><div class="group shprog2">' + n.prog.map((ev) => '<div class="shev2" data-ev="' + ev.id + '"><input class="tt" data-pf="t" inputmode="decimal" value="' + M.mmss(ev.t) + '" aria-label="' + esc(t('prog.t')) + '">' +
-      [['key', 'prog.key', ev.key], ['tempo', 'prog.tempo', ev.tempo], ['level', 'prog.level', ev.level], ['ramp', 'prog.ramp', ev.ramp || '']].map(([k, lb, v]) => '<input data-pf="' + k + '" inputmode="decimal" value="' + (v == null ? '' : v) + '" placeholder="' + esc(t(lb)) + '" aria-label="' + esc(t(lb)) + '">').join('') + '<button data-x="evdel" aria-label="' + esc(t('num.cueDel')) + '">×</button></div>').join('') +
+      [['key', 'prog.key', ev.key], ['tempo', 'prog.tempo', ev.tempo], ['level', 'prog.level', ev.level], ['mix', 'prog.mix', mixText(ev.mix)], ['ramp', 'prog.ramp', ev.ramp || '']].map(([k, lb, v]) => '<input data-pf="' + k + '" inputmode="decimal" value="' + (v == null ? '' : v) + '" placeholder="' + esc(t(lb)) + '" aria-label="' + esc(t(lb)) + '">').join('') + '<button data-x="evdel" aria-label="' + esc(t('num.cueDel')) + '">×</button></div>').join('') +
       '<button class="cell act" data-x="evadd"><span class="grow">' + esc(t('prog.add')) + '</span></button></div><p class="ftr">' + esc(t('prog.hint')) + '</p>' : '') +
     '<div class="hdr">' + esc(t('num.bed')) + '</div><div class="group">' + row(t('num.bed'), ctx.ui.seg('nbed', [['keep', t('num.bed.keep')], ['set', t('num.bed.set')]], n.bed ? 'set' : 'keep', t('num.bed'))) +
       (n.bed ? '<div class="cell"><span class="grow">' + esc(t('num.bed.pad')) + '</span>' + ctx.ui.sw('nbpad', n.bed.pad, t('num.bed.pad')) + '</div>' +
@@ -922,8 +936,8 @@ function numSheet(n) {
       const g = (s) => ev.target.closest(s); let b;
       if ((b = g('[data-seg="nbed"] [data-v]'))) { n.bed = b.dataset.v === 'set' ? { pad: S.bed.pad.on, noise: S.bed.noise.cur || '' } : null; touch(); sh.update(); return; }
       if ((b = g('[data-neq]'))) { n.eq = b.dataset.neq; touch(); if (S.cur === n.id && deck) deck.setEq(n.eq); sh.update(); return; }
-      if (g('[data-x="evadd"]')) { const st = deck ? deck.state : null; const tt = st && st.file === n.file ? Math.round(st.time * 10) / 10 : 0; n.prog = M.normalizeProg([...n.prog, { t: tt, level: n.level, ramp: 0 }]); touch(); sh.update(); return; }
-      if ((b = g('[data-x="evdel"]'))) { const id = b.closest('[data-ev]').dataset.ev; n.prog = n.prog.filter((x) => x.id !== id); touch(); sh.update(); return; }
+      if (g('[data-x="evadd"]')) { const st = deck ? deck.state : null; const tt = st && st.file === n.file ? Math.round(st.time * 10) / 10 : 0; n.prog = M.normalizeProg([...n.prog, { t: tt, level: n.level, ramp: 0 }]); touch(); if (deck && deck.state.file === n.file) deck.setProg(n.prog); sh.update(); return; }
+      if ((b = g('[data-x="evdel"]'))) { const id = b.closest('[data-ev]').dataset.ev; n.prog = n.prog.filter((x) => x.id !== id); touch(); if (deck && deck.state.file === n.file) deck.setProg(n.prog); sh.update(); return; }
       if ((b = g('[data-nkey]'))) { n.keyPc = b.dataset.nkey === '' ? null : +b.dataset.nkey; touch(); if (S.cur === n.id && bed && bed.state.pad && S.bed.pad.tonic == null) bed.padTonic(bedTonic(n)); sh.update(); return; }
       if ((b = g('[data-seg="nminor"] [data-v]'))) { n.minor = b.dataset.v === 'min'; touch(); sh.update(); return; }
       if ((b = g('[data-nnoise]'))) { if (n.bed) n.bed.noise = b.dataset.nnoise; touch(); sh.update(); return; }
@@ -938,6 +952,11 @@ function numSheet(n) {
       const f = ev.target.dataset.f, s = ev.target.dataset.s;
       if (f === 'title') n.title = ev.target.value.slice(0, 80);
       else if (f === 'note') n.note = ev.target.value.slice(0, 4000);
+      else if (s && s.startsWith('mix_')) {
+        const k = s.slice(4), v = +ev.target.value / 100; n.mix = M.normalizeMix({ ...n.mix, [k]: v });
+        const o = el.querySelector('[data-o="' + s + '"]'); if (o) o.textContent = Math.round(v * 100) + '%';
+        if (S.cur === n.id && deck && deck.state.file === n.file) deck.setMix && deck.setMix(n.mix);
+      }
       else if (s) {
         const v = +ev.target.value; n[s] = v;
         const o = el.querySelector('[data-o="' + s + '"]');
@@ -956,8 +975,8 @@ function numSheet(n) {
       if (ev.target.dataset.sw === 'nbpad') { if (n.bed) n.bed.pad = ev.target.checked; touch(); return; }
       if (ev.target.dataset.pf) {
         const row = ev.target.closest('[data-ev]'), pe = n.prog.find((x) => x.id === row.dataset.ev), k = ev.target.dataset.pf, raw = ev.target.value.trim().replace(',', '.');
-        if (pe) { if (k === 't') { const v = M.parseTime(ev.target.value); if (v != null) pe.t = v; } else if (raw === '') delete pe[k]; else pe[k] = +raw; n.prog = M.normalizeProg(n.prog); }
-        touch(); if (S.cur === n.id && deck && deck.state.file === n.file) { /* новая программа подхватится при следующем событии */ } sh.update(); return;
+        if (pe) { if (k === 't') { const v = M.parseTime(ev.target.value); if (v != null) pe.t = v; } else if (k === 'mix') { const mx = mixParse(ev.target.value); if (Object.keys(mx).length) pe.mix = mx; else delete pe.mix; } else if (raw === '') delete pe[k]; else pe[k] = +raw; n.prog = M.normalizeProg(n.prog); }
+        touch(); if (deck && deck.state.file === n.file) deck.setProg(n.prog); sh.update(); return;
       }
       if (f === 'bpm') { const v = Math.round(+ev.target.value.replace(',', '.')); n.bpm = Number.isFinite(v) && v >= 20 && v <= 300 ? v : null; touch(); sh.update(); return; }
       if (f === 'at') { const v = ev.target.value.trim() ? M.parseHhmm(ev.target.value) : null; n.at = v; sh.update(); touch(); }

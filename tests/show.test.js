@@ -134,3 +134,9 @@ describe('программа и звук (25.11.2026)', () => {
     expect(_eg('zzz')).toEqual([0, 0, 0]);
   });
 });
+describe('свод дорожек', () => {
+  it('нормализация: только известные части, 0…1,5', () => {
+    expect(normalizeProg([{ t: 1, mix: { vocals: 0, drums: 9, zzz: 1 } }])[0].mix).toEqual({ vocals: 0, drums: 1.5 });
+    expect(_nn({ mix: { bass: 0.5, x: 1 } }).mix).toEqual({ bass: 0.5 });
+  });
+});

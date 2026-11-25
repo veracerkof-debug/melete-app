@@ -298,6 +298,16 @@
   "prog.level": "balandlik",
   "prog.ramp": "silliq, s",
   "prog.add": "+ Hodisa (hozirgi vaqtdan)",
-  "prog.hint": "Yozuvning berilgan vaqtida ton (yarim ton), temp (0,5–1,5) va balandlik (0–100) o‘zgaradi; «silliq» — necha soniyada. Bo‘sh maydon — o‘zgarmaydi.",
-  "num.cueDel": "O‘chirish"
+  "prog.hint": "Yozuvning berilgan vaqtida ton, temp, balandlik va treklar («vocals 0, drums 50» — foiz) o‘zgaradi; «silliq» — necha soniyada. Bo‘sh maydon — o‘zgarmaydi.",
+  "num.cueDel": "O‘chirish",
+  "num.parts": "Treklar",
+  "num.partsHint": "Nomerda nima jaranglaydi: 0 — o‘chiq, 100 — yozuvdagidek. Bo‘lingan yozuv kerak (mediateka). Ijro paytida o‘zgaradi.",
+  "prog.mix": "treklar",
+  "part.vocals": "Vokal",
+  "part.inst": "Minus",
+  "part.drums": "Barabanlar",
+  "part.bass": "Bas",
+  "part.guitar": "Gitara",
+  "part.piano": "Klavishlar",
+  "part.other": "Boshqa"
 }
