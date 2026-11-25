@@ -2985,5 +2985,8 @@
   "ai.att.err.format": "Fayl shikastlangan",
   "ai.att.err.net": "Aloqa yoʻq",
   "ai.att.err.timeout": "Sahifa juda uzoq javob beryapti",
-  "ai.by": "Javob beryapti: {name}"
+  "ai.by": "Javob beryapti: {name}",
+  "ai.cat.media": "Mediateka yozuvlari",
+  "ai.cat.media.sub": "Nomi, tonallik, temp, akkordlar va boʻlimlar — ovozsiz va matnsiz",
+  "ai.prop.rec": "Taklif: yozuv tahrirlari"
 }

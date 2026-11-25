@@ -107,7 +107,7 @@ API хранилища (`createStore`): `state` — живой объект; п�
 ```js
 { id, name, size, type, blob, created, songs: [songId…], kind?: 'audio'|'tab'|'midi'|'bible'|'daw',
   dur?, peaks? /* волна */, video?,
-  ana?  /* тональность, темп, доли, аккорды — разбор записи */, lyr? /* текст песни */,
+  ana?  /* тональность, темп, доли, аккорды — разбор записи; cedit/cauto — правка аккордов, music.md */, marks? /* тайм-коды и части: [{ t, name }] */, lyr? /* текст песни */,
   stem? /* дорожка: { src, part, mode, db } */, trans? /* ноты из записи */, fmt?, variant? }
 ```
 

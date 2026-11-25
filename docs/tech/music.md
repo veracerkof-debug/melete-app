@@ -57,8 +57,13 @@
   зазвучало — прерывается и повторится позже. Порядок — от недавно слушанных; «Когда считать» — всегда или на зарядке.
 
 Результат разбора `rec.ana`:
-`{ pc, minor, cents, bpm, bpb, beats, downbeats, chords: [{ t, d, c }], v: 2 }` — плеер медиатеки рисует по нему
+`{ pc, minor, cents, bpm, bpb, beats, downbeats, chords: [{ t, d, c }], v: 2, cedit?, cauto? }` — плеер медиатеки рисует по нему
 полосу аккордов, такты на волне, притягивает A–B к долям.
+
+**Правка аккордов (25.11.2026).** `music/chordedit.js` — чистые функции (`parseText`, `setAt`, `setRange`, `replaceAll`, `split`,
+`mergeNext`, `shiftLabel`, `applyItems`, `markEdited`, `resetEdited`); шторка — `modules/audio/index.js: chordSheet`, запись файла
+отложена на 0,7 с. `ana.cedit` — время правки (рукой или по совету нейросети), `ana.cauto` — как посчитано моделью («Как посчитано»).
+Правленые аккорды не пересчитываются (`autostems.js: needsAna`) и при синхронизации побеждают по `cedit` (`sync.js: mergeMeta`).
 
 ## Модели и пакеты
 

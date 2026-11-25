@@ -50,7 +50,7 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
       const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
       messages.push(msg);
       // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»
-      if (c.auto && canWrite(c, 'songs')) for (const p of msg.proposals) if (p.status === 'pending') await applyProposal(msg.id, p.id);
+      if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && canWrite(c, p.kind === 'rec' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
       return { ok: true };
     } catch (e) { error = { kind: (e && e.kind) || 'net', message: String((e && e.message) || '').slice(0, 200) }; return { ok: false, why: error.kind }; }
     finally { busy = false; persist(); emit(); }

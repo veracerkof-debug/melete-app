@@ -3024,5 +3024,8 @@
   "ai.att.err.format": "The file is damaged",
   "ai.att.err.net": "No connection",
   "ai.att.err.timeout": "The page is taking too long",
-  "ai.by": "Replying: {name}"
+  "ai.by": "Replying: {name}",
+  "ai.cat.media": "Media library recordings",
+  "ai.cat.media.sub": "Names, key, tempo, chords and sections — no audio, no lyrics",
+  "ai.prop.rec": "Proposal: recording edits"
 }

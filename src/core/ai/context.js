@@ -1,11 +1,12 @@
 // Что модель знает: общая инструкция и данные только из открытых человеком категорий (песни, статистика, журнал).
 // Всё — текстом, сжато и с пределами; размер виден человеку до отправки (screens/aichat.js). Без DOM и сети.
 import { canRead, canWrite } from './config.js';
+import { labelText } from '../../music/chordedit.js';
 
-export const LIMITS = { songs: 400, topSongs: 15, logLines: 80, logChars: 6000, notesPreview: 0 };
+export const LIMITS = { songs: 400, topSongs: 15, logLines: 80, logChars: 6000, notesPreview: 0, recs: 60, chords: 800, downs: 300 };
 
 export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = Date.now() } = {}) {
-  const w = canWrite(cfg, 'songs');
+  const w = canWrite(cfg, 'songs'), wm = canWrite(cfg, 'media');
   return [
     'Ты — ' + mascot + ', помощник музыканта в приложении Melete (учёт занятий, песни с аккордами, инструменты: метроном, тюнер, пианино, табы и др.).',
     'Отвечай коротко, по-доброму и по делу, на языке человека (интерфейс: ' + lang + '). Ты не видишь ничего, кроме того, что дано ниже; не выдумывай данные, о которых тебе не сказали.',
@@ -18,6 +19,10 @@ export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = D
       '2) Правки существующих песен: блок ```melete-ops с массивом [{"op":"set","ref":"<id песни из списка ниже>","fields":{"genre":"…","key":"…","targetBpm":90,"artist":"…","title":"…","notes":"…"}}]. Допустимые поля: title, artist, genre, key, targetBpm, notes, capo. Другие операции (удаление, слияние) не поддерживаются — предложи их словами.',
       'Одно предложение — один блок; перед блоком коротко объясни, что он меняет. Не обещай, что изменение уже сделано.',
     ].join('\n') : 'Изменять данные ты не можешь (доступ только на чтение): предлагай словами, что поправить.',
+    wm ? [
+      '3) Правки записи медиатеки (аккорды, части песни, тайм-коды): блок ```melete-rec с массивом [{"op":"chords","ref":"<id записи>","items":[{"t":секунды,"d":секунды (можно не указывать),"c":"Am7"}]},{"op":"marks","ref":"<id записи>","items":[{"t":секунды,"name":"Куплет 1"}]}]. "c":"N" — нет аккорда; без "d" аккорд держится до следующего элемента.',
+      'Ты НЕ слышишь звук: опирайся только на аккорды, доли, тональность, название и исполнителя из данных. В аккордах правь лишь то, в чём уверен по гармонии (пропуски, явные промахи: аккорд вне тональности без причины); сомнительное объясни словами и попроси проверить на слух. Части ставь на сильные доли из данных; названия: Вступление, Куплет, Припев, Бридж, Проигрыш, Кода — с номером при повторах. Время — только внутри длины записи; текст песни не нужен и не выдавай.',
+    ].join('\n') : '',
     cfg.instruction ? 'Дополнительно от человека: ' + cfg.instruction : '',
     'Сегодня: ' + new Date(now).toISOString().slice(0, 10) + '.',
   ].filter(Boolean).join('\n\n');
@@ -28,6 +33,26 @@ export function songsContext(songs, max = LIMITS.songs) {
   const list = songs.filter((s) => !s.deleted), shown = list.slice(0, max);
   const head = 'ПЕСНИ (' + list.length + (list.length > shown.length ? ', показаны первые ' + shown.length : '') + '). Строка: id | название | исполнитель | тональность | жанр | темп цель/сейчас | есть текст';
   return head + '\n' + shown.map((s) => [s.id, one(s.title), one(s.artist), one(s.key), one(s.genre), (s.targetBpm || '') + '/' + (s.currentBpm || ''), s.notes ? 'да' : 'нет'].join(' | ')).join('\n');
+}
+// Записи медиатеки: список последних (id, название, песни, длина, тональность, темп) и подробно — одна, которую слушали последней
+// (аккорды, сильные доли, части-метки). Звука и текста песен здесь нет — только то, что разобрал компьютер и отметил человек.
+const NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const keyOf = (a) => (a && a.pc != null ? NOTE[a.pc] + (a.minor ? 'm' : '') : '');
+const sec = (x) => String(Math.round(x * 10) / 10);
+export function mediaContext(recs, used = {}, songs = [], max = LIMITS.recs) {
+  const at = (r) => Math.max(r.created || 0, used[r.id] || 0);
+  const list = recs.filter((r) => r.kind === 'audio' || !r.kind).sort((a, b) => at(b) - at(a)), shown = list.slice(0, max);
+  const titles = (r) => (r.songs || []).map((id) => { const s = songs.find((q) => q.id === id && !q.deleted); return s ? one(s.title) + (s.artist ? ' — ' + one(s.artist) : '') : ''; }).filter(Boolean).join('; ');
+  const head = 'ЗАПИСИ МЕДИАТЕКИ (' + list.length + (list.length > shown.length ? ', показаны последние ' + shown.length : '') + '). Строка: id | файл | песня | длина с | тональность | темп | аккордов | частей (меток)';
+  let text = head + '\n' + shown.map((r) => [r.id, one(r.name), titles(r), Math.round(r.dur || 0), keyOf(r.ana), (r.ana && r.ana.bpm) || '', r.ana && r.ana.chords ? r.ana.chords.length : 0, (r.marks || []).length].join(' | ')).join('\n');
+  const cur = shown.find((r) => r.ana && Array.isArray(r.ana.chords) && r.ana.chords.length);
+  if (cur) {
+    const a = cur.ana, ch = a.chords.slice(0, LIMITS.chords), dn = (a.downbeats || []).slice(0, LIMITS.downs);
+    text += '\n\nЗАПИСЬ, КОТОРУЮ СЛУШАЛИ ПОСЛЕДНЕЙ: ' + cur.id + ' (' + one(cur.name) + ')\nТональность: ' + keyOf(a) + (a.bpm ? ', темп ' + a.bpm : '') + (a.bpb ? ', в такте ' + a.bpb + ' доли' : '') + ', длина ' + Math.round(cur.dur || 0) + ' с' + (a.cedit ? ' (аккорды уже правились)' : '') +
+      '\nСильные доли, с: ' + dn.map(sec).join(' ') + '\nАккорды (время с: аккорд, N — нет): ' + ch.map((c) => sec(c.t) + ':' + labelText(c.c)).join(' ') + (a.chords.length > ch.length ? ' … (ещё ' + (a.chords.length - ch.length) + ')' : '') +
+      '\nЧасти (метки): ' + ((cur.marks || []).map((m) => sec(m.t) + ':' + one(m.name || '—')).join(' ') || 'нет');
+  }
+  return text;
 }
 const DAY = 864e5, mins = (s) => Math.round(s / 60);
 export function statsContext(sessions, songs, goalMin = 0, now = Date.now()) {
@@ -49,6 +74,7 @@ export function logContext(text) {
 export function buildContext(cfg, d) {
   const parts = [];
   if (canRead(cfg, 'songs')) parts.push({ cat: 'songs', text: songsContext(d.songs || []) });
+  if (canRead(cfg, 'media')) parts.push({ cat: 'media', text: mediaContext(d.recs || [], d.used || {}, d.songs || []) });
   if (canRead(cfg, 'stats')) parts.push({ cat: 'stats', text: statsContext(d.sessions || [], d.songs || [], d.goalMin || 0, d.now) });
   if (canRead(cfg, 'log')) parts.push({ cat: 'log', text: logContext(d.logText) });
   return { text: parts.map((p) => p.text).join('\n\n'), parts: parts.map((p) => ({ cat: p.cat, chars: p.text.length })), chars: parts.reduce((n, p) => n + p.text.length, 0) };

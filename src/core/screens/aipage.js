@@ -34,7 +34,7 @@ export function aiHTML(app) {
     Object.entries(LEVELS).map(([cat, vals]) => '<div class="aifield"><span class="aicat"><b>' + t('ai.cat.' + cat) + '</b><i class="l2">' + t('ai.cat.' + cat + '.sub') + '</i></span><div class="seg aiseg2" role="group" aria-label="' + esc(t('ai.cat.' + cat)) + '">' +
       vals.map((v) => '<button type="button" data-ai-acc="' + cat + '" data-v="' + v + '" aria-pressed="' + (c.access[cat] === v) + '"' + (c.access[cat] === v ? ' class="on"' : '') + '>' + t('ai.lvl.' + v) + '</button>').join('') + '</div></div>').join('') + '</div>' +
     '<p class="ftr keep">' + t('ai.accHint') + '</p>' +
-    (c.access.songs === 'write' ? '<div class="group aicard"><div class="cell"><span class="grow">' + t('ai.auto') + '<span class="psub">' + t('ai.autoSub') + '</span></span>' + sw('auto', c.auto, t('ai.auto')) + '</div></div>' + (c.auto ? '<p class="aierrl">' + t('ai.autoWarn') + '</p>' : '') : '') +
+    ((c.access.songs === 'write' || c.access.media === 'write') ? '<div class="group aicard"><div class="cell"><span class="grow">' + t('ai.auto') + '<span class="psub">' + t('ai.autoSub') + '</span></span>' + sw('auto', c.auto, t('ai.auto')) + '</div></div>' + (c.auto ? '<p class="aierrl">' + t('ai.autoWarn') + '</p>' : '') : '') +
     '<div class="hdr">' + t('ai.att') + '</div><div class="group aicard">' +
     '<div class="cell"><span class="grow">' + t('ai.att.files') + '<span class="psub">' + t('ai.att.filesSub') + '</span></span>' + sw('att:files', c.attach.files, t('ai.att.files')) + '</div>' +
     '<div class="cell"><span class="grow">' + t('ai.att.links') + '<span class="psub">' + t('ai.att.linksSub') + '</span></span>' + sw('att:links', c.attach.links, t('ai.att.links')) + '</div></div>' +
@@ -49,7 +49,7 @@ export function aiClick(app, target, rerender, openChat) {
   const ai = app.ai; let e;
   if ((e = target.closest('[data-ai-fmt]'))) { ai.save({ format: e.dataset.aiFmt }); rerender(); return true; }
   if ((e = target.closest('button[data-ai-acc]'))) {
-    ai.save({ access: { [e.dataset.aiAcc]: e.dataset.v } }); if (ai.cfg().access.songs !== 'write') ai.save({ auto: false }); rerender(); return true;
+    ai.save({ access: { [e.dataset.aiAcc]: e.dataset.v } }); if (ai.cfg().access.songs !== 'write' && ai.cfg().access.media !== 'write') ai.save({ auto: false }); rerender(); return true;
   }
   if ((e = target.closest('[data-ai-act]'))) {
     const a = e.dataset.aiAct;

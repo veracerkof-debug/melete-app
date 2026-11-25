@@ -15,10 +15,10 @@ const LINK = '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0
 const ACCEPT = 'text/*,.txt,.md,.csv,.json,.html,.htm,.docx,.pdf,.cho,.chopro,.crd,.lrc,image/png,image/jpeg,image/webp,image/gif';
 
 const nl = (s) => esc(s).replace(/\n/g, '<br>');
-const CATS = { songs: 'ai.cat.songs', stats: 'ai.cat.stats', log: 'ai.cat.log' };
+const CATS = { songs: 'ai.cat.songs', media: 'ai.cat.media', stats: 'ai.cat.stats', log: 'ai.cat.log' };
 
-function propHTML(m, p, songs) {
-  const lines = describeP(p, songs), head = t('ai.prop.' + p.kind);
+function propHTML(m, p, songs, recs = []) {
+  const lines = describeP(p, songs, recs), head = t('ai.prop.' + p.kind);
   const st = p.status;
   const body = '<div class="aipl">' + lines.slice(0, 12).map((x) => '<span>' + esc(x) + '</span>').join('') + (lines.length > 12 ? '<span class="l2">' + t('ai.more', { n: lines.length - 12 }) + '</span>' : '') + '</div>';
   const btns = st === 'pending' ? '<div class="aipb"><button class="link b" data-ai="apply" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.apply') + '</button><button class="link" data-ai="reject" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.reject') + '</button></div>'
@@ -55,8 +55,8 @@ export function openChat(app, { onSettings = () => {} } = {}) {
     };
     const draw = () => {
       drawBrand();
-      const songs = app.store.state.songs || [], msgs = chat.messages;
-      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t('ai.hello', { name }) + '</p>') + msgs.map((m) => (m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs)).join('')).join('') +
+      const songs = app.store.state.songs || [], recs = app.files ? app.files.list('audio') : [], msgs = chat.messages;
+      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t('ai.hello', { name }) + '</p>') + msgs.map((m) => (m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
         (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
       list.scrollTop = list.scrollHeight;

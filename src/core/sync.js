@@ -44,13 +44,15 @@ export function derivedKey(r) {
 // Сведения записи, которые сливаются между устройствами
 const sortObj = (o) => (o && typeof o === 'object' && !Array.isArray(o) ? Object.keys(o).sort().map((k) => [k, o[k]]) : o || 0);
 function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
-export const metaHash = (r) => hashStr(JSON.stringify([r.ana ? [r.ana.v || 1, r.ana.at || 0] : 0, r.lyr ? r.lyr.at || 1 : 0, sortObj(r.stemsAbsent), [...(r.songs || [])].sort(), r.want ? [r.want.stems, !!r.want.hq] : 0]));
+export const metaHash = (r) => hashStr(JSON.stringify([r.ana ? [r.ana.v || 1, r.ana.at || 0, r.ana.cedit || 0] : 0, r.lyr ? r.lyr.at || 1 : 0, sortObj(r.stemsAbsent), [...(r.songs || [])].sort(), r.want ? [r.want.stems, !!r.want.hq] : 0]));
 // Что взять записи a от записи b → изменения или null. Слияние одинаково на обеих сторонах, поэтому сходится:
 // разбор — новее по версии и времени, текст — новее, отсутствующие части и песни — объединение, пожелание — если своего нет
 export function mergeMeta(a, b) {
   if (!a || !b) return null;
   const p = {}, A = a.ana, B = b.ana;
-  if (B && (!A || (B.v || 1) > (A.v || 1) || ((B.v || 1) === (A.v || 1) && (B.at || 0) > (A.at || 0)))) p.ana = B;
+  // правка аккордов рукой или по совету нейросети (ana.cedit) весомее пересчёта: побеждает более поздняя правка, иначе — по версии и времени
+  const ceA = (A && A.cedit) || 0, ceB = (B && B.cedit) || 0;
+  if (B && (!A || ceB > ceA || (ceB === ceA && ((B.v || 1) > (A.v || 1) || ((B.v || 1) === (A.v || 1) && (B.at || 0) > (A.at || 0)))))) p.ana = B;
   if (b.lyr && (!a.lyr || (b.lyr.at || 0) > (a.lyr.at || 0))) p.lyr = b.lyr;
   const sa = a.stemsAbsent && !Array.isArray(a.stemsAbsent) ? a.stemsAbsent : {}, sb = b.stemsAbsent && !Array.isArray(b.stemsAbsent) ? b.stemsAbsent : {};
   if (Object.keys(sb).some((k) => !(k in sa))) p.stemsAbsent = { ...sb, ...sa };

@@ -53,7 +53,7 @@ export function createAutoStems(app) {
   const pcWaits = (r, kind) => !!(app.syncCli && app.syncCli.waits(r, kind)); // посчитает компьютер — не тратить телефон
   // компьютер: v < 3 — аккорды прежней моделью или их нет — пересчитать ансамблем аккордов компьютера (mir.worker.js: chordsPc)
   const ANA_V = desk ? 3 : 2;
-  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= ANA_V) && mirOk)) && !pcWaits(r, 'ana');
+  const needsAna = (r) => autoAna(settings()) && !r.anaTried && (!r.ana || (!(r.ana.v >= ANA_V) && mirOk && !r.ana.cedit)) && !pcWaits(r, 'ana');
   let mirOk = false; import('../audio/mir.js').then((m) => { mirOk = m.mirSupported(); schedule(); }).catch(() => {});
   const ok = (r) => !(failed.get(r.id) > Date.now());
   // режим записи: свой, а запись с телефона — как просил телефон (rec.want); своё выключено — не считаем

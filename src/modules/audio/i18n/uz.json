@@ -303,5 +303,19 @@
   "cat.instr": "Asboblar",
   "cat.free": "Mashq",
   "cat.dict": "Diktofon",
-  "cat.video": "Video"
+  "cat.video": "Video",
+  "ce.title": "Akkord",
+  "ce.maj": "mažor",
+  "ce.none": "akkord yoʻq",
+  "ce.root": "Asos nota",
+  "ce.kind": "Turi",
+  "ce.down": "Yarim ton past",
+  "ce.up": "Yarim ton yuqori",
+  "ce.split": "{time} da boʻlish",
+  "ce.join": "Birlashtirish",
+  "ce.all": "Hamma joyda shu",
+  "ce.auto": "Hisoblanganicha",
+  "ce.hint": "Tuzatish yozuvda saqlanadi va qayta tahlil bilan oʻchmaydi. «Hamma joyda shu» barcha shunday akkordlarni birdan almashtiradi.",
+  "ce.edit": "Akkordni tuzatish",
+  "ce.loop": "Takrorlash"
 }

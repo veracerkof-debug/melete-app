@@ -304,5 +304,19 @@
   "cat.instr": "Instruments",
   "cat.free": "Practice",
   "cat.dict": "Recorder",
-  "cat.video": "Video"
+  "cat.video": "Video",
+  "ce.title": "Chord",
+  "ce.maj": "major",
+  "ce.none": "no chord",
+  "ce.root": "Root",
+  "ce.kind": "Type",
+  "ce.down": "Semitone down",
+  "ce.up": "Semitone up",
+  "ce.split": "Split at {time}",
+  "ce.join": "Join",
+  "ce.all": "Same everywhere",
+  "ce.auto": "As detected",
+  "ce.hint": "The edit is kept in the recording and is not overwritten by a re-analysis. “Same everywhere” changes every such chord at once.",
+  "ce.edit": "Edit chord",
+  "ce.loop": "Repeat"
 }

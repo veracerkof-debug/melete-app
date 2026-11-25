@@ -13,6 +13,7 @@ import { coverOfBlob } from '../../music/cover.js';
 import { SH, FL } from '../../music/notes.js';
 import { onHold } from '../../ui/hold.js';
 import { parseChord } from '../../audio/mirpost.js';
+import { EDIT_QUALS, labelOf, setAt, setRange, replaceAll, split as chSplit, mergeNext, shiftLabel, markEdited, resetEdited } from '../../music/chordedit.js';
 import { shapeFor, diagramSVG, degreeOf } from './chordview.js';
 import { pitchShifter } from '../../audio/pitchshift.js';
 import { createStretchPlayer, stretchAvailable } from '../../audio/stretchplayer.js';
@@ -34,6 +35,7 @@ import { isVideo, VIDEO_EXT, addMark, markSpan, nearMark, currentMark } from './
 import meta, { ICON } from './meta.js';
 import { createSing } from './sing.js';
 const I = {
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
   show: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>',
   share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 7.5 12 3.5l4 4M6 11H5v9h14v-9h-1"/></svg>',
   stems: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 5v4M14 10v4M11 15v4" style="stroke-width:3"/></svg>',
@@ -246,13 +248,13 @@ function chordInfo(t, c) {
   return { txt: chordTxt(c, t), deg: dg.deg, fn: dg.fn, frets: sh ? sh.frets : null, barre: sh ? sh.barre : null };
 }
 const nowHTML = () => '<div class="chnow" id="chnow" aria-live="polite"><div class="chcur"><b id="chn">—</b><span class="chdeg num" id="chdeg"></span></div><div class="chdg" id="chdg"></div>' +
-  '<div class="chnx"><span class="l2">→</span><b id="chx"></b><span class="chin num" id="chin"></span></div></div>';
+  '<div class="chnx"><span class="l2">→</span><b id="chx"></b><span class="chin num" id="chin"></span></div><button class="ic sm chedit" data-x="chedit" aria-label="' + ctx.t('ce.edit') + '">' + I.edit + '</button></div>';
 function chordsViewHTML(t) {
   const { ui } = ctx, tr = ctx.t, bars = chordGrid(t), L = chordsOf(t);
   PV.cells = []; PV.bars = []; PV.barT = [];
   if (!L.length) return '<div class="pview pempty"><span>' + ui.esc(tr(t.anaTried ? 'pv.noChords' : ctx.jobs && ctx.jobs.notesSupported() ? 'pv.waitChords' : 'pv.chordsPc')) + '</span></div>';
   if (!bars.length) // аккорды без долей — лентой
-    return '<div class="pview pchords flat" id="pchords">' + nowHTML() + '<div class="chflat">' + L.map((c, i) => { const inf = chordInfo(t, c.c); return '<button class="chc fn-' + ((inf && inf.fn) || 'x') + (c.c ? '' : ' no') + '" data-ci="' + i + '" data-bt="' + c.t + '"><b>' + (inf ? ui.esc(inf.txt) : '·') + '</b><span class="num">' + fmtT(c.t) + '</span></button>'; }).join('') + '</div></div>';
+    return '<div class="pview pchords flat" id="pchords">' + nowHTML() + '<div class="chflat">' + L.map((c, i) => { const inf = chordInfo(t, c.c); return '<button class="chc fn-' + ((inf && inf.fn) || 'x') + (c.c ? '' : ' no') + '" data-ci="' + i + '" data-cx="' + i + '" data-bt="' + c.t + '"><b>' + (inf ? ui.esc(inf.txt) : '·') + '</b><span class="num">' + fmtT(c.t) + '</span></button>'; }).join('') + '</div></div>';
   let h = '<div class="pview pchords" id="pchords">' + nowHTML() + '<div class="chgrid">', last = '';
   bars.forEach((b, bi) => {
     const t1 = bi + 1 < bars.length ? bars[bi + 1].t : b.t + (b.cells.length ? (b.cells[b.cells.length - 1] - b.t) * (b.cells.length / Math.max(1, b.cells.length - 1)) : 2), len = Math.max(0.01, t1 - b.t);
@@ -260,12 +262,13 @@ function chordsViewHTML(t) {
     for (let i = Math.max(0, chordAt(t, b.t + 0.02)); i < L.length && L[i].t < t1 - 0.05; i++) {
       const a0 = Math.max(b.t, L[i].t), a1 = Math.min(t1, L[i].t + L[i].d);
       if (a1 - a0 < len * 0.12 && parts.length) continue; // короче полудоли — не дробить такт
-      parts.push({ c: L[i].c, f: Math.max(0.15, (a1 - a0) / len) });
+      parts.push({ c: L[i].c, f: Math.max(0.15, (a1 - a0) / len), i });
     }
     if (!parts.length) parts.push({ c: null, f: 1 });
     const fn0 = (chordInfo(t, parts[0].c) || {}).fn || 'x';
-    h += '<button class="chb fn-' + fn0 + '" data-bt="' + b.t + '" data-bar="' + bi + '" aria-label="' + ui.esc(tr('pv.bar', { n: bi + 1 })) + '"><span class="chbn num">' + (bi + 1) + '</span><span class="chps">' +
-      parts.map((p) => { const inf = chordInfo(t, p.c), txt = inf ? inf.txt : '·', rep = parts.length === 1 && txt === last; if (inf) last = txt; return '<i class="fn-' + ((inf && inf.fn) || 'x') + (rep ? ' rep' : '') + '" style="flex:' + p.f.toFixed(2) + '">' + ui.esc(txt) + '</i>'; }).join('') +
+    const mk = (t.marks || []).find((m) => m.name && m.t >= b.t - 0.05 && m.t < t1 - 0.05);
+    h += '<button class="chb fn-' + fn0 + '" data-bt="' + b.t + '" data-bar="' + bi + '" aria-label="' + ui.esc(tr('pv.bar', { n: bi + 1 })) + '"><span class="chbn num">' + (bi + 1) + '</span>' + (mk ? '<em class="chmk">' + ui.esc(mk.name) + '</em>' : '') + '<span class="chps">' +
+      parts.map((p) => { const inf = chordInfo(t, p.c), txt = inf ? inf.txt : '·', rep = parts.length === 1 && txt === last; if (inf) last = txt; return '<i class="fn-' + ((inf && inf.fn) || 'x') + (rep ? ' rep' : '') + '" data-cx="' + p.i + '" style="flex:' + p.f.toFixed(2) + '">' + ui.esc(txt) + '</i>'; }).join('') +
       '</span><i class="chpg"></i></button>';
     PV.barT.push(b.t);
   });
@@ -296,7 +299,7 @@ function pviewHTML(c, d, half) {
   if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
   if (v === 'sing') return SING.html(t) + atimes({ ...c, chord: '' }, d, anaTxt(t));
   if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
-  if (v === 'chords') return chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)); // «сейчас» — в самом виде, строка под ним не нужна
+  if (v === 'chords') return chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)) + marksHTML(); // «сейчас» — в самом виде, строка под ним не нужна
   return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
 }
 
@@ -927,10 +930,12 @@ const vidbox = (cls) => '<div class="vidbox ' + cls + '" data-x="aplay" aria-lab
   (cls === 'f' || cls === 'h' ? '<button class="ic sm vfs" data-x="afs" aria-label="' + ctx.t('fullscreen') + '">' + I.full + '</button>' : '') + '</div>';
 
 // Тайм-коды: «+ метка», метки (нажать — перейти), «все» — список с названиями и повтором
+// отрезок метки сейчас повторяется (A–B совпадает с отрезком до следующей метки)
+const markLooped = (ms, i) => !!(AU.loop && AU.a != null && AU.b != null && Math.abs(AU.a - ms[i].t) < 0.06 && Math.abs(AU.b - markSpan(ms, i, pl().duration || (AU.cur && AU.cur.dur) || 0)[1]) < 0.06);
 function marksHTML() {
   const { t } = ctx, ms = AU.cur.marks || [], k = currentMark(ms, pl().currentTime);
   return '<div class="chips nowrap amarks" role="group" aria-label="' + t('marks') + '"><button class="chip amadd" data-x="amadd" aria-label="' + t('markAdd') + '">' + I.flag + t('mark') + '</button>' +
-    ms.map((m, i) => '<button class="chip amk' + (i === k ? ' on' : '') + '" data-x="amj" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) + '</b>' +
+    ms.map((m, i) => '<button class="chip amk' + (i === k ? ' on' : '') + (markLooped(ms, i) ? ' loop' : '') + '" data-x="amj" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) + '</b>' +
       esc(m.name || fmtT(m.t)) + '</button>').join('') +
     (ms.length ? '<button class="chip amall" data-x="amlist" aria-label="' + t('marksAll') + '">' + I.list + '</button>' : '') + '</div>';
 }
@@ -1499,6 +1504,60 @@ function marksSheet() {
   }, { onClose: () => render() });
 }
 
+// Правка аккордов записи рукой: касание аккорда в виде «Аккорды» открывает шторку — корень (12 нот), вид, «нет аккорда»,
+// полутон вверх/вниз, разделить на месте игры, склеить с соседом, «везде такой же». Исходный разбор помнится (ana.cauto) —
+// «Как посчитано» возвращает его; пересчёт моделью и синхронизация правку не затирают (ana.cedit, music/chordedit.js)
+let chSaveT = 0;
+const chFlush = () => { if (chSaveT) { clearTimeout(chSaveT); chSaveT = 0; if (AU.cur) ctx.files.save(AU.cur).catch((e) => ctx.logErr(e)); } };
+function chCommit(list) {
+  const x = AU.cur; if (!x) return;
+  x.ana = markEdited(x.ana, list);
+  if (chSaveT) clearTimeout(chSaveT);
+  chSaveT = setTimeout(chFlush, 700); // частые касания — одна запись файла (запись переписывает файл целиком)
+  render();
+}
+function chordSheet(t0) {
+  const { t, ui } = ctx, x = AU.cur;
+  if (!x || !chordsOf(x).length) return;
+  let tt = t0, every = false;
+  const idx = () => { const L = chordsOf(x); let k = -1; for (let i = 0; i < L.length; i++) if (L[i].t <= tt + 0.005) k = i; return k; };
+  const semi = () => pitchOf(x)[0];
+  const rootName = (pc) => { const a = x.ana || {}, keyPc = a.pc == null ? 0 : (((a.minor ? a.pc + 3 : a.pc) + semi()) % 12 + 12) % 12; return (FLAT_KEYS.includes(keyPc) ? FL : SH)[(((pc + semi()) % 12) + 12) % 12]; };
+  const body = () => {
+    const L = chordsOf(x), i = idx(), c = L[i], p = c ? parseChord(c.c) : null, now = pl().currentTime;
+    if (!c) return ui.snav(t('ce.title'));
+    const chip = (act, txt, on, extra = '') => '<button class="chip' + (on ? ' on' : '') + '" data-ce="' + act + '"' + extra + '>' + txt + '</button>';
+    const roots = Array.from({ length: 12 }, (_, pc) => chip('root', esc(rootName(pc)), p && p.pc === pc, ' data-v="' + pc + '"')).join('');
+    const quals = EDIT_QUALS.map((q) => chip('q', esc(q === '' ? t('ce.maj') : QUAL_TXT[q] || q), p && p.q === q, ' data-v="' + q + '"' + (p ? '' : ' disabled'))).join('');
+    const can = (k) => (k ? '' : ' disabled');
+    return ui.snav(t('ce.title')) + '<div class="cesh"><div class="cebig"><b>' + esc(c.c ? chordTxt(c.c, x) : t('ce.none')) + '</b><span class="num l2">' + fmtT(c.t) + ' – ' + fmtT(c.t + c.d) + '</span></div>' +
+      '<div class="chips wrap" role="group" aria-label="' + esc(t('ce.root')) + '">' + roots + '</div>' +
+      '<div class="chips wrap" role="group" aria-label="' + esc(t('ce.kind')) + '">' + quals + chip('none', esc(t('ce.none')), !c.c) + '</div>' +
+      '<div class="chips wrap">' + chip('down', '♭', false, ' aria-label="' + esc(t('ce.down')) + '"' + can(c.c)) + chip('up', '♯', false, ' aria-label="' + esc(t('ce.up')) + '"' + can(c.c)) +
+      chip('split', esc(t('ce.split', { time: fmtT(now) })), false, can(now > c.t + 0.1 && now < c.t + c.d - 0.1)) +
+      chip('prev', '← ' + esc(t('ce.join')), false, can(i > 0)) + chip('next', esc(t('ce.join')) + ' →', false, can(i < L.length - 1)) +
+      chip('loop', esc(t('ce.loop')), false) + chip('all', esc(t('ce.all')), every) + (x.ana && x.ana.cauto ? chip('auto', esc(t('ce.auto')), false) : '') + '</div>' +
+      '<p class="ftr">' + esc(t('ce.hint')) + '</p></div>';
+  };
+  ui.sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ce]'); if (!b || b.disabled) return;
+    const L = chordsOf(x), i = idx(), c = L[i]; if (!c) return;
+    const p = parseChord(c.c), k = b.dataset.ce, v = b.dataset.v;
+    const put = (lab) => { chCommit(every && c.c ? replaceAll(L, c.c, lab) : setAt(L, i, lab)); };
+    if (k === 'root') put(labelOf(+v, p ? p.q : ''));
+    else if (k === 'q' && p) put(labelOf(p.pc, v));
+    else if (k === 'none') put(null);
+    else if (k === 'down' || k === 'up') put(shiftLabel(c.c, k === 'up' ? 1 : -1));
+    else if (k === 'split') chCommit(chSplit(L, i, pl().currentTime));
+    else if (k === 'prev') { tt = L[i - 1].t; chCommit(mergeNext(L, i - 1)); }
+    else if (k === 'next') chCommit(mergeNext(L, i));
+    else if (k === 'loop') { AU.a = c.t; AU.b = c.t + c.d; AU.loop = true; pl().currentTime = c.t; if (pl().paused) playEl(); render(); sh.close(); return; }
+    else if (k === 'all') { every = !every; }
+    else if (k === 'auto') { x.ana = resetEdited(x.ana); chCommit(x.ana.chords); }
+    sh.update();
+  }), { onClose: () => { chFlush(); render(); } });
+}
+
 function markAdd() {
   const x = AU.cur;
   if (!x) return;
@@ -1517,6 +1576,7 @@ function loopMark(i) {
   if (!AU.cur || !AU.cur.marks || !AU.cur.marks[i]) return;
   const [a, b] = markSpan(AU.cur.marks, i, pl().duration || AU.cur.dur || 0);
   if (!(b > a)) return;
+  if (markLooped(AU.cur.marks, i)) { AU.loop = false; AU.a = null; AU.b = null; render(); return; } // удержание той же метки — снять повтор
   AU.a = a; AU.b = b; AU.loop = true;
   pl().currentTime = a;
   if (pl().paused) playEl();
@@ -1733,6 +1793,7 @@ function act(a, el) {
     case 'mlselon': ML.sel = new Set(); render(); break;
     case 'amadd': markAdd(); break;
     case 'amj': seekMark(+el.dataset.i); break;
+    case 'chedit': { const L = chordsOf(AU.cur), i = chordAt(AU.cur, pl().currentTime + 0.03); if (i >= 0) chordSheet(L[i].t); break; }
     case 'amlist': marksSheet(); break;
     case 'akeysheet': keySheet(); break;
     case 'astems': stemsSheet(); break;
@@ -1754,6 +1815,8 @@ function bind() {
   // удержание строки — выбор нескольких файлов (вместо отдельной кнопки); дальше — касания по строкам
   onHold(host, '.mlcat[data-cu]', (el) => folderMenu(el.dataset.v));
   onHold(host, '.mlmain[data-x="mlplay"], .mlmain[data-x="mlsel"]', (el) => { if (!ML.sel) ML.sel = new Set(); ML.sel.add(el.dataset.id); render(); });
+  onHold(host, '[data-cx]', (el) => { const c = AU.cur && chordsOf(AU.cur)[+el.dataset.cx]; if (c) { pl().currentTime = c.t; CL.last = -1; chordSheet(c.t); } }); // аккорд: удержание — правка
+  onHold(host, '.amk[data-x="amj"]', (el) => loopMark(+el.dataset.i)); // метка: удержание — повторять отрезок до следующей
   onHold(host, '.rpre', (el) => rateSheet(rates().findIndex((x) => Math.abs(x - +el.dataset.rpre) < 0.001)));
   on(host, 'click', (e) => {
     const s = e.target.closest('[data-step="arate"]');
@@ -1767,6 +1830,8 @@ function bind() {
     // панель плеера: выкл дорожки, ячейка аккорда или строка текста — перемотка
     const mu = e.target.closest('[data-smute]');
     if (mu && AU.cur) { mixToggle(AU.cur, mu.dataset.smute); mixApply(AU.cur); refreshStemRows(host, AU.cur); return; }
+    const cx = e.target.closest('[data-cx]'); // аккорд в виде «Аккорды»: перемотать к нему и открыть правку
+    if (cx && AU.cur) { const c = chordsOf(AU.cur)[+cx.dataset.cx]; if (c) { pl().currentTime = c.t; CL.last = -1; uiTick(); return; } } // касание — перейти к началу аккорда; правка — удержанием или кнопкой «Править»
     const bt = e.target.closest('[data-bt]');
     if (bt && AU.cur) act('apbt', bt);
   });
