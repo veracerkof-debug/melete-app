@@ -5,8 +5,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 
 export const S = {
   'bk.part9': 'Noldan gitara',
-  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '9 ta dars: oʻtirish, tuzilish, sozlash, birinchi major akkordlar',
-  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng uchta major akkord va ular orasida almashish. Minor akkordlar — keyingi qadam, major toza chiqqanda.',
+  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '15 ta dars: oʻtirish, tuzilish, sozlash, major, minor, boy',
+  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major akkordlar, minor akkordlar va boy.',
   'ls.g1': 'Oʻtirish', 'ls.g2': 'Gitara tuzilishi', 'ls.g3': 'Sozlash', 'ls.g4': 'Ogʻriqsiz qoʻllar', 'ls.g5': 'Akkord sxemasini oʻqish',
   'ls.g6': 'C akkordi', 'ls.g7': 'G akkordi', 'ls.g8': 'D akkordi', 'ls.g9': 'Akkord almashish va birinchi qoʻshiq',
 
@@ -59,6 +59,42 @@ export const S = {
   'gp.bridge.n': 'Koʻprik (bridj)', 'gp.bridge.d': 'Korpusdagi torlar uchlari mahkamlanadigan plankcha. Tebranishni yuqori dekaga uzatadi.',
   'gp.pos.aria': 'Klassik gitara bilan oʻtirish: yon koʻrinish', 'gp.pos.1': 'Orqa tik, yelkalar pastda.', 'gp.pos.2': 'Chap oyoq tagoyoqda.', 'gp.pos.3': 'Gitara chap sonda, boʻyin yuqoriga.',
   'gp.box.aria': '{n} akkord sxemasi', 'gp.box.mute': 'chalmaslik', 'gp.box.open': 'ochiq tor', 'gp.box.fret': '{f}-lad, {p}-barmoq', 'gp.box.hear': 'Tinglash',
+  // strumming and minor (25.11.2026)
+  'ls.g10': 'Minor: Am akkordi',
+  'ls.g11': 'Em akkordi',
+  'ls.g12': 'Dm akkordi',
+  'ls.g13': 'Pastga boy',
+  'ls.g14': 'Pastga-yuqoriga boy',
+  'ls.g15': 'Boy bilan qoʻshiq',
+  'lx.g10.g': '<ul><li>Barmoqlar: 2 — 4-torning 2-ladida, 3 — 3-torning 2-ladida, 1 — 2-torning 1-ladida.</li><li>Besh torni chalish (5-dan 1-gacha), 6-ni chalmaslik.</li><li>Am va A (major) ni tinglang: minorda tovush yumshoqroq va qaygʻuliroq.</li></ul>',
+  'lx.g10.t': 'Major va minorni navbat bilan tinglab, qaysi biri qaygʻuliroq ekanini ayting.',
+  'lx.g10.easy': 'Minor — majorning qaygʻuli ukasi. Farqi — bitta barmoq: Am da u 2-torning 1-ladida.',
+  'lx.g10.fix': '<ul><li>2- va 3-barmoq aralashadi — tartib bilan qoʻying: avval 1-, keyin 2- va 3-.</li><li>Ingichka tor ovozsiz — 1-barmoq yotiq; uchiga qoʻying.</li></ul>',
+  'lx.g11.g': '<ul><li>Barmoqlar: 2 — 5-torning 2-ladida, 3 — 4-torning 2-ladida.</li><li>Barcha oltita torni chalish — qolganlari ochiq.</li><li>Am → Em: 2- va 3-barmoq bir tor pastga, butunlay siljiydi.</li></ul>',
+  'lx.g11.t': 'Shaklni oʻrganing: ikkinchi ladda ikki barmoq yonma-yon.',
+  'lx.g11.easy': 'Em — eng oson akkord: atigi ikki barmoq va hamma torlar jaranglaydi.',
+  'lx.g11.fix': '<ul><li>Baʼzi torlar shaqillaydi — barmoqlar qoʻshni torga tegadi; tikroq qoʻying.</li><li>Qoʻl tarang — akkord yengil, yengilroq bosing.</li></ul>',
+  'lx.g12.g': '<ul><li>Barmoqlar: 1 — 1-torning 1-ladida, 3 — 2-torning 3-ladida, 2 — 3-torning 2-ladida.</li><li>Toʻrtta ingichka torni chalish (4-dan 1-gacha).</li><li>D bilan solishtiring: uchburchak boshqacha joylashadi.</li></ul>',
+  'lx.g12.t': 'D va Dm ni ketma-ket tinglang.',
+  'lx.g12.easy': 'Dm — D bilan bir xil joylashuv, lekin eng ingichka torning 1-ladidagi barmoq tovushni qaygʻuli qiladi.',
+  'lx.g12.fix': '<ul><li>5-tor jaranglaydi — uni chalmang.</li><li>Barmoqlar bir-biriga xalaqit beradi — uchiga va tikroq qoʻying.</li></ul>',
+  'lx.g13.g': '<ul><li>Oʻng qoʻl: bilak erkin, qoʻl suvni silkitgandek bilakdan tebranadi.</li><li>Pastga zarba: bosh yoki koʻrsatkich barmoq torlar boʻylab yoʻgʻondan ingichkaga oʻtadi.</li><li>Am akkordida metronom 70 da har hisobga bitta zarba.</li></ul>',
+  'lx.g13.t': 'Ekranda metronomga mos ketma-ket toʻrt zarbani bosing.',
+  'lx.g13.easy': 'Boy — barcha torlarga teng zarbalar. Asosiysi — teng, baland emas.',
+  'lx.g13.fix': '<ul><li>Qoʻl tarang va charchaydi — yelkani boʻshating, tirsakdan emas, bilakdan chaling.</li><li>Torlarga tegmayapti — qoʻl qayerdan oʻtayotganini kuzating, teshik ustida tuting.</li></ul>',
+  'lx.g14.g': '<ul><li>"Bir-va ikki-va uch-va toʻrt-va" deb sanash: raqamda — pastga, "va" da — yuqoriga.</li><li>Qoʻl toʻxtamay tebranadi — torga tegmasa ham havoda yuradi.</li><li>Barcha sakkizlik: ↓↑↓↑↓↑↓↑ metronom 70 da, keyin "xalq" chizmasi ↓ ·↓↑ ·↑↓↑.</li></ul>',
+  'lx.g14.t': 'Ekranda sakkizliklarni bosing — toʻxtamay pastga-yuqoriga.',
+  'lx.g14.easy': 'Pastga — hisobda, yuqoriga — hisoblar orasida. Qoʻl doim tebranadi; yuqoriga sekinroq va faqat ingichka torlarda chalish mumkin.',
+  'lx.g14.fix': '<ul><li>Hisob adashadi — avval faqat ovoz chiqarib "bir-va ikki-va" deb sanab, torsiz qoʻlni tebrating.</li><li>Yuqoriga zarba juda baland — uni faqat ingichka torlarda va yarim kuch bilan chaling.</li></ul>',
+  'lx.g15.g': '<ul><li>Am – Em – Am – Dm – Am – Em – Am – Am ni "xalq" boyi bilan metronom 70 da chaling.</li><li>Akkordni taktning oxirgi hisobida almashtiring; qoʻl toʻxtamaydi.</li><li>Oʻzingizni yozib tinglang: boy tekis ketyaptimi?</li></ul>',
+  'lx.g15.t': 'Yozuvni tinglab, kurs boshidagi bilan solishtiring.',
+  'lx.g15.easy': 'Qoʻshiq — akkordlar va boy. Almashish boyni buzsa — sekinlashtiring va qoʻlni toʻxtatmay akkord almashtiring.',
+  'lx.g15.fix': '<ul><li>Almashishda boy toʻxtaydi — akkord tayyor boʻlmasa ham qoʻlni tebratishda davom eting.</li><li>Juda tez — metronom 55, keyin oshiring.</li></ul>',
+  'gp.strum.q': '↓ teng',
+  'gp.strum.e': '↓↑ hammasi',
+  'gp.strum.f': 'xalq',
+  'gp.strum.aria': 'Sakkiz hisobli boy chizmasi',
+  'gp.strum.hint': '↓ pastga, ↑ yuqoriga, · qoʻl havoda yuradi. "Tinglash" ikki taktni chaladi.',
 };
 export const TERMS = {};
 export const CH = [
@@ -129,5 +165,47 @@ ${tip('D ni qoʻyib, toʻrt ingichka torni chaling va 5- hamda 6-tor jim ekanini
 <p>"When the Saints Go Marching In" faqat uch akkordda — C, G va D da chalinadi. Avval sekin, keyin tezroq sinab koʻring.</p>
 ${key('Toza va sekin — tez va xato bilan chalishdan yaxshi. Tezlik oʻzi keladi.')}
 ${tip('C–G–C–G–D–G–C ni metronom 60 da aylantirib chalib, oʻzingizni yozib oling.')}
+` },
+  { id: 'g10', t: 'Minor: Am akkordi', s: 'Xuddi shu ladlar, lekin qaygʻuliroq', src: '', h: `
+<p>Minor — majorning qaygʻuli ukasi. Akkord nomida <b>m</b> harfi bor: Am "lya minor" deb oʻqiladi. Endi major chiqayotgan boʻlsa, minorni qoʻshish mumkin.</p>
+{{lab:gboxm}}
+<p>Am akkordi E ga oʻxshaydi, faqat ikki lad pastda. Uch barmoq: 1 — 2-torning 1-ladida, 2 va 3 — 4- va 3-torning 2-ladida.</p>
+${key('Major — yorqin, minor — yumshoq va qaygʻuli. Farqi — bitta barmoq.')}
+${tip('Am va A (major) ni tinglang: besh torni chaling, 6-ga tegmang.')}
+` },
+  { id: 'g11', t: 'Em akkordi', s: 'Eng oson akkord', src: '', h: `
+<p>Em ("mi minor") — eng oddiy: ikkinchi ladda ikki barmoq yonma-yon va barcha oltita tor jaranglaydi.</p>
+{{lab:gboxem}}
+<p>Am → Em almashish kursdagi eng yengili: ikki barmoq bir tor pastga siljiydi, shakl oʻzgarmaydi.</p>
+${key('Almashish — siljish: qoʻl shaklni saqlab, butunlay koʻchadi.')}
+${tip('Am, keyin Em ni chaling — metronom 60 da har biriga toʻrt hisob.')}
+` },
+  { id: 'g12', t: 'Dm akkordi', s: 'D ning qarindoshi', src: '', h: `
+<p>Dm ("re minor") D kabi qoʻyiladi, lekin 1-barmoq eng ingichka torning 1-ladida turadi. D dagi kabi toʻrt ingichka tor chalinadi.</p>
+{{lab:gboxdm}}
+<p>Endi oltita akkord maʼlum: C, G, D, Am, Em, Dm. Bu koʻplab oddiy qoʻshiqlar uchun yetarli.</p>
+${key('D va Dm bitta barmoq bilan farqlanadi — farqni quloq bilan eshiting.')}
+${tip('Dm, keyin D ni chaling — tovush qanday oʻzgarishini tinglang.')}
+` },
+  { id: 'g13', t: 'Pastga boy', s: 'Oʻng qoʻlning birinchi chizmasi', src: '', h: `
+<p>Boy — oʻng qoʻlning barcha torlarga teng zarbalari. Oddiydan boshlang: har hisobga bitta pastga zarba.</p>
+{{lab:gstrum}}
+<p>Qoʻl suvni silkitgandek bilakdan tebranadi. Bosh yoki koʻrsatkich barmoq torlar boʻylab yoʻgʻondan ingichkaga oʻtadi.</p>
+${key('Boy — teng ritm, kuch emas. Teng va sokin — baland va uzilib-uzilib chalishdan yaxshi.')}
+${tip('Akkordni tanlab, "Tinglash" ni bosing va birga chaling — har hisobga bitta zarba.')}
+` },
+  { id: 'g14', t: 'Pastga-yuqoriga boy', s: 'Sakkizliklar va "xalq" chizmasi', src: '', h: `
+<p>Endi yuqoriga harakatni qoʻshamiz. Hisob — "bir-va ikki-va uch-va toʻrt-va": raqamda — pastga, "va" da — yuqoriga.</p>
+{{lab:gstrume}}
+<p>Qoʻl toʻxtamay tebranadi: hisobda pastga, hisoblar orasida yuqoriga. Baʼzan zarba tashlab oʻtiladi, lekin qoʻl baribir havoda yuradi — shunda jonli chizma chiqadi.</p>
+${key('Qoʻl toʻxtamaydi: tashlab oʻtilgan zarba — torga tegmagan tebranish.')}
+${tip('Avval tashlamasdan ↓↑↓↑↓↑↓↑ sakkizliklar, keyin "xalq" chizmasi.')}
+` },
+  { id: 'g15', t: 'Boy bilan qoʻshiq', s: 'Akkordlar va boy birga', src: '', h: `
+<p>Hammasini birlashtiramiz: akkordlar va boy. Am – Em – Am – Dm – Am – Em – Am – Am ni "xalq" boyi bilan metronomga chaling.</p>
+{{lab:gstrumf}}
+<p>Almashish — taktning oxirgi hisobida, qoʻl toʻxtamaydi. Boy adashsa — sekinlashtiring va qoʻlni toʻxtatmang.</p>
+${key('Qoʻl toʻxtasa — boy buziladi. Akkordni toʻliq chalmaslik qoʻlni toʻxtatishdan yaxshi.')}
+${tip('Shu ketma-ketlikda oʻzingizni yozib, ertasi kuni tinglang.')}
 ` },
 ];

@@ -100,6 +100,37 @@ export function guitarLabs({ T, snd }) {
   LABS.gbox = boxLab(MAJ);
   LABS.gboxg = boxLab(MAJ, 'G');
   LABS.gboxd = boxLab(MAJ, 'D');
-  LABS.gboxm = boxLab(['Am', 'Em', 'Dm']);
+  const MIN = ['Am', 'Em', 'Dm'];
+  LABS.gboxm = boxLab(MIN);
+  LABS.gboxem = boxLab(MIN, 'Em');
+  LABS.gboxdm = boxLab(MIN, 'Dm');
+
+  // Бой: рисунок на восемь долей («1 и 2 и 3 и 4 и») — ↓ вниз, ↑ вверх, · пропуск; «Послушать» играет два такта под счёт (80 уд/мин)
+  const PAT = { q: 'D-D-D-D-', e: 'DUDUDUDU', f: 'D-DU-UDU' };
+  const strumLab = (pat, ch) => ({
+    st: { pat, ch },
+    render(s) {
+      const p = PAT[s.pat], lab = ['1', 'и', '2', 'и', '3', 'и', '4', 'и'];
+      return '<div class="bkgrow">' + ['Am', 'C', 'G'].map((n) => '<button type="button" class="bkgch' + (n === s.ch ? ' on' : '') + '" data-a="c:' + n + '" aria-pressed="' + (n === s.ch) + '">' + n + '</button>').join('') +
+        '<span class="bkgsp"></span>' + Object.keys(PAT).map((k) => '<button type="button" class="bkgch' + (k === s.pat ? ' on' : '') + '" data-a="s:' + k + '" aria-pressed="' + (k === s.pat) + '" aria-label="' + T('gp.strum.' + k) + '">' + T('gp.strum.' + k) + '</button>').join('') + '</div>' +
+        '<div class="bkgstrum" role="img" aria-label="' + T('gp.strum.aria') + '">' + [...p].map((c, i) => '<div class="bkgbt' + (i % 2 ? ' off' : '') + '"><b>' + (c === 'D' ? '↓' : c === 'U' ? '↑' : '·') + '</b><i>' + lab[i] + '</i></div>').join('') + '</div>' +
+        '<p class="bkhint">' + T('gp.strum.hint') + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
+    },
+    on(s, a) {
+      if (a.startsWith('c:') && GCH[a.slice(2)]) { s.ch = a.slice(2); return; }
+      if (a.startsWith('s:') && PAT[a.slice(2)]) { s.pat = a.slice(2); return; }
+      if (a !== 'hear') return false;
+      const ms = midisOf(s.ch), step = 60 / 80 / 2, list = [];
+      for (let bar = 0; bar < 2; bar++) [...PAT[s.pat]].forEach((c, i) => {
+        if (c === '-') return;
+        const t = (bar * 8 + i) * step, order = c === 'D' ? ms : [...ms].reverse();
+        order.forEach((m, k) => list.push([t + k * 0.018, [m], 0.5]));
+      });
+      snd.hits(list); return false;
+    },
+  });
+  LABS.gstrum = strumLab('q', 'Am');
+  LABS.gstrume = strumLab('e', 'Am');
+  LABS.gstrumf = strumLab('f', 'C');
   return LABS;
 }

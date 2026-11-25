@@ -5,8 +5,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 
 export const S = {
   'bk.part9': 'Guitar from scratch',
-  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '9 lessons: posture, parts, tuning, first major chords',
-  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then three major chords and changing between them. Minor chords come next, once major is clean.',
+  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '15 lessons: posture, parts, tuning, major, minor, strumming',
+  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major chords, minor chords and strumming.',
   'ls.g1': 'Posture', 'ls.g2': 'Parts of the guitar', 'ls.g3': 'Tuning', 'ls.g4': 'Pain-free hands', 'ls.g5': 'Reading a chord diagram',
   'ls.g6': 'Chord C', 'ls.g7': 'Chord G', 'ls.g8': 'Chord D', 'ls.g9': 'Chord changes and a first song',
 
@@ -59,6 +59,42 @@ export const S = {
   'gp.bridge.n': 'Bridge', 'gp.bridge.d': 'The bar on the body where the strings are fixed. It passes vibrations to the top.',
   'gp.pos.aria': 'Classical guitar posture: side view', 'gp.pos.1': 'Back straight, shoulders down.', 'gp.pos.2': 'Left foot on the footstool.', 'gp.pos.3': 'Guitar on the left thigh, neck up.',
   'gp.box.aria': 'Chord diagram {n}', 'gp.box.mute': 'do not play', 'gp.box.open': 'open string', 'gp.box.fret': 'fret {f}, finger {p}', 'gp.box.hear': 'Listen',
+  // strumming and minor (25.11.2026)
+  'ls.g10': 'Minor: chord Am',
+  'ls.g11': 'Chord Em',
+  'ls.g12': 'Chord Dm',
+  'ls.g13': 'Down strum',
+  'ls.g14': 'Down-up strum',
+  'ls.g15': 'A song with strumming',
+  'lx.g10.g': '<ul><li>Fingers: 2 on fret 2 of string 4, 3 on fret 2 of string 3, 1 on fret 1 of string 2.</li><li>Play five strings (5th to 1st), skip the 6th.</li><li>Listen to Am and A (major): minor sounds softer and sadder.</li></ul>',
+  'lx.g10.t': 'Listen to major and minor in turn and say which is sadder.',
+  'lx.g10.easy': 'Minor is the sad brother of major. The difference is one finger: in Am it sits on fret 1 of string 2.',
+  'lx.g10.fix': '<ul><li>Fingers 2 and 3 get mixed up — place them in order: 1 first, then 2 and 3.</li><li>The thin string is dead — finger 1 lies flat; set it on the tip.</li></ul>',
+  'lx.g11.g': '<ul><li>Fingers: 2 on fret 2 of string 5, 3 on fret 2 of string 4.</li><li>Play all six strings — the rest are open.</li><li>Change Am → Em: fingers 2 and 3 slide one string down, as a whole.</li></ul>',
+  'lx.g11.t': 'Learn the shape: two fingers side by side on the second fret.',
+  'lx.g11.easy': 'Em is the easiest chord: just two fingers and all strings sound.',
+  'lx.g11.fix': '<ul><li>Some strings buzz — fingers touch neighbours; set them steeper.</li><li>The hand is tense — the chord is easy, press more lightly.</li></ul>',
+  'lx.g12.g': '<ul><li>Fingers: 1 on fret 1 of string 1, 3 on fret 3 of string 2, 2 on fret 2 of string 3.</li><li>Play the four thin strings (4th to 1st).</li><li>Compare with D: the triangle is placed differently.</li></ul>',
+  'lx.g12.t': 'Listen to D and Dm one after another.',
+  'lx.g12.easy': 'Dm is the same position as D, but the finger on fret 1 of the thinnest string makes it sad.',
+  'lx.g12.fix': '<ul><li>The 5th string rings — do not play it.</li><li>Fingers get in each other\'s way — set them on the tips and steeper.</li></ul>',
+  'lx.g13.g': '<ul><li>Right hand: loose wrist, the arm swings from the wrist as if shaking off water.</li><li>Down stroke: thumb or index passes over the strings from thick to thin.</li><li>One stroke per beat at 70, on chord Am.</li></ul>',
+  'lx.g13.t': 'Tap four strokes in a row on the screen to the metronome.',
+  'lx.g13.easy': 'Strumming is even strokes over all strings. Even matters more than loud.',
+  'lx.g13.fix': '<ul><li>The hand is tight and tires — relax the shoulder and play from the wrist, not the elbow.</li><li>You miss the strings — watch where the hand passes and keep it over the sound hole.</li></ul>',
+  'lx.g14.g': '<ul><li>Count "one-and two-and three-and four-and": on the number — down, on "and" — up.</li><li>The hand swings without stopping — even when it does not hit the strings, it moves in the air.</li><li>All eighths: ↓↑↓↑↓↑↓↑ at 70, then the "folk" pattern ↓ ·↓↑ ·↑↓↑.</li></ul>',
+  'lx.g14.t': 'Tap eighths on the screen — down-up without stops.',
+  'lx.g14.easy': 'Down on the beat, up between beats. The hand always swings; up strokes can be softer and only on the thin strings.',
+  'lx.g14.fix': '<ul><li>The count slips — first only count aloud "one-and two-and" and swing the hand without strings.</li><li>The up stroke is too loud — play it only on thin strings and half as strong.</li></ul>',
+  'lx.g15.g': '<ul><li>Play Am – Em – Am – Dm – Am – Em – Am – Am with the "folk" strum at 70.</li><li>Change the chord on the last beat of the bar; the hand does not stop.</li><li>Record yourself and listen: is the strum even?</li></ul>',
+  'lx.g15.t': 'Listen to the recording and compare with the start of the course.',
+  'lx.g15.easy': 'A song is chords plus strumming. If the change breaks the strum — slow down and change the chord without stopping the hand.',
+  'lx.g15.fix': '<ul><li>The strum stops on the change — keep the hand swinging even if the chord is not ready.</li><li>Too fast — metronome 55, then raise it.</li></ul>',
+  'gp.strum.q': '↓ even',
+  'gp.strum.e': '↓↑ all',
+  'gp.strum.f': 'folk',
+  'gp.strum.aria': 'Strum pattern for eight beats',
+  'gp.strum.hint': '↓ down, ↑ up, · the hand moves in the air. "Listen" plays two bars.',
 };
 export const TERMS = {};
 export const CH = [
@@ -129,5 +165,47 @@ ${tip('Set D, play the four thin strings and check that the 5th and 6th are sile
 <p>"When the Saints Go Marching In" needs only three chords — C, G and D. Try it slowly first, then faster.</p>
 ${key('Clean and slow beats fast and sloppy. Speed comes on its own.')}
 ${tip('Play C–G–C–G–D–G–C around at 60 and record yourself.')}
+` },
+  { id: 'g10', t: 'Minor: chord Am', s: 'The same frets, but sadder', src: '', h: `
+<p>Minor is the sad brother of major. The chord name has an <b>m</b>: Am reads "A minor". Now that major works, minor can be added.</p>
+{{lab:gboxm}}
+<p>Chord Am looks like E, two frets lower. Three fingers: 1 on fret 1 of string 2, 2 and 3 on fret 2 of strings 4 and 3.</p>
+${key('Major is bright, minor is soft and sad. The difference is one finger.')}
+${tip('Listen to Am and A (major): play five strings, do not touch the 6th.')}
+` },
+  { id: 'g11', t: 'Chord Em', s: 'The easiest chord', src: '', h: `
+<p>Em ("E minor") is the simplest: two fingers side by side on the second fret, and all six strings sound.</p>
+{{lab:gboxem}}
+<p>The change Am → Em is the easiest in the course: two fingers move one string down and the shape stays the same.</p>
+${key('The change is a slide: the hand keeps the shape and moves as a whole.')}
+${tip('Play Am, then Em — four beats each at 60.')}
+` },
+  { id: 'g12', t: 'Chord Dm', s: 'A relative of D', src: '', h: `
+<p>Dm ("D minor") is set like D, but finger 1 sits on fret 1 of the thinnest string. Four thin strings are played, as in D.</p>
+{{lab:gboxdm}}
+<p>Six chords are known now: C, G, D, Am, Em, Dm. That is already enough for many simple songs.</p>
+${key('D and Dm differ by one finger — hear the difference.')}
+${tip('Play Dm, then D — listen to how the sound changes.')}
+` },
+  { id: 'g13', t: 'Down strum', s: 'The first right-hand pattern', src: '', h: `
+<p>Strumming is even strokes of the right hand over all strings. Start simple: one down stroke per beat.</p>
+{{lab:gstrum}}
+<p>The hand swings from the wrist as if shaking off water. The thumb or index passes over the strings from thick to thin.</p>
+${key('Strumming is steady rhythm, not force. Even and soft beats loud and ragged.')}
+${tip('Pick a chord, press "Listen" and play along — one stroke per beat.')}
+` },
+  { id: 'g14', t: 'Down-up strum', s: 'Eighths and the "folk" pattern', src: '', h: `
+<p>Now add the upward motion. Count "one-and two-and three-and four-and": on the number — down, on "and" — up.</p>
+{{lab:gstrume}}
+<p>The hand swings without stopping: down on the beat, up between beats. Sometimes a stroke is skipped, but the hand still moves in the air — that makes a lively pattern.</p>
+${key('The hand never stops: a skipped stroke is a swing that misses the strings.')}
+${tip('First eighths ↓↑↓↑↓↑↓↑ with no skips, then the "folk" pattern.')}
+` },
+  { id: 'g15', t: 'A song with strumming', s: 'Chords and strumming together', src: '', h: `
+<p>Put it all together: chords and strumming. Play Am – Em – Am – Dm – Am – Em – Am – Am with the "folk" strum to the metronome.</p>
+{{lab:gstrumf}}
+<p>Change on the last beat of the bar; the hand does not stop. If the strum slips — slow down and keep the hand moving.</p>
+${key('When the hand stops, the strum breaks. Better to play an incomplete chord than to stop the hand.')}
+${tip('Record yourself on this sequence and listen the next day.')}
 ` },
 ];
