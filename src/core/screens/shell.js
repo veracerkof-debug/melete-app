@@ -12,7 +12,7 @@ import { moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
-import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
+import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, goalSheet, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
 import { listSongs, ensureLib } from '../library.js';
 import { getLang } from '../../i18n/index.js';
@@ -207,6 +207,7 @@ export function createShell(app, root) {
     else if (d.act === 'libman') libManager(app, render);
     else if (d.act === 'compare') import('./compare.js').then((m) => m.compareSheet(app, d.sid));
     else if (d.act === 'quickedit') quickEdit(app, render);
+    else if (d.act === 'goal') goalSheet(app, render);
     // чтение дня: Библия — на нужной главе
     else if (d.act === 'bible') {
       if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }

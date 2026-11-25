@@ -505,6 +505,13 @@ function exportICS(app) {
 
 /* ---------- на других экранах ---------- */
 
+// Главная, панель «Сегодня»: события сегодняшнего дня по времени → [{ id, time, title, start }]
+export function todayEvents(app, now = Date.now()) {
+  const c = cal(app), d0 = dayStart(now);
+  return occurrences(events(app), d0, d0 + DAY).sort((a, b) => a.start - b.start)
+    .map((o) => ({ id: o.ev.id, time: o.ev.allDay ? t('cal.allDay') : hm(o.start), title: titleOf(c, o.ev), start: o.start }));
+}
+
 // Главная: ближайшие события на неделю (до двух)
 export function nextEventsHTML(app, { stage: withStage = true } = {}) {
   const all = upcoming(events(app), Date.now(), 7).filter((o, i, a) => a.findIndex((x) => x.ev.id === o.ev.id) === i);

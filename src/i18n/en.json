@@ -3039,5 +3039,16 @@
   "lay.unpair": "Split the row",
   "lay.width": "Width of the blocks in the row",
   "lay.rotate": "Turn the phone upright: the layout is edited in portrait",
-  "hb.size": "Size"
+  "hb.size": "Size",
+  "home.today": "Today",
+  "home.goalNone": "No goal",
+  "home.goalPick": "Choose a piece",
+  "home.goalIs": "Goal: {title}",
+  "home.goalDone": "Played: {title}",
+  "home.startSong": "Start “{title}”",
+  "home.freeSmall": "Free",
+  "home.goalTitle": "Goal for today",
+  "home.goalClear": "Remove the goal",
+  "home.goalEmpty": "No songs yet: add one and it can become the goal of the day",
+  "home.moreEv": "{n} more"
 }

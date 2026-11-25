@@ -3000,5 +3000,16 @@
   "lay.unpair": "Qatorni ajratish",
   "lay.width": "Qatordagi bloklar kengligi",
   "lay.rotate": "Telefonni tik tuting: koʻrinish tik holatda tahrirlanadi",
-  "hb.size": "Oʻlcham"
+  "hb.size": "Oʻlcham",
+  "home.today": "Bugun",
+  "home.goalNone": "Maqsad yoʻq",
+  "home.goalPick": "Asarni tanlash",
+  "home.goalIs": "Maqsad: {title}",
+  "home.goalDone": "Chalindi: {title}",
+  "home.startSong": "«{title}»ni boshlash",
+  "home.freeSmall": "Erkin",
+  "home.goalTitle": "Bugungi maqsad",
+  "home.goalClear": "Maqsadni olib tashlash",
+  "home.goalEmpty": "Hozircha qoʻshiq yoʻq: qoʻshiq qoʻshing, uni kun maqsadi qilish mumkin",
+  "home.moreEv": "yana {n}"
 }

@@ -151,3 +151,30 @@ test('отчёт для педагога: из статистики — карт
   expect(h2).toBeLessThan(h); // без заметок картинка короче
   expect(errors).toEqual([]);
 });
+
+// Цель на день (слово автора 25.11.2026): без цели — «Свободная практика»; с целью — «Начать «песня»» и маленькая «Свободно»;
+// сыграна — снова «Свободная практика»; цель действует только сегодня
+test('цель на день: выбор в панели «Сегодня», кнопка «Начать «песня»», убрать', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [{ id: 's1', title: 'Каприс 24', artist: 'Паганини', createdAt: 1 }, { id: 's2', title: 'Blackbird', createdAt: 2 }] });
+  await expect(page.locator('.hstart .hcta')).toContainText('Свободная практика');
+  await expect(page.locator('.hgoal.none')).toBeVisible();
+  await page.click('.hgoal'); await page.waitForTimeout(400);
+  await page.click('[data-goal="s1"]'); await page.waitForTimeout(400);
+  await expect(page.locator('.hgoal')).toContainText('Цель: Каприс 24');
+  await expect(page.locator('.hstart .hcta')).toContainText('Начать «Каприс 24»');
+  await expect(page.locator('.hstart .hfree')).toBeVisible();
+  await expect(page.locator('.hstart .hstage')).toBeVisible();
+  expect(await page.evaluate(() => window.__melete.store.state.settings.todayGoal.songId)).toBe('s1');
+  // цель сыграна — кнопка снова «Свободная практика»
+  await page.evaluate(() => { const S = window.__melete.store, n = Date.now(); S.addSession({ id: 'g1', type: 'song', songId: 's1', start: n - 900000, end: n - 300000, dur: 600 }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await expect(page.locator('.hgoal.done')).toContainText('Сыграно: Каприс 24');
+  await expect(page.locator('.hstart .hcta')).toContainText('Свободная практика');
+  // убрать цель
+  await page.click('.hgoal'); await page.waitForTimeout(400);
+  await page.click('[data-goal=""]'); await page.waitForTimeout(400);
+  await expect(page.locator('.hgoal.none')).toBeVisible();
+  expect(await page.evaluate(() => window.__melete.store.state.settings.todayGoal)).toBeUndefined();
+  void errors;
+});

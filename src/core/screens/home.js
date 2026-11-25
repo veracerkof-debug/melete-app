@@ -42,7 +42,8 @@ import { isAbsorbed, repOf, toolLabel } from '../groups.js';
 import { topbar, weekdays, relDay, PLAY, IC, STAGE_IC, tabIds, TAB_MODULES, isPage, pageName, TAB_ICONS } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
-import { nextEventsHTML } from './calendar.js';
+import { nextEventsHTML, todayEvents } from './calendar.js';
+import { goalOf, setGoal, clearGoal, goalDone } from '../todaygoal.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
 import { quoteAt, dayIndex, setsOf } from '../quotes.js';
@@ -285,6 +286,7 @@ export function homeHTML(app) {
   // крестик на самом кольце; убранный камень лежит в «Убрано» и возвращается касанием
   const gemIn = !plain && isOn(st, 'mastery') && !homeLayout(st).off.has('league');
   const daily = wp.goal / Math.max(1, plan.filter(Boolean).length);
+  const dayGoal = goalOf(st, app.store.songs()), dayDone = dayGoal ? goalDone(app.store.sessions(), dayGoal.id) : false; // цель дня (произведение), не путать с целью недели goal
   // Виджет недели — одна кликабельная карточка (слово автора 25.11.2026): кольцо — дни и цель, числа и дни — статистика,
   // камень — свой экран. Подписи «Настроить…» нет; строка остаётся только при перерыве и пока неделя не настроена
   const ringLabel = t('home.ringAria', { p: Math.round(p * 100) });
@@ -294,12 +296,18 @@ export function homeHTML(app) {
     '<button class="days hdays" data-pp="stats" aria-label="' + esc(t('home.stats')) + '">' + WD.map((d, i) => { const tn3 = w.per[i] > 0 ? dayTone(w.per[i], daily) : 0;
       return '<span class="day ' + (w.per[i] > 0 ? 'done t' + tn3 : wp.off[i] ? 'off' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
         esc(w.per[i] ? fmtDur(w.per[i]) : wp.off[i] ? offText(wp.off[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d">' + (tn3 === 3 && daily > 0 ? CHK : '') + '</span>' + d + '</span>'; }).join('') + '</button>' +
+    todayHTML(app, dayGoal, dayDone) +
     (wp.now ? '<button class="hlink" data-pp="stats">' + esc(offText(wp.now)) + ' ›</button>' : !st.configured ? '<button class="hlink" data-pp="week">' + t('home.setup') + ' ›</button>' : '') + '</div>';
   P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
   P.study = (plain ? '' : studyCard(app)) + homeworkCard(app) + classCard(app); // у ученика — «Домашка» от учителя, у учителя — сводка по ученикам // учёба: учебник, слух, ритм — часы в неделю
-  // Главная кнопка — свободная практика (слово автора 25.11.2026), рядом поменьше «Сцена»; отдельной полосы «Сцена» нет
-  P.start = '<div class="hstart"><button class="hcta" data-act="free"><i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i><span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.freeStart') + '</span></button>' +
+  // Главная кнопка — свободная практика (слово автора 25.11.2026); есть цель на сегодня и она не сыграна — «Начать «название»», рядом
+  // маленькая «Свободно»; рядом всегда «Сцена». Отдельной полосы «Сцена» нет
+  const PL = '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></i>';
+  const goalGo = !plain && dayGoal && !dayDone && !app.active;
+  P.start = '<div class="hstart">' + (goalGo
+    ? '<button class="hcta" data-play="' + dayGoal.id + '">' + PL + '<span>' + esc(t('home.startSong', { title: dayGoal.title })) + '</span></button><button class="hfree" data-act="free">' + esc(t('home.freeSmall')) + '</button>'
+    : '<button class="hcta" data-act="free">' + PL + '<span>' + t(plain ? (app.active ? 'home.wsResume' : 'home.ws') : app.active ? 'home.resume' : 'home.freeStart') + '</span></button>') +
     '<button class="hstage" data-act="stage">' + STAGE_IC + '<span>' + t('stage.btn') + '</span></button></div>';
   const q = quickList(st);
   // Быстрый доступ — только значки, без заголовка и «Изменить» (слово автора 25.11.2026); правка — удержанием значка (toolHoldMenu)
@@ -307,7 +315,7 @@ export function homeHTML(app) {
     ? q.map((id) => { const m = moduleById(id), nm = toolLabel(st, m); return '<button class="qbtn" data-open-tool="' + id + '" aria-label="' + esc(nm) + '" title="' + esc(nm) + '" style="--c:' + m.color + ';--on:' + (m.on || '#fff') + '"><span class="qic">' + m.icon + '</span></button>'; }).join('')
     : '<button class="qbtn add" data-act="quickedit" aria-label="' + esc(t('home.add')) + '"><span class="qic">' + IC.plus + '</span></button>') + '</div>';
   P.review = plain ? '' : reviewHTML(app, false);
-  P.events = nextEventsHTML(app, { stage: false });
+  P.events = ''; // события дня — в панели «Сегодня» внутри карточки недели (слово автора 25.11.2026: отдельной строки календаря нет)
   const songs = app.store.songs();
   const sm = songStatsMap(app.store.sessions()), rec = songs.map((s) => ({ s, st: sm.of(s.id) })).sort((a, b) => (b.st.last || b.s.createdAt) - (a.st.last || a.s.createdAt)).slice(0, 4);
   // Песни — плоский список в стиле списка сцены, без панелей (слово автора 25.11.2026): кнопка «играть» слева, название, пометка, тональность и темп справа
@@ -320,6 +328,33 @@ export function homeHTML(app) {
         '</b><small>' + esc(sub) + '</small></span>' + (meta ? '<span class="m num">' + esc(meta) + '</span>' : '') + '</button></div>';
     }).join('') + '</div>');
   return topbar(logoHTML() + headRight(app), '') + '<div class="hlist">' + updSlot(app) + levelUpHTML(app) + blocks(st, P) + '</div>';
+}
+
+// Панель «Сегодня» (слово автора 25.11.2026): события дня из календаря и цель на день — внутри карточки недели.
+// Касание заголовка и события — календарь; строка цели — выбор произведения
+function todayHTML(app, goal, gdone) {
+  const ev = todayEvents(app), lang = getLang() === 'uz' ? 'uz-Latn' : getLang(), day = new Date().toLocaleDateString(lang, { weekday: 'long' });
+  const goalLine = goal
+    ? '<button class="hgoal' + (gdone ? ' done' : '') + '" data-act="goal"><span class="hgi" aria-hidden="true">' + (gdone ? CHK : '★') + '</span><span class="hgt">' + esc(t(gdone ? 'home.goalDone' : 'home.goalIs', { title: goal.title })) + '</span><i aria-hidden="true">›</i></button>'
+    : '<button class="hgoal none" data-act="goal"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalNone')) + '</span><u>' + esc(t('home.goalPick')) + ' ›</u></button>';
+  return '<div class="htoday"><button class="htdh" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><b>' + esc(t('home.today')) + '</b><span>' + esc(day) + '</span><i aria-hidden="true">›</i></button>' +
+    ev.slice(0, 3).map((e) => '<button class="htev" data-tab="calendar"><em class="num">' + esc(e.time) + '</em><span>' + esc(e.title) + '</span></button>').join('') +
+    (ev.length > 3 ? '<span class="htmore">' + esc(t('home.moreEv', { n: ev.length - 3 })) + '</span>' : '') + goalLine + '</div>';
+}
+
+// Выбор цели на день: свои песни, недавние первыми; «Убрать цель»
+export function goalSheet(app, done = () => {}) {
+  const st = app.store.state.settings, songs = app.store.songs(), sm = songStatsMap(app.store.sessions()), cur = goalOf(st, songs);
+  const list = songs.map((s) => ({ s, last: sm.of(s.id).last || s.createdAt || 0 })).sort((a, b) => b.last - a.last);
+  const api = sheet(() => snav(t('home.goalTitle')) + (list.length
+    ? '<div class="group">' + list.map(({ s }) => '<button class="cell" data-goal="' + s.id + '"><span class="grow" style="text-align:left"><b>' + esc(s.title) + '</b>' + (s.artist ? '<span class="bksub">' + esc(s.artist) + '</span>' : '') + '</span>' + (cur && cur.id === s.id ? '<span class="num">✓</span>' : '') + '</button>').join('') + '</div>'
+    : '<p class="ftr">' + esc(t('home.goalEmpty')) + '</p>') +
+    (cur ? '<div class="group" style="margin-top:12px"><button class="cell act danger center" data-goal="">' + esc(t('home.goalClear')) + '</button></div>' : ''),
+  (el) => el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-goal]'); if (!b) return;
+    if (b.dataset.goal) setGoal(st, b.dataset.goal); else clearGoal(st);
+    app.store.settingsChanged(); api.close(); done();
+  }));
 }
 
 // Одно предложение повысить уровень (слово автора 25.11.2026): без давления, «Не сейчас» больше не спрашивает про этот уровень

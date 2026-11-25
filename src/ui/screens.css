@@ -947,3 +947,18 @@ html.desk .qgrid2 .qbtn{width:64px;height:64px;max-height:none}
 .hbgrip{position:absolute;left:50%;bottom:-16px;margin-left:-48px;width:96px;height:32px;border-radius:16px;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);touch-action:none;cursor:ns-resize;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .hbgrip i{width:30px;height:8px;border-top:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.9}
 .hbedit ~ .hblk > .hbgrip{pointer-events:auto}
+
+/* Панель «Сегодня» в карточке недели и цель на день (слово автора 25.11.2026) */
+.htoday{margin-top:6px;padding-top:6px;border-top:.5px solid var(--sep);display:flex;flex-direction:column}
+.htoday button{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;text-align:left;color:var(--ink);min-width:0}
+.htdh{min-height:34px}.htdh b{font-size:15px}.htdh span{font-size:13px;color:var(--l2);flex:1}.htdh i,.hgoal i{font-style:normal;color:var(--l2)}
+.htev em{font-style:normal;flex:none;width:44px;font-size:13px;color:var(--tint-text,var(--tint));font-weight:600}
+.htev span{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.htmore{font-size:12px;color:var(--l2);padding:0 2px 2px 52px}
+.hgoal .hgi{flex:none;width:44px;text-align:center;color:var(--tint-text,var(--tint))}
+.hgoal .hgi svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.hgoal .hgt{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hgoal.none .hgt{color:var(--l2);flex:0 1 auto}.hgoal.none u{text-decoration:none;color:var(--tint-text,var(--tint));font-size:13px;font-weight:600;margin-left:auto;white-space:nowrap}
+.hgoal.done .hgt{color:var(--l2)}
+.hstart .hfree{flex:none;width:76px;min-height:50px;padding:0 8px;border-radius:18px;background:var(--cell);color:var(--ink);font-size:13px;font-weight:700;line-height:1.15}
+html.desk .hstart .hfree{min-height:64px}

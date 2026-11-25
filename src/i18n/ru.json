@@ -3064,5 +3064,16 @@
   "lay.unpair": "Разделить ряд",
   "lay.width": "Ширина блоков в ряду",
   "lay.rotate": "Поверните телефон вертикально: вид правят стоя",
-  "hb.size": "Размер"
+  "hb.size": "Размер",
+  "home.today": "Сегодня",
+  "home.goalNone": "Цели нет",
+  "home.goalPick": "Выбрать произведение",
+  "home.goalIs": "Цель: {title}",
+  "home.goalDone": "Сыграно: {title}",
+  "home.startSong": "Начать «{title}»",
+  "home.freeSmall": "Свободно",
+  "home.goalTitle": "Цель на сегодня",
+  "home.goalClear": "Убрать цель",
+  "home.goalEmpty": "Песен пока нет: добавьте песню, и её можно будет поставить целью дня",
+  "home.moreEv": "ещё {n}"
 }
