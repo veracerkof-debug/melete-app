@@ -6,14 +6,14 @@
 import { backupText } from './backup.js';
 import { log, logErr } from './log.js';
 
-export const KEEP_DAY = 7, KEEP_UPD = 1; // перед обновлением — одна последняя (слово автора 06.11.2026)
+export const KEEP_DAY = 7, KEEP_UPD = 1, KEEP_AI = 3; // «ai» — копия перед применением правок из чата (core/ai) // перед обновлением — одна последняя (слово автора 06.11.2026)
 const DB = 'melete-snap', ST = 'snaps';
 const dayOf = (t) => { const d = new Date(t), p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); };
 
 // Что убрать: суточные — сверх 7 самых свежих, «перед обновлением» — сверх 3. list — [{ id, at, kind }]
-export function toPrune(list, keepDay = KEEP_DAY, keepUpd = KEEP_UPD) {
+export function toPrune(list, keepDay = KEEP_DAY, keepUpd = KEEP_UPD, keepAi = KEEP_AI) {
   const by = (k) => list.filter((x) => x.kind === k).sort((a, b) => b.at - a.at);
-  return [...by('day').slice(keepDay), ...by('update').slice(keepUpd)].map((x) => x.id);
+  return [...by('day').slice(keepDay), ...by('update').slice(keepUpd), ...by('ai').slice(keepAi)].map((x) => x.id);
 }
 export const dayId = (t) => 'day-' + dayOf(t);
 // Данные заметно меньше самой крупной из последних копий (меньше трети, а там было больше 4 КБ)
@@ -42,7 +42,7 @@ export function createSnapshots(app) {
   async function take(kind = 'day', { build = 0 } = {}) {
     try {
       if (app.store.ready) await app.store.ready; // проекты студии прочитаны из своей базы — копия полная
-      const text = backupText(app), at = Date.now(), id = kind === 'day' ? dayId(at) : 'upd-' + at + '-' + Math.random().toString(36).slice(2, 6);
+      const text = backupText(app), at = Date.now(), id = kind === 'day' ? dayId(at) : (kind === 'ai' ? 'ai-' : 'upd-') + at + '-' + Math.random().toString(36).slice(2, 6);
       const before = await list();
       await tx('readwrite', (s) => s.put({ id, at, kind, build, size: text.length, text }));
       // данные резко уменьшились (сбой загрузки, ошибка, случайная очистка) — старые копии не убирать: иначе за неделю

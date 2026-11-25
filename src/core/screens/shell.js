@@ -213,6 +213,7 @@ export function createShell(app, root) {
     }
     else if (d.act === 'pomo') openToolView(app, 'timer', render);
     else if (d.act === 'study') import('./study.js').then((m) => m.openStudy(app, d.k, openToolView, render));
+    else if (d.act === 'aichat') import('./aichat.js').then((m) => m.openChat(app, { onSettings: () => panel.open('ai') })); // касание лица маскота: чат (если подключён)
     else if (d.act === 'hwgo') import('./studentpage.js').then((m) => m.homeworkGo(app, d.k, go));
     else if (d.act === 'hw') import('./studentpage.js').then((m) => { if (m.homeworkDone(app, d.k)) render(); });
     else if (d.act === 'studyset') import('./study.js').then((m) => m.studySetSheet(app, render));

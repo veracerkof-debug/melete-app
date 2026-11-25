@@ -164,7 +164,7 @@ function quoteHTML(app, mono) {
   const st = app.store.state.settings, now = new Date(), name = st.profile && st.profile.name;
   const hello = greet(now.getHours()) + (name ? ', ' + name : '');
   const q = isOn(st, 'quote') ? quoteAt(dayIndex(), getLang(), setsOf(st), st.quoteBooks || []) : {};
-  return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '" aria-live="polite">' + (hasMascot() ? '<button class="mascotb" data-mascot aria-label="' + esc(t('mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
+  return '<div class="' + (mono ? 'mvo' : 'hvoice') + (hasMascot() ? '' : ' nomascot') + '" aria-live="polite">' + (hasMascot() ? '<button class="mascotb" ' + (app.ai && app.ai.ready() ? 'data-act="aichat"' : 'data-mascot') + ' aria-label="' + esc(t(app.ai && app.ai.ready() ? 'ai.open' : 'mascot.aria')) + '">' + mascotSVG(moodNow(app), { size: mono ? 52 : 56, ring: !mono }) + '</button>' : '') +
     '<p class="' + (mono ? 'mquote' : 'hquote') + '">' + pleaHTML(app, 'mplea') + esc(hello) + (q.text ? '. ' + esc(q.text) : '!') + (q.ref ? '<span class="qref">' + esc(q.ref) + '</span>' : '') + '</p></div>';
 }
 // «Минимал»: только самое нужное — у раздела нет заголовка, остаются действия (справа)

@@ -57,6 +57,7 @@ import { WEB } from '../platform.js';
 import { studentHTML, studentClick } from './studentpage.js';
 import { classHTML, classClick } from './classpage.js';
 import { normHTML, normClick, normChange } from './bibleread.js';
+import { aiHTML, aiClick, aiChange } from './aipage.js';
 import { studentOn } from '../student.js';
 import { scanQR, parsePair, pairPayload, qrHTML } from './qrscan.js';
 
@@ -76,17 +77,18 @@ const PAGES = {
   link: ['blue', '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="13" height="9.5" rx="1.6"/><path d="M6 18h6M9 14.5V18"/><rect x="16.5" y="8" width="5" height="10" rx="1.4"/></svg>'],
   sound: ['teal', '<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>'],
   bible: ['brown', '<svg viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M12 6.5v6M9.5 8.8h5"/></svg>'],
+  ai: ['purple', '<svg viewBox="0 0 24 24"><path d="M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L12 15.5l-1.7-4.3L6 9.5l4.3-1.7z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>'],
   class: ['blue', '<svg viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="10" r="2.4"/><path d="M3.5 19c.5-3 2.6-4.5 5.5-4.5s5 1.5 5.5 4.5M15 15.2c2.4-.3 4.7.7 5.5 3.4"/></svg>'],
   student: ['blue', '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>'],
   data: ['graphite', '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></svg>'],
 };
 // Страницы группами: я и практика, экран, инструменты и подсказки, помощь и данные
 // Карта настроек (решение автора 06.11.2026): практика · экран · звук, маскот, Библия · связь · помощь
-const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'student', 'class']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
+const PAGE_GROUPS = [['me', ['me', 'week', 'notif', 'stats', 'data']], ['screen', ['look', 'tabs', 'feat']], ['more', ['sound', 'mascot', 'bible', 'ai', 'student', 'class']], ['link', ['link']], ['help', ['help']]]; // главная правится на самой главной (удержание блока)
 // Страницы, которых нет в режиме «Только инструменты»
 const PLAIN_HIDE = ['stats', 'notif', 'mascot'];
 // Ученик под блокировкой: страницы, через которые её можно обойти (данные и копии, модули, вкладки, связь)
-const STUDENT_HIDE = ['data', 'feat', 'tabs', 'link', 'bible', 'class'];
+const STUDENT_HIDE = ['data', 'feat', 'tabs', 'link', 'bible', 'class', 'ai'];
 // «Сообщить о проблеме» — лист со строчками журнала
 const BUG = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>';
 // Чат тестеров и обсуждения (Telegram) — открывается только по нажатию, в браузере или приложении Telegram
@@ -719,7 +721,7 @@ function rootHTML(app) {
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)));
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)));
       const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
       return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +
@@ -758,7 +760,7 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
     // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
     const TIGHT = { week: 1, feat: 1, tabs: 1, help: 1 };
     for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
@@ -819,6 +821,7 @@ export function createPanel(app, onChange) {
       if (studentClick(app, e.target, () => { render(); onChange(); })) return;
       if (classClick(app, e.target, () => { render(); onChange(); })) return;
       if (page === 'bible' && normClick(app, e.target, () => { render(); onChange(); })) return;
+      if (page === 'ai' && aiClick(app, e.target, () => { render(); onChange(); }, () => import('./aichat.js').then((m) => m.openChat(app, { onSettings: () => {} })))) return;
       if ((b = g('[data-dockup]'))) { const st = app.store.state.settings, l = dockGroups(st), i = l.indexOf(b.dataset.dockup); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; st.dockOrder = l; app.store.settingsChanged(); render(); } return; }
       if (g('[data-dockreset]')) { delete app.store.state.settings.dockOrder; app.store.settingsChanged(); render(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
@@ -1015,6 +1018,7 @@ export function createPanel(app, onChange) {
     });
     layer.addEventListener('change', (e) => {
       if (page === 'bible' && normChange(app, e, () => { render(); onChange(); })) return;
+      if (page === 'ai' && aiChange(app, e, () => { render(); onChange(); })) return;
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); if (d.feat === 'quote') render(); return; }
       // наборы слов Мелеты: хотя бы один остаётся

@@ -830,3 +830,27 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .stile3.sel .selmk{background:var(--tint);border-color:var(--tint)}
 .selacts{display:flex;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);position:sticky;bottom:0;background:var(--bg)}
 .selacts .cell{flex:1;justify-content:center;text-align:center}
+
+/* Чат с нейросетью (screens/aichat.js): шторка на весь экран, лента, карточки предложений */
+.aichat{display:flex;flex-direction:column;height:calc(100dvh - 120px);min-height:320px}
+.aimsgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}
+.aihint{color:var(--l2);font-size:14px;text-align:center;margin:24px 12px}
+.aim{max-width:86%;padding:10px 12px;border-radius:14px;font-size:15px;line-height:1.4;word-break:break-word}
+.aim.u{align-self:flex-end;background:var(--tint);color:var(--on,#fff)}
+.aim.a{align-self:flex-start;background:var(--cell)}
+.aim.think{display:flex;gap:5px;padding:14px}
+.aim.think i{width:7px;height:7px;border-radius:50%;background:var(--l2);animation:aidot 1s infinite ease-in-out}
+.aim.think i:nth-child(2){animation-delay:.15s}.aim.think i:nth-child(3){animation-delay:.3s}
+@keyframes aidot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.aim.think i{animation:none;opacity:.6}}
+.aip{align-self:stretch;border:1px solid var(--l3);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--cell)}
+.aip.pend{border-color:var(--tint)}
+.aipl{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.aipb{display:flex;gap:14px;align-items:center;min-height:40px}
+.aierr{align-self:stretch;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--red) 12%,var(--cell));font-size:14px}
+.aictx{font-size:12px;color:var(--l2);padding:4px 2px}
+.aiin{display:flex;gap:8px;align-items:flex-end}
+.aiin textarea{flex:1;resize:none;font-size:16px}
+.aisend{width:48px;height:48px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center}
+.aisend svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.aisend:disabled{opacity:.4}

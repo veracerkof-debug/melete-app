@@ -61,6 +61,7 @@ import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
 import { reschedule, rescheduleEvents, rescheduleBible, rescheduleBibleNotes, notifyNow } from './reminders.js';
 import { planNotes, normStatus } from './readnorm.js';
+import { createAi } from './ai/index.js';
 import { createTogether } from './together/index.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
@@ -301,6 +302,7 @@ export function boot(root) {
   bibSync();
   // Церковный режим: чтение Библии — план, отметки, место (src/core/reading.js)
   app.bible = createBible(store);
+  app.ai = createAi(app); // чат с нейросетью (только Android, выключен по умолчанию)
   // Совместное чтение (церковный режим): сверка при старте; новое от партнёра — тост (экран открыт) или местное уведомление
   app.together = createTogether(app, { notify: (n) => {
     const text = n.kind === 'report' ? t('together.push.report', { name: n.name, ref: n.ref ? refText([n.ref.b + '.' + n.ref.c]) : '' }) : n.kind === 'nudge' ? t('together.push.nudge', { name: n.name }) : t('together.push.msg', { name: n.name, text: n.text });
