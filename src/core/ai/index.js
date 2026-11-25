@@ -1,7 +1,8 @@
 // Точка входа чата с нейросетью (app.ai): настройки, готовность, сессия чата. Только Android (нативный HTTP), в веб-версии
 // функции нет (правило 13: скрыта). Всё подгружается по требованию; в звуковой тракт не входит.
 import { load, save, wipe, ready, checkUrl } from './config.js';
-import { aiAvail, post as netPost } from './transport.js';
+import { aiAvail, post as netPost, get as netGet } from './transport.js';
+import { fromFile, fromUrl, shrinkImage } from './attach.js';
 import { buildRequest, parseResponse } from './provider.js';
 import { createChat } from './chat.js';
 import { entries, logText } from '../log.js';
@@ -11,7 +12,7 @@ const NAMES = { m: { ru: 'Мелетий', en: 'Meletius', uz: 'Meletiy' }, f: {
 export const mascotName = (lang = getLang()) => (NAMES[mascotGender()] || NAMES.f)[lang] || 'Melete';
 
 export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
-  let chat = null, over = { avail: null, post: null };
+  let chat = null, over = { avail: null, post: null, get: null };
   const api = {
     get avail() { return over.avail != null ? over.avail : avail(); },
     cfg: () => load(),
@@ -29,9 +30,18 @@ export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
         data: () => ({ songs: app.store.state.songs || [], sessions: app.store.sessions(), goalMin: app.store.state.settings.goalMin || 0, logText: logText(entries().filter((e) => e[1] !== 'i')), now: Date.now() }),
       }));
     },
+    // Вложения: файл с телефона (текст, PDF, DOCX, HTML, картинка) и ссылка; ссылку приложение открывает само — только по нажатию и если это включено
+    async attachFile(file) {
+      if (!load().attach.files) throw Object.assign(new Error('off'), { kind: 'off' });
+      return fromFile(file, { pdfText: async (u8) => (await import('./pdftext.js')).pdfText(u8), shrink: shrinkImage });
+    },
+    async attachUrl(url) {
+      if (!load().attach.links) throw Object.assign(new Error('off'), { kind: 'off' });
+      return fromUrl(url, over.get || netGet);
+    },
     wipe() { wipe(); chat = null; },
   };
   // только для проверок в браузере (vite dev, как window.__melete): подменить доступность и сеть
-  if (import.meta.env && import.meta.env.DEV) api.__test = (o) => { over = { avail: null, post: null, ...o }; chat = null; };
+  if (import.meta.env && import.meta.env.DEV) api.__test = (o) => { over = { avail: null, post: null, get: null, ...o }; chat = null; };
   return api;
 }

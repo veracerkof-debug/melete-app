@@ -4,7 +4,14 @@ import { endpoint } from './config.js';
 export const MAX_TOKENS = 4096;
 export function buildRequest(cfg, { system, messages }) {
   const url = endpoint(cfg); if (!url) throw Object.assign(new Error('url'), { kind: 'config' });
-  const msgs = messages.map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content) }));
+  // у реплики могут быть картинки: m.images = [{ mime, b64 }] — в формате своего провайдера (модель должна уметь читать картинки)
+  const part = (m) => {
+    const imgs = m.images || [], text = String(m.content);
+    if (!imgs.length) return text;
+    return cfg.format === 'anthropic' ? [...imgs.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mime, data: i.b64 } })), { type: 'text', text }]
+      : [{ type: 'text', text }, ...imgs.map((i) => ({ type: 'image_url', image_url: { url: 'data:' + i.mime + ';base64,' + i.b64 } }))];
+  };
+  const msgs = messages.map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: part(m) }));
   if (cfg.format === 'anthropic') {
     return { url, headers: { 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: { model: cfg.model, max_tokens: MAX_TOKENS, system, messages: msgs } };
   }

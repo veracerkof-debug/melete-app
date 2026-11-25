@@ -4,7 +4,8 @@
 export const KEY = 'melete.ai';
 export const FORMATS = ['openai', 'anthropic'];
 export const LEVELS = { songs: ['none', 'read', 'write'], stats: ['none', 'read'], log: ['none', 'read'] };
-export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', stats: 'none', log: 'none' }, auto: false, instruction: '' };
+// attach — вложения в чат: files (файл с телефона уходит провайдеру целиком) и links (приложение само открывает ссылку по нажатию; по умолчанию выключено)
+export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
 
 export function clean(x) {
   const c = { ...DEFAULTS, ...(x && typeof x === 'object' ? x : {}) };
@@ -13,6 +14,8 @@ export function clean(x) {
   c.instruction = String(c.instruction || '').slice(0, 2000);
   const a = (x && x.access) || {};
   c.access = Object.fromEntries(Object.entries(LEVELS).map(([k, v]) => [k, v.includes(a[k]) ? a[k] : 'none']));
+  const at = (x && x.attach) || {};
+  c.attach = { files: at.files === undefined ? true : !!at.files, links: !!at.links };
   c.on = !!c.on; c.auto = !!c.auto;
   return c;
 }

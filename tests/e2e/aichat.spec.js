@@ -47,13 +47,13 @@ test('нейросеть: страница настроек — выключен
   await page.locator('[data-ai-sw="on"]').evaluate((el) => el.click()); await page.waitForTimeout(300);
   await page.fill('[data-ai-f="url"]', 'http://api.example.com'); await page.locator('[data-ai-f="url"]').blur(); await page.waitForTimeout(300);
   await expect(page.getByText('Нужен адрес с https://')).toBeVisible();
-  await page.selectOption('[data-ai-acc="songs"]', 'write'); await page.waitForTimeout(300);
+  await page.click('button[data-ai-acc="songs"][data-v="write"]'); await page.waitForTimeout(300);
   await expect(page.locator('[data-ai-sw="auto"]')).toHaveCount(1); // «применять сразу» — только при праве на правку
   await page.locator('[data-ai-sw="auto"]').evaluate((el) => el.click()); await page.waitForTimeout(300);
   await expect(page.getByText('скрытые команды')).toBeVisible(); // предупреждение про чужие тексты
   const c = await page.evaluate(() => JSON.parse(localStorage.getItem('melete.ai')));
   expect(c).toMatchObject({ on: true, auto: true, access: { songs: 'write', stats: 'none', log: 'none' } });
-  await page.selectOption('[data-ai-acc="songs"]', 'read'); await page.waitForTimeout(300);
+  await page.click('button[data-ai-acc="songs"][data-v="read"]'); await page.waitForTimeout(300);
   expect((await page.evaluate(() => JSON.parse(localStorage.getItem('melete.ai')))).auto).toBe(false); // без права на правку авто выключается
   void errors;
 });
@@ -64,5 +64,55 @@ test('нейросеть: в обычной версии страницы нет
   await melete.click('.avatar'); await page.waitForTimeout(500);
   await expect(page.locator('[data-pp="ai"]')).toHaveCount(0);
   await expect(page.locator('.mascotb[data-act="aichat"]')).toHaveCount(0);
+  void errors;
+});
+
+test('нейросеть: вложения — файл и ссылка уходят блоком в сообщении, видны в ленте; поля настроек выровнены влево', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, { ...CFG, attach: { files: true, links: true } });
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => {
+    const app = window.__melete; window.__aiCalls = [];
+    app.ai.__test({ avail: true, post: async (req) => { window.__aiCalls.push(req); return { status: 200, data: JSON.stringify({ choices: [{ message: { content: 'Разобрал.' } }] }) }; },
+      get: async () => ({ status: 200, headers: { 'content-type': 'text/html' }, data: '<html><head><title>Песня на сайте</title></head><body><p>Куплет: Am G C</p></body></html>' }) });
+    app.render();
+  });
+  await page.waitForTimeout(400);
+  // настройки: поля слева, карточка состояния
+  await melete.click('.avatar'); await page.waitForTimeout(500);
+  await page.click('[data-pp="ai"]'); await page.waitForTimeout(400);
+  await expect(page.locator('.aistat.ok')).toBeVisible();
+  expect(await page.locator('[data-ai-f="url"]').evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
+  expect(await page.locator('[data-ai-f="model"]').evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
+  await expect(page.locator('[data-ai-sw="att:files"]')).toBeChecked(); await expect(page.locator('[data-ai-sw="att:links"]')).toBeChecked();
+  if (process.env.UPD_SHOTS) { await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-settings1.png' }); await page.evaluate(() => document.querySelector('#panelLayer').scrollTo(0, 800)); await page.waitForTimeout(300); await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-settings2.png' }); }
+  await page.click('[data-ai-act="open"]'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-aiin]')).toBeVisible();
+  expect(await page.locator('[data-aiin]').evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
+  // файл
+  await page.setInputFiles('[data-aifile]', { name: 'аккорды.txt', mimeType: 'text/plain', buffer: Buffer.from('Am  G\nСлова песни') });
+  await expect(page.locator('.aichip', { hasText: 'аккорды.txt' })).toBeVisible();
+  // ссылка
+  await page.click('[data-ai="link"]'); await page.fill('[data-ailink]', 'https://site.org/song'); await page.click('[data-ai="linkgo"]');
+  await expect(page.locator('.aichip', { hasText: 'site.org' })).toBeVisible();
+  await expect(page.locator('[data-aictx]')).toContainText('вложения: 2');
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-chat-att.png' });
+  await page.fill('[data-aiin]', 'Забери аккорды'); await page.click('[data-ai="send"]');
+  await expect(page.locator('.aim.a').first()).toContainText('Разобрал', { timeout: 8000 });
+  const calls = await page.evaluate(() => window.__aiCalls); const sent = calls[0].body.messages.at(-1).content;
+  expect(sent).toContain('=== ВЛОЖЕНИЕ: аккорды.txt ==='); expect(sent).toContain('Am  G'); expect(sent).toContain('Куплет: Am G C'); expect(sent).toContain('Песня на сайте');
+  await expect(page.locator('.aim.u .aiatl')).toContainText('аккорды.txt');
+  await expect(page.locator('.aichip')).toHaveCount(0); // после отправки вложения очищены
+  void errors;
+});
+
+test('нейросеть: ссылки по умолчанию выключены — кнопки «ссылка» нет, файлы включены', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, CFG);
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => { window.__melete.ai.__test({ avail: true }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await page.locator('.mascotb[data-act="aichat"]').click(); await page.waitForTimeout(500);
+  await expect(page.locator('[data-ai="file"]')).toBeVisible(); await expect(page.locator('[data-ai="link"]')).toHaveCount(0);
   void errors;
 });

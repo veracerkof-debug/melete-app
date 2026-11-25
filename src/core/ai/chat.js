@@ -5,6 +5,7 @@ import { buildRequest, parseResponse } from './provider.js';
 import { buildSystem, buildContext, tokensOf } from './context.js';
 import { extract, apply, undo } from './proposals.js';
 import { canWrite, ready, KEY } from './config.js';
+import { textBlock, imagesOf, textChars } from './attach.js';
 
 export const HISTORY_MAX = 40, TURNS = 16, SAVE_MAX = 250_000;
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -22,7 +23,7 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
   const find = (mid, pidv) => { const m = messages.find((x) => x.id === mid), p = m && (m.proposals || []).find((x) => x.id === pidv); return m && p ? { m, p } : null; };
 
   // Что уйдёт в запрос: размер видно заранее
-  function preview() { const c = buildContext(cfg(), data()); return { parts: c.parts, chars: c.chars, tokens: tokensOf(c.chars) }; }
+  function preview(atts = []) { const c = buildContext(cfg(), data()), ac = textChars(atts); return { parts: c.parts, chars: c.chars + ac, tokens: tokensOf(c.chars + ac), attChars: ac, images: imagesOf(atts).length }; }
 
   async function applyProposal(mid, pidv) {
     const f = find(mid, pidv); if (!f || f.p.status !== 'pending') return false;
@@ -33,14 +34,16 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
   const rejectProposal = (mid, pidv) => { const f = find(mid, pidv); if (!f || f.p.status !== 'pending') return false; f.p.status = 'rejected'; persist(); emit(); return true; };
   function undoProposal(mid, pidv) { const f = find(mid, pidv); if (!f || f.p.status !== 'applied') return false; const ok = undo(app, f.p.undo); if (ok) { f.p.status = 'undone'; delete f.p.undo; persist(); emit(); } return ok; }
 
-  async function sendText(text) {
-    const c = cfg(), t = String(text || '').trim();
+  // atts — вложения этого сообщения (attach.js): текст уходит блоками в сообщении, картинки — частями; в истории остаётся только пометка
+  async function sendText(text, atts = []) {
+    const c = cfg(), t = String(text || '').trim() || (atts.length ? 'Разбери приложенное.' : '');
     if (!t || busy) return { ok: false, why: busy ? 'busy' : 'empty' };
     if (!ready(c)) return { ok: false, why: 'config' };
-    messages.push({ id: uid(), role: 'user', text: t, at: now() }); busy = true; error = null; persist(); emit();
+    messages.push({ id: uid(), role: 'user', text: t, at: now(), ...(atts.length ? { att: atts.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars || 0 })) } : {}) }); busy = true; error = null; persist(); emit();
     try {
       const ctx = buildContext(c, data()), sys = buildSystem(c, { mascot: mascot(), lang: lang(), now: now() }) + (ctx.text ? '\n\n=== ДАННЫЕ ===\n' + ctx.text : '');
-      const hist = messages.slice(-TURNS * 2).map((m) => ({ role: m.role, content: m.text }));
+      const past = messages.slice(-TURNS * 2), last = past.length - 1;
+      const hist = past.map((m, i) => (i === last && atts.length ? { role: m.role, content: m.text + (textBlock(atts) ? '\n\n' + textBlock(atts) : ''), images: imagesOf(atts) } : { role: m.role, content: m.text + (m.att && m.att.length ? '\n[вложения были: ' + m.att.map((a) => a.name).join(', ') + ']' : '') }));
       const res = await post(buildRequest(c, { system: sys, messages: hist }));
       const out = parseResponse(c, res.status, res.data);
       if (!out.ok) { error = { kind: out.kind, message: out.message }; return { ok: false, why: out.kind }; }

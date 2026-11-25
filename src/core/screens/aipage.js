@@ -1,30 +1,44 @@
-// Настройки «Нейросеть» (слово автора 23–25.11.2026): подключение, доступ к данным по категориям с предупреждениями, инструкция.
-// Выключено по умолчанию. Ключ и история — только на этом устройстве, вне копий. Логика — core/ai/*.
+// Настройки «Нейросеть» (слово автора 23–25.11.2026): карточка состояния, подключение, доступ к данным по категориям, вложения,
+// инструкция. Выключено по умолчанию. Ключ и история — только на этом устройстве, вне копий. Логика — core/ai/*.
+// Вид: поля с рамкой и выравниванием влево (прежние поля настроек прижимали текст вправо — для адреса и ключа неудобно).
 import { t } from '../../i18n/index.js';
 import { esc, toast, confirm } from '../../ui/index.js';
 import { checkUrl, FORMATS, LEVELS } from '../ai/config.js';
 
-const lvlName = (cat, v) => t('ai.lvl.' + v);
+const sw = (k, on, l) => '<label class="sw"><input type="checkbox" data-ai-sw="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(l) + '"><i></i></label>';
+const field = (k, label, val, o = {}) => '<label class="aifield"><span>' + esc(label) + '</span>' + (o.area
+  ? '<textarea class="ain" data-ai-f="' + k + '" rows="3" maxlength="2000" placeholder="' + esc(o.ph || '') + '" aria-label="' + esc(label) + '">' + esc(val) + '</textarea>'
+  : '<input class="ain" ' + (o.type ? 'type="' + o.type + '" ' : '') + 'data-ai-f="' + k + '" ' + (o.mode ? 'inputmode="' + o.mode + '" ' : '') + 'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="' + esc(o.ph || '') + '" value="' + esc(val) + '" aria-label="' + esc(label) + '">') + '</label>';
+const ICON = '<svg viewBox="0 0 24 24"><path d="M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L12 15.5l-1.7-4.3L6 9.5l4.3-1.7z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>';
+
 export function aiHTML(app) {
-  const ai = app.ai, c = ai.cfg(), sw = (k, on, l) => '<label class="sw"><input type="checkbox" data-ai-sw="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(l) + '"><i></i></label>';
+  const ai = app.ai, c = ai.cfg();
   if (!ai.avail) return '<div class="large">' + t('page.ai') + '</div><p class="ftr keep">' + t('ai.noPlatform') + '</p>';
-  const u = c.url ? checkUrl(c.url) : { ok: true };
-  let h = '<div class="large">' + t('page.ai') + '</div><div class="group"><div class="cell"><span class="grow">' + t('ai.on') + '</span>' + sw('on', c.on, t('ai.on')) + '</div></div><p class="ftr keep">' + t('ai.intro') + '</p>';
-  if (!c.on) return h;
-  h += '<div class="hdr">' + t('ai.conn') + '</div><div class="group">' +
-    '<div class="cell"><span class="grow">' + t('ai.format') + '</span><div class="seg" role="group">' + FORMATS.map((f) => '<button type="button" data-ai-fmt="' + f + '" aria-pressed="' + (c.format === f) + '"' + (c.format === f ? ' class="on"' : '') + '>' + t('ai.fmt.' + f) + '</button>').join('') + '</div></div>' +
-    '<label class="cellcol"><span>' + t('ai.url') + '</span><input class="inp" data-ai-f="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://api.openai.com/v1" value="' + esc(c.url) + '" style="width:100%;margin-top:8px" aria-label="' + esc(t('ai.url')) + '"></label>' +
-    (!u.ok ? '<p class="ftr keep" style="color:var(--red)">' + t('ai.url.' + u.why) + '</p>' : '') +
-    '<label class="cellcol"><span>' + t('ai.model') + '</span><input class="inp" data-ai-f="model" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="gpt-4o-mini" value="' + esc(c.model) + '" style="width:100%;margin-top:8px" aria-label="' + esc(t('ai.model')) + '"></label>' +
-    '<label class="cellcol"><span>' + t('ai.key') + '</span><input class="inp" type="password" data-ai-f="key" autocomplete="off" placeholder="' + (c.key ? '••••••••' : 'sk-…') + '" style="width:100%;margin-top:8px" aria-label="' + esc(t('ai.key')) + '"></label>' +
+  const u = c.url ? checkUrl(c.url) : { ok: true }, ok = ai.ready();
+  let h = '<div class="large">' + t('page.ai') + '</div>' +
+    '<div class="aistat' + (ok ? ' ok' : '') + '"><i class="aiic" aria-hidden="true">' + ICON + '</i><span class="grow"><b>' + t(ok ? 'ai.st.ready' : c.on ? 'ai.st.setup' : 'ai.st.off') + '</b>' +
+    '<span class="l2">' + (c.on && c.model ? esc(t('ai.fmt.' + c.format) + ' · ' + c.model) : t('ai.intro.short')) + '</span></span>' +
+    '<label class="sw"><input type="checkbox" data-ai-sw="on"' + (c.on ? ' checked' : '') + ' aria-label="' + esc(t('ai.on')) + '"><i></i></label></div>';
+  if (!c.on) return h + '<p class="ftr keep">' + t('ai.intro') + '</p>';
+  h += '<div class="group aicard"><button class="cell act aiopen" data-ai-act="open"' + (ok ? '' : ' disabled') + '>' + t('ai.open') + '</button></div>' +
+    '<div class="hdr">' + t('ai.conn') + '</div><div class="group aicard">' +
+    '<div class="aifield"><span>' + t('ai.format') + '</span><div class="seg aiseg2" role="group">' + FORMATS.map((f) => '<button type="button" data-ai-fmt="' + f + '" aria-pressed="' + (c.format === f) + '"' + (c.format === f ? ' class="on"' : '') + '>' + t('ai.fmt.' + f) + '</button>').join('') + '</div></div>' +
+    field('url', t('ai.url'), c.url, { mode: 'url', ph: c.format === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1' }) +
+    (!u.ok ? '<p class="aierrl">' + t('ai.url.' + u.why) + '</p>' : '') +
+    field('model', t('ai.model'), c.model, { ph: c.format === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-4o-mini' }) +
+    field('key', t('ai.key'), '', { type: 'password', ph: c.key ? '••••••••••••  (' + t('ai.key.saved') + ')' : 'sk-…' }) +
     '<button class="cell act" data-ai-act="ping">' + t('ai.ping') + '</button></div><p class="ftr keep">' + t('ai.keyHint') + '</p>' +
-    '<div class="hdr">' + t('ai.access') + '</div><div class="group">' +
-    Object.entries(LEVELS).map(([cat, vals]) => '<label class="cell"><span class="grow">' + t('ai.cat.' + cat) + '</span><select class="sortsel" data-ai-acc="' + cat + '" aria-label="' + esc(t('ai.cat.' + cat)) + '">' + vals.map((v) => '<option value="' + v + '"' + (c.access[cat] === v ? ' selected' : '') + '>' + lvlName(cat, v) + '</option>').join('') + '</select></label>').join('') + '</div>' +
+    '<div class="hdr">' + t('ai.access') + '</div><div class="group aicard">' +
+    Object.entries(LEVELS).map(([cat, vals]) => '<div class="aifield"><span class="aicat"><b>' + t('ai.cat.' + cat) + '</b><i class="l2">' + t('ai.cat.' + cat + '.sub') + '</i></span><div class="seg aiseg2" role="group" aria-label="' + esc(t('ai.cat.' + cat)) + '">' +
+      vals.map((v) => '<button type="button" data-ai-acc="' + cat + '" data-v="' + v + '" aria-pressed="' + (c.access[cat] === v) + '"' + (c.access[cat] === v ? ' class="on"' : '') + '>' + t('ai.lvl.' + v) + '</button>').join('') + '</div></div>').join('') + '</div>' +
     '<p class="ftr keep">' + t('ai.accHint') + '</p>' +
-    (c.access.songs === 'write' ? '<div class="group"><div class="cell"><span class="grow">' + t('ai.auto') + '<span class="psub">' + t('ai.autoSub') + '</span></span>' + sw('auto', c.auto, t('ai.auto')) + '</div></div>' + (c.auto ? '<p class="ftr keep" style="color:var(--red)">' + t('ai.autoWarn') + '</p>' : '') : '') +
-    '<div class="hdr">' + t('ai.instr') + '</div><div class="group"><label class="cell"><textarea class="inp" data-ai-f="instruction" rows="3" maxlength="2000" placeholder="' + esc(t('ai.instrPh')) + '" style="width:100%" aria-label="' + esc(t('ai.instr')) + '">' + esc(c.instruction) + '</textarea></label></div>' +
-    '<div class="group"><button class="cell act" data-ai-act="open"' + (ai.ready() ? '' : ' disabled') + '>' + t('ai.open') + '</button><button class="cell act danger" data-ai-act="wipe">' + t('ai.wipe') + '</button></div>' +
-    '<p class="ftr keep">' + t('ai.privacy') + '</p>';
+    (c.access.songs === 'write' ? '<div class="group aicard"><div class="cell"><span class="grow">' + t('ai.auto') + '<span class="psub">' + t('ai.autoSub') + '</span></span>' + sw('auto', c.auto, t('ai.auto')) + '</div></div>' + (c.auto ? '<p class="aierrl">' + t('ai.autoWarn') + '</p>' : '') : '') +
+    '<div class="hdr">' + t('ai.att') + '</div><div class="group aicard">' +
+    '<div class="cell"><span class="grow">' + t('ai.att.files') + '<span class="psub">' + t('ai.att.filesSub') + '</span></span>' + sw('att:files', c.attach.files, t('ai.att.files')) + '</div>' +
+    '<div class="cell"><span class="grow">' + t('ai.att.links') + '<span class="psub">' + t('ai.att.linksSub') + '</span></span>' + sw('att:links', c.attach.links, t('ai.att.links')) + '</div></div>' +
+    '<p class="ftr keep">' + t('ai.att.hint') + '</p>' +
+    '<div class="hdr">' + t('ai.instr') + '</div><div class="group aicard">' + field('instruction', t('ai.instr'), c.instruction, { area: true, ph: t('ai.instrPh') }) + '</div>' +
+    '<div class="group aicard"><button class="cell act danger" data-ai-act="wipe">' + t('ai.wipe') + '</button></div><p class="ftr keep">' + t('ai.privacy') + '</p>';
   return h;
 }
 
@@ -32,6 +46,9 @@ export function aiHTML(app) {
 export function aiClick(app, target, rerender, openChat) {
   const ai = app.ai; let e;
   if ((e = target.closest('[data-ai-fmt]'))) { ai.save({ format: e.dataset.aiFmt }); rerender(); return true; }
+  if ((e = target.closest('button[data-ai-acc]'))) {
+    ai.save({ access: { [e.dataset.aiAcc]: e.dataset.v } }); if (ai.cfg().access.songs !== 'write') ai.save({ auto: false }); rerender(); return true;
+  }
   if ((e = target.closest('[data-ai-act]'))) {
     const a = e.dataset.aiAct;
     if (a === 'ping') { toast(t('ai.pinging')); ai.ping().then((r) => toast(r.ok ? t('ai.pingOk') : t('ai.err.' + r.kind) + (r.message ? ': ' + r.message : ''))); return true; }
@@ -42,8 +59,11 @@ export function aiClick(app, target, rerender, openChat) {
 }
 export function aiChange(app, ev, rerender) {
   const ai = app.ai, el = ev.target;
-  if (el.dataset && el.dataset.aiSw) { ai.save({ [el.dataset.aiSw]: el.checked }); rerender(); return true; }
+  if (el.dataset && el.dataset.aiSw) {
+    const k = el.dataset.aiSw;
+    if (k.startsWith('att:')) ai.save({ attach: { ...ai.cfg().attach, [k.slice(4)]: el.checked } }); else ai.save({ [k]: el.checked });
+    rerender(); return true;
+  }
   if (el.dataset && el.dataset.aiF) { const k = el.dataset.aiF; if (k === 'key' && !el.value.trim()) return true; ai.save({ [k]: el.value }); if (k === 'key') el.value = ''; rerender(); return true; }
-  if (el.dataset && el.dataset.aiAcc) { ai.save({ access: { [el.dataset.aiAcc]: el.value } }); if (el.value !== 'write') ai.save({ auto: false }); rerender(); return true; }
   return false;
 }

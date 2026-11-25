@@ -854,3 +854,30 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .aisend{width:48px;height:48px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center}
 .aisend svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 .aisend:disabled{opacity:.4}
+
+/* Нейросеть: настройки карточками и вложения чата (screens/aipage.js, aichat.js) */
+.aistat{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:var(--cell);margin:4px 0 8px}
+.aistat .aiic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--fill);color:var(--l2)}
+.aistat.ok .aiic{background:color-mix(in srgb,var(--ok) 18%,var(--cell));color:var(--ok)}
+.aistat .aiic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.aistat .grow{display:flex;flex-direction:column;gap:2px;min-width:0}.aistat .grow b{font-size:16px}.aistat .grow .l2{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aicard{overflow:hidden}
+.aifield{display:flex;flex-direction:column;gap:6px;padding:12px 16px;border-top:1px solid var(--sep)}.aicard>.aifield:first-child{border-top:0}
+.aifield>span{font-size:13px;color:var(--l2)}
+.aicat{display:flex;flex-direction:column;gap:2px;font-size:13px}.aicat b{font-size:16px;color:var(--ink);font-weight:600}.aicat i{font-style:normal;font-size:13px}
+.ain{width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid var(--sep);background:var(--fill);color:var(--ink);font-size:16px;text-align:left;outline:none;font-family:inherit}
+.ain:focus{border-color:var(--tint)}textarea.ain{resize:vertical;min-height:84px;line-height:1.4}
+.aiseg2{display:flex;width:100%}.aiseg2 button{flex:1;min-height:42px;font-size:15px}
+.aierrl{margin:0;padding:10px 16px;font-size:13px;color:var(--red)}
+.aiopen{font-weight:600}
+.aiin{display:flex;gap:8px;align-items:flex-end}.aiin .aitools{display:flex;flex-direction:column;gap:6px}
+.aitool{width:44px;height:44px}.aitool svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.aitool.on{color:var(--tint)}.aitool:disabled{opacity:.4}
+.aiatt:empty{display:none}.aiatt{display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.aichips{display:flex;flex-wrap:wrap;gap:6px}
+.aichip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 6px 6px 12px;border-radius:999px;background:var(--cell);border:1px solid var(--sep);font-size:13px}
+.aichip b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.aichip i{font-style:normal;color:var(--l2)}
+.aichip button{width:28px;height:28px;border-radius:50%;border:0;background:var(--fill);color:var(--l2);font-size:13px}
+.ailink{display:flex;gap:8px;align-items:center}.ailink .ain{min-height:42px}
+.aiatl{margin-top:6px;padding-top:6px;border-top:1px solid color-mix(in srgb,currentColor 25%,transparent);font-size:12px;opacity:.85}
+.aiseg2 button{white-space:normal;line-height:1.15;padding:6px 6px}
+.aiin .aitools{gap:4px}.aitool{width:40px;height:40px}.aiin textarea{min-height:84px}
