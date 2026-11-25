@@ -72,9 +72,9 @@ describe('несколько блоков рядом', () => {
     expect(moveBlock(lay, ids, 'd', -1)).toBe(true); expect(lay.order).toEqual(['c', 'd', 'a', 'b']);
   });
   it('arrange: без пар разметка прежняя (нет рядов); пара — один ряд с долей', () => {
-    expect(arrange(B, {})).not.toContain('lyr');
+    expect(arrange(B, {})).not.toContain('lyrow');
     const h = arrange(B, { pair: { b: 0.4 } }, { grow: ['b'] });
-    expect(h).toContain('<div class="lyr lyg" style="--lw:0.4">'); expect((h.match(/class="lyb"/g) || []).length).toBe(3);
+    expect(h).toContain('<div class="lyrow lyg" style="--lw:0.4">'); expect((h.match(/class="lyb"/g) || []).length).toBe(3);
     expect(h.indexOf('data-lb="a"')).toBeLessThan(h.indexOf('data-lb="b"'));
   });
   it('arrange в правке: планка ширины и кнопка «рядом/разделить»', () => {

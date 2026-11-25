@@ -32,7 +32,7 @@ export function openChat(app, { onSettings = () => {} } = {}) {
   let off = null, draft = '', atts = [], reading = 0, linkOpen = false;
   const GEAR = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
   const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>' }) + '<div class="aibrand" data-aibrand></div><div class="aichat"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
-    '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="2" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
+    '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="1" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
   sheet(html, (el) => {
     const brandEl = el.querySelector('[data-aibrand]');
     const drawBrand = () => { const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + '</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
@@ -67,9 +67,17 @@ export function openChat(app, { onSettings = () => {} } = {}) {
       el.querySelector('[data-ai="send"]').disabled = chat.busy;
     };
     off = chat.subscribe(draw); draw();
+    // поле ввода — одна строка, растёт по тексту до разумного предела (≈ 30 % видимой высоты, не больше 160 px), дальше прокручивается
+    const grow = () => {
+      const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 600, max = Math.max(88, Math.min(160, vh * 0.3));
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight + 2, max) + 'px';
+      ta.style.overflowY = ta.scrollHeight + 2 > max ? 'auto' : 'hidden';
+    };
+    ta.addEventListener('input', grow); grow();
     const send = async () => {
       const v = ta.value.trim(); if ((!v && !atts.length) || chat.busy) return;
-      draft = v; ta.value = '';
+      draft = v; ta.value = ''; grow();
       const r = await chat.sendText(v, atts);
       if (r.ok) { atts = []; linkOpen = false; draw(); } else if (r.why === 'config') toast(t('ai.err.config'));
     };
@@ -89,7 +97,7 @@ export function openChat(app, { onSettings = () => {} } = {}) {
       else if (a === 'apply') chat.apply(b.dataset.m, b.dataset.p).then((ok) => { if (!ok) toast(t('ai.st.failed')); });
       else if (a === 'reject') chat.reject(b.dataset.m, b.dataset.p);
       else if (a === 'undo') { if (chat.undo(b.dataset.m, b.dataset.p)) toast(t('ai.undone')); }
-      else if (a === 'retry') { chat.dismissError(); ta.value = draft; send(); }
+      else if (a === 'retry') { chat.dismissError(); ta.value = draft; grow(); send(); }
       else if (a === 'dismiss') chat.dismissError();
       else if (a === 'settings') onSettings();
     });

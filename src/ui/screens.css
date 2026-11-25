@@ -882,7 +882,7 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .ailink{display:flex;gap:8px;align-items:center}.ailink .ain{min-height:42px}
 .aiatl{margin-top:6px;padding-top:6px;border-top:1px solid color-mix(in srgb,currentColor 25%,transparent);font-size:12px;opacity:.85}
 .aiseg2 button{white-space:normal;line-height:1.15;padding:6px 6px}
-.aiin .aitools{gap:4px}.aitool{width:40px;height:40px}.aiin textarea{min-height:84px}
+.aiin .aitools{gap:4px}.aitool{width:40px;height:40px}.aiin textarea{min-height:44px;overflow-y:hidden;line-height:1.35}
 /* Значок нейросети: свой кружок с буквой, цвет по фирме (core/ai/brand.js) */
 .aibadge{display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--bs,28px);height:var(--bs,28px);border-radius:50%;background:hsl(var(--bh,200) 55% 46%);color:white;font-style:normal;font-weight:700;font-size:calc(var(--bs,28px)*.5);line-height:1}
 .aibrand{display:flex;align-items:center;gap:10px;padding:2px 4px 8px}

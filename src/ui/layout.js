@@ -61,7 +61,7 @@ export function arrange(blocks, lay, opts = {}) {
   const body = rows.map((r) => {
     if (r.length === 1) return one(byId.get(r[0]));
     const w = clampRatio(lay.pair[r[1]]), g = r.some((id) => grow.includes(id));
-    return '<div class="lyr' + (g ? ' lyg' : '') + (editing ? ' ed' : '') + '" style="--lw:' + w + '">' + r.map((id) => one(byId.get(id))).join('') +
+    return '<div class="lyrow' + (g ? ' lyg' : '') + (editing ? ' ed' : '') + '" style="--lw:' + w + '">' + r.map((id) => one(byId.get(id))).join('') +
       (editing ? '<div class="lyv" data-ly="width" role="slider" aria-label="' + esc(t('lay.width')) + '" aria-valuemin="25" aria-valuemax="75" aria-valuenow="' + Math.round(w * 100) + '"><i></i></div>' : '') + '</div>';
   }).join('');
   if (!editing) return body;
@@ -102,7 +102,7 @@ export function moveBlock(lay, ids, id, d) {
 // Ширина пары: тянуть планку между блоками; долю видно сразу, значение пишется на отпускании
 function dragWidth(e, w, api, lay) {
   e.preventDefault(); e.stopPropagation();
-  const row = w.closest('.lyr'), second = row.querySelectorAll(':scope > .lyb')[1].dataset.lb, rc = row.getBoundingClientRect();
+  const row = w.closest('.lyrow'), second = row.querySelectorAll(':scope > .lyb')[1].dataset.lb, rc = row.getBoundingClientRect();
   let r = clampRatio(lay.pair[second]);
   try { w.setPointerCapture(e.pointerId); } catch { /* без захвата — события идут по окну */ }
   const move = (ev) => { r = clampRatio((ev.clientX - rc.left) / rc.width); row.style.setProperty('--lw', r); };

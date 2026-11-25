@@ -157,3 +157,25 @@ test('нейросеть: экранная клавиатура не закры�
   expect(ta.y).toBeGreaterThan(0);
   void errors;
 });
+
+test('нейросеть: поле ввода — одна строка, растёт по тексту до предела, после отправки сжимается', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, CFG);
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => { window.__melete.ai.__test({ avail: true, post: async () => ({ status: 200, data: JSON.stringify({ choices: [{ message: { content: 'ок' } }] }) }) }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(600);
+  const h = () => page.locator('[data-aiin]').evaluate((e) => Math.round(e.getBoundingClientRect().height));
+  const h0 = await h();
+  expect(h0).toBeLessThanOrEqual(60); // одна строка, а не 84 px
+  await page.fill('[data-aiin]', 'строка\nвторая\nтретья');
+  const h3 = await h();
+  expect(h3).toBeGreaterThan(h0 + 20);
+  await page.fill('[data-aiin]', Array.from({ length: 30 }, (_, i) => 'строка ' + i).join('\n'));
+  const hm = await h();
+  expect(hm).toBeLessThanOrEqual(165); expect(hm).toBeGreaterThan(h3); // предел, дальше — прокрутка внутри поля
+  expect(await page.locator('[data-aiin]').evaluate((e) => getComputedStyle(e).overflowY)).toBe('auto');
+  await page.click('[data-ai="send"]'); await page.waitForTimeout(600);
+  expect(await h()).toBeLessThanOrEqual(60); // после отправки — снова одна строка
+  void errors;
+});
