@@ -19,7 +19,8 @@ test('«Вместе»: подключение, отчёт, экран без п
     return json(404, { message: 'Not Found' });
   });
   await melete.open({ settings: { church: true, configured: true } });
-  await melete.openTool('together');
+  await melete.tab('bible'); await page.waitForTimeout(600); // «Вместе» — не отдельный инструмент, а кнопка в полосе Библии (с 22.11.2026)
+  await page.click('[data-x="btogether"]'); await page.waitForTimeout(700);
   await expect(page.locator('.tg [data-x="connect"]')).toBeVisible();
   await page.click('.tg [data-x="connect"]');
   await page.fill('[data-f="invite"]', 'alice/data'); await page.fill('[data-f="token"]', 'tok'); await page.fill('[data-f="name"]', 'Алиса');
