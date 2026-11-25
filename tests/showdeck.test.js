@@ -4,9 +4,9 @@ import { createShowDeck } from '../src/audio/showdeck.js';
 
 function fakeCtx() {
   const param = () => ({ value: 0, v: [], setValueAtTime(x) { this.value = x; this.v.push(['set', x]); }, linearRampToValueAtTime(x, t) { this.v.push(['ramp', x, t]); }, setTargetAtTime(x) { this.target = x; }, cancelScheduledValues() {} });
-  const node = () => ({ gain: param(), connect() {}, disconnect() {} });
+  const node = () => ({ gain: param(), frequency: { value: 0 }, Q: { value: 0 }, connect() {}, disconnect() {} });
   const gains = [];
-  return { currentTime: 10, gains, createGain: () => { const n = node(); gains.push(n); return n; } };
+  return { currentTime: 10, gains, createGain: () => { const n = node(); gains.push(n); return n; }, createBiquadFilter: () => node() };
 }
 function fakePlayer() {
   const p = new EventTarget();
@@ -63,5 +63,23 @@ describe('основной трек пульта', () => {
     await deck.start({ file: 'a', normDb: -6 });
     expect(c.gains.some((g) => Math.abs(g.gain.value - 0.501) < 0.002)).toBe(true);
     deck.setNorm(3); expect(c.gains.some((g) => g.gain.target && Math.abs(g.gain.target - 1.413) < 0.002)).toBe(true);
+  });
+});
+
+describe('программа номера', () => {
+  const fp = () => { const c = fakeCtx(), dest = { context: c, connect() {} }, made = []; const deck = createShowDeck({ dest, getBlob: (id) => ({ id }), makePlayer: async () => { const p = fakePlayer(); p.playbackRate = 1; made.push(p); return p; }, now: () => c.currentTime }); return { c, deck, made }; };
+  it('событие по времени меняет тональность и темп, перемотка назад возвращает исходное', async () => {
+    const { deck, made } = fp();
+    await deck.start({ file: 'a', shift: 1, tempo: 1, prog: [{ id: 'e1', t: 10, key: 3, tempo: 0.8, ramp: 0 }] });
+    made[0].currentTime = 5; deck.tick(); expect(made[0].pitch).toBe(1);
+    made[0].currentTime = 11; deck.tick(); expect(made[0].pitch).toBe(3); expect(made[0].playbackRate).toBe(0.8);
+    made[0].currentTime = 2; deck.tick(); expect(made[0].pitch).toBe(1); expect(made[0].playbackRate).toBe(1);
+  });
+  it('плавный темп: идёт шагами к цели', async () => {
+    const { c, deck, made } = fp();
+    await deck.start({ file: 'a', tempo: 1, prog: [{ id: 'e1', t: 1, tempo: 1.4, ramp: 4 }] });
+    made[0].currentTime = 1.5; deck.tick();
+    c.currentTime += 2; deck.tick();
+    expect(made[0].playbackRate).toBeGreaterThan(1.1); expect(made[0].playbackRate).toBeLessThan(1.4);
   });
 });

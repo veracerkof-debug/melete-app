@@ -4,11 +4,12 @@
 import { unpack, planImport, applyImport, normKey } from '../share.js';
 import { deleteSong } from '../library.js';
 import { canWrite } from './config.js';
+import { cleanShowOp, applyShowOps, undoShowOps, describeShow, SHOW_MAX } from './showops.js';
 import { applyItems, markEdited, norm } from '../../music/chordedit.js';
 
 export const REC_MAX = { ops: 20, chords: 2000, marks: 100 }, MARK_NAME = 40;
 export const OPS_MAX = 100, FIELDS = ['title', 'artist', 'genre', 'key', 'targetBpm', 'notes', 'capo'];
-const BLOCK = /```(melete-json|melete-ops|melete-rec)[ \t]*\r?\n([\s\S]*?)```/g;
+const BLOCK = /```(melete-json|melete-ops|melete-rec|melete-show)[ \t]*\r?\n([\s\S]*?)```/g;
 
 // Значение поля → допустимое или undefined (не применять)
 export function cleanField(k, v) {
@@ -55,10 +56,14 @@ const pid = () => 'p' + Date.now().toString(36) + (seq++).toString(36);
 export function extract(reply, cfg) {
   const proposals = [];
   const text = String(reply || '').replace(BLOCK, (all, kind, body) => {
-    const k0 = kind === 'melete-json' ? 'songs' : kind === 'melete-rec' ? 'rec' : 'ops';
-    const mk = (extra) => proposals.push({ id: pid(), kind: k0, status: canWrite(cfg, k0 === 'rec' ? 'media' : 'songs') ? 'pending' : 'blocked', ...extra });
+    const k0 = kind === 'melete-json' ? 'songs' : kind === 'melete-rec' ? 'rec' : kind === 'melete-show' ? 'show' : 'ops';
+    const mk = (extra) => proposals.push({ id: pid(), kind: k0, status: canWrite(cfg, k0 === 'rec' || k0 === 'show' ? 'media' : 'songs') ? 'pending' : 'blocked', ...extra });
     try {
       const j = JSON.parse(body);
+      if (kind === 'melete-show') {
+        const ops = (Array.isArray(j) ? j : []).slice(0, SHOW_MAX.ops).map(cleanShowOp).filter(Boolean);
+        if (ops.length) mk({ ops }); else proposals.push({ id: pid(), kind: 'show', status: 'invalid' });
+      } else
       if (kind === 'melete-rec') {
         const ops = (Array.isArray(j) ? j : []).slice(0, REC_MAX.ops).map(cleanRecOp).filter(Boolean);
         if (ops.length) mk({ ops }); else proposals.push({ id: pid(), kind: 'rec', status: 'invalid' });
@@ -80,7 +85,8 @@ export function extract(reply, cfg) {
 
 const FIELD_NAME = { title: 'название', artist: 'исполнитель', genre: 'жанр', key: 'тональность', targetBpm: 'темп', notes: 'текст', capo: 'каподастр' };
 // Строки для карточки: что именно изменится
-export function describe(p, songs, recs = []) {
+export function describe(p, songs, recs = [], show = null) {
+  if (p.kind === 'show') return describeShow(p.ops || [], show);
   if (p.kind === 'songs' && p.manifest) { const plan = planImport(songs, p.manifest); return plan.map((x) => (x.match ? '↻ ' : '+ ') + x.x.title + (x.x.artist ? ' — ' + x.x.artist : '') + (x.x.key ? ' (' + x.x.key + ')' : '')); }
   if (p.kind === 'ops') return (p.ops || []).map((o) => { const s = songs.find((q) => q.id === o.ref && !q.deleted); return (s ? s.title : '? ' + o.ref) + ': ' + Object.entries(o.fields).map(([k, v]) => (FIELD_NAME[k] || k) + ' → ' + (k === 'notes' ? '…' : v)).join(', '); });
   if (p.kind === 'rec') {
@@ -115,6 +121,12 @@ export async function apply(app, p) {
     save(store);
     return { ok: true, undo: { kind: 'ops', prev }, n: prev.length };
   }
+  if (p.kind === 'show') {
+    const show = app.device && app.device.show; if (!show) return { ok: false, why: 'none' };
+    const r = applyShowOps(show, p.ops || [], now); if (!r.n) return { ok: false, why: 'none' };
+    if (app.saveDevice) app.saveDevice();
+    return { ok: true, undo: { kind: 'show', prev: r.prev }, n: r.n };
+  }
   if (p.kind === 'rec') {
     const files = app.files; if (!files) return { ok: false, why: 'none' };
     const prev = new Map(), changed = new Set(); let n = 0;
@@ -145,6 +157,10 @@ export function undo(app, u) {
   if (u.kind === 'songs') {
     (u.added || []).forEach((id) => { const s = st.songs.find((q) => q.id === id); if (s && !s.deleted) deleteSong(store, id); });
     (u.prev || []).forEach(({ id, copy }) => { const s = st.songs.find((q) => q.id === id); if (s) Object.assign(s, copy, { updatedAt: now }); });
+  } else if (u.kind === 'show') {
+    const show = app.device && app.device.show; if (!show) return false;
+    undoShowOps(show, u.prev); if (app.saveDevice) app.saveDevice();
+    return true;
   } else if (u.kind === 'rec') {
     const files = app.files; if (!files) return false;
     for (const b of u.prev || []) {

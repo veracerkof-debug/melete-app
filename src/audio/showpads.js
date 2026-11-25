@@ -4,7 +4,7 @@
 // приглушения создаются один раз, правятся только параметрами и плавно (правило звука: ничего не переподключается на ходу).
 // Файл раскрывается в память заранее (preload) — касание играет сразу; раскрытое хранится не больше MAX_CACHE штук.
 import { holdAt } from './param.js';
-import { faderGain } from '../music/show.js';
+import { faderGain, eqGains } from '../music/show.js';
 import { createStagePads, PADS } from './stagepads.js';
 import { measureLoudness, normGainDb, dbGain } from './loudness.js';
 
@@ -65,7 +65,7 @@ export function createShowPads({ dest, getBlob, drumFx = () => ({}), now = () =>
   }
   function drop(v) {
     if (!voices.delete(v)) return;
-    try { v.src.disconnect(); v.g.disconnect(); } catch { /* уже */ }
+    try { v.src.disconnect(); v.g.disconnect(); (v.fx || []).forEach((f) => f.disconnect()); } catch { /* уже */ }
     applyDuck(); emit();
   }
 
@@ -73,19 +73,25 @@ export function createShowPads({ dest, getBlob, drumFx = () => ({}), now = () =>
     const t = now(), g = c.createGain(), src = c.createBufferSource();
     const nm = getNorm(), m = loud.get(pad.file), nd = nm && nm.on && nm.pads && m ? normGainDb(m.lufs, m.peak, nm.target) : 0;
     const lvl = faderGain(pad.level) * dbGain(nd), from = Math.min(pad.from || 0, Math.max(0, buf.duration - 0.05));
-    const end = pad.to && pad.to > from ? Math.min(pad.to, buf.duration) : buf.duration, len = end - from;
-    src.buffer = buf;
+    const end = pad.to && pad.to > from ? Math.min(pad.to, buf.duration) : buf.duration;
+    // скорость и тональность пада — как у семплера (вместе): темп = скорость × 2^(полутонов/12); длительность на часах — с поправкой
+    const rate = Math.max(0.25, Math.min(4, (pad.speed || 1) * Math.pow(2, (pad.shift || 0) / 12))), span = end - from, len = span / rate;
+    src.buffer = buf; src.playbackRate.value = rate;
     if (pad.mode === 'loop') { src.loop = true; src.loopStart = from; src.loopEnd = end; }
     const fin = Math.max(CLICK, pad.fadeIn || 0);
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + fin);
-    src.connect(g); g.connect(out);
-    const v = { id: pad.id, pad, src, g, t0: t, len, loop: pad.mode === 'loop', duck: !!pad.duck, group: pad.group || 0, ending: false };
+    // эквалайзер-пресет: три фильтра на голос (создаются вместе с голосом и уходят вместе с ним)
+    let fx = [];
+    if (pad.eq) { const [lo, mi, hi] = eqGains(pad.eq), mk = (type, f, gain, q) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = gain; if (q) b.Q.value = q; return b; }; fx = [mk('lowshelf', 120, lo), mk('peaking', 1000, mi, 0.9), mk('highshelf', 6000, hi)]; }
+    let node = src; for (const f of fx) { node.connect(f); node = f; }
+    node.connect(g); g.connect(out);
+    const v = { id: pad.id, pad, src, g, fx, t0: t, len, loop: pad.mode === 'loop', duck: !!pad.duck, group: pad.group || 0, ending: false };
     // хвост: нота-однократка плавно уходит в конце, если задан выход
     if (pad.mode !== 'loop' && pad.fadeOut > CLICK) { const te = t + len - pad.fadeOut; if (te > t + fin) { g.gain.setValueAtTime(lvl, te); g.gain.linearRampToValueAtTime(0, t + len); } }
     src.onended = () => drop(v);
     voices.add(v);
     if (voices.size > MAX_VOICES) { const old = [...voices].find((x) => !x.ending); if (old) stopVoice(old, 0.05); }
-    if (pad.mode === 'loop') src.start(t, from); else src.start(t, from, len);
+    if (pad.mode === 'loop') src.start(t, from); else src.start(t, from, span);
     applyDuck(); emit();
     return v;
   }

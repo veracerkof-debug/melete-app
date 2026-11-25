@@ -5,7 +5,7 @@
 // Правки — только параметрами и плавно.
 import { after } from './clock.js'; // таймеры на часах звука: в свёрнутом окне setTimeout замедляется
 import { holdAt } from './param.js';
-import { faderGain } from '../music/show.js';
+import { faderGain, eqGains } from '../music/show.js';
 import { dbGain } from './loudness.js';
 import { createStretchPlayer, stretchAvailable } from './stretchplayer.js';
 import { createBufferPlayer } from './bufferplayer.js';
@@ -15,7 +15,12 @@ const realPlayer = (c, dest) => (stretchAvailable() ? createStretchPlayer(c, des
 
 export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = () => dest.context.currentTime }) {
   const c = dest.context;
-  const trim = c.createGain(); trim.gain.value = 1; trim.connect(dest);
+  // фейдер трека → эквалайзер номера (три полосы, создаются один раз; пресет меняет только усиление, плавно) → выход
+  const trim = c.createGain(); trim.gain.value = 1;
+  const mkEq = (type, f, q) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = 0; if (q) b.Q.value = q; return b; };
+  const eq = [mkEq('lowshelf', 120), mkEq('peaking', 1000, 0.9), mkEq('highshelf', 6000)];
+  trim.connect(eq[0]); eq[0].connect(eq[1]); eq[1].connect(eq[2]); eq[2].connect(dest);
+  const setEq = (id, snap) => { const g = eqGains(id), t = now(); eq.forEach((b, i) => { if (snap) b.gain.setValueAtTime(g[i], t); else b.gain.setTargetAtTime(g[i], t, 0.05); }); };
   const subs = new Set();
   // огибающая (вход, выход, громкость номера) → поправка нормализации → общий фейдер трека
   const mkSlot = () => { const env = c.createGain(), norm = c.createGain(); env.gain.value = 0; norm.gain.value = 1; env.connect(norm); norm.connect(trim); return { env, norm, player: null, file: null, ready: null, loadedFile: null, opts: null, fading: false }; };
@@ -54,10 +59,12 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
       if (!pl) return 0;
       const t = now(), lvl = faderGain(opts.level == null ? 100 : opts.level), fin = Math.max(CLICK, opts.fadeIn || 0);
       try { pl.setPitch && pl.setPitch(opts.shift || 0, 0, false); } catch { /* запасной движок без тональности */ }
+      try { pl.playbackRate = opts.tempo || 1; } catch { /* */ }
+      setEq(opts.eq || '', false);
       pl.currentTime = opts.from || 0;
       holdAt(s.env.gain, t); s.env.gain.setValueAtTime(0, t); s.env.gain.linearRampToValueAtTime(lvl, t + fin);
       s.norm.gain.setValueAtTime(dbGain(opts.normDb || 0), t); // выравнивание громкости записей до одной цели
-      s.opts = { ...opts, lvl, fading: false }; s.fading = false;
+      s.opts = { ...opts, lvl, fading: false }; s.fading = false; s.progI = -1; s.ramp = null; s.base = { shift: opts.shift || 0, tempo: opts.tempo || 1 };
       await pl.play();
       active = s;
       emit();
@@ -80,10 +87,30 @@ export function createShowDeck({ dest, getBlob, makePlayer = realPlayer, now = (
     // поправка нормализации идущего трека (дБ): настройку цели сменили на ходу
     setNorm(db) { const s = active; if (s) s.norm.gain.setTargetAtTime(dbGain(db || 0), now(), 0.05); },
     setShift(semi) { const s = active; if (s && s.player && s.player.setPitch) { try { s.player.setPitch(semi, 0, false); } catch { /* */ } } },
+    setEq(id) { setEq(id, false); },
+    setTempo(r) { const s = active; if (s && s.player) { try { s.player.playbackRate = r; } catch { /* */ } } },
+    // программа номера: события по времени записи (key — полутоны, tempo, level; ramp — плавно за сколько секунд)
+    applyProg(s, time) {
+      const L = s.opts && s.opts.prog; if (!L || !L.length) return;
+      let i = -1; while (i + 1 < L.length && L[i + 1].t <= time + 0.02) i++;
+      if (i === s.progI) return;
+      const back = i < s.progI; s.progI = i;
+      // итог — по всем событиям до i (их немного): так и перемотка, и прыжок дают верное состояние
+      const st = { shift: s.base.shift, tempo: s.base.tempo, level: s.opts.level == null ? 100 : s.opts.level };
+      L.slice(0, i + 1).forEach((e) => { if (e.key != null) st.shift = e.key; if (e.tempo != null) st.tempo = e.tempo; if (e.level != null) st.level = e.level; });
+      const ramp = back || i < 0 ? 0 : L[i].ramp || 0, t = now();
+      if (s.player && s.player.setPitch) { try { s.player.setPitch(st.shift, 0, false); } catch { /* */ } }
+      if (!s.fading) { const g = faderGain(st.level); s.opts.lvl = g; holdAt(s.env.gain, t); if (ramp > 0.05) s.env.gain.linearRampToValueAtTime(g, t + ramp); else s.env.gain.setTargetAtTime(g, t, 0.03); }
+      const cur = (s.player && s.player.playbackRate) || 1;
+      if (ramp > 0.05 && st.tempo !== cur) s.ramp = { from: cur, to: st.tempo, t0: t, dur: ramp };
+      else { s.ramp = null; if (s.player) { try { s.player.playbackRate = st.tempo; } catch { /* */ } } }
+    },
     setTrim(v) { trim.gain.setTargetAtTime(faderGain(v), now(), 0.03); },
     // вызывается часто (UI): плавный уход в конце трека по fadeOut номера
     tick() {
       const s = active; if (!s || !s.player || !s.opts || s.fading || s.player.paused) return;
+      if (s.opts.prog && s.opts.prog.length) api.applyProg(s, s.player.currentTime || 0);
+      if (s.ramp) { const k = Math.min(1, (now() - s.ramp.t0) / s.ramp.dur); try { s.player.playbackRate = s.ramp.from + (s.ramp.to - s.ramp.from) * k; } catch { /* */ } if (k >= 1) s.ramp = null; }
       const fo = s.opts.fadeOut, d = s.player.duration;
       if (fo > 0 && d && s.player.currentTime >= d - fo) { const t = now(), left = Math.max(CLICK, d - s.player.currentTime); holdAt(s.env.gain, t); s.env.gain.linearRampToValueAtTime(0, t + left); s.fading = true; }
     },

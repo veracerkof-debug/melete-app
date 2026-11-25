@@ -201,19 +201,39 @@ test('нормализация и громкости номера: запись 
   // пульт: ГО, крутилки номера (шторка «Программа» закрывается)
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="pp"]');
-  await expect(page.locator(T + '[data-knob="nlevel"]')).toBeVisible({ timeout: 10_000 });
-  const kn = T + '[data-knob="nlevel"]', b = await page.locator(kn).boundingBox();
+  await expect(page.locator(T + '[data-knob="deck"]')).toBeVisible({ timeout: 10_000 });
+  const kn = T + '.shstrip [data-knob="deck"]', b = await page.locator(kn).boundingBox();
   const v0 = +(await page.locator(kn).getAttribute('aria-valuenow'));
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - 28, { steps: 5 }); await page.mouse.up(); // вверх на 28 px ≈ +20
   const v1 = +(await page.locator(kn).getAttribute('aria-valuenow'));
-  expect(v1).toBeGreaterThan(v0 + 10);
-  await page.locator(T + '[data-knob="npad"]').focus(); await page.keyboard.press('ArrowDown');
+  expect(v1 === 100 || v1 > v0 + 10).toBe(true);
   const sh = (await melete.toolsNow()).show, n = sh.events[0].numbers[0];
-  expect(n.level).toBe(v1); expect(n.bed.padLevel).toBe(59);
+  expect(n.level).toBe(v1);
   // настройки: цель нормализации
   await page.click(T + '[data-x="set"]');
   await page.click('.sheet [data-seg="ntarget"] [data-v="-19"]');
   expect((await melete.toolsNow()).show.norm.target).toBe(-19);
+  expect(errors).toEqual([]);
+});
+
+test('пульт: «стоп всем» — только двойное касание; избранные пады на «Эфире» включаются в настройках', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-x="evnew"]'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click(T + '[data-page="desk"]');
+  // одно касание заряжает и сходит само; два подряд — гасят
+  await page.click(T + '[data-x="panic"]');
+  await expect(page.locator(T + '.shpanic.armed')).toHaveCount(1);
+  await expect(page.locator(T + '.shpanic.armed')).toHaveCount(0, { timeout: 4000 });
+  await page.click(T + '[data-x="panic"]'); await page.click(T + '[data-x="panic"]');
+  await expect(page.locator(T + '.shpanic.armed')).toHaveCount(0);
+  // избранные пады: по умолчанию нет, плитка включает колонку справа
+  await expect(page.locator(T + '.shfavs')).toHaveCount(0);
+  await page.click(T + '[data-x="set"]'); await page.click('.sheet [data-tg="deskPads"]');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await expect(page.locator(T + '.shfavs .shpad')).not.toHaveCount(0);
   expect(errors).toEqual([]);
 });

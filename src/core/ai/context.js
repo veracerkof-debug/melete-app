@@ -1,6 +1,7 @@
 // Что модель знает: общая инструкция и данные только из открытых человеком категорий (песни, статистика, журнал).
 // Всё — текстом, сжато и с пределами; размер виден человеку до отправки (screens/aichat.js). Без DOM и сети.
 import { canRead, canWrite } from './config.js';
+import { showContext } from './showops.js';
 import { labelText } from '../../music/chordedit.js';
 
 export const LIMITS = { songs: 400, topSongs: 15, logLines: 80, logChars: 6000, notesPreview: 0, recs: 60, chords: 800, downs: 300 };
@@ -23,6 +24,7 @@ export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = D
       '3) Правки записи медиатеки (аккорды, части песни, тайм-коды): блок ```melete-rec с массивом [{"op":"chords","ref":"<id записи>","items":[{"t":секунды,"d":секунды (можно не указывать),"c":"Am7"}]},{"op":"marks","ref":"<id записи>","items":[{"t":секунды,"name":"Куплет 1"}]}]. "c":"N" — нет аккорда; без "d" аккорд держится до следующего элемента.',
       'Ты НЕ слышишь звук: опирайся только на аккорды, доли, тональность, название и исполнителя из данных. В аккордах правь лишь то, в чём уверен по гармонии (пропуски, явные промахи: аккорд вне тональности без причины); сомнительное объясни словами и попроси проверить на слух. Части ставь на сильные доли из данных; названия: Вступление, Куплет, Припев, Бридж, Проигрыш, Кода — с номером при повторах. Время — только внутри длины записи; текст песни не нужен и не выдавай.',
     ].join('\n') : '',
+    wm ? '4) Программа выступления (Пульт): блок ```melete-show с массивом [{"op":"number","ref":"<id номера>","set":{"eq":"flat|warm|bright|vocal|bass|thin|cut|air","tempo":0.5–1.5,"shift":-12…12,"level":0–100,"fadeIn":с,"fadeOut":с},"prog":[{"t":секунды записи,"key":полутоны,"tempo":0.5–1.5,"level":0–100,"ramp":секунд плавно}]},{"op":"pad","ref":"<id пада>","set":{"level","speed":0.5–2,"shift":-12…12,"eq","mode":"shot|loop|hold","from","to"}}]. prog заменяет программу номера целиком; поле, которого нет, не меняется. Ты не слышишь звук: для «фонового» номера понижай level, для плохого сведения предлагай пресет эквалайзера, для плавной смены тональности/темпа ставь ramp.' : '',
     cfg.instruction ? 'Дополнительно от человека: ' + cfg.instruction : '',
     'Сегодня: ' + new Date(now).toISOString().slice(0, 10) + '.',
   ].filter(Boolean).join('\n\n');
@@ -74,7 +76,7 @@ export function logContext(text) {
 export function buildContext(cfg, d) {
   const parts = [];
   if (canRead(cfg, 'songs')) parts.push({ cat: 'songs', text: songsContext(d.songs || []) });
-  if (canRead(cfg, 'media')) parts.push({ cat: 'media', text: mediaContext(d.recs || [], d.used || {}, d.songs || []) });
+  if (canRead(cfg, 'media')) parts.push({ cat: 'media', text: mediaContext(d.recs || [], d.used || {}, d.songs || []) + (d.show ? (showContext(d.show, d.recs || []) ? '\n\n' + showContext(d.show, d.recs || []) : '') : '') });
   if (canRead(cfg, 'stats')) parts.push({ cat: 'stats', text: statsContext(d.sessions || [], d.songs || [], d.goalMin || 0, d.now) });
   if (canRead(cfg, 'log')) parts.push({ cat: 'log', text: logContext(d.logText) });
   return { text: parts.map((p) => p.text).join('\n\n'), parts: parts.map((p) => ({ cat: p.cat, chars: p.text.length })), chars: parts.reduce((n, p) => n + p.text.length, 0) };

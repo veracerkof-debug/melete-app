@@ -120,3 +120,17 @@ describe('фон: пэд на квинте и шумы', () => {
     expect(normalizeNumber({}).bed).toBeNull();
   });
 });
+
+import { normalizeProg, normalizePad as _np, normalizeNumber as _nn, eqGains as _eg } from '../src/music/show.js';
+describe('программа и звук (25.11.2026)', () => {
+  it('события: порядок, границы, пустые отбрасываются', () => {
+    const p = normalizeProg([{ t: 20, key: 30 }, { t: 5, tempo: 9, ramp: 99 }, { t: 7 }, { t: -1, key: 1 }, null]);
+    expect(p.map((e) => e.t)).toEqual([5, 20]);
+    expect(p[0].tempo).toBe(1.5); expect(p[0].ramp).toBe(60); expect(p[1].key).toBe(12);
+  });
+  it('номер и пад: скорость, тональность, пресет в границах', () => {
+    expect(_nn({ tempo: 5, eq: 'нет' }).tempo).toBe(1.5); expect(_nn({ eq: 'warm' }).eq).toBe('warm'); expect(_nn({ eq: 'x' }).eq).toBe('');
+    const p = _np({ speed: 9, shift: -40, eq: 'vocal' }); expect(p.speed).toBe(2); expect(p.shift).toBe(-12); expect(p.eq).toBe('vocal');
+    expect(_eg('zzz')).toEqual([0, 0, 0]);
+  });
+});

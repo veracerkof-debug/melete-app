@@ -22,6 +22,15 @@ export const faderGain = (v) => (v < 1 ? 0 : Math.pow(Math.min(100, v) / 100, 2)
 export const gainFader = (g) => (g <= 0 ? 0 : Math.round(Math.sqrt(g) * 100));
 export const dbText = (v) => (v < 1 ? '−∞' : (v >= 100 ? '0' : '−' + Math.round(-faderDb(v))));
 
+/* ---------- эквалайзер-пресеты (слово автора 25.11.2026): три полосы — низ, середина, верх, дБ ---------- */
+// Пресет, а не ручной эквалайзер: у номера и у пада один выбор из короткого списка; '' — без обработки
+export const EQ_PRESETS = {
+  '': [0, 0, 0], warm: [3, 0, -3], bright: [-2, 0, 4], vocal: [-4, 3, 2], bass: [6, -1, -3], thin: [-6, 1, 1], cut: [-8, 0, -4], air: [0, -1, 6],
+};
+export const EQ_IDS = Object.keys(EQ_PRESETS);
+export const eqGains = (id) => EQ_PRESETS[id] || EQ_PRESETS[''];
+export const PROG_MAX = 64; // событий программы у номера
+
 /* ---------- пэды и банки ---------- */
 export function newPad(o = {}) {
   return normalizePad({ id: uid('p'), ...o });
@@ -40,6 +49,9 @@ export function normalizePad(p) {
   o.fadeOut = clamp(o.fadeOut, 0, 30, 0.05);
   o.group = clamp(o.group, 0, 9, 0) | 0;   // 0 — без группы; в группе один звук глушит другой
   o.duck = !!o.duck;                       // приглушать основной трек, пока играет
+  o.speed = clamp(o.speed, 0.5, 2, 1);     // скорость воспроизведения (как у семплера: вместе с высотой)
+  o.shift = clamp(o.shift, -12, 12, 0) | 0; // тональность, полутонов (вместе со скоростью)
+  o.eq = pick(o.eq, EQ_IDS, '');            // пресет эквалайзера звука
   o.from = clamp(o.from, 0, 36000, 0);     // начало и конец отрезка, с (0 — весь файл)
   o.to = clamp(o.to, 0, 36000, 0);
   if (o.to && o.to <= o.from) o.to = 0;
@@ -74,6 +86,17 @@ export function resizeBank(b, cols, rows) {
 export function newCue(t = 0, text = '') {
   return { id: uid('c'), t: Math.max(0, Math.round(+t * 10) / 10 || 0), text: String(text).slice(0, 200) };
 }
+// Событие программы: в момент t (с записи) — key (сдвиг в полутонах, абсолютный), tempo (0.5–1.5), level (0–100); ramp — за сколько секунд
+// доехать (0 — сразу). Поля, которых нет, не меняются.
+export function normalizeProg(list) {
+  return (Array.isArray(list) ? list : []).filter((e) => e && Number.isFinite(+e.t) && +e.t >= 0).slice(0, PROG_MAX).map((e) => {
+    const o = { id: e.id || uid('e'), t: Math.round(+e.t * 10) / 10, ramp: clamp(e.ramp, 0, 60, 0) };
+    if (e.key != null && e.key !== '' && Number.isFinite(+e.key)) o.key = clamp(e.key, -12, 12, 0) | 0;
+    if (e.tempo != null && e.tempo !== '' && Number.isFinite(+e.tempo)) o.tempo = clamp(e.tempo, 0.5, 1.5, 1);
+    if (e.level != null && e.level !== '' && Number.isFinite(+e.level)) o.level = clamp(e.level, 0, 100, 80);
+    return o;
+  }).filter((e) => e.key != null || e.tempo != null || e.level != null).sort((a, b) => a.t - b.t);
+}
 export function normalizeNumber(n) {
   const o = { ...n };
   if (!o.id) o.id = uid('n');
@@ -89,6 +112,10 @@ export function normalizeNumber(n) {
   o.fadeOut = clamp(o.fadeOut, 0, 60, 0);
   o.cues = (Array.isArray(o.cues) ? o.cues : []).filter((c) => c && Number.isFinite(+c.t)).map((c) => ({ id: c.id || uid('c'), t: Math.max(0, +c.t), text: String(c.text || '').slice(0, 200) })).sort((a, b) => a.t - b.t);
   o.done = !!o.done;
+  // программа номера: свой эквалайзер-пресет, скорость (темп) и события по времени записи — смена тональности, темпа, громкости
+  o.eq = pick(o.eq, EQ_IDS, '');
+  o.tempo = clamp(o.tempo, 0.5, 1.5, 1);
+  o.prog = normalizeProg(o.prog);
   // своя правка записи: тональность (0–11, null — как определено), лад и темп — сильнее автоматического разбора
   o.keyPc = Number.isFinite(+o.keyPc) && o.keyPc !== null && o.keyPc !== '' ? ((Math.round(+o.keyPc) % 12) + 12) % 12 : null;
   o.minor = !!o.minor;
@@ -151,7 +178,7 @@ export function parseHhmm(str) {
 }
 
 /* ---------- всё хранилище ---------- */
-export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true, strip: true };
+export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true, strip: true, deskPads: false }; // deskPads — избранные пады справа на «Эфире» (закреплённый ряд); по умолчанию выключены
 export function normalizeShow(s = {}) {
   const o = { ...s };
   o.v = 1;

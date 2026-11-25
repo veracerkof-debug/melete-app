@@ -8,7 +8,8 @@ function fakeCtx() {
   const param = () => ({ value: 0, setValueAtTime(v) { this.value = v; }, linearRampToValueAtTime(v) { this.last = v; (this.ramps ??= []).push(v); }, setTargetAtTime(v) { this.target = v; }, cancelScheduledValues() {}, cancelAndHoldAtTime() {} });
   const node = () => ({ gain: param(), connect(x) { return x; }, disconnect() {} });
   c.gains = []; c.createGain = () => { const n = node(); c.gains.push(n); return n; };
-  c.createBufferSource = () => { const s = { ...node(), started: null, stopped: null, loop: false, start(t, o, d) { s.started = { t, o, d }; }, stop(t) { s.stopped = t; setTimeout(() => s.onended && s.onended(), 0); } }; c.made.push(s); return s; };
+  c.filters = []; c.createBiquadFilter = () => { const f = { ...node(), type: '', frequency: { value: 0 }, Q: { value: 0 }, gain: param() }; c.filters.push(f); return f; };
+  c.createBufferSource = () => { const s = { ...node(), playbackRate: { value: 1 }, started: null, stopped: null, loop: false, start(t, o, d) { s.started = { t, o, d }; }, stop(t) { s.stopped = t; setTimeout(() => s.onended && s.onended(), 0); } }; c.made.push(s); return s; };
   c.decodeAudioData = async () => ({ duration: 4, numberOfChannels: 1, sampleRate: 8000, getChannelData: () => Float32Array.from({ length: 8000 }, (_, i) => 0.05 * Math.sin(i / 8000 * 2 * Math.PI * 997)) });
   return c;
 }
@@ -85,5 +86,23 @@ describe('звуки пульта', () => {
     const s = setup({ getNorm: () => ({ on: true, pads: true, target: -16 }), known: () => ({ lufs: -26, peak: -10 }), onMeasure: () => { n++; } });
     await s.eng.preload([newPad({ file: 'f1' })]);
     expect(n).toBe(0); expect(s.eng.normOf('f1')).toBe(9); // −16 − (−26) = 10, но потолок по пику: −1 − (−10) = 9
+  });
+});
+
+describe('звуки пульта: скорость, тональность, эквалайзер пада', () => {
+  it('скорость и тональность задают темп воспроизведения, эквалайзер — три фильтра голоса', async () => {
+    const { c, eng } = setup();
+    const p = newPad({ file: 'f1', speed: 2, shift: 12, eq: 'warm' });
+    eng.press(p); await tick(); eng.press(p); await tick();
+    const s = c.made[c.made.length - 1];
+    expect(s.playbackRate.value).toBe(4); // 2 × 2^(12/12), предел 4
+    expect(c.filters.length % 3).toBe(0);
+    expect(c.filters.slice(-3).map((f) => f.gain.value)).toEqual([3, 0, -3]);
+  });
+  it('без пресета фильтров нет', async () => {
+    const { c, eng } = setup();
+    const p = newPad({ file: 'f1' });
+    eng.press(p); await tick(); eng.press(p); await tick();
+    expect(c.filters.length).toBe(0);
   });
 });

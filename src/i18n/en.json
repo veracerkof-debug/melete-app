@@ -3027,6 +3027,7 @@
   "ai.by": "Replying: {name}",
   "ai.cat.media": "Media library recordings",
   "ai.cat.media.sub": "Names, key, tempo, chords and sections — no audio, no lyrics",
+  "ai.prop.show": "Proposal: show program",
   "ai.prop.rec": "Proposal: recording edits",
   "home.freeStart": "Free practice",
   "home.ringOpen": "Goal and days of the week",

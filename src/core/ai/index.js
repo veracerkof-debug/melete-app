@@ -27,7 +27,7 @@ export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
     chat() {
       return (chat ??= createChat({
         app, cfg: () => load(), post: (req) => (over.post || post)(req), mascot: () => mascotName(), lang: () => getLang(),
-        data: () => ({ songs: app.store.state.songs || [], recs: app.files ? app.files.list('audio').filter((r) => !r.stem && !r.dn && !r.show && !r.dict) : [], used: ((app.device && app.device.audio) || {}).used || {}, sessions: app.store.sessions(), goalMin: app.store.state.settings.goalMin || 0, logText: logText(entries().filter((e) => e[1] !== 'i')), now: Date.now() }),
+        data: () => ({ songs: app.store.state.songs || [], recs: app.files ? app.files.list('audio').filter((r) => !r.stem && !r.dn && !r.show && !r.dict) : [], used: ((app.device && app.device.audio) || {}).used || {}, show: (app.device && app.device.show) || null, sessions: app.store.sessions(), goalMin: app.store.state.settings.goalMin || 0, logText: logText(entries().filter((e) => e[1] !== 'i')), now: Date.now() }),
       }));
     },
     // Вложения: файл с телефона (текст, PDF, DOCX, HTML, картинка) и ссылка; ссылку приложение открывает само — только по нажатию и если это включено

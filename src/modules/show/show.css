@@ -219,3 +219,16 @@
 .shtile.on small{color:var(--on-tint);opacity:.85}
 .shduckw{display:flex;align-items:center;gap:10px;padding:10px 14px 0;color:var(--l2);font:500 12px var(--font)}
 .shduck{flex:none;width:120px;height:30px;fill:none;stroke:var(--tint);stroke-width:2;stroke-linejoin:round}
+.shbar{grid-template-columns:auto auto repeat(4,1fr)}
+.shpanic{min-width:48px;height:48px;border-radius:var(--r-3);background:var(--fill);color:var(--red);font:800 16px var(--font);margin-right:4px;padding:0 8px;white-space:nowrap}
+.shpanic.armed{background:var(--red);color:var(--bg);font-size:13px}
+.shsplit{flex:1 1 0;min-height:112px;display:flex;gap:4px;min-width:0}
+.shsplit .shpicks{flex:1 1 0;min-height:0}
+.shfavs{flex:none;width:84px;display:flex;flex-direction:column;gap:2px}
+.shfavs .shpad{flex:1;min-height:44px;padding:4px 6px}
+.shfavs .shpad b{font-size:12px}
+.shev2{display:grid;grid-template-columns:54px repeat(4,1fr) 36px;border-top:1px solid var(--fill);align-items:center}
+.shev2 input{padding:10px 4px;font:500 14px var(--font);background:transparent;color:var(--ink);border:0;width:100%;text-align:center}
+.shev2 .tt{color:var(--tint-text);font-weight:700}
+.shev2 button{min-height:44px;color:var(--l2)}
+.shknob.glob{outline:2px solid var(--tint);outline-offset:2px}
