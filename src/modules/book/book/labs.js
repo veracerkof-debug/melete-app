@@ -16,6 +16,7 @@ import { pieceLabs } from './labs7.js';
 import { chromaLabs } from './labs8.js';
 import { guitarLabs } from './labs9.js';
 import { modelLabs } from './labs10.js';
+import { guitarLabs2 } from './labs11.js';
 
 IV['#1'] = [0, 1];
 
@@ -726,6 +727,6 @@ export function createLabs({ T, L, snd, mic = null, ui = { redraw() {} }, tools 
   };
 
   // части учебника: схемы — в своих файлах, общие помощники — отсюда
-  Object.assign(LABS, grammarLabs({ T, L, snd, fact, sp, rootSel }), harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), jazzLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), playLabs({ T, L, snd, sp, rootSel, voiceSimple }), themeLabs({ T, L, snd, sp, mic, ui }), lessonLabs({ T, snd, mic, ui, tools }), pieceLabs({ T, snd, mic, ui }), chromaLabs({ T, L, snd, rootSel }), guitarLabs({ T, snd }), modelLabs({ T }));
+  Object.assign(LABS, grammarLabs({ T, L, snd, fact, sp, rootSel }), harmonyLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), jazzLabs({ T, L, snd, fact, sp, rootSel, voiceSimple, scName }), playLabs({ T, L, snd, sp, rootSel, voiceSimple }), themeLabs({ T, L, snd, sp, mic, ui }), lessonLabs({ T, snd, mic, ui, tools }), pieceLabs({ T, snd, mic, ui }), chromaLabs({ T, L, snd, rootSel }), guitarLabs({ T, snd }), modelLabs({ T }), guitarLabs2({ T, snd }));
   return LABS;
 }

@@ -3,7 +3,7 @@
 // gbox / gboxm — как читать схему аккорда: мажорные, потом минорные; касание кнопки — аккорд на схеме, «Послушать» — разбор струн.
 import { playBtn } from './draw.js';
 
-const OPEN = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4 — струны с 6-й по 1-ю
+export const OPEN = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4 — струны с 6-й по 1-ю
 // Аккорды: лады по струнам 6→1 (-1 — не играть, 0 — открытая) и пальцы (1 — указательный … 4 — мизинец)
 export const GCH = {
   C: { f: [-1, 3, 2, 0, 1, 0], p: [0, 3, 2, 0, 1, 0] },
@@ -25,6 +25,9 @@ export const GCH = {
   F3: { f: [-1, -1, 3, 2, 1, 1], p: [0, 0, 3, 2, 1, 1], label: true },
   F: { f: [1, 3, 3, 2, 1, 1], p: [1, 3, 4, 2, 1, 1] },
   Bm: { f: [-1, 2, 4, 4, 3, 2], p: [0, 1, 3, 4, 2, 1] },
+  Fm: { f: [1, 3, 3, 1, 1, 1], p: [1, 3, 4, 1, 1, 1] },
+  'F#m': { f: [2, 4, 4, 2, 2, 2], p: [1, 3, 4, 1, 1, 1] },
+  Bb: { f: [-1, 1, 3, 3, 3, 1], p: [0, 1, 2, 3, 4, 1] },
   // септаккорды на минор и большая септима
   Am7: { f: [-1, 0, 2, 0, 1, 0], p: [0, 0, 2, 0, 1, 0] },
   Em7: { f: [0, 2, 0, 0, 0, 0], p: [0, 2, 0, 0, 0, 0] },
@@ -138,25 +141,29 @@ export function guitarLabs({ T, snd }) {
   // Бой: рисунок на восемь долей («1 и 2 и 3 и 4 и») — ↓ вниз, ↑ вверх, · пропуск; «Послушать» играет два такта под счёт (80 уд/мин)
   const PAT = { q: 'D-D-D-D-', e: 'DUDUDUDU', f: 'D-DU-UDU' };
   const strumLab = (pat, ch) => ({
-    st: { pat, ch },
+    st: { pat, ch, m: true },
     render(s) {
       const p = PAT[s.pat], lab = ['1', 'и', '2', 'и', '3', 'и', '4', 'и'];
       return '<div class="bkgrow">' + ['Am', 'C', 'G'].map((n) => '<button type="button" class="bkgch' + (n === s.ch ? ' on' : '') + '" data-a="c:' + n + '" aria-pressed="' + (n === s.ch) + '">' + n + '</button>').join('') +
         '<span class="bkgsp"></span>' + Object.keys(PAT).map((k) => '<button type="button" class="bkgch' + (k === s.pat ? ' on' : '') + '" data-a="s:' + k + '" aria-pressed="' + (k === s.pat) + '" aria-label="' + T('gp.strum.' + k) + '">' + T('gp.strum.' + k) + '</button>').join('') + '</div>' +
         '<div class="bkgstrum" role="img" aria-label="' + T('gp.strum.aria') + '">' + [...p].map((c, i) => '<div class="bkgbt' + (i % 2 ? ' off' : '') + '"><b>' + (c === 'D' ? '↓' : c === 'U' ? '↑' : '·') + '</b><i>' + lab[i] + '</i></div>').join('') + '</div>' +
-        '<p class="bkhint">' + T('gp.strum.hint') + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
+        '<p class="bkhint">' + T('gp.strum.hint') + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '<button type="button" class="bkgch' + (s.m ? ' on' : '') + '" data-a="m" aria-pressed="' + !!s.m + '">' + T('gp.strum.metro') + '</button></div>';
     },
     on(s, a) {
       if (a.startsWith('c:') && GCH[a.slice(2)]) { s.ch = a.slice(2); return; }
       if (a.startsWith('s:') && PAT[a.slice(2)]) { s.pat = a.slice(2); return; }
+      if (a === 'm') { s.m = !s.m; return; }
       if (a !== 'hear') return false;
-      const ms = midisOf(s.ch), step = 60 / 80 / 2, list = [];
-      for (let bar = 0; bar < 2; bar++) [...PAT[s.pat]].forEach((c, i) => {
-        if (c === '-') return;
-        const t = (bar * 8 + i) * step, order = c === 'D' ? ms : [...ms].reverse();
-        order.forEach((m, k) => list.push([t + k * 0.018, [m], 0.5]));
-      });
-      snd.hits(list); return false;
+      const ms = midisOf(s.ch), step = 60 / 80 / 2, notes = [], hits = [];
+      for (let bar = 0; bar < 2; bar++) {
+        [...PAT[s.pat]].forEach((c, i) => {
+          if (c === '-') return;
+          const t = (bar * 8 + i) * step, order = c === 'D' ? ms : [...ms].reverse();
+          order.forEach((m, k) => notes.push([t + k * 0.018, [m], 0.5, 0.8]));
+        });
+        if (s.m) for (let b = 0; b < 4; b++) hits.push([(bar * 8 + b * 2) * step, b ? 'click' : 'clickHi', 0.7]);
+      }
+      snd.play({ hits, notes }); return false;
     },
   });
   LABS.gstrum = strumLab('q', 'Am');
@@ -164,9 +171,9 @@ export function guitarLabs({ T, snd }) {
   LABS.gstrumf = strumLab('f', 'C');
 
   // Связки аккордов: готовые последовательности открытых аккордов; схемы всех аккордов связки рядом и «Послушать»
-  const PROG = { g: ['G', 'C', 'D', 'G'], d: ['D', 'G', 'A', 'D'], a: ['A', 'D', 'E', 'A'], e: ['E', 'A', 'B7', 'E'], pop: ['G', 'D', 'Em', 'C'], min: ['Am', 'Dm', 'E', 'Am'],
+  const PROG = { g: ['G', 'C', 'D', 'G'], d: ['D', 'G', 'A', 'D'], a: ['A', 'D', 'E', 'A'], e: ['E', 'A', 'B7', 'E'], pop: ['G', 'D', 'Em', 'C'], cavg: ['C', 'Am', 'F', 'G'], gevd: ['G', 'Em', 'C', 'D'], amfc: ['Am', 'F', 'C', 'G'], min: ['Am', 'Dm', 'E', 'Am'],
     ii: ['Dm7', 'G7', 'Cmaj7', 'Cmaj7'], vi: ['Am7', 'Dm7', 'G7', 'Cmaj7'], bal: ['Cmaj7', 'Am7', 'Dm7', 'G7'] };
-  const ROMAN = { g: 'I – IV – V – I', d: 'I – IV – V – I', a: 'I – IV – V – I', e: 'I – IV – V – I', pop: 'I – V – vi – IV', min: 'i – iv – V – i', ii: 'ii – V – I – I', vi: 'vi – ii – V – I', bal: 'I – vi – ii – V' };
+  const ROMAN = { cavg: 'I – vi – IV – V', gevd: 'I – vi – IV – V', amfc: 'vi – IV – I – V', g: 'I – IV – V – I', d: 'I – IV – V – I', a: 'I – IV – V – I', e: 'I – IV – V – I', pop: 'I – V – vi – IV', min: 'i – iv – V – i', ii: 'ii – V – I – I', vi: 'vi – ii – V – I', bal: 'I – vi – ii – V' };
   const BASIC = ['g', 'd', 'a', 'e', 'pop', 'min'], SEVENTH = ['ii', 'vi', 'bal'];
   const progLab = (start, keys = BASIC) => ({
     st: { p: start },
@@ -186,6 +193,7 @@ export function guitarLabs({ T, snd }) {
   });
   LABS.gprog = progLab('g');
   LABS.gprogp = progLab('pop');
+  LABS.gprogc = progLab('cavg', ['cavg', 'gevd', 'amfc']);
   LABS.gprogj = progLab('ii', SEVENTH); // с септаккордами: ii–V–I в C и другие
 
   // Арпеджио (перебор): правая рука p (большой) играет басовую струну аккорда, i — 3-ю, m — 2-ю, a — 1-ю; рисунок — по долям
@@ -225,6 +233,9 @@ export function guitarLabs({ T, snd }) {
     cmaj: { from: 0, to: 4, notes: [[1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 0, 0], [3, 2, 2], [4, 0, 0], [4, 1, 1]] },
     gmaj: { from: 0, to: 4, notes: [[0, 3, 3], [1, 0, 0], [1, 2, 2], [1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 4, 4], [3, 0, 0]] },
     amin: { from: 0, to: 4, notes: [[1, 0, 0], [1, 2, 2], [1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 0, 0], [3, 2, 2]] },
+    dmin: { from: 0, to: 4, notes: [[2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 0, 0], [3, 2, 2], [3, 3, 3], [4, 1, 1], [4, 3, 3]] },
+    cmin: { from: 0, to: 4, notes: [[1, 3, 3], [2, 0, 0], [2, 1, 1], [2, 3, 3], [3, 0, 0], [3, 1, 1], [3, 3, 3], [4, 1, 1]] },
+    aharm: { from: 0, to: 4, notes: [[1, 0, 0], [1, 2, 2], [1, 3, 3], [2, 0, 0], [2, 2, 2], [2, 3, 3], [3, 1, 1], [3, 2, 2]] },
     apent: { from: 5, to: 8, notes: [[0, 5, 1], [0, 8, 4], [1, 5, 1], [1, 7, 3], [2, 5, 1], [2, 7, 3], [3, 5, 1], [3, 7, 3], [4, 5, 1], [4, 8, 4], [5, 5, 1], [5, 8, 4]] },
     chrom: { from: 0, to: 4, notes: [[0, 0, 0], [0, 1, 1], [0, 2, 2], [0, 3, 3], [0, 4, 4], [1, 0, 0], [1, 1, 1], [1, 2, 2], [1, 3, 3], [1, 4, 4], [2, 0, 0], [2, 1, 1], [2, 2, 2]] },
   };
@@ -263,6 +274,10 @@ export function guitarLabs({ T, snd }) {
     },
   });
   LABS.gscmaj = scaleLab(['cmaj', 'gmaj'], 'cmaj');
+  LABS.gscc = scaleLab(['cmaj'], 'cmaj');
+  LABS.gscg = scaleLab(['gmaj'], 'gmaj');
+  LABS.gscmin2 = scaleLab(['dmin', 'cmin'], 'dmin');
+  LABS.gscharm = scaleLab(['aharm', 'amin'], 'aharm');
   LABS.gscmin = scaleLab(['amin'], 'amin');
   LABS.gscpent = scaleLab(['apent'], 'apent');
   LABS.gscchrom = scaleLab(['chrom'], 'chrom');

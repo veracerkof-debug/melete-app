@@ -512,3 +512,20 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 .gm-dot::before{content:"";position:absolute;inset:-6px}
 .gm3.ex .gm-dot{opacity:.92;pointer-events:auto}
 .gm-dot.on{opacity:1;background:var(--tint);color:var(--on,white);border-color:var(--tint);pointer-events:auto}
+/* labs11: струны и лады, такт, карта аккордов, формула гаммы, строение трезвучия */
+.bkgnames{width:100%;max-width:340px;display:block;margin:0 auto}
+.bkgnames .str{stroke:var(--l3)}.bkgnames .nut{stroke:var(--ink);stroke-width:3}.bkgnames .fw{stroke:var(--l3);stroke-width:1}.bkgnames .fnum{fill:var(--l2);font-size:11px}
+.bkgnames .gnst{cursor:pointer}.bkgnames .gnst circle{fill:var(--cell);stroke:var(--l3)}.bkgnames .gnst text{fill:var(--ink);font-size:13px;font-weight:600}.bkgnames .gnst .nm{fill:var(--l2);font-size:12px;font-weight:600}
+.bkgnames .gnst.on circle{fill:var(--tint);stroke:var(--tint)}.bkgnames .gnst.on text:not(.nm){fill:var(--on,white)}.bkgnames .gnst.on .str{stroke:var(--tint)}
+.bkgbar{display:grid;gap:3px;margin:10px 0}
+.bkgbc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:8px;background:var(--cell);min-width:0}
+.bkgbc.beat{background:color-mix(in srgb,var(--tint) 16%,var(--cell))}.bkgbc b{color:var(--tint);font-size:16px;line-height:1}.bkgcn{font-size:12px;color:var(--l2)}
+.bkgbpm{min-width:36px;text-align:center;font-weight:600}
+.bkgall{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin:8px 0}
+.bkgcard{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:10px;border:1px solid var(--l3);background:var(--cell);color:var(--ink);font:inherit;min-height:44px}
+.bkgcard b{font-size:16px}.bkgcard .bkgbox{width:100%}
+.bkgform{display:grid;gap:2px;align-items:center;justify-content:start;margin:8px 0;overflow-x:auto}
+.bkgnote{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:26px;padding:6px 2px;border-radius:8px;background:var(--cell)}
+.bkgnote b{font-size:16px}.bkgnote .bkgcn{font-size:11px}.bkgnote.root{background:color-mix(in srgb,var(--tint) 20%,var(--cell))}
+.bkgstep{font-size:12px;color:var(--l2);text-align:center;padding:0 2px}.bkgstep.semi{color:var(--tint);font-weight:700}
+.bkgh{margin:6px 0 0;font-size:13px;color:var(--l2);font-weight:600}

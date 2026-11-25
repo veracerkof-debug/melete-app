@@ -250,26 +250,12 @@ ${tip('Play the open 1st string in quarter notes at 60, alternating i and m.')}
 ${key('Read top to bottom and left to right: first which strings to play, then where the fingers go.')}
 ${tip('Pick a chord, press "Listen" and compare the sound with the diagram.')}
 ` },
-  { id: 'g6', t: 'Chord C', s: 'The first major chord', src: '', h: `
-<p>Chord C is the most recognisable. Three fingers stand like stairs: 1 on fret 1, 2 on fret 2, 3 on fret 3.</p>
-{{lab:gbox}}
-<p>Play the five thin strings, 5th to 1st; do not touch the 6th (there is "×" above it).</p>
-${key('Put all fingers down together, on the tips, not flat — otherwise the neighbouring string goes dead.')}
-${tip('Set the chord, pluck each string alone and check that all ring clearly.')}
-` },
   { id: 'g7', t: 'Chord G', s: 'The second major chord', src: '', h: `
 <p>Chord G sounds wider: all six strings are played. Two fingers by the thick strings and one by the thinnest.</p>
 {{lab:gboxg}}
 <p>From C to G the hand spreads: the fingers go up and sideways. It is the most common change in songs.</p>
 ${key('A change is not speed but a planned move: the fingers go to the new chord while the old one still rings.')}
 ${tip('Play C, then G — four beats each at 60.')}
-` },
-  { id: 'g8', t: 'Chord D', s: 'The third major chord', src: '', h: `
-<p>Chord D is the most compact of the three: three fingers side by side, only the four thin strings (4th to 1st) are played.</p>
-{{lab:gboxd}}
-<p>C, G and D are the base of a huge number of songs: with them and clean changes you can already play a simple accompaniment.</p>
-${key('Major only for now. Minor chords (Am, Em, Dm) come next, once major is clean and without stops.')}
-${tip('Set D, play the four thin strings and check that the 5th and 6th are silent.')}
 ` },
   { id: 'g9', t: 'Chord changes and a first song', s: 'C, G and D together', src: '', h: `
 <p>Now the three chords need to be changed. Four beats per chord at 60; on the last beat of the bar the fingers are already going to the next one.</p>
@@ -284,20 +270,6 @@ ${tip('Play C–G–C–G–D–G–C around at 60 and record yourself.')}
 <p>Chord Am looks like E, two frets lower. Three fingers: 1 on fret 1 of string 2, 2 and 3 on fret 2 of strings 4 and 3.</p>
 ${key('Major is bright, minor is soft and sad. The difference is one finger.')}
 ${tip('Listen to Am and A (major): play five strings, do not touch the 6th.')}
-` },
-  { id: 'g11', t: 'Chord Em', s: 'The easiest chord', src: '', h: `
-<p>Em ("E minor") is the simplest: two fingers side by side on the second fret, and all six strings sound.</p>
-{{lab:gboxem}}
-<p>The change Am → Em is the easiest in the course: two fingers move one string down and the shape stays the same.</p>
-${key('The change is a slide: the hand keeps the shape and moves as a whole.')}
-${tip('Play Am, then Em — four beats each at 60.')}
-` },
-  { id: 'g12', t: 'Chord Dm', s: 'A relative of D', src: '', h: `
-<p>Dm ("D minor") is set like D, but finger 1 sits on fret 1 of the thinnest string. Four thin strings are played, as in D.</p>
-{{lab:gboxdm}}
-<p>Six chords are known now: C, G, D, Am, Em, Dm. That is already enough for many simple songs.</p>
-${key('D and Dm differ by one finger — hear the difference.')}
-${tip('Play Dm, then D — listen to how the sound changes.')}
 ` },
   { id: 'g13', t: 'Down strum', s: 'The first right-hand pattern', src: '', h: `
 <p>Strumming is even strokes of the right hand over all strings. Start simple: one down stroke per beat.</p>
@@ -319,20 +291,6 @@ ${tip('First eighths ↓↑↓↑↓↑↓↑ with no skips, then the "folk" pat
 <p>Change on the last beat of the bar; the hand does not stop. If the strum slips — slow down and keep the hand moving.</p>
 ${key('When the hand stops, the strum breaks. Better to play an incomplete chord than to stop the hand.')}
 ${tip('Record yourself on this sequence and listen the next day.')}
-` },
-  { id: 'g16', t: 'Chord A', s: 'Three fingers in a row', src: '', h: `
-<p>Chord A is set with three fingers in a row on the second fret: strings 4, 3 and 2. Play five strings, 5th to 1st.</p>
-{{lab:gboxa}}
-<p>It is a tight shape: the fingers stand side by side, and each must not touch the neighbouring strings.</p>
-${key('Fingertips and slightly slanted, otherwise the thin string goes dead.')}
-${tip('Set A, pluck five strings one by one and check that all ring.')}
-` },
-  { id: 'g17', t: 'Chord E', s: 'Em plus one finger', src: '', h: `
-<p>Chord E is Em with one more finger: finger 1 goes on fret 1 of string 3. Play all six strings.</p>
-{{lab:gboxe}}
-<p>From Em to E: fingers 2 and 3 stay, finger 1 is added. One finger makes the chord bright.</p>
-${key('E and Em are the same shape — the difference is one finger.')}
-${tip('Play Em, then E — hear how the mood changes.')}
 ` },
   { id: 'g18', t: 'Seventh chords', s: 'E7, A7, D7, G7, C7, B7', src: '', h: `
 <p>A seventh chord is a major chord with an added bitterness. The name has a 7. It sounds tense and wants to move on to the next chord.</p>
@@ -382,13 +340,6 @@ ${tip('Lay the index on the two thin strings and pluck them: both must ring.')}
 <p>It is a familiar shape moved along the neck plus a barre. If it does not work at first, play "F (small)" and come back to the full one in a few days.</p>
 ${key('F is Em moved one fret up with an index-finger barre.')}
 ${tip('Set F, pluck the six strings one by one and find a dead one — move the finger.')}
-` },
-  { id: 'g25', t: 'Chord Bm (barre)', s: 'A barre on the second fret', src: '', h: `
-<p>Bm ("B minor"): the index finger on fret 2 of five strings (5th to 1st). The other three fingers are as in an Am chord, two frets higher.</p>
-{{lab:gboxbm}}
-<p>The 6th string is not played: there is an "×" above it in the diagram.</p>
-${key('Barre chords are familiar shapes moved along the neck: the Em shape gives F, the Am shape gives Bm.')}
-${tip('Play Am, then Bm — hear the same shape on different frets.')}
 ` },
   { id: 'g26', t: 'Am7, Em7, Dm7', s: 'Minor seventh chords', src: '', h: `
 <p>A minor seventh chord is a minor chord with an added soft seventh. It sounds warmer and calmer than a plain minor.</p>

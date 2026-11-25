@@ -9,7 +9,7 @@ import { fmtDur } from '../format.js';
 import { studentOn, STUDENT_OPENABLE } from '../student.js';
 import { devsOf, pair, http, meshAvail, meshClient } from '../sync.js';
 import { scanQR, parsePair } from './qrscan.js';
-import { studentOf, studentsOf, addTask, removeTask, toggleOpen, setLessons, lessonsCount, COURSE_LESSONS, pullReport, pushPack, tasksLeft, openFor, releaseStudent, summaryOf } from '../classroom.js';
+import { studentOf, studentsOf, addTask, removeTask, toggleOpen, setLessons, lessonsCount, COURSE_LESSONS, COURSE_PATH, pullReport, pushPack, tasksLeft, openFor, releaseStudent, summaryOf } from '../classroom.js';
 import { confirm } from '../../ui/index.js';
 
 const ago = (ms) => { if (!ms) return t('cls.never'); const m = Math.round((Date.now() - ms) / 60000); return m < 2 ? t('cls.now') : m < 90 ? t('cls.min', { n: m }) : m < 2880 ? t('cls.hours', { n: Math.round(m / 60) }) : t('cls.days', { n: Math.round(m / 1440) }); };
@@ -73,7 +73,7 @@ function studentSheet(app, addr, rerender) {
   const songsOf = () => app.store.state.songs || [];
   const refHTML = () => {
     if (pick.kind === 'free') return '';
-    const opts = pick.kind === 'lesson' ? Array.from({ length: COURSE_LESSONS }, (_, i) => ['g' + (i + 1), t('cls.lesson', { n: i + 1 })])
+    const opts = pick.kind === 'lesson' ? COURSE_PATH.map((id, i) => [id, t('cls.lesson', { n: i + 1 })])
       : pick.kind === 'tool' ? STUDENT_OPENABLE.filter(moduleById).map((id) => [id, moduleName(moduleById(id))]) : songsOf().map((s) => [s.id, s.title]);
     if (!opts.length) return '<p class="ftr keep">' + t('cls.noSongs') + '</p>';
     if (!opts.some(([v]) => v === pick.ref)) pick.ref = opts[0][0];

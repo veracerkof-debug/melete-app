@@ -113,13 +113,13 @@ describe('учитель и ученик: по сети (петля)', () => {
   });
 });
 
-import { setLessons, lessonsCount, COURSE_LESSONS } from '../src/core/classroom.js';
+import { setLessons, lessonsCount, COURSE_LESSONS, COURSE_PATH } from '../src/core/classroom.js';
 import { PATHS } from '../src/modules/book/book/lessons.js';
 describe('уроки курса для ученика', () => {
   it('ползунок «+/−» открывает уроки подряд; число совпадает с курсом', () => {
-    expect(COURSE_LESSONS).toBe(PATHS.guitar.length);
+    expect(COURSE_LESSONS).toBe(PATHS.guitar.length); expect(COURSE_PATH).toEqual(PATHS.guitar);
     const rec = studentOf({}, 'a');
-    expect(setLessons(rec, 3)).toBe(3); expect(rec.lessons).toEqual(['g1', 'g2', 'g3']);
+    expect(setLessons(rec, 3)).toBe(3); expect(rec.lessons).toEqual(['g2', 'g1', 'g3']);
     expect(setLessons(rec, 99)).toBe(COURSE_LESSONS); expect(setLessons(rec, -4)).toBe(0); expect(lessonsCount(rec)).toBe(0);
   });
 });
@@ -155,7 +155,7 @@ describe('учитель и ученик: песни, цель, отвязка',
   });
   it('открытие по заданию: урок и инструмент открываются сами', () => {
     const rec = studentOf({}, 'a');
-    openFor(rec, { kind: 'lesson', ref: 'g4' }); expect(rec.lessons).toEqual(['g1', 'g2', 'g3', 'g4']);
+    openFor(rec, { kind: 'lesson', ref: 'g4' }); expect(rec.lessons).toEqual(['g2', 'g1', 'g3', 'g4']);
     openFor(rec, { kind: 'tool', ref: 'ear' }); expect(rec.open).toEqual(['ear']);
     openFor(rec, { kind: 'lesson', ref: 'g2' }); expect(lessonsCount(rec)).toBe(4); // не сужает
     expect(shareOf(rec, [])).toBeNull();

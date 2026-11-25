@@ -250,26 +250,12 @@ ${tip('Ochiq 1-torni metronom 60 da choraklab chaling, i va m ni almashtirib.')}
 ${key('Sxema yuqoridan pastga va chapdan oʻngga oʻqiladi: avval qaysi torlar chalinishini, keyin barmoqlar qayerga qoʻyilishini koʻring.')}
 ${tip('Akkordni tanlab, "Tinglash" ni bosing va tovushni sxema bilan solishtiring.')}
 ` },
-  { id: 'g6', t: 'C akkordi', s: 'Birinchi major akkord', src: '', h: `
-<p>C akkordi — eng tanish. Uch barmoq zinapoya shaklida turadi: 1-barmoq 1-ladda, 2-barmoq 2-ladda, 3-barmoq 3-ladda.</p>
-{{lab:gbox}}
-<p>Besh ingichka tor chalinadi, 5-dan 1-gacha; 6-ga tegilmaydi (uning ustida "×" bor).</p>
-${key('Barmoqlarni birdaniga va uchida qoʻying, yotiq emas — aks holda qoʻshni tor ovozsiz boʻladi.')}
-${tip('Akkordni qoʻyib, har torni alohida tortib, hammasi toza jaranglashini tekshiring.')}
-` },
   { id: 'g7', t: 'G akkordi', s: 'Ikkinchi major akkord', src: '', h: `
 <p>G akkordi kengroq jaranglaydi: barcha oltita tor chalinadi. Ikki barmoq yoʻgʻon torlarda, bittasi eng ingichkada.</p>
 {{lab:gboxg}}
 <p>C dan G ga oʻtganda qoʻl "ochiladi": barmoqlar yuqoriga va yonga boradi. Bu qoʻshiqlardagi eng koʻp uchraydigan almashish.</p>
 ${key('Almashish — tezlik emas, oldindan oʻylangan harakat: barmoqlar eski akkord hali jaranglayotganda yangisiga boradi.')}
 ${tip('C, keyin G ni chaling — metronom 60 da har biriga toʻrt hisob.')}
-` },
-  { id: 'g8', t: 'D akkordi', s: 'Uchinchi major akkord', src: '', h: `
-<p>D akkordi — uchtadan eng ixchami: uch barmoq yonma-yon, faqat toʻrt ingichka tor (4-dan 1-gacha) chalinadi.</p>
-{{lab:gboxd}}
-<p>C, G va D — koʻplab qoʻshiqlarning asosi: ularni chalib, toza almashishni oʻrganib, oddiy joʻrlik qilish mumkin.</p>
-${key('Hozircha faqat major. Minor akkordlar (Am, Em, Dm) — keyingi qadam, major toza va toʻxtamasdan chiqqanda.')}
-${tip('D ni qoʻyib, toʻrt ingichka torni chaling va 5- hamda 6-tor jim ekanini tekshiring.')}
 ` },
   { id: 'g9', t: 'Akkord almashish va birinchi qoʻshiq', s: 'C, G va D birga', src: '', h: `
 <p>Endi uch akkordni almashtirishni oʻrganish kerak. Metronom 60 da har akkordga toʻrt hisob; taktning oxirgi hisobida barmoqlar yangisiga ketayotgan boʻladi.</p>
@@ -284,20 +270,6 @@ ${tip('C–G–C–G–D–G–C ni metronom 60 da aylantirib chalib, oʻzingizn
 <p>Am akkordi E ga oʻxshaydi, faqat ikki lad pastda. Uch barmoq: 1 — 2-torning 1-ladida, 2 va 3 — 4- va 3-torning 2-ladida.</p>
 ${key('Major — yorqin, minor — yumshoq va qaygʻuli. Farqi — bitta barmoq.')}
 ${tip('Am va A (major) ni tinglang: besh torni chaling, 6-ga tegmang.')}
-` },
-  { id: 'g11', t: 'Em akkordi', s: 'Eng oson akkord', src: '', h: `
-<p>Em ("mi minor") — eng oddiy: ikkinchi ladda ikki barmoq yonma-yon va barcha oltita tor jaranglaydi.</p>
-{{lab:gboxem}}
-<p>Am → Em almashish kursdagi eng yengili: ikki barmoq bir tor pastga siljiydi, shakl oʻzgarmaydi.</p>
-${key('Almashish — siljish: qoʻl shaklni saqlab, butunlay koʻchadi.')}
-${tip('Am, keyin Em ni chaling — metronom 60 da har biriga toʻrt hisob.')}
-` },
-  { id: 'g12', t: 'Dm akkordi', s: 'D ning qarindoshi', src: '', h: `
-<p>Dm ("re minor") D kabi qoʻyiladi, lekin 1-barmoq eng ingichka torning 1-ladida turadi. D dagi kabi toʻrt ingichka tor chalinadi.</p>
-{{lab:gboxdm}}
-<p>Endi oltita akkord maʼlum: C, G, D, Am, Em, Dm. Bu koʻplab oddiy qoʻshiqlar uchun yetarli.</p>
-${key('D va Dm bitta barmoq bilan farqlanadi — farqni quloq bilan eshiting.')}
-${tip('Dm, keyin D ni chaling — tovush qanday oʻzgarishini tinglang.')}
 ` },
   { id: 'g13', t: 'Pastga boy', s: 'Oʻng qoʻlning birinchi chizmasi', src: '', h: `
 <p>Boy — oʻng qoʻlning barcha torlarga teng zarbalari. Oddiydan boshlang: har hisobga bitta pastga zarba.</p>
@@ -319,20 +291,6 @@ ${tip('Avval tashlamasdan ↓↑↓↑↓↑↓↑ sakkizliklar, keyin "xalq" ch
 <p>Almashish — taktning oxirgi hisobida, qoʻl toʻxtamaydi. Boy adashsa — sekinlashtiring va qoʻlni toʻxtatmang.</p>
 ${key('Qoʻl toʻxtasa — boy buziladi. Akkordni toʻliq chalmaslik qoʻlni toʻxtatishdan yaxshi.')}
 ${tip('Shu ketma-ketlikda oʻzingizni yozib, ertasi kuni tinglang.')}
-` },
-  { id: 'g16', t: 'A akkordi', s: 'Uch barmoq qatorda', src: '', h: `
-<p>A akkordi ikkinchi ladda uch barmoq qatorda qoʻyiladi: 4-, 3- va 2-torlar. Besh tor chalinadi, 5-dan 1-gacha.</p>
-{{lab:gboxa}}
-<p>Bu tor shakl: barmoqlar yonma-yon turadi va har biri qoʻshni torlarga tegmasligi kerak.</p>
-${key('Barmoqlar uchida va sal qiyshiq, aks holda ingichka tor ovozsiz boʻladi.')}
-${tip('A ni qoʻyib, besh torni birma-bir tortib, hammasi jaranglashini tekshiring.')}
-` },
-  { id: 'g17', t: 'E akkordi', s: 'Em va yana bitta barmoq', src: '', h: `
-<p>E akkordi — bitta barmoq qoʻshilgan Em: 1-barmoq 3-torning birinchi ladiga qoʻyiladi. Barcha oltita tor chalinadi.</p>
-{{lab:gboxe}}
-<p>Em dan E ga: 2- va 3-barmoq qoladi, 1-barmoq qoʻshiladi. Bitta barmoq akkordni yorugʻ qiladi.</p>
-${key('E va Em — bir xil shakl, farqi bitta barmoqda.')}
-${tip('Em, keyin E ni chaling — kayfiyat qanday oʻzgarishini eshiting.')}
 ` },
   { id: 'g18', t: 'Septakkordlar', s: 'E7, A7, D7, G7, C7, B7', src: '', h: `
 <p>Septakkord — "achchiqlik" qoʻshilgan major akkord. Nomida 7 raqami bor. U tarang jaranglaydi va keyingi akkordga intiladi.</p>
@@ -382,13 +340,6 @@ ${tip('Koʻrsatkichni ikki ingichka torga qoʻyib, ularni torting: ikkalasi ham 
 <p>Bu boʻyin boʻylab siljitilgan tanish shakl va barre. Avval chiqmasa — «F (kichik)» ni chalib, bir necha kundan keyin toʻliq shaklga qayting.</p>
 ${key('F — bir lad yuqoriga siljitilgan Em va koʻrsatkich barmoq bilan barre.')}
 ${tip('F ni qoʻyib, oltita torni birma-bir torting va ovozsizini toping — barmoqni siljiting.')}
-` },
-  { id: 'g25', t: 'Bm akkordi (barre)', s: 'Ikkinchi ladda barre', src: '', h: `
-<p>Bm («si minor»): koʻrsatkich barmoq besh torning (5-dan 1-gacha) 2-ladida. Qolgan uch barmoq — Am akkordidagidek, faqat ikki lad yuqorida.</p>
-{{lab:gboxbm}}
-<p>6-tor chalinmaydi: sxemada uning ustida «×» bor.</p>
-${key('Barre akkordlar — boʻyin boʻylab siljitilgan tanish shakllar: Em shakli F ni, Am shakli Bm ni beradi.')}
-${tip('Am, keyin Bm ni chaling — bir xil shaklni turli ladlarda eshiting.')}
 ` },
   { id: 'g26', t: 'Am7, Em7, Dm7', s: 'Minor septakkordlar', src: '', h: `
 <p>Minor septakkord — yumshoq septima qoʻshilgan minor akkord. U oddiy minordan iliqroq va xotirjamroq jaranglaydi.</p>

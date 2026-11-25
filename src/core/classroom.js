@@ -38,8 +38,10 @@ export function toggleOpen(rec, kind, id, on) {
   rec[key] = [...set]; return true;
 }
 // Уроки курса «Гитара с нуля» открываются подряд: первые n (учитель двигает ползунок «+/−»)
-export const COURSE_LESSONS = 31;
-export function setLessons(rec, n) { n = Math.max(0, Math.min(COURSE_LESSONS, Math.round(+n) || 0)); rec.lessons = Array.from({ length: n }, (_, i) => 'g' + (i + 1)); return n; }
+// Порядок курса «Гитара с нуля» (должен совпадать с PATHS.guitar в modules/book/book/lessons.js — это проверяет tests/classroom.test.js)
+export const COURSE_PATH = ['g2', 'g1', 'g3', 'g4', 'g32', 'g5', 'g7', 'g23', 'g33', 'g13', 'g9', 'g10', 'g24', 'g34', 'g35', 'g36', 'g14', 'g15', 'g19', 'g20', 'g37', 'g38', 'g39', 'g28', 'g40', 'g29', 'g31', 'g41', 'g30', 'g42', 'g18', 'g26', 'g27', 'g43', 'g44', 'g45', 'g21', 'g22', 'g46', 'g47', 'g48', 'g49'];
+export const COURSE_LESSONS = COURSE_PATH.length;
+export function setLessons(rec, n) { n = Math.max(0, Math.min(COURSE_LESSONS, Math.round(+n) || 0)); rec.lessons = COURSE_PATH.slice(0, n); return n; }
 export const lessonsCount = (rec) => rec.lessons.filter((x) => /^g\d+$/.test(x)).length;
 // Песни из заданий-«песен»: файл `.melete` обычным JSON (share.js) — ученик принимает его теми же правилами, что присланный файл
 export const SONGS_MAX = 40;
@@ -51,7 +53,7 @@ export function shareOf(rec, songs) {
 export const packOf = (rec, songs = []) => ({ v: VERSION, tasks: rec.tasks.map(plain), open: { tools: [...rec.open], lessons: [...rec.lessons] }, note: clip(rec.note, NOTE_MAX), goal: Math.round(+rec.goal) || 0, share: shareOf(rec, songs) });
 // Новое задание-ссылка открывает то, что нужно: урок — и сам урок, инструмент — и сам инструмент
 export function openFor(rec, task) {
-  if (task.kind === 'lesson' && /^g\d+$/.test(task.ref || '')) { const n = +task.ref.slice(1); if (n > lessonsCount(rec)) setLessons(rec, n); }
+  if (task.kind === 'lesson' && /^g\d+$/.test(task.ref || '')) { const n = COURSE_PATH.indexOf(task.ref) + 1; if (n > 0) { if (n > lessonsCount(rec)) setLessons(rec, n); } else toggleOpen(rec, 'lesson', task.ref, true); }
   if (task.kind === 'tool' && task.ref) toggleOpen(rec, 'tool', task.ref, true);
 }
 

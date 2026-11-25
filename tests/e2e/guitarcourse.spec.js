@@ -8,7 +8,7 @@ test('гитара с нуля: путь, устройство гитары, с�
   await melete.tools({ book: { book: { lvl: 'beginner', sec: 'first' } } }); await melete.free('F', ['book']);
   await page.waitForSelector('.pane .book', { timeout: 15_000 });
   await expect(page.locator('.book .bcard[data-bch="g1"]')).toHaveCount(1);
-  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(31);
+  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(42);
   await expect(page.locator('.book .bpath.guitar')).toHaveCount(1);
   // устройство: касание части меняет подпись
   await page.locator('.book .bcard[data-bch="g2"]').click();
@@ -39,18 +39,32 @@ test('гитара с нуля: путь, устройство гитары, с�
   await expect(page.locator('.bkgstrum .bkgbt b').first()).toHaveText('↓');
   await page.locator('.bkgch[data-a="s:q"]').click();
   await expect(page.locator('.bkgstrum .bkgbt b').nth(1)).toHaveText('·');
+  // новые схемы: имена струн, такт и деления, карта аккордов, формула гаммы
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g32"]').click();
+  await page.waitForSelector('.bkgbar');
+  await page.locator('.bkgch[data-a="d:16"]').click();
+  await expect(page.locator('.bkgbar .bkgbc')).toHaveCount(16);
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g33"]').click();
+  await page.waitForSelector('.bkgall');
+  await expect(page.locator('.bkgall .bkgcard')).toHaveCount(6);
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g28"]').click();
+  await page.waitForSelector('.bkgform');
+  await expect(page.locator('.bkgform .bkgnote')).toHaveCount(8);
   // минор: Am, Em, Dm
   await page.locator('.book [data-btoc]').first().click();
-  await page.locator('.book .bcard[data-bch="g11"]').click();
+  await page.locator('.book .bcard[data-bch="g10"]').click();
   await page.waitForSelector('.bkgbox');
-  await expect(page.locator('.bkgch.on')).toHaveText('Em');
+  await expect(page.locator('.bkgch.on')).toHaveText('Am');
   // связки и септаккорды
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g19"]').click();
   await page.waitForSelector('.bkgprog');
   await expect(page.locator('.bkgprog .bkgpc')).toHaveCount(4);
-  await page.locator('.bkgch[data-a="p:e"]').click();
-  await expect(page.locator('.bkgprog .bkgpc b').nth(2)).toHaveText('B7');
+  await page.locator('.bkgch[data-a="p:gevd"]').click();
+  await expect(page.locator('.bkgprog .bkgpc b').nth(2)).toHaveText('C');
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-prog.png' });
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g18"]').click();
@@ -60,7 +74,7 @@ test('гитара с нуля: путь, устройство гитары, с�
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g24"]').click();
   await page.waitForSelector('.bkgbox');
-  await expect(page.locator('.bkgbox .barre')).toHaveCount(1);
+  await expect(page.locator('.bkgbox .barre')).toHaveCount(2);
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-barre.png' });
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g21"]').click();
@@ -74,8 +88,10 @@ test('гитара с нуля: путь, устройство гитары, с�
   await page.locator('.book .bcard[data-bch="g28"]').click();
   await page.waitForSelector('.bkgscale');
   await expect(page.locator('.bkgscale .dot, .bkgscale .op')).toHaveCount(8);
-  await page.locator('.bkgch[data-a="s:gmaj"]').click();
-  await expect(page.locator('.bkginfo')).toContainText('F♯');
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g40"]').click();
+  await page.waitForSelector('.bkgscale');
+  await expect(page.locator('.bkginfo').first()).toContainText('F♯');
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-scale.png' });
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g31"]').click();
