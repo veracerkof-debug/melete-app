@@ -5,8 +5,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 
 export const S = {
   'bk.part9': 'Noldan gitara',
-  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '15 ta dars: oʻtirish, tuzilish, sozlash, major, minor, boy',
-  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major akkordlar, minor akkordlar va boy.',
+  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '20 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, bogʻlamlar',
+  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy va akkord bogʻlamlari.',
   'ls.g1': 'Oʻtirish', 'ls.g2': 'Gitara tuzilishi', 'ls.g3': 'Sozlash', 'ls.g4': 'Ogʻriqsiz qoʻllar', 'ls.g5': 'Akkord sxemasini oʻqish',
   'ls.g6': 'C akkordi', 'ls.g7': 'G akkordi', 'ls.g8': 'D akkordi', 'ls.g9': 'Akkord almashish va birinchi qoʻshiq',
 
@@ -95,6 +95,39 @@ export const S = {
   'gp.strum.f': 'xalq',
   'gp.strum.aria': 'Sakkiz hisobli boy chizmasi',
   'gp.strum.hint': '↓ pastga, ↑ yuqoriga, · qoʻl havoda yuradi. "Tinglash" ikki taktni chaladi.',
+  // остальные аккорды и связки (25.11.2026)
+  'ls.g16': 'A akkordi',
+  'ls.g17': 'E akkordi',
+  'ls.g18': 'Septakkordlar',
+  'ls.g19': 'Akkord bogʻlamlari',
+  'ls.g20': 'Bogʻlamlardan qoʻshiqlar',
+  'lx.g16.g': '<ul><li>Barmoqlar: 1, 2 va 3 — 4-, 3- va 2-torlarning 2-ladida yonma-yon.</li><li>Besh torni chalish (5-dan 1-gacha), 6-ga tegmaslik.</li><li>D → A: uch barmoq qoʻshni torlarga oʻtadi.</li></ul>',
+  'lx.g16.t': 'Shaklni oʻrganing: bir ladda uch barmoq qatorda.',
+  'lx.g16.easy': 'A — ikkinchi ladda uch barmoq qatorda. Tor — barmoqlarni tikroq, uchiga qoʻying.',
+  'lx.g16.fix': '<ul><li>Barmoqlar sigʻmayapti — sal qiyshiq qoʻying, qoʻlni koʻproq egib.</li><li>Ingichka tor ovozsiz — 3-barmoq unga pastdan tegadi; koʻtaring.</li></ul>',
+  'lx.g17.g': '<ul><li>Barmoqlar: 2 — 5-torning 2-ladida, 3 — 4-torning 2-ladida, 1 — 3-torning 1-ladida.</li><li>Barcha oltita torni chalish.</li><li>Em bilan solishtiring: 3-torda bitta barmoq qoʻshiladi.</li></ul>',
+  'lx.g17.t': 'Em va E ni ketma-ket tinglab, kayfiyat qanday oʻzgarishini eshiting.',
+  'lx.g17.easy': 'E — bu Em va bitta barmoq: u akkordni yorugʻ, major qiladi.',
+  'lx.g17.fix': '<ul><li>Uchinchi tor ovozsiz — barmoq yotiq bosadi; uchiga qoʻying.</li><li>Shaqillaydi — lad metall chizigʻiga yaqinroq bosing.</li></ul>',
+  'lx.g18.g': '<ul><li>Septakkord — "achchiqlik" qoʻshilgan major akkord: u tarang va keyingisiga intiladi.</li><li>E7: E ga oʻxshash, lekin bitta barmoq olingan — oltita tor jaranglaydi.</li><li>E → E7 → A → A7 ni chalib, 7 keyingi akkordga qanday tortishini eshiting.</li></ul>',
+  'lx.g18.t': 'E va E7 ni, keyin D va D7 ni tinglang.',
+  'lx.g18.easy': 'Nomdagi 7 (E7, A7) tarangilik qoʻshadi. Bunday akkord kamdan-kam oxirgi boʻladi: undan keyin "xotirjam" akkord keladi.',
+  'lx.g18.fix': '<ul><li>E7 E kabi jaranglayapti — barmoqni olmadingizmi? E7 da 3-torda barmoq yoʻq.</li><li>D7 tor — barmoqlarni uchiga qoʻyib, 3-tordan sanang.</li></ul>',
+  'lx.g19.g': '<ul><li>Bogʻlam — ketma-ket bir necha akkord. Eng koʻp uchraydigani — I–IV–V: tonallikning 1-, 4- va 5-pogʻonalari.</li><li>G da bu G–C–D, D da — D–G–A, A da — A–D–E, E da — E–A–B7.</li><li>Har birini metronom 60 da, akkordga 4 hisobdan chaling.</li></ul>',
+  'lx.g19.t': 'Bogʻlamdagi akkordlarni ovoz chiqarib ayting va ularning birinchi notalarini kuylang.',
+  'lx.g19.easy': 'Pogʻonalar — tonallikdagi akkordlarning tartib raqami. I — "uy", IV — yon tomonga qadam, V — "uyga qayt".',
+  'lx.g19.fix': '<ul><li>Bogʻlamlar aralashadi — kuniga bitta tonallikni oʻrganing.</li><li>Almashish ulgurmaydi — sekinlashtiring: metronom 50, pauzada almashtiring.</li></ul>',
+  'lx.g20.g': '<ul><li>G–D–Em–C ("pop" yurishi I–V–vi–IV) ni metronom 70 da boy bilan chaling.</li><li>Am–Dm–E–Am (minor bogʻlam) ni chaling.</li><li>Oʻzingizni yozib tinglang.</li></ul>',
+  'lx.g20.t': 'Yozuvni tinglab, kurs boshidagi bilan solishtiring.',
+  'lx.g20.easy': 'G–D–Em–C yurishi yuzlab qoʻshiqda uchraydi. Uni oʻrgansangiz, koʻp tanish musiqani chalish mumkin.',
+  'lx.g20.fix': '<ul><li>Almashishda boy toʻxtaydi — qoʻlni toʻxtatmang.</li><li>Em chiqmayapti — bu Am bilan bir xil shakl, bir tor siljigan.</li></ul>',
+  'gp.prog.g': 'G da',
+  'gp.prog.d': 'D da',
+  'gp.prog.a': 'A da',
+  'gp.prog.e': 'E da',
+  'gp.prog.pop': 'pop',
+  'gp.prog.min': 'minor',
+  'gp.prog.hint': 'Pogʻonalar: {r}. "Tinglash" bogʻlamni akkordga ikki hisobdan chaladi.',
 };
 export const TERMS = {};
 export const CH = [
@@ -207,5 +240,40 @@ ${tip('Avval tashlamasdan ↓↑↓↑↓↑↓↑ sakkizliklar, keyin "xalq" ch
 <p>Almashish — taktning oxirgi hisobida, qoʻl toʻxtamaydi. Boy adashsa — sekinlashtiring va qoʻlni toʻxtatmang.</p>
 ${key('Qoʻl toʻxtasa — boy buziladi. Akkordni toʻliq chalmaslik qoʻlni toʻxtatishdan yaxshi.')}
 ${tip('Shu ketma-ketlikda oʻzingizni yozib, ertasi kuni tinglang.')}
+` },
+  { id: 'g16', t: 'A akkordi', s: 'Uch barmoq qatorda', src: '', h: `
+<p>A akkordi ikkinchi ladda uch barmoq qatorda qoʻyiladi: 4-, 3- va 2-torlar. Besh tor chalinadi, 5-dan 1-gacha.</p>
+{{lab:gboxa}}
+<p>Bu tor shakl: barmoqlar yonma-yon turadi va har biri qoʻshni torlarga tegmasligi kerak.</p>
+${key('Barmoqlar uchida va sal qiyshiq, aks holda ingichka tor ovozsiz boʻladi.')}
+${tip('A ni qoʻyib, besh torni birma-bir tortib, hammasi jaranglashini tekshiring.')}
+` },
+  { id: 'g17', t: 'E akkordi', s: 'Em va yana bitta barmoq', src: '', h: `
+<p>E akkordi — bitta barmoq qoʻshilgan Em: 1-barmoq 3-torning birinchi ladiga qoʻyiladi. Barcha oltita tor chalinadi.</p>
+{{lab:gboxe}}
+<p>Em dan E ga: 2- va 3-barmoq qoladi, 1-barmoq qoʻshiladi. Bitta barmoq akkordni yorugʻ qiladi.</p>
+${key('E va Em — bir xil shakl, farqi bitta barmoqda.')}
+${tip('Em, keyin E ni chaling — kayfiyat qanday oʻzgarishini eshiting.')}
+` },
+  { id: 'g18', t: 'Septakkordlar', s: 'E7, A7, D7, G7, C7, B7', src: '', h: `
+<p>Septakkord — "achchiqlik" qoʻshilgan major akkord. Nomida 7 raqami bor. U tarang jaranglaydi va keyingi akkordga intiladi.</p>
+{{lab:gboxs}}
+<p>Bu oltita akkord ochiq — barresiz. E7, A7 va D7 eng koʻp uchraydi; ular tanish shakllardan qurilgan: E7 — bitta barmoq olingan E, A7 — bitta barmoq olingan A.</p>
+${key('Yettilik — alohida dunyo emas, bitta barmogʻi oʻzgargan tanish akkord.')}
+${tip('E va E7 ni, keyin A va A7 ni tinglang.')}
+` },
+  { id: 'g19', t: 'Akkord bogʻlamlari', s: 'I–IV–V va "pop" yurishi', src: '', h: `
+<p>Bogʻlam — ketma-ket bir necha akkord. Eng koʻp uchraydigani — <b>I–IV–V</b>: tonallikning 1-, 4- va 5-pogʻonalari.</p><p>Har tonallikning oʻz toʻplami bor: G da G–C–D, D da — D–G–A, A da — A–D–E, E da — E–A–B7.</p>
+{{lab:gprog}}
+<p>Yana bir keng tarqalgani — "pop" yurishi I–V–vi–IV: G da G–D–Em–C. Minor bogʻlam — Am–Dm–E–Am. Quyidagi tugmalarni bosing, sxemalarni koʻring va tinglang.</p>
+${key('I — "uy", IV — yon tomonga qadam, V — "uyga qayt". Minglab qoʻshiqlar shunday qurilgan.')}
+${tip('Har bogʻlamni metronom 60 da chaling: akkordga toʻrt hisobdan.')}
+` },
+  { id: 'g20', t: 'Bogʻlamlardan qoʻshiqlar', s: 'Akkordlar va boy birga', src: '', h: `
+<p>Endi koʻp qoʻshiqlar qoʻlingizda: G–D–Em–C, A–D–E yoki Am–Dm–E dagi har qanday qoʻshiq mos keladi. Sevimlisini tanlab, bogʻlamini toping.</p>
+{{lab:gprogp}}
+<p>Metronom 70 da boy bilan chaling: akkord almashtirish — taktning oxirgi hisobida, qoʻl toʻxtamaydi.</p>
+${key('Bitta bogʻlam, bitta boy — almashish toza boʻlguncha. Keyin keyingisi.')}
+${tip('Bogʻlamni tanlab, boy bilan ikki aylanish chalib, oʻzingizni yozib oling.')}
 ` },
 ];

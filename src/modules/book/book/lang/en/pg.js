@@ -5,8 +5,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 
 export const S = {
   'bk.part9': 'Guitar from scratch',
-  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '15 lessons: posture, parts, tuning, major, minor, strumming',
-  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major chords, minor chords and strumming.',
+  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '20 lessons: posture, parts, tuning, chords, strumming, progressions',
+  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming and chord progressions.',
   'ls.g1': 'Posture', 'ls.g2': 'Parts of the guitar', 'ls.g3': 'Tuning', 'ls.g4': 'Pain-free hands', 'ls.g5': 'Reading a chord diagram',
   'ls.g6': 'Chord C', 'ls.g7': 'Chord G', 'ls.g8': 'Chord D', 'ls.g9': 'Chord changes and a first song',
 
@@ -95,6 +95,39 @@ export const S = {
   'gp.strum.f': 'folk',
   'gp.strum.aria': 'Strum pattern for eight beats',
   'gp.strum.hint': '↓ down, ↑ up, · the hand moves in the air. "Listen" plays two bars.',
+  // остальные аккорды и связки (25.11.2026)
+  'ls.g16': 'Chord A',
+  'ls.g17': 'Chord E',
+  'ls.g18': 'Seventh chords',
+  'ls.g19': 'Chord progressions',
+  'ls.g20': 'Songs from progressions',
+  'lx.g16.g': '<ul><li>Fingers: 1, 2 and 3 side by side on fret 2 of strings 4, 3 and 2.</li><li>Play five strings (5th to 1st), skip the 6th.</li><li>Change D → A: three fingers move to the neighbouring strings.</li></ul>',
+  'lx.g16.t': 'Learn the shape: three fingers in a row on one fret.',
+  'lx.g16.easy': 'A is three fingers in a row on the second fret. It is tight — set the fingers steeper, on the tips.',
+  'lx.g16.fix': '<ul><li>The fingers do not fit — set them slightly slanted, curving the hand more.</li><li>The thin string is dead — finger 3 touches it from below; lift it.</li></ul>',
+  'lx.g17.g': '<ul><li>Fingers: 2 on fret 2 of string 5, 3 on fret 2 of string 4, 1 on fret 1 of string 3.</li><li>Play all six strings.</li><li>Compare with Em: one finger is added on string 3.</li></ul>',
+  'lx.g17.t': 'Listen to Em and E in a row — hear how the mood changes.',
+  'lx.g17.easy': 'E is Em and one finger: it makes the chord bright, major.',
+  'lx.g17.fix': '<ul><li>The third string is dead — the finger presses flat; use the tip.</li><li>It buzzes — press closer to the metal fret bar.</li></ul>',
+  'lx.g18.g': '<ul><li>A seventh chord is a major chord with an added bitterness: it is tense and wants to move on.</li><li>E7: like E but with one finger lifted — all six strings sound.</li><li>Play E → E7 → A → A7: hear how the 7 pulls towards the next chord.</li></ul>',
+  'lx.g18.t': 'Listen to E and E7, then D and D7.',
+  'lx.g18.easy': 'The 7 in the name (E7, A7) adds tension. Such a chord is rarely last: a calm one follows.',
+  'lx.g18.fix': '<ul><li>E7 sounds like E — did you lift a finger? In E7 there is no finger on string 3.</li><li>D7 is tight — set the fingertips and count from string 3.</li></ul>',
+  'lx.g19.g': '<ul><li>A progression is several chords in a row. The most common is I–IV–V: the 1st, 4th and 5th degrees of the key.</li><li>In G it is G–C–D, in D — D–G–A, in A — A–D–E, in E — E–A–B7.</li><li>Play each at 60, four beats per chord.</li></ul>',
+  'lx.g19.t': 'Say aloud which chords are in the progression and sing their first notes.',
+  'lx.g19.easy': 'Degrees are the ordinal numbers of chords in a key. I is home, IV a step aside, V "come back home".',
+  'lx.g19.fix': '<ul><li>The progressions get mixed up — learn one key a day.</li><li>Cannot keep up with the change — slow down: metronome 50, change in the gap.</li></ul>',
+  'lx.g20.g': '<ul><li>Play G–D–Em–C (the "pop" progression I–V–vi–IV) with strumming at 70.</li><li>Play Am–Dm–E–Am (a minor progression).</li><li>Record yourself and listen.</li></ul>',
+  'lx.g20.t': 'Listen to the recording and compare with the start of the course.',
+  'lx.g20.easy': 'The G–D–Em–C progression is in hundreds of songs. Learn it and you can play a lot of familiar music.',
+  'lx.g20.fix': '<ul><li>The strum stops on the change — keep the hand moving.</li><li>Em is hard — it is the same shape as Am, moved one string.</li></ul>',
+  'gp.prog.g': 'in G',
+  'gp.prog.d': 'in D',
+  'gp.prog.a': 'in A',
+  'gp.prog.e': 'in E',
+  'gp.prog.pop': 'pop',
+  'gp.prog.min': 'minor',
+  'gp.prog.hint': 'Degrees: {r}. "Listen" plays the progression, one chord per two beats.',
 };
 export const TERMS = {};
 export const CH = [
@@ -207,5 +240,40 @@ ${tip('First eighths ↓↑↓↑↓↑↓↑ with no skips, then the "folk" pat
 <p>Change on the last beat of the bar; the hand does not stop. If the strum slips — slow down and keep the hand moving.</p>
 ${key('When the hand stops, the strum breaks. Better to play an incomplete chord than to stop the hand.')}
 ${tip('Record yourself on this sequence and listen the next day.')}
+` },
+  { id: 'g16', t: 'Chord A', s: 'Three fingers in a row', src: '', h: `
+<p>Chord A is set with three fingers in a row on the second fret: strings 4, 3 and 2. Play five strings, 5th to 1st.</p>
+{{lab:gboxa}}
+<p>It is a tight shape: the fingers stand side by side, and each must not touch the neighbouring strings.</p>
+${key('Fingertips and slightly slanted, otherwise the thin string goes dead.')}
+${tip('Set A, pluck five strings one by one and check that all ring.')}
+` },
+  { id: 'g17', t: 'Chord E', s: 'Em plus one finger', src: '', h: `
+<p>Chord E is Em with one more finger: finger 1 goes on fret 1 of string 3. Play all six strings.</p>
+{{lab:gboxe}}
+<p>From Em to E: fingers 2 and 3 stay, finger 1 is added. One finger makes the chord bright.</p>
+${key('E and Em are the same shape — the difference is one finger.')}
+${tip('Play Em, then E — hear how the mood changes.')}
+` },
+  { id: 'g18', t: 'Seventh chords', s: 'E7, A7, D7, G7, C7, B7', src: '', h: `
+<p>A seventh chord is a major chord with an added bitterness. The name has a 7. It sounds tense and wants to move on to the next chord.</p>
+{{lab:gboxs}}
+<p>These six are open chords — no barre. E7, A7 and D7 are the most common; they are built from familiar shapes: E7 is E with one finger lifted, A7 is A with one lifted.</p>
+${key('A seventh is not a new world, just a familiar chord with one finger changed.')}
+${tip('Listen to E and E7, then A and A7.')}
+` },
+  { id: 'g19', t: 'Chord progressions', s: 'I–IV–V and the "pop" progression', src: '', h: `
+<p>A progression is several chords in a row. The most common is <b>I–IV–V</b>: the 1st, 4th and 5th degrees of the key.</p><p>Each key has its own set: in G it is G–C–D, in D — D–G–A, in A — A–D–E, in E — E–A–B7.</p>
+{{lab:gprog}}
+<p>Another common one is the "pop" progression I–V–vi–IV: in G it is G–D–Em–C. A minor progression is Am–Dm–E–Am. Press the buttons below, look at the diagrams and listen.</p>
+${key('I is home, IV a step aside, V "come back home". Thousands of songs are built this way.')}
+${tip('Play each progression at 60: four beats per chord.')}
+` },
+  { id: 'g20', t: 'Songs from progressions', s: 'Chords and strumming together', src: '', h: `
+<p>Now many songs are in reach: any song on G–D–Em–C, A–D–E or Am–Dm–E will do. Pick a favourite and find its progression.</p>
+{{lab:gprogp}}
+<p>Strum at 70: change on the last beat of the bar, the hand does not stop.</p>
+${key('One progression, one strum, until the change is clean. Then the next.')}
+${tip('Pick a progression, strum two rounds and record yourself.')}
 ` },
 ];

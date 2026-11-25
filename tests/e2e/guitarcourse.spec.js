@@ -8,7 +8,7 @@ test('гитара с нуля: путь, устройство гитары, с�
   await melete.tools({ book: { book: { lvl: 'beginner', sec: 'first' } } }); await melete.free('F', ['book']);
   await page.waitForSelector('.pane .book', { timeout: 15_000 });
   await expect(page.locator('.book .bcard[data-bch="g1"]')).toHaveCount(1);
-  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(15);
+  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(20);
   await expect(page.locator('.book .bpath.guitar')).toHaveCount(1);
   // устройство: касание части меняет подпись
   await page.locator('.book .bcard[data-bch="g2"]').click();
@@ -38,6 +38,18 @@ test('гитара с нуля: путь, устройство гитары, с�
   await page.locator('.book .bcard[data-bch="g11"]').click();
   await page.waitForSelector('.bkgbox');
   await expect(page.locator('.bkgch.on')).toHaveText('Em');
+  // связки и септаккорды
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g19"]').click();
+  await page.waitForSelector('.bkgprog');
+  await expect(page.locator('.bkgprog .bkgpc')).toHaveCount(4);
+  await page.locator('.bkgch[data-a="p:e"]').click();
+  await expect(page.locator('.bkgprog .bkgpc b').nth(2)).toHaveText('B7');
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-prog.png' });
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g18"]').click();
+  await page.waitForSelector('.bkgbox');
+  await expect(page.locator('.bkgch')).toHaveCount(6);
   // посадка и упражнения только для гитары, без выбора инструмента
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g1"]').click();

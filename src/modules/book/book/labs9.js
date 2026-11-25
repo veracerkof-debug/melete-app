@@ -14,6 +14,13 @@ export const GCH = {
   Am: { f: [-1, 0, 2, 2, 1, 0], p: [0, 0, 2, 3, 1, 0] },
   Em: { f: [0, 2, 2, 0, 0, 0], p: [0, 2, 3, 0, 0, 0] },
   Dm: { f: [-1, -1, 0, 2, 3, 1], p: [0, 0, 0, 2, 3, 1] },
+  // открытые септаккорды (доминантовые): строят напряжение, «просятся» в следующий аккорд
+  E7: { f: [0, 2, 0, 1, 0, 0], p: [0, 2, 0, 1, 0, 0] },
+  A7: { f: [-1, 0, 2, 0, 2, 0], p: [0, 0, 2, 0, 3, 0] },
+  D7: { f: [-1, -1, 0, 2, 1, 2], p: [0, 0, 0, 2, 1, 3] },
+  G7: { f: [3, 2, 0, 0, 0, 1], p: [3, 2, 0, 0, 0, 1] },
+  C7: { f: [-1, 3, 2, 3, 1, 0], p: [0, 3, 2, 4, 1, 0] },
+  B7: { f: [-1, 2, 1, 2, 0, 2], p: [0, 2, 1, 3, 0, 4] },
 };
 export const midisOf = (name) => GCH[name].f.map((f, i) => (f < 0 ? null : OPEN[i] + f)).filter((m) => m != null);
 
@@ -100,6 +107,9 @@ export function guitarLabs({ T, snd }) {
   LABS.gbox = boxLab(MAJ);
   LABS.gboxg = boxLab(MAJ, 'G');
   LABS.gboxd = boxLab(MAJ, 'D');
+  LABS.gboxa = boxLab(MAJ, 'A');
+  LABS.gboxe = boxLab(MAJ, 'E');
+  LABS.gboxs = boxLab(['E7', 'A7', 'D7', 'G7', 'C7', 'B7']);
   const MIN = ['Am', 'Em', 'Dm'];
   LABS.gboxm = boxLab(MIN);
   LABS.gboxem = boxLab(MIN, 'Em');
@@ -132,5 +142,27 @@ export function guitarLabs({ T, snd }) {
   LABS.gstrum = strumLab('q', 'Am');
   LABS.gstrume = strumLab('e', 'Am');
   LABS.gstrumf = strumLab('f', 'C');
+
+  // Связки аккордов: готовые последовательности открытых аккордов; схемы всех аккордов связки рядом и «Послушать»
+  const PROG = { g: ['G', 'C', 'D', 'G'], d: ['D', 'G', 'A', 'D'], a: ['A', 'D', 'E', 'A'], e: ['E', 'A', 'B7', 'E'], pop: ['G', 'D', 'Em', 'C'], min: ['Am', 'Dm', 'E', 'Am'] };
+  const ROMAN = { g: 'I – IV – V – I', d: 'I – IV – V – I', a: 'I – IV – V – I', e: 'I – IV – V – I', pop: 'I – V – vi – IV', min: 'i – iv – V – i' };
+  const progLab = (start) => ({
+    st: { p: start },
+    render(s) {
+      const ch = PROG[s.p];
+      return '<div class="bkgrow">' + Object.keys(PROG).map((k) => '<button type="button" class="bkgch' + (k === s.p ? ' on' : '') + '" data-a="p:' + k + '" aria-pressed="' + (k === s.p) + '">' + T('gp.prog.' + k) + '</button>').join('') + '</div>' +
+        '<div class="bkgprog">' + ch.map((n, i) => '<div class="bkgpc"><b>' + n + '</b>' + chordBoxSVG(n, T('gp.box.aria', { n })) + '<i>' + ROMAN[s.p].split(' – ')[i] + '</i></div>').join('') + '</div>' +
+        '<p class="bkhint">' + T('gp.prog.hint', { r: ROMAN[s.p] }) + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
+    },
+    on(s, a) {
+      if (a.startsWith('p:') && PROG[a.slice(2)]) { s.p = a.slice(2); return; }
+      if (a !== 'hear') return false;
+      const list = [];
+      PROG[s.p].forEach((n, i) => midisOf(n).forEach((m, k) => list.push([i * 1.6 + k * 0.03, [m], 1.5])));
+      snd.hits(list); return false;
+    },
+  });
+  LABS.gprog = progLab('g');
+  LABS.gprogp = progLab('pop');
   return LABS;
 }
