@@ -56,6 +56,7 @@ import { setlistsOf } from '../guest.js';
 import { WEB } from '../platform.js';
 import { studentHTML, studentClick } from './studentpage.js';
 import { classHTML, classClick } from './classpage.js';
+import { normHTML, normClick, normChange } from './bibleread.js';
 import { studentOn } from '../student.js';
 import { scanQR, parsePair, pairPayload, qrHTML } from './qrscan.js';
 
@@ -285,6 +286,7 @@ function bibleHTML(app) {
       '<button class="cell act" data-bplannew>' + t('bplan.new') + '</button>' + '</div>' +
     '<div class="group"><div class="cell"><span class="grow">' + t('church.remind') + '</span>' + psw('brem', !!(st.bible && st.bible.remind && st.bible.remind.on), t('church.remind')) + '</div>' +
       (st.bible && st.bible.remind && st.bible.remind.on ? '<div class="cell"><span class="grow">' + t('church.remindAt') + '</span><input type="time" class="inp num" data-bremt value="' + esc(st.bible.remind.time || '07:30') + '" step="900" aria-label="' + esc(t('church.remindAt')) + '"></div>' : '') + '</div>' +
+    normHTML(app) +
     '<p class="ftr">' + t('church.hintOn') + (st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
     '<div class="hdr">' + t('bset.view') + '</div><div class="group"><div class="cell"><span class="grow">' + t('bset.barTop') + '</span><label class="sw"><input type="checkbox" data-bbartop' + (top ? ' checked' : '') + ' aria-label="' + esc(t('bset.barTop')) + '"><i></i></label></div></div>' +
     '<p class="ftr">' + t('bset.hint') + '</p>';
@@ -816,6 +818,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="pclose"]')) { panel.close(); return; }
       if (studentClick(app, e.target, () => { render(); onChange(); })) return;
       if (classClick(app, e.target, () => { render(); onChange(); })) return;
+      if (page === 'bible' && normClick(app, e.target, () => { render(); onChange(); })) return;
       if ((b = g('[data-dockup]'))) { const st = app.store.state.settings, l = dockGroups(st), i = l.indexOf(b.dataset.dockup); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; st.dockOrder = l; app.store.settingsChanged(); render(); } return; }
       if (g('[data-dockreset]')) { delete app.store.state.settings.dockOrder; app.store.settingsChanged(); render(); return; }
       if ((b = g('[data-tabmv]'))) { if (editTabs(app.store, tabIds(app.store.state.settings), b.dataset.tabId, b.dataset.tabmv)) { render(); onChange(); } return; }
@@ -1011,6 +1014,7 @@ export function createPanel(app, onChange) {
       app.shellAct(e); // общие действия: ударный режим, правовые тексты
     });
     layer.addEventListener('change', (e) => {
+      if (page === 'bible' && normChange(app, e, () => { render(); onChange(); })) return;
       const d = e.target.dataset;
       if (d.feat) { setFeature(app.store, d.feat, e.target.checked); onChange(); if (d.feat === 'quote') render(); return; }
       // наборы слов Мелеты: хотя бы один остаётся

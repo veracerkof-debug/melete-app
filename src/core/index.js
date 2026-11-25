@@ -59,7 +59,8 @@ import { createMidi } from './midi.js';
 import { createSyncServer, createSyncClient } from './sync.js';
 import { createGuestServer } from './guest.js';
 import { isDesktop } from './desktop.js';
-import { reschedule, rescheduleEvents, rescheduleBible, notifyNow } from './reminders.js';
+import { reschedule, rescheduleEvents, rescheduleBible, rescheduleBibleNotes, notifyNow } from './reminders.js';
+import { planNotes, normStatus } from './readnorm.js';
 import { createTogether } from './together/index.js';
 import { ensureCal, eventReminders, liveEvents, kindOf } from './calendar.js';
 import { remindText, remindCtx } from './remindtexts.js';
@@ -280,12 +281,16 @@ export function boot(root) {
   store.subscribe(evSync);
   evSync();
   // Чтение Библии: утреннее напоминание (церковный режим); касание открывает Библию на месте остановки
-  let bibSig = '', bibT = 0;
+  let bibSig = '', bibNSig = '', bibT = 0;
   const bibSync = () => {
     clearTimeout(bibT);
     bibT = setTimeout(() => {
       const s = store.state.settings, r = s.church && s.bible && s.bible.remind && s.bible.remind.on ? s.bible.remind : null;
       const rd = r && s.bible.plan ? readingFor(s.bible, Date.now()) : null;
+      // свои напоминания (readnorm.js): их план зависит ещё и от того, выполнена ли норма дня
+      const nst = s.church && s.bible ? normStatus(s.bible, store.sessions(), Date.now()) : null, nts = s.church && s.bible && Array.isArray(s.bible.notes) && s.bible.notes.length ? planNotes(s.bible, nst, Date.now()) : [];
+      const nsig = JSON.stringify([nts.map((x) => [x.ts, x.text]), getLang()]);
+      if (nsig !== bibNSig) { bibNSig = nsig; rescheduleBibleNotes(nts.map((x) => ({ ts: x.ts, title: x.again ? t('bn.again') : t('church.remindTitle'), body: x.text || t('church.remindBody') })), 'Melete · ' + t('church.title')); }
       const sig = JSON.stringify([r, rd && rd.keys, getLang()]);
       if (sig === bibSig) return;
       bibSig = sig;

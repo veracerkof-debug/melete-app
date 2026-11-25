@@ -239,6 +239,25 @@ export async function notifyNow({ title, body, extra, channel }) {
   } catch (e) { log('remind', 'уведомление не показалось: ' + errText(e), 'e'); return false; }
 }
 
+// Свои напоминания о чтении (readnorm.js: planNotes): [{ ts, title, body }]; номера 7500…7569 — по десять на день, неделя вперёд.
+// Касание открывает Библию. Пустой список — все прежние отменяются.
+const BN_CH = 'melete-bible-notes', BN0 = 7500, BN_N = 70;
+export async function rescheduleBibleNotes(items, channelName = 'Melete') {
+  const { P } = await plugin();
+  if (!P) return 0;
+  try {
+    await P.cancel({ notifications: Array.from({ length: BN_N }, (_, i) => ({ id: BN0 + i })) });
+    const list = (items || []).slice(0, BN_N);
+    if (!list.length) return 0;
+    if (!(await P.checkPermissions().then((p) => p.display === 'granted').catch(() => false))) { log('remind', 'Библия: свои напоминания — уведомления не разрешены', 'w'); return 0; }
+    if (Capacitor.getPlatform() === 'android') await P.createChannel({ id: BN_CH, name: channelName, importance: 4, visibility: 1, vibration: false }).catch(() => {});
+    const exact = await exactAllowed();
+    await P.schedule({ notifications: list.map((x, i) => ({ id: BN0 + i, ...note({ title: x.title, body: x.body }), schedule: { at: new Date(x.ts), allowWhileIdle: true }, channelId: BN_CH, autoCancel: true, isExactNotification: exact, extra: { go: 'bible' } })) });
+    log('remind', 'Библия: своих напоминаний запланировано ' + list.length);
+    return list.length;
+  } catch (e) { log('remind', 'Библия: свои напоминания не запланировались: ' + errText(e), 'e'); return 0; }
+}
+
 // Ближайшее запланированное напоминание о практике (для строки в настройках): время или null
 export async function remindNext() {
   const { P } = await plugin();

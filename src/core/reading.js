@@ -3,6 +3,7 @@
 // в общих данных, поэтому попадает в резервную копию. Ритм, как у практики, недельный: пропущенный день
 // не «сгорает», чтения просто ждут.
 import { BOOKS, ALL } from './bible.js';
+import { normReading, normStatus, normOn } from './readnorm.js';
 
 const chaptersOf = (codes) => BOOKS.filter((b) => codes.includes(b.code)).flatMap((b) => Array.from({ length: b.chapters }, (_, k) => b.code + '.' + (k + 1)));
 const OT = ALL.filter((k) => !BOOKS.find((b) => b.code === k.split('.')[0]).nt);
@@ -90,7 +91,9 @@ export function createBible(store) {
     mark(k, on) { const r = (st().read ??= {}); if (on) r[k] = Date.now(); else delete r[k]; store.settingsChanged(); },
     pos: () => st().pos,
     setPos(p) { st().pos = p; store.persist(); }, // место чтения — без перерисовки приложения
-    today: (date) => readingFor(st(), date),
+    // чтение дня: по плану; плана нет, но включена норма — по норме (только для сегодняшнего дня)
+    today: (date) => readingFor(st(), date) || (normOn(st()) && dayKeyOf(date || Date.now()) === dayKeyOf(Date.now()) ? normReading(st(), store.sessions ? store.sessions() : [], Date.now()) : null),
+    norm: () => normStatus(st(), store.sessions ? store.sessions() : [], Date.now()),
     week: () => weekReading(st()),
     setPlan(id, startKey) { const b = st(); b.plan = planOf(b, id) ? id : null; b.start = b.plan ? startKey : null; store.settingsChanged(); },
     plan: () => planOf(st()),

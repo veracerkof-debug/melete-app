@@ -137,9 +137,12 @@ function readingCard(app, mono = false) {
   // план не выбран (или закончился) — приглашение выбрать готовый или свой
   if (!r) return '<button class="' + (mono ? 'mread' : 'hread') + '" data-pp="feat"><span class="hrt">' + t('read.title') + '</span><span class="hrr">' + t('read.noPlan') + '</span><span class="hrs">' + t('read.pick') + '</span></button>';
   const all = r.done === r.keys.length, next = nextOf(app.bible.st(), r);
-  return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + next + '"><span class="hrt">' + t('read.today') + ' · ' + t('read.day', { d: r.day, n: r.days }) + '</span>' +
-    '<span class="hrr">' + esc(refText(r.keys)) + '</span><span class="hrs">' + (all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length })) + '</span>' +
-    '<span class="hrbar"><i style="width:' + Math.round((r.done / r.keys.length) * 100) + '%"></i></span></button>';
+  // по норме (readnorm.js): без «дня N из M»; минуты — по занятиям в Библии; свободное чтение — без списка глав
+  const nm = r.norm, status = nm ? (r.kind === 'min' ? t('read.normMin', { done: r.min, n: r.n }) : r.status.todayDone ? t('read.done') : t('read.progress', { done: r.status.today, n: r.n })) : all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length });
+  const frac = nm ? Math.min(1, (r.kind === 'min' ? r.min : r.status.today) / r.n) : r.keys.length ? r.done / r.keys.length : 0;
+  return '<button class="' + (mono ? 'mread' : 'hread') + '" data-act="bible" data-key="' + (next || '') + '"><span class="hrt">' + t('read.today') + (nm ? '' : ' · ' + t('read.day', { d: r.day, n: r.days })) + '</span>' +
+    '<span class="hrr">' + esc(r.keys.length ? refText(r.keys) : t('read.free')) + '</span><span class="hrs">' + status + '</span>' +
+    '<span class="hrbar"><i style="width:' + Math.round(frac * 100) + '%"></i></span></button>';
 }
 // Мелета (маскот) и слово дня из выбранных наборов (история музыканта, слова мастеров, стих, цитатник) — одно на день.
 // Лицо — по состоянию занятий (src/core/mascot.js); касание — реакция (src/ui/mascot.js), слово не меняется
