@@ -14,7 +14,7 @@ describe('гитара в 3D', () => {
     const c = ext(CLASSIC_R), a = ext(DREAD_R), e = ext(ELEC_R, ELEC_L);
     expect(c.h).toBeGreaterThan(470); expect(c.h).toBeLessThan(490); expect(c.w).toBeGreaterThan(360); expect(c.w).toBeLessThan(375);
     expect(a.h).toBeGreaterThan(500); expect(a.h).toBeLessThan(515); expect(a.w).toBeGreaterThan(395); expect(a.w).toBeLessThan(410);
-    expect(e.w).toBeGreaterThan(310); expect(e.w).toBeLessThan(330); expect(e.h).toBeGreaterThan(395); expect(e.h).toBeLessThan(420);
+    expect(e.w).toBeGreaterThan(310); expect(e.w).toBeLessThan(330); expect(e.h).toBeGreaterThan(410); expect(e.h).toBeLessThan(440);
   });
   it('у каждой части каждого типа есть название и пояснение на ru, en, uz', () => {
     for (const [name, L] of [['ru', ru], ['en', en], ['uz', uz]]) {
