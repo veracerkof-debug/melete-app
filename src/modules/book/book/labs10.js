@@ -1,36 +1,27 @@
-// Устройство гитары в 3D (слово автора 25.11.2026): классика, акустика, электро. Размеры — по опубликованным спецификациям и открытым
-// чертежам (мензура, ширина порожка, длина и ширины корпуса, глубина, число ладов); формы своё, чужие рисунки и знаки фирм не берутся.
-// Классика: мензура 650, корпус 480. Акустика (дредноут): мензура 645, корпус 508, дека 292/250/400. Электро: мензура 648, корпус ≈ 400×320, толщина 45.
-// Цвета — из токенов темы. three.js (MIT) грузится лениво, только в этом уроке. Тексты частей — gp.<id>.n / gp.<id>.d (+ запасные для типа).
-export const TYPES = ['classic', 'acoustic', 'electric'];
+// Устройство гитары в 3D (слово автора 25.11.2026). Модели — готовые, открытые (Sketchfab, CC BY 4.0), приведены скриптами tools/prep-*.mjs
+// к своим осям и разбиты на именованные детали: акустика «DD Acoustic Guitar» (piscopancer), электро «Electric Guitar Explorer» (Skabl; текстуры — автора приложения).
+// Оси: y — вдоль грифа к голове, x — к тонким струнам, z — вверх по деке; длина 1000 мм, начало — в центре. three.js (MIT) и модели грузятся лениво, только в этом уроке.
+// Тянуть — вращать, щипок — приблизить, касание детали — название и пояснение, «Разобрать» — детали разъезжаются. Тексты — gp.<id>.n / gp.<id>.d.
+import glbAcoustic from './assets/guitar-acoustic.glb?url';
+import glbElectric from './assets/guitar-electric.glb?url';
+import texAlbedo from './assets/electric-albedo.jpg?url';
+import texAO from './assets/electric-ao.jpg?url';
+export const TYPES = ['acoustic', 'electric'];
 export const PARTS = {
-  classic: ['head', 'pegs', 'nut', 'neck', 'fret', 'strings', 'hole', 'body', 'bridge'],
-  acoustic: ['head', 'pegs', 'nut', 'neck', 'rod', 'fret', 'strings', 'hole', 'top', 'braces', 'body', 'bridge', 'pickguard'],
-  electric: ['head', 'pegs', 'nut', 'neck', 'rod', 'fret', 'strings', 'body', 'pickguard', 'pickups', 'controls', 'bridge'],
+  acoustic: ['head', 'pegs', 'neck', 'fret', 'strings', 'hole', 'top', 'body', 'bridge', 'pickguard'],
+  electric: ['head', 'pegs', 'neck', 'fret', 'strings', 'body', 'pickguard', 'pickups', 'controls', 'bridge'],
 };
 // Особые тексты: у типа — свой ключ вместо общего
 const ALT = { acoustic: { body: 'sides', bridge: 'bridge.a', strings: 'strings.s' }, electric: { body: 'body.e', bridge: 'bridge.e', strings: 'strings.s' } };
 export const partKey = (type, id) => 'gp.' + ((ALT[type] && ALT[type][id]) || id);
 // Виды: [наклон, поворот] в радианах
-export const VIEWS = [[0.22, -0.55], [0, 0], [0, Math.PI / 2], [0.2, Math.PI + 0.5], [1.2, 0]];
-export const SPEC = {
-  classic: { S: 650, J: 325, nutW: 52, endW: 62, endAt: 325, frets: 19, zfj: 6, zs: 12.5, nutP: 8.4, brP: 11.6, brk: -0.26, mid: -307, len: 1000 },
-  acoustic: { S: 645, J: 358, nutW: 43, endW: 56, endAt: 358, frets: 20, zfj: 6.5, zs: 12, nutP: 7.2, brP: 10.8, brk: -0.24, mid: -340, len: 1060 },
-  electric: { S: 648, J: 391, nutW: 42, endW: 56, endAt: 466, frets: 22, zfj: 5, zs: 14, nutP: 7, brP: 10.5, brk: -0.1, mid: -283, len: 990 },
+export const VIEWS = [[0.2, -0.5], [0, 0], [0, Math.PI / 2], [0.2, Math.PI + 0.5], [1.2, 0]];
+export const FILES = { acoustic: glbAcoustic, electric: glbElectric };
+// Разнос деталей при «Разобрать», мм (x — вбок, y — по грифу к голове, z — к зрителю)
+export const OFFS = {
+  acoustic: { top: [0, 0, 80], body: [0, 0, -70], hole: [0, 0, 130], pickguard: [0, 0, 160], bridge: [0, 0, 190], strings: [0, 0, 240], neck: [0, 70, 20], fret: [0, 70, 100], head: [0, 170, -40], pegs: [0, 170, 70] },
+  electric: { body: [0, 0, -40], pickguard: [0, 0, 60], pickups: [0, 0, 110], controls: [0, 0, 130], bridge: [0, 0, 150], strings: [0, 0, 210], neck: [0, 70, 0], fret: [0, 70, 80], head: [0, 170, -50], pegs: [0, 170, 70] },
 };
-// Контуры корпуса: [x — половина ширины, yd — вниз от верха], мм
-export const CLASSIC_R = [[0, 0], [40, 2], [75, 12], [110, 35], [132, 75], [140, 120], [133, 165], [118, 205], [112, 240], [122, 275], [150, 315], [175, 355], [183, 400], [165, 445], [110, 473], [0, 480]];
-export const DREAD_R = [[0, 0], [45, 3], [90, 15], [125, 40], [144, 85], [146, 130], [135, 170], [124, 205], [122, 235], [132, 270], [160, 315], [190, 360], [200, 410], [185, 465], [120, 500], [0, 508]];
-export const DREAD_CUT_R = [[0, 0], [34, 4], [56, 24], [66, 54], [80, 86], [106, 114], [132, 138], [140, 165], [132, 195], [124, 215], [122, 235], [132, 270], [160, 315], [190, 360], [200, 410], [185, 465], [120, 500], [0, 508]];
-export const ELEC_R = [[0, 40], [30, 36], [66, 18], [92, 2], [112, -6], [124, 6], [122, 36], [114, 66], [118, 98], [140, 128], [158, 170], [163, 225], [156, 285], [132, 335], [88, 372], [0, 386]];
-export const ELEC_L = [[-30, 36], [-70, 12], [-112, -28], [-138, -42], [-148, -24], [-138, 14], [-122, 56], [-114, 92], [-126, 122], [-152, 158], [-162, 208], [-160, 262], [-146, 312], [-118, 350], [-84, 372]];
-export const fretPos = (n, S = 650) => S * (1 - Math.pow(2, -n / 12)); // расстояние лада от порожка
-export const widthAt = (sp, d) => sp.nutW + (sp.endW - sp.nutW) * d / sp.endAt;
-export function outlinePts(THREE, top, R, Lmid, seg = 150) {
-  const mir = Lmid || R.slice(1, -1).map(([x, y]) => [-x, y]);
-  const pts = [...R, ...mir.slice().reverse()].map(([x, yd]) => new THREE.Vector2(x, -(top + yd)));
-  return new THREE.SplineCurve(pts).getPoints(seg);
-}
 export const hasWebGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } };
 
 // Текстуры дерева: цвет, волокна и (для декы электро/акустики) переход «санбёрст» запекаются в холст.
@@ -68,145 +59,39 @@ const WOOD = {
 };
 const CREAM = [0.95, 0.92, 0.82], BLACK = [0.07, 0.07, 0.08], CHROME = [0.82, 0.83, 0.85];
 
-export function buildGuitar(THREE, _C, type) {
-  const sp = SPEC[type], S = sp.S, J = sp.J, g = new THREE.Group(), set = [], reps = {}, textures = [], materials = [], V3 = THREE.Vector3;
-  const mat = (col, o = {}) => { const m = new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(col[0], col[1], col[2], THREE.SRGBColorSpace), roughness: 0.5, metalness: 0.04, ...o }); materials.push(m); return m; };
-  const wmat = (w, o = {}, tex = {}) => { const t = woodTex(THREE, { ...w, ...tex, seed: ++seedN }); textures.push(t); const m = new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.5, clearcoat: o.gloss ? 0.85 : 0.12, clearcoatRoughness: 0.18, metalness: 0, ...o.p }); materials.push(m); return m; };
-  let seedN = type.length;
-  const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
-  const add = (id, mesh, off = [0, 0, 0], rep = false) => { mesh.userData.part = id; mesh.userData.off = off; g.add(mesh); set.push(mesh); if (rep || !reps[id]) reps[id] = mesh; return mesh; };
-  const ext = (shape, depth, bevel = 0.8, seg = 2) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelSize: bevel, bevelThickness: bevel, bevelSegments: seg, curveSegments: 28 });
-  const trap = (w0, y0, w1, y1) => { const s = new THREE.Shape(); s.moveTo(-w0 / 2, y0); s.lineTo(w0 / 2, y0); s.lineTo(w1 / 2, y1); s.lineTo(-w1 / 2, y1); s.closePath(); return s; };
-  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-  const cyl = (r, h, m, seg = 16) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
-  const scaled = (pts, k) => { const c = pts.reduce((a, p) => a.add(p), new THREE.Vector2()).multiplyScalar(1 / pts.length); return pts.map((p) => p.clone().sub(c).multiplyScalar(k).add(c)); };
-  const ring = (pts, k, depth, m, bevel = 0) => { const sh = new THREE.Shape(pts); sh.holes.push(new THREE.Path(scaled(pts, k).reverse())); return new THREE.Mesh(ext(sh, depth, bevel), m); };
-  const bbox = (pts) => { const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]; };
-  const metal = mat(CHROME, { metalness: 0.95, roughness: 0.22 }), pale = mat(CREAM, { roughness: 0.4 }), blk = mat(BLACK, { roughness: 0.35 }), ink = mat([0.02, 0.02, 0.02], { roughness: 1 });
-  const neckW = type === 'classic' ? WOOD.cedar : type === 'acoustic' ? WOOD.mahogany : WOOD.maple;
-  const neckM = wmat(neckW, { gloss: type === 'electric' }, { tile: [60, 420] }), headM = wmat(type === 'electric' ? WOOD.maple : WOOD.ebony, { gloss: true }, { tile: [70, 300] });
-  const fbM = wmat(type === 'electric' ? WOOD.rosewood : WOOD.ebony, {}, { tile: [60, 400] });
-  // — геометрия грифа: наклон назад так, чтобы струна шла над ладами с зазором
-  const fbTop = sp.zfj - 1.7, woodTop = fbTop - 5, zj = sp.zfj + 2.2, zn = (zj - sp.zs * J / S) / (1 - J / S), ang = ((zn - 1.2) - sp.zfj) / J;
-  const tp = (x, y, z) => { const dy = y + J, cs = Math.cos(ang), sn = Math.sin(ang); return new V3(x, -J + dy * cs - z * sn, dy * sn + z * cs); };
-  const N = (m) => { m.position.copy(tp(m.position.x, m.position.y, m.position.z)); m.rotation.x += ang; return m; };
-  const FBL = fretPos(sp.frets, S) + 12, NL = type === 'classic' ? 440 : FBL + 4;
-  add('neck', N(at(new THREE.Mesh(ext(trap(widthAt(sp, 0) - 2, 0, widthAt(sp, NL) - 2, -NL), 20, 1.4, 3), neckM), 0, 0, woodTop - 20)), [0, 45, 0], true);
-  add('neck', N(at(new THREE.Mesh(ext(trap(widthAt(sp, 0), 0, widthAt(sp, FBL), -FBL), 5, 0.3), fbM), 0, -2, fbTop - 5)), [0, 45, 55]);
-  for (let n = 1; n <= sp.frets; n++) { const y = -fretPos(n, S); add('fret', N(at(box(widthAt(sp, -y) + 1, 1.4, 2.4, metal), 0, y, fbTop + 0.5)), [0, 45, 115], n === 12); }
-  if (type !== 'classic') {
-    [3, 5, 7, 9, 12, 15, 17, 19, 21].filter((n) => n <= sp.frets).forEach((n) => {
-      const y = -(fretPos(n - 1, S) + fretPos(n, S)) / 2, xs = n === 12 ? [-8, 8] : [0];
-      xs.forEach((x) => { const d = cyl(2.3, 0.8, pale, 20); d.rotation.x = Math.PI / 2; add('neck', N(at(d, x, y, fbTop + 0.2)), [0, 45, 60]); });
-    });
-  }
-  add('nut', N(at(box(widthAt(sp, 0) + 1, 4, 6, pale), 0, 0, fbTop + 1)), [0, 55, 95]);
-  // — голова и колки (в своей системе: y вверх по голове)
-  const headG = new THREE.Group(); headG.position.copy(tp(0, 0, 0)); headG.rotation.x = ang + sp.brk; g.add(headG);
-  const pegG = new THREE.Group(); pegG.position.copy(headG.position); pegG.rotation.x = headG.rotation.x; g.add(pegG);
-  const hs = new THREE.Shape();
-  if (type === 'classic') {
-    hs.moveTo(-38, 0); hs.lineTo(38, 0); hs.bezierCurveTo(44, 60, 46, 110, 47, 150); hs.bezierCurveTo(48, 186, 30, 194, 0, 194); hs.bezierCurveTo(-30, 194, -48, 186, -47, 150); hs.bezierCurveTo(-46, 110, -44, 60, -38, 0);
-    [-1, 1].forEach((sd) => { const h = new THREE.Path(); h.moveTo(sd * 17, 30); h.lineTo(sd * 31, 30); h.lineTo(sd * 31, 165); h.lineTo(sd * 17, 165); h.closePath(); hs.holes.push(h); });
-  } else if (type === 'acoustic') {
-    hs.moveTo(-26, 0); hs.lineTo(26, 0); hs.bezierCurveTo(36, 40, 52, 90, 54, 150); hs.bezierCurveTo(54, 184, 36, 198, 12, 196); hs.bezierCurveTo(4, 205, -4, 205, -12, 196); hs.bezierCurveTo(-36, 198, -54, 184, -54, 150); hs.bezierCurveTo(-52, 90, -36, 40, -26, 0);
+
+const cache = {};
+async function loadGLB(type) {
+  if (!cache[type]) cache[type] = (async () => { const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'); return (await new GLTFLoader().loadAsync(FILES[type])).scene; })();
+  return cache[type];
+}
+// Детали из GLB в свои материалы. Акустика: цвет по материалу исходной модели (суффикс .N в имени); электро: текстуры автора + карта затенения.
+export async function buildGuitar(THREE, type) {
+  const scene = await loadGLB(type), g = new THREE.Group(), set = [], reps = {}, materials = [], textures = [], OFF = OFFS[type];
+  const col = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.SRGBColorSpace);
+  const std = (c, o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: col(c), roughness: 0.45, metalness: 0, ...o }); materials.push(m); return m; };
+  const wood = (w, gloss, tex) => { const t = woodTex(THREE, { ...w, ...tex, seed: textures.length + 3 }); textures.push(t); return std([1, 1, 1], { map: t, roughness: 0.35, clearcoat: gloss ? 0.85 : 0.1, clearcoatRoughness: 0.18 }); };
+  let byPart;
+  if (type === 'acoustic') {
+    const chrome = { metalness: 0.95, roughness: 0.22 };
+    const M = { 0: wood({ ...WOOD.spruce, amp: 0.3 }, true, { box: [-190, 190, -500, -10], sun: WOOD.sunTop }), 1: wood(WOOD.mahogany, true, { tile: [90, 420] }), 2: std([0.05, 0.05, 0.055], { roughness: 0.3, clearcoat: 0.6 }),
+      3: std(CREAM, { roughness: 0.4 }), 4: std(CHROME, chrome), 5: std([0.93, 0.91, 0.84], { roughness: 0.3 }), 6: std([0.72, 0.5, 0.28], { metalness: 0.8, roughness: 0.3 }), 7: std([0.03, 0.03, 0.035], { roughness: 0.2, clearcoat: 0.9 }) };
+    byPart = (name) => M[+name.split('_')[1]] || M[1];
   } else {
-    hs.moveTo(-21, 0); hs.lineTo(21, 0); hs.bezierCurveTo(24, 50, 28, 110, 36, 160); hs.bezierCurveTo(44, 192, 38, 212, 6, 214); hs.bezierCurveTo(-12, 214, -22, 204, -25, 176); hs.bezierCurveTo(-26, 110, -22, 50, -21, 0);
+    const load = (u) => new Promise((res) => new THREE.TextureLoader().load(u, res)), [alb, ao] = await Promise.all([load(texAlbedo), load(texAO)]);
+    alb.colorSpace = THREE.SRGBColorSpace; alb.anisotropy = 4; textures.push(alb, ao);
+    const metalP = new Set(['bridge', 'strings', 'fret', 'pegs']);
+    byPart = (name) => { const p = name.split('_')[0]; return std([1, 1, 1], { map: alb, aoMap: ao, aoMapIntensity: 0.9, roughness: p === 'body' ? 0.3 : 0.5, metalness: metalP.has(p) ? 0.85 : 0.05, clearcoat: p === 'body' ? 0.8 : 0 }); };
   }
-  const hm = at(new THREE.Mesh(ext(hs, 14, 0.9, 3), headM), 0, 0, woodTop - 14); hm.userData = { part: 'head', off: [0, 150, -70] }; headG.add(hm); set.push(hm); reps.head = hm;
-  const hd = (m, x, y, z, off) => { m.position.set(x, y, z); m.userData = { part: 'head', off }; headG.add(m); set.push(m); return m; };
-  if (type === 'acoustic') { const inl = new THREE.Mesh(new THREE.CircleGeometry(11, 4), pale); inl.rotation.z = Math.PI / 4; hd(inl, 0, 170, woodTop + 0.35, [0, 150, -70]); }
-  const peg = (m, x, y, z) => { m.position.set(x, y, z); m.userData = { part: 'pegs', off: [0, 150, 70] }; pegG.add(m); set.push(m); if (!reps.pegs) reps.pegs = m; return m; };
-  const knob = mat(type === 'classic' ? CREAM : type === 'acoustic' ? CHROME : [0.9, 0.88, 0.8], type === 'acoustic' ? { metalness: 0.9, roughness: 0.25 } : { roughness: 0.3 });
-  if (type === 'classic') {
-    [-1, 1].forEach((sd) => [55, 100, 145].forEach((y) => {
-      const sh = cyl(2.2, 52, metal, 12); sh.rotation.z = Math.PI / 2; peg(sh, sd * 38, y, woodTop - 7);
-      const ro = cyl(4.6, 12, metal); ro.rotation.z = Math.PI / 2; peg(ro, sd * 24, y, woodTop - 7);
-      peg(box(7, 22, 13, knob), sd * 66, y, woodTop - 7);
-      peg(box(8, 14, 2, metal), sd * 49, y, woodTop + 0.6);
-    }));
-  } else if (type === 'acoustic') {
-    [-1, 1].forEach((sd) => [48, 92, 136].forEach((y) => {
-      peg(cyl(4, 22, metal), sd * 33, y, woodTop - 2);
-      const sh = cyl(1.6, 24, metal, 10); sh.rotation.z = Math.PI / 2; peg(sh, sd * 46, y, woodTop - 7);
-      peg(box(5, 18, 9, knob), sd * 60, y, woodTop - 7);
-      peg(cyl(6, 1.2, metal, 20), sd * 33, y, woodTop + 0.8).rotation.x = Math.PI / 2;
-    }));
-  } else {
-    [0, 1, 2, 3, 4, 5].forEach((i) => {
-      const y = 38 + i * 28, ex = 21 + (36 - 21) * (y / 190);
-      peg(cyl(5, 20, metal), ex - 11, y, woodTop - 2);
-      const sh = cyl(1.5, 22, metal, 10); sh.rotation.z = Math.PI / 2; peg(sh, ex + 2, y, woodTop - 7);
-      peg(box(5, 16, 9, metal), ex + 14, y, woodTop - 7);
-    });
-  }
-  if (type !== 'classic') {
-    add('rod', N(at(box(4.5, NL - 8, 4, metal), 0, -NL / 2, woodTop - 8)), [0, 30, -90], true);
-    hd(box(type === 'acoustic' ? 22 : 18, 34, 1.4, blk), 0, 30, woodTop + 0.7, [0, 150, 150]).userData.part = 'rod';
-  }
-  // — струны
-  const gauge = type === 'classic' ? [1.5, 1.3, 1.1, 0.8, 0.7, 0.6] : [1.15, 0.95, 0.75, 0.55, 0.42, 0.32];
-  for (let i = 0; i < 6; i++) {
-    const a = tp(-sp.nutP * 2.5 + i * sp.nutP, 0, fbTop + 3.4), b = new V3(-sp.brP * 2.5 + i * sp.brP, -S, sp.zs + 0.4), d = b.clone().sub(a), wound = i < 3;
-    const col = type === 'classic' ? (wound ? [0.8, 0.77, 0.72] : [0.93, 0.93, 0.9]) : (wound ? [0.72, 0.5, 0.28] : CHROME);
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(gauge[i], gauge[i], d.length(), 8), mat(col, { roughness: 0.3, metalness: type === 'classic' && !wound ? 0 : 0.8 }));
-    m.position.copy(a.clone().add(b).multiplyScalar(0.5)); m.quaternion.setFromUnitVectors(new V3(0, 1, 0), d.normalize());
-    add('strings', m, [0, 0, 200], i === 2);
-  }
-  // — корпус
-  const bodyTop = J, dk = mat([0.1, 0.06, 0.05], { roughness: 0.35 });
-  if (type === 'classic' || type === 'acoustic') {
-    const dd = type === 'classic', O = dd ? outlinePts(THREE, bodyTop, CLASSIC_R) : outlinePts(THREE, bodyTop, DREAD_CUT_R, DREAD_R.slice(1, -1).map(([x, y]) => [-x, y])), dep = dd ? 95 : 108, th = 3.2, cy = -bodyTop - (dd ? 165 : 150), hr = dd ? 43 : 50, bb = bbox(O);
-    const topS = new THREE.Shape(O), hole = new THREE.Path(); hole.absarc(0, cy, hr, 0, Math.PI * 2, true); topS.holes.push(hole);
-    const topM = wmat(WOOD.spruce, { gloss: !dd }, dd ? { box: bb, amp: 0.3 } : { box: bb, sun: WOOD.sunTop, amp: 0.3 });
-    const sideM = wmat(dd ? WOOD.rosewood : WOOD.mahogany, { gloss: true }, { tile: [140, 260] });
-    add('top', at(new THREE.Mesh(ext(topS, th, 0.3), topM), 0, 0, -th), dd ? [0, 0, 55] : [0, 0, 70], true);
-    add('body', at(ring(O, 0.975, dep - 2 * th, sideM), 0, 0, -dep + th), dd ? [0, 0, -45] : [0, 0, -75], true);
-    add('body', at(new THREE.Mesh(ext(new THREE.Shape(O), th, 0.3), sideM), 0, 0, -dep), dd ? [0, 0, -135] : [0, 0, -150]);
-    // кант и вставка: кремовый кант с тёмной линией
-    add('top', at(ring(O, 0.988, 0.9, pale), 0, 0, 0), dd ? [0, 0, 55] : [0, 0, 70]); add('top', at(ring(scaled(O, 0.988), 0.992, 0.95, dk), 0, 0, 0.05), dd ? [0, 0, 55] : [0, 0, 70]);
-    add('body', at(ring(O, 0.988, 0.9, pale), 0, 0, -dep - 0.9), dd ? [0, 0, -135] : [0, 0, -150]);
-    if (!dd) add('body', at(cyl(4, 8, metal, 16), 0, -bodyTop - 508 + 1, -dep / 2), [0, -40, -150]).rotation.z = 0;
-    const z = dd ? 110 : 125;
-    [[hr, hr + 3, dk], [hr + 3, hr + 6, pale], [hr + 6, hr + 8, dk], [hr + 8, hr + 12, mat([0.8, 0.62, 0.32], { roughness: 0.5 })], [hr + 12, hr + 14, dk]].forEach(([a, b, m], i) => add('hole', at(new THREE.Mesh(new THREE.RingGeometry(a, b, 72), m), 0, cy, 0.25 + i * 0.02), [0, 0, z], i === 0));
-    add('hole', at(new THREE.Mesh(new THREE.CircleGeometry(hr + 14, 48), ink), 0, cy, -dep + th + 0.5), [0, 0, dd ? 0 : -150]);
-    if (!dd) { // пружины: X-образные, поперечные, кольцо у отверстия
-      const wd = wmat(WOOD.spruce, {}, { tile: [60, 200] }), bar = (x1, y1, x2, y2, w, h) => { const len = Math.hypot(x2 - x1, y2 - y1), m = box(len, w, h, wd); m.position.set((x1 + x2) / 2, -bodyTop - (y1 + y2) / 2, -th - h / 2); m.rotation.z = Math.atan2(-(y2 - y1), x2 - x1); return add('braces', m, [0, 0, 25]); };
-      bar(-108, 100, 108, 330, 14, 8); bar(96, 104, -108, 330, 14, 8); bar(-40, 345, -115, 440, 10, 6); bar(40, 345, 115, 440, 10, 6); bar(-100, 45, 45, 45, 12, 6); bar(-125, 295, 125, 295, 9, 5);
-      add('braces', at(new THREE.Mesh(new THREE.RingGeometry(hr + 2, hr + 12, 48), wd), 0, cy, -th - 0.5), [0, 0, 25]);
-      const pg = new THREE.Shape(new THREE.SplineCurve([[60, 130], [88, 124], [112, 146], [120, 190], [106, 232], [80, 248], [62, 222], [57, 170]].map(([x, yd]) => new THREE.Vector2(x, -bodyTop - yd))).getPoints(40));
-      add('pickguard', at(new THREE.Mesh(ext(pg, 0.9, 0.25), wmat({ base: [0.04, 0.04, 0.045], dark: [0, 0, 0], amp: 0.1 }, { gloss: true }, { tile: [120, 120] })), 0, 0, 0.1), [0, 0, 135], true);
-    }
-    const bw = dd ? 190 : 175, bs = new THREE.Shape(); bs.moveTo(-bw / 2, -S - 24); bs.lineTo(bw / 2, -S - 24); bs.quadraticCurveTo(bw / 2 + 10, -S - 2, bw / 2 - 14, -S + 9); bs.lineTo(-bw / 2 + 14, -S + 9); bs.quadraticCurveTo(-bw / 2 - 10, -S - 2, -bw / 2, -S - 24);
-    add('bridge', at(new THREE.Mesh(ext(bs, 7, 1, 3), wmat(WOOD.ebony, { gloss: true }, { tile: [100, 100] })), 0, 0, 0), dd ? [0, 0, 150] : [0, 0, 175], true);
-    add('bridge', at(box(dd ? 80 : 76, 3, 5.5, pale), 0, -S, 10.5), dd ? [0, 0, 160] : [0, 0, 185]);
-    if (!dd) for (let i = 0; i < 6; i++) { add('bridge', at(cyl(2.8, 9, pale, 12), -27 + i * 10.8, -S - 14, 11), [0, 0, 185]); add('bridge', at(cyl(0.9, 9.4, dk, 8), -27 + i * 10.8, -S - 14, 11.1), [0, 0, 186]); }
-    else for (let i = 0; i < 6; i++) add('bridge', at(box(3, 8, 1.4, pale), -29 + i * 11.6, -S - 15, 7.5), [0, 0, 155]);
-  } else {
-    const O = outlinePts(THREE, bodyTop, ELEC_R, ELEC_L, 190), dep = 45, bv = 6, bb = bbox(O);
-    const bodyM = wmat(WOOD.burst ? { base: [0.9, 0.62, 0.3], dark: [0.4, 0.2, 0.08] } : WOOD.maple, { gloss: true, p: { roughness: 0.25 } }, { box: bb, sun: WOOD.burst, amp: 0.2 });
-    add('body', at(new THREE.Mesh(ext(new THREE.Shape(O), dep - 2 * bv, bv, 5), bodyM), 0, 0, -dep + bv), [0, 0, -30], true);
-    const pgM = mat(CREAM, { roughness: 0.28 });
-    add('pickguard', at(new THREE.Mesh(ext(new THREE.Shape(scaled(O, 0.84)), 2, 0.4, 2), pgM), 0, 0, bv + 0.1), [0, 0, 55], true);
-    // винты накладки
-    scaled(O, 0.84).filter((_, i) => i % 15 === 3).forEach((p) => add('pickguard', at(cyl(2.2, 1, metal, 12), p.x * 0.97, p.y, bv + 2.4), [0, 0, 56]).rotation.x = Math.PI / 2);
-    [45, 92, 150].forEach((d, i) => {
-      const y = -(S - d); add('pickups', at(box(74, 19, 9, blk), 0, y, bv + 6.4), [0, 0, 105], i === 1);
-      for (let k = 0; k < 6; k++) add('pickups', at(cyl(1.9, 4, metal, 12), -26.25 + k * 10.5, y, bv + 11.4), [0, 0, 105]);
-    });
-    [[50, -bodyTop - 300], [32, -bodyTop - 335], [14, -bodyTop - 370]].forEach(([x, y], i) => {
-      const k = cyl(11, 16, blk, 28); k.rotation.x = Math.PI / 2; add('controls', at(k, x, y, bv + 10), [0, 0, 120], i === 1);
-      const cp = cyl(7, 1, metal, 24); cp.rotation.x = Math.PI / 2; add('controls', at(cp, x, y, bv + 18.2), [0, 0, 124]);
-    });
-    add('controls', at(box(34, 8, 3, metal), -58, -bodyTop - 300, bv + 3.5), [0, 0, 95]); add('controls', at(box(5, 16, 11, pale), -58, -bodyTop - 303, bv + 9), [0, 0, 120]);
-    add('controls', at(box(26, 22, 3, metal), -92, -bodyTop - 352, bv + 3.5), [0, 0, 95]); const jk = cyl(5, 8, blk, 16); jk.rotation.x = Math.PI / 2; add('controls', at(jk, -92, -bodyTop - 352, bv + 7), [0, 0, 110]);
-    add('bridge', at(box(86, 38, 3, metal), 0, -S - 6, bv + 2.2), [0, 0, 140], true);
-    for (let i = 0; i < 6; i++) { add('bridge', at(box(8.5, 20, 6, metal), -26.25 + i * 10.5, -S - 2, bv + 7.5), [0, 0, 160]); add('bridge', at(cyl(1.2, 12, metal, 8), -26.25 + i * 10.5, -S + 6, bv + 8), [0, 0, 160]); }
-    const dir = new V3(0.55, -0.75, 0.37).normalize(), arm = cyl(2.4, 120, metal, 10); arm.quaternion.setFromUnitVectors(new V3(0, 1, 0), dir); add('bridge', at(arm, 36 + dir.x * 60, -S - 24 + dir.y * 60, bv + 10 + dir.z * 60), [0, 0, 170]);
-    [[0, -bodyTop - 384], [-132, -bodyTop + 12]].forEach(([x, y]) => { const sb = cyl(5, 8, metal, 16); sb.rotation.x = Math.PI / 2; add('controls', at(sb, x, y, bv + 2), [0, 0, 100]); });
-  }
-  set.forEach((m) => { m.userData.base = m.position.clone(); if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); });
-  return { group: g, meshes: set, reps, materials, textures, sp };
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const [part] = o.name.split('_'), geo = o.geometry.clone(), mt = type === 'acoustic' ? byPart(o.name).clone() : byPart(o.name); if (type === 'acoustic') materials.push(mt);
+    if (type === 'acoustic') { const p = geo.attributes.position, uv = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i); uv[i * 2 + 1] = p.getY(i); } geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); }
+    const m = new THREE.Mesh(geo, mt); m.userData.part = part; m.userData.off = OFF[part] || [0, 0, 0]; m.userData.base = new THREE.Vector3(); geo.computeBoundingBox();
+    const sz = geo.boundingBox.getSize(new THREE.Vector3()), vol = sz.x * sz.y * sz.z;
+    m.userData.vol = vol; g.add(m); set.push(m); if (!reps[part] || vol > reps[part].userData.vol) reps[part] = m;
+  });
+  return { group: g, meshes: set, reps, materials, textures, len: 1050 };
 }
 
 // Цвет из токена темы → числа 0..1 (sRGB)
@@ -221,7 +106,7 @@ export function modelLabs({ T }) {
   const LABS = {};
   const lab = (type, id) => T(partKey(type, id) + '.n'), desc = (type, id) => T(partKey(type, id) + '.d');
   LABS.gmodel = {
-    st: { rx: VIEWS[0][0], ry: VIEWS[0][1], ex: false, sel: '', view: 0, zoom: 1, type: 'classic' },
+    st: { rx: VIEWS[0][0], ry: VIEWS[0][1], ex: false, sel: '', view: 0, zoom: 1, type: 'acoustic' },
     render(s) {
       return '<div class="gm-wrap"><div class="gm-types" role="group" aria-label="' + T('gm.types') + '">' + TYPES.map((k) => '<button type="button" class="gm-type" data-gm-type="' + k + '" aria-pressed="' + (s.type === k) + '">' + T('gm.t.' + k) + '</button>').join('') + '</div>' +
         '<div class="gm3" data-gm3 role="img" aria-label="' + T('gm.aria') + '"></div>' +
@@ -274,9 +159,13 @@ export function modelLabs({ T }) {
         const cam = new THREE.PerspectiveCamera(28, 1, 0.5, 80), ray = new THREE.Raycaster(), P = new THREE.Vector2(), tmp = new THREE.Vector3();
         let gt = null, t = s.ex ? 1 : 0, raf = 0, zoom = s.zoom, dragging = false, centers = {};
         const freeGt = () => { if (!gt) return; pivot.remove(gt.group); gt.meshes.forEach((m) => m.geometry.dispose()); gt.materials.forEach((m) => m.dispose()); gt.textures.forEach((x) => x.dispose()); gt = null; };
-        const rebuild = () => {
-          freeGt(); gt = buildGuitar(THREE, null, s.type);
-          gt.group.scale.setScalar(K); gt.group.position.y = -gt.sp.mid * K; pivot.add(gt.group);
+        let buildTok = 0;
+        const rebuild = async () => {
+          const tok = ++buildTok; let nx;
+          try { nx = await buildGuitar(THREE, s.type); } catch (e) { console.error('gm3', e && e.message); if (tok === buildTok && !dead) { root.classList.add('nogl'); root.textContent = T('gm.nogl'); } return; }
+          if (tok !== buildTok || dead) { nx.meshes.forEach((m) => m.geometry.dispose()); return; }
+          freeGt(); gt = nx;
+          gt.group.scale.setScalar(K); pivot.add(gt.group);
           dots.innerHTML = PARTS[s.type].map((id, i) => '<button type="button" class="gm-dot" data-gm-sel="' + id + '" aria-label="' + lab(s.type, id) + '">' + (i + 1) + '</button>').join('');
           centers = {}; for (const id of PARTS[s.type]) { const m = gt.reps[id]; if (m) { const b = m.geometry.boundingBox; centers[id] = [m, b.getCenter(new THREE.Vector3())]; } }
           kick();
@@ -289,7 +178,7 @@ export function modelLabs({ T }) {
           for (const m of gt.meshes) { const o = m.userData.off, b = m.userData.base; m.position.set(b.x + o[0] * t, b.y + o[1] * t, b.z + o[2] * t); }
           let busy = false; if (s.goal) { s.rx += (s.goal[0] - s.rx) * 0.12; s.ry += (s.goal[1] - s.ry) * 0.12; if (Math.abs(s.goal[0] - s.rx) + Math.abs(s.goal[1] - s.ry) < 0.004) { s.rx = s.goal[0]; s.ry = s.goal[1]; s.goal = null; } else busy = true; }
           pivot.rotation.set(s.rx, s.ry, 0);
-          const asp = cam.aspect, dist = ((gt.sp.len * K / 2) / Math.tan(14 * Math.PI / 180) * 1.08) * (1 + 0.3 * t) / Math.min(1, asp * 1.6) / zoom;
+          const asp = cam.aspect, dist = ((gt.len * K / 2) / Math.tan(14 * Math.PI / 180) * 1.08) * (1 + 0.3 * t) / Math.min(1, asp * 1.6) / zoom;
           cam.position.set(0, 0, dist); cam.lookAt(0, 0, 0);
           gt.meshes.forEach((m) => { const on = m.userData.part === s.sel, mm = m.material; if (mm.emissive) { mm.emissive.copy(C0); mm.emissiveIntensity = on ? 0.5 : 0; } });
           renderer.render(scene, cam);

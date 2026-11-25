@@ -883,6 +883,8 @@
   "legal.ruOnly": "Toʻliq matn hozircha rus tilida.",
   "lic.intro": "Ilova boshqa mualliflarning komponentlaridan foydalanadi. Ularga rahmat!",
   "lic.andContrib": "va loyiha ishtirokchilari.",
+  "lic.gm.sub": "Darslikdagi gitara modellari: akustik (DD Acoustic Guitar, muallif piscopancer) va elektro (Electric Guitar Explorer, muallif Skabl)",
+  "lic.gm.text": "Creative Commons Attribution 4.0 litsenziyasi (CC BY 4.0, creativecommons.org/licenses/by/4.0). Modellar Sketchfab’da joylashgan; qismlarga ajratilib GLB sifatida qayta saqlangan, ranglar va teksturalar ilova uchun moslangan.",
   "lic.three.sub": "Darslikdagi gitaraning hajmli modeli · versiya 0.187",
   "lic.three.text": "Copyright © 2010–2026 three.js authors. MIT litsenziyasi ostida tarqatiladi. Oʻzgartirishsiz, faqat «Gitara tuzilishi» darsida yuklanadi.",
   "lic.at.sub": "Tabulaturalarni koʻrsatish va ijro etish · versiya 1.8.4",

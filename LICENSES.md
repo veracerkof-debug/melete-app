@@ -8,6 +8,7 @@
 
 | Компонент | Назначение | Лицензия |
 |---|---|---|
+| Модели гитар: «DD Acoustic Guitar» (piscopancer) и «Electric Guitar Explorer» (Skabl), [Sketchfab](https://sketchfab.com) | 3D-модели урока «Устройство гитары»: разбиты на детали (`tools/prep-*.mjs`), сохранены в GLB, цвета и текстуры подобраны | CC BY 4.0 |
 | [three.js](https://github.com/mrdoob/three.js) 0.187 — © three.js authors | Объёмная модель гитары в учебнике (урок «Устройство гитары»), подгружается лениво, без изменений | MIT |
 | [alphaTab](https://github.com/CoderLine/alphaTab) 1.8.4 — © CoderLine (Daniel Kuschny) и участники | Отображение и воспроизведение табулатур (модуль «Табы и текст»), используется без изменений | MPL-2.0 |
 | [Tauri](https://github.com/tauri-apps/tauri) 2 (с tauri-plugin-dialog, tauri-plugin-fs, tauri-plugin-window-state, @tauri-apps/api) — © Tauri Programme within The Commons Conservancy | Окно и сохранение файлов в версии для Windows; в веб-версию и APK не входит | MIT / Apache-2.0 |

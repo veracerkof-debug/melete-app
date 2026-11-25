@@ -899,6 +899,8 @@
   "legal.ruOnly": "The full text is currently available in Russian.",
   "lic.intro": "The app uses components by other authors. Thank you!",
   "lic.andContrib": "and contributors.",
+  "lic.gm.sub": "Guitar models in the book: acoustic (DD Acoustic Guitar by piscopancer) and electric (Electric Guitar Explorer by Skabl)",
+  "lic.gm.text": "Creative Commons Attribution 4.0 license (CC BY 4.0, creativecommons.org/licenses/by/4.0). Models are hosted on Sketchfab; split into parts and re-saved as GLB, colors and textures adapted for the app.",
   "lic.three.sub": "3D guitar model in the book · version 0.187",
   "lic.three.text": "Copyright © 2010–2026 three.js authors. Distributed under the MIT License. Used unmodified, loaded only in the “Guitar anatomy” lesson.",
   "lic.at.sub": "Tab display and playback · version 1.8.4",

@@ -19,10 +19,7 @@ test('гитара с нуля: путь, устройство гитары, с�
   await expect(page.locator('[data-gm-info] b')).toContainText('Подставка');
   await page.locator('[data-gm="ex"]').click();
   await expect(page.locator('.gm3.ex')).toHaveCount(1);
-  // типы гитар: у акустики — пружины, у электро — звукосниматели
-  await page.locator('[data-gm-type="acoustic"]').click();
-  await page.locator('.gm-chip[data-gm-sel="braces"]').click();
-  await expect(page.locator('[data-gm-info] b')).toContainText('Пружины');
+  // электро: звукосниматели
   await page.locator('[data-gm-type="electric"]').click();
   await page.locator('.gm-chip[data-gm-sel="pickups"]').click();
   await expect(page.locator('[data-gm-info] b')).toContainText('Звукосниматели');
