@@ -899,6 +899,8 @@
   "legal.ruOnly": "The full text is currently available in Russian.",
   "lic.intro": "The app uses components by other authors. Thank you!",
   "lic.andContrib": "and contributors.",
+  "lic.three.sub": "3D guitar model in the book · version 0.187",
+  "lic.three.text": "Copyright © 2010–2026 three.js authors. Distributed under the MIT License. Used unmodified, loaded only in the “Guitar anatomy” lesson.",
   "lic.at.sub": "Tab display and playback · version 1.8.4",
   "lic.at.text": "Distributed under the Mozilla Public License 2.0. alphaTab source code: github.com/CoderLine/alphaTab, licence text: mozilla.org/MPL/2.0. The app uses alphaTab unmodified.",
   "lic.at.inner": "Inside alphaTab: TinySoundFont, SFZero, Haxe Standard Library, SharpZipLib, NVorbis (MIT) and libvorbis (BSD-3-Clause, © Xiph.org Foundation).",

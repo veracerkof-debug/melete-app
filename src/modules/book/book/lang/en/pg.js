@@ -48,6 +48,8 @@ export const S = {
   'lx.g9.easy': 'A change is not speed but preparation: the fingers go to the new chord while the old one still rings.',
   'lx.g9.fix': ul('Cannot keep up — slow down: metronome 50, change on "four".', 'Fingers search for the frets — look at the diagram and see the whole shape before the change.'),
 
+  'gm.aria': '3D guitar model: drag to rotate', 'gm.nogl': 'The 3D model could not be shown: no WebGL. Part names are listed below.',
+  'gm.explode': 'Explode', 'gm.assemble': 'Assemble', 'gm.view': 'View', 'gm.parts': 'Parts', 'gm.pick': 'Tap a part to read what it is', 'gm.hint': 'Drag to rotate, pinch to zoom, double-tap to explode or assemble.',
   'gp.parts.aria': 'Guitar from the front: tap a number to see the part', 'gp.parts.hint': 'Tap a number to read what it is and why it matters.',
   'gp.pegs.n': 'Tuning pegs', 'gp.pegs.d': 'They turn and tighten the strings: tension sets the pitch. Tuning is turning the pegs.',
   'gp.head.n': 'Headstock', 'gp.head.d': 'The top end of the neck with the pegs. Strings run over it to the pegs.',
@@ -217,7 +219,7 @@ ${tip('Sit, put the foot on the footstool and rest the guitar: check that it doe
 ` },
   { id: 'g2', t: 'Parts of the guitar', s: 'Nine parts and what they are for', src: '', h: `
 <p>Only nine parts matter — they are used in every lesson. Tap a number on the picture: the name and a short note appear.</p>
-{{lab:gparts}}
+{{lab:gmodel}}
 <p>Sound is born like this: a string vibrates, the bridge passes the vibration to the body, the body and the air inside amplify it, and the sound leaves through the sound hole.</p>
 ${key('Pegs change tension, frets choose pitch, the body amplifies.')}
 ` },

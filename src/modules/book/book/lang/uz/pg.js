@@ -48,6 +48,8 @@ export const S = {
   'lx.g9.easy': 'Almashish — tezlik emas, tayyorgarlik: barmoqlar eski akkord hali jaranglayotganda yangisiga boradi.',
   'lx.g9.fix': ul('Ulgurmayapti — sekinlashtiring: metronom 50, almashishni "toʻrt" da qiling.', 'Barmoqlar ladlarni qidiradi — almashishdan oldin sxemaga qarab butun shaklni koʻring.'),
 
+  'gm.aria': 'Gitaraning hajmli modeli: tortib aylantiring', 'gm.nogl': 'Hajmli model koʻrsatilmadi: WebGL yoʻq. Qismlar nomi quyida.',
+  'gm.explode': 'Ajratish', 'gm.assemble': 'Yigʻish', 'gm.view': 'Koʻrinish', 'gm.parts': 'Qismlar', 'gm.pick': 'Qismga tegib, nima ekanini oʻqing', 'gm.hint': 'Tortib aylantiring, chimdib yaqinlashtiring, ikki marta tegib ajrating yoki yigʻing.',
   'gp.parts.aria': 'Gitara oldidan: raqamga tegib qismni koʻring', 'gp.parts.hint': 'Raqamga tegib, bu nima va nega kerakligini oʻqing.',
   'gp.pegs.n': 'Quloqlar', 'gp.pegs.d': 'Burilib, torlarni tortadi: tarangligi balandlikni belgilaydi. Sozlash — quloqlarni burash.',
   'gp.head.n': 'Boʻyin boshi', 'gp.head.d': 'Quloqlar joylashgan boʻyinning yuqori uchi. Torlar u orqali quloqlarga boradi.',
@@ -217,7 +219,7 @@ ${tip('Oʻtirib, oyoqni tagoyoqqa qoʻying va gitarani qoʻying: sirpanmasligini
 ` },
   { id: 'g2', t: 'Gitara tuzilishi', s: 'Toʻqqiz qism va ular nima uchun', src: '', h: `
 <p>Faqat toʻqqiz qismni bilish kerak — ular har darsda tilga olinadi. Rasmdagi raqamga tegsangiz, nomi va izohi chiqadi.</p>
-{{lab:gparts}}
+{{lab:gmodel}}
 <p>Tovush shunday tugʻiladi: tor tebranadi, koʻprik tebranishni korpusga uzatadi, korpus va ichidagi havo uni kuchaytiradi, tovush teshikdan chiqadi.</p>
 ${key('Quloqlar tarangligni oʻzgartiradi, ladlar balandlikni tanlaydi, korpus kuchaytiradi.')}
 ` },

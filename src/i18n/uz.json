@@ -883,6 +883,8 @@
   "legal.ruOnly": "Toʻliq matn hozircha rus tilida.",
   "lic.intro": "Ilova boshqa mualliflarning komponentlaridan foydalanadi. Ularga rahmat!",
   "lic.andContrib": "va loyiha ishtirokchilari.",
+  "lic.three.sub": "Darslikdagi gitaraning hajmli modeli · versiya 0.187",
+  "lic.three.text": "Copyright © 2010–2026 three.js authors. MIT litsenziyasi ostida tarqatiladi. Oʻzgartirishsiz, faqat «Gitara tuzilishi» darsida yuklanadi.",
   "lic.at.sub": "Tabulaturalarni koʻrsatish va ijro etish · versiya 1.8.4",
   "lic.at.text": "Mozilla Public License 2.0 litsenziyasi boʻyicha tarqatiladi. alphaTab manba kodi: github.com/CoderLine/alphaTab, litsenziya matni: mozilla.org/MPL/2.0. Ilova alphaTab’dan oʻzgarishsiz foydalanadi.",
   "lic.at.inner": "alphaTab ichida: TinySoundFont, SFZero, Haxe Standard Library, SharpZipLib, NVorbis (MIT) va libvorbis (BSD-3-Clause, © Xiph.org Foundation).",

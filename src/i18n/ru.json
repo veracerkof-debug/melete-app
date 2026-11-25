@@ -909,6 +909,8 @@
   "legal.ruOnly": "Полный текст пока только на русском.",
   "lic.intro": "Приложение использует компоненты сторонних авторов. Спасибо им!",
   "lic.andContrib": "и участники проекта.",
+  "lic.three.sub": "Объёмная модель гитары в учебнике · версия 0.187",
+  "lic.three.text": "Copyright © 2010–2026 three.js authors. Распространяется по лицензии MIT. Используется без изменений, подгружается только в уроке «Устройство гитары».",
   "lic.at.sub": "Отображение и воспроизведение табулатур · версия 1.8.4",
   "lic.at.text": "Распространяется по лицензии Mozilla Public License 2.0. Исходный код alphaTab доступен по адресу github.com/CoderLine/alphaTab, текст лицензии — mozilla.org/MPL/2.0. Приложение использует alphaTab без изменений.",
   "lic.at.inner": "Внутри alphaTab: TinySoundFont, SFZero, Haxe Standard Library, SharpZipLib, NVorbis (MIT) и libvorbis (BSD-3-Clause, © Xiph.org Foundation).",

@@ -57,6 +57,7 @@
     "pdfjs-dist": "^6.4.299",
     "qrcode-generator": "^1.4.4",
     "signalsmith-stretch": "^1.3.2",
-    "sql.js": "1.14.2"
+    "sql.js": "1.14.2",
+    "three": "^0.187.0"
   }
 }

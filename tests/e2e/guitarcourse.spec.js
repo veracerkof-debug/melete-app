@@ -12,11 +12,13 @@ test('гитара с нуля: путь, устройство гитары, с�
   await expect(page.locator('.book .bpath.guitar')).toHaveCount(1);
   // устройство: касание части меняет подпись
   await page.locator('.book .bcard[data-bch="g2"]').click();
-  await page.waitForSelector('.bkgparts');
-  await page.locator('.bkgparts .pn[data-a="p:pegs"]').click();
-  await expect(page.locator('.bkginfo b')).toContainText('Колки');
-  await page.locator('.bkgparts .pn[data-a="p:bridge"]').click();
-  await expect(page.locator('.bkginfo b')).toContainText('Подставка');
+  await page.waitForSelector('.gm3');
+  await page.locator('.gm-chip[data-gm-sel="pegs"]').click();
+  await expect(page.locator('[data-gm-info] b')).toContainText('Колки');
+  await page.locator('.gm-chip[data-gm-sel="bridge"]').click();
+  await expect(page.locator('[data-gm-info] b')).toContainText('Подставка');
+  await page.locator('[data-gm="ex"]').click();
+  await expect(page.locator('.gm3.ex')).toHaveCount(1);
   // схема аккорда: C → G, шесть строк разбора
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g5"]').click();
