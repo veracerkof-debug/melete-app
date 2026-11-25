@@ -1,5 +1,6 @@
 // Каркас приложения: нижние вкладки (порядок и состав настраиваются — «Вкладки» в профиле), экраны, общие действия.
 // Перенесено из legacy/practice.html (view, renderTabs, go, render, глобальные обработчики нажатий).
+import { saveProfile } from '../profile.js';
 import { readingFor } from '../reading.js';
 import '../../ui/screens.css';
 import { t } from '../../i18n/index.js';
@@ -213,6 +214,11 @@ export function createShell(app, root) {
     }
     else if (d.act === 'pomo') openToolView(app, 'timer', render);
     else if (d.act === 'study') import('./study.js').then((m) => m.openStudy(app, d.k, openToolView, render));
+    else if (d.act === 'lvlup' || d.act === 'lvlno') { // предложение повысить уровень: спрашиваем один раз на уровень
+      const st = app.store.state.settings;
+      if (d.act === 'lvlup') saveProfile(app.store, { ...st.profile, level: d.v });
+      st.levelAsk = d.v; app.store.settingsChanged(); app.render && app.render();
+    }
     else if (d.act === 'aichat') { if (app.ai && app.ai.ready()) import('./aichat.js').then((m) => m.openChat(app, { onSettings: () => panel.open('ai') })); else panel.open('ai'); } // лицо маскота: чат; нейросеть не подключена — её настройки
     else if (d.act === 'hwgo') import('./studentpage.js').then((m) => m.homeworkGo(app, d.k, go));
     else if (d.act === 'hw') import('./studentpage.js').then((m) => { if (m.homeworkDone(app, d.k)) render(); });

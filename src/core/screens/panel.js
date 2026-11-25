@@ -371,6 +371,8 @@ function paletteHTML(st) {
 
 // «Оформление» разбито по смыслу на три вкладки (слово автора 22.11.2026: сжать и разбить): вид · цвета · ещё
 let lookTab = 'view';
+let moreOpen = false; // у новичка короткий список настроек, остальное под «Ещё» (слово автора 25.11.2026)
+const BEGINNER_MORE = ['tabs', 'data', 'notif', 'mascot', 'bible', 'ai', 'class', 'link'];
 // Тема и стиль — мини-экраны (слово автора 22.11.2026: настройки — картинкой, не только переключателем); выбор — тот же st.theme
 const THEME_VIEWS = {
   system: null,
@@ -711,7 +713,7 @@ function rootHTML(app) {
   const pr = app.store.state.settings.profile || {}, sub = (pr.instruments || []).map((k) => t('inst.' + k)).join(', ');
   // Вместо аватара — лига (самоцвет по часам практики в приложении); нажатие — подробности. Званий и уровня нет.
   // «Только инструменты»: ни лиги, ни итогов — обычный аватар, и в списке нет статистики, недели, уведомлений
-  const plain = !!app.store.state.settings.toolsOnly;
+  const plain = !!app.store.state.settings.toolsOnly, short = pr.level === 'beginner';
   return '<div class="phero">' + (plain ? '<div class="pav">' + AVATAR + '</div>' : '<canvas class="pstone" data-stone="home" role="button" tabindex="0" aria-label="' + esc(t('stone.title')) + '"></canvas>') +
     // компактно (слово автора 06.11.2026: камень меньше, настройки выше): камень слева, имя и лига справа
     '<div class="phtxt"><div class="large" style="margin:0">' + esc(pr.name || t('panel.title')) + '</div>' +
@@ -723,10 +725,11 @@ function rootHTML(app) {
     // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
     (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
-      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)));
+      const list = ks.filter((k) => (!plain || !PLAIN_HIDE.includes(k)) && (k !== 'link' || linkAvail(app)) && (k !== 'notif' || !WEB) && (k !== 'bible' || !!app.store.state.settings.church) && (k !== 'ai' || app.ai.avail) && !(studentOn(app.store.state.settings) && STUDENT_HIDE.includes(k)) && !(short && !moreOpen && BEGINNER_MORE.includes(k)));
       const extra = g === 'help' ? cellA('diag', 'graphite', BUG, t('report.title'), t('report.sub2')) + cellA('idea', 'blue', PLANE, t('contact.title'), t('contact.sub')) : '';
       return list.length ? (g === 'more' ? '<div style="height:18px"></div>' : '<div class="hdr">' + t('pg.' + g) + '</div>') + '<div class="group">' + list.map((k) => { const [c, ic] = PAGES[k]; return '<button class="cell" data-pp="' + k + '"><span class="ticon" style="' + iconBg(app.store.state.settings, c) + '">' + ic + '</span><span class="grow">' + t('page.' + k) + '<span class="psub">' + t(k === 'link' && !isDesktop() ? 'page.link.subPh' : 'page.' + k + '.sub') + '</span></span>' + CHEV + '</button>'; }).join('') + extra + '</div>' : '';
     }).join('') +
+    (short ? '<div class="group" style="margin-top:12px"><button class="cell act center" data-act="moreset" aria-expanded="' + moreOpen + '">' + t(moreOpen ? 'panel.less' : 'panel.more') + '</button></div>' : '') +
     ((DEV && VARIANTS.length) || (app.updater && app.updater.platform) ? '<div class="group" style="margin-top:20px">' +
       (DEV && VARIANTS.length ? '<button class="cell" data-act="variants"><span class="ticon" style="' + iconBg(app.store.state.settings, 'indigo') + '">' + VAR_IC + '</span><span class="grow">' + t('variant.title') + '<span class="psub">' + t('variant.sub') + '</span></span>' + CHEV + '</button>' : '') +
       (app.updater && app.updater.platform ? '<button class="cell" data-act="upd"><span class="ticon" style="' + iconBg(app.store.state.settings, 'teal') + '">' + UPD_IC + '</span><span class="grow">' + t('upd.title') + '<span class="psub">' + t('upd.sub', { b: app.updater.build || '—', ch: t(app.updater.channel === 'dev' ? 'upd.dev' : 'upd.pre') }) + '</span></span>' + CHEV + '</button>' : '') +
@@ -899,6 +902,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="sndout"]')) { outSheet(app, () => render()); return; }
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="scen"]')) { globalThis.__SCEN__.set(g('[data-act="scen"]').dataset.v); location.reload(); return; }
+      if (g('[data-act="moreset"]')) { moreOpen = !moreOpen; render(); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }

@@ -46,6 +46,16 @@ export const gemSec = (sessions) => totalTime(sessions) - sessions.reduce((s, r)
 // Оценка опыта: годы занятий × часов в неделю × 52 недели
 export const estimateHours = (years, perWeek) => Math.max(0, Math.round((+years || 0) * 52 * (+perWeek || 0)));
 
+// Мягкое предложение повысить уровень (один раз на уровень): часы до приложения + практика в приложении дошли до порога выше.
+// Возвращает уровень, который можно предложить, или null. st.levelAsk — уровень, о котором уже спрашивали
+export function levelUpOffer(settings, sessions) {
+  const p = settings.profile;
+  if (!p || !settings.configured || settings.toolsOnly || !LEVELS.includes(p.level)) return null;
+  const hours = priorHours(settings) + gemSec(sessions) / 3600, want = levelByHours(hours);
+  if (LEVELS.indexOf(want) <= LEVELS.indexOf(p.level) || settings.levelAsk === want) return null;
+  return want;
+}
+
 export function newProfile() {
   return { name: '', instruments: [], level: 'amateur', priorHours: 0 };
 }

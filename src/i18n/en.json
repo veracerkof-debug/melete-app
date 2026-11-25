@@ -1,4 +1,10 @@
 {
+  "panel.more": "More",
+  "panel.less": "Less",
+  "lvlup.title": "Level “{lv}”?",
+  "lvlup.text": "Practice hours add up to the next level. Tools and the weekly goal can be changed at any time.",
+  "lvlup.yes": "Move up",
+  "lvlup.no": "Not now",
   "week.sessHdr": "Session",
   "feat.cat.time": "Time and rhythm",
   "feat.cat.pitch": "Sound and pitch",

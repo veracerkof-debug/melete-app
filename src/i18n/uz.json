@@ -1,4 +1,10 @@
 {
+  "panel.more": "Yana",
+  "panel.less": "Yigʻish",
+  "lvlup.title": "“{lv}” darajasi?",
+  "lvlup.text": "Mashq soatlari keyingi daraja uchun yetarli. Asboblar va haftalik maqsadni istalgan payt oʻzgartirish mumkin.",
+  "lvlup.yes": "Oshirish",
+  "lvlup.no": "Hozir emas",
   "week.sessHdr": "Mashgʻulot",
   "feat.cat.time": "Vaqt va ritm",
   "feat.cat.pitch": "Tovush va balandlik",

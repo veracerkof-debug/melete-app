@@ -6,7 +6,7 @@ import { goalRing, FLAME } from '../../ui/cards.js';
 import { fmtDur } from '../format.js';
 import { weekData, songStatsMap, streakInfo, weekPlan } from '../stats.js';
 import { GEMS, gemOf } from '../mastery.js';
-import { gemSec } from '../profile.js';
+import { gemSec, levelUpOffer } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
 import { genreOf, ensureLib } from '../library.js';
@@ -57,11 +57,13 @@ import { classCard } from './classpage.js';
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
 export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
 const QUICK_MAX = 8;
+const QUICK_BEGINNER = ['metro', 'tuner', 'book']; // новичку — три кнопки (слово автора 25.11.2026)
 
 // Объединённые инструменты (groups.js): старый id отдела («beat») в списке заменяется представителем группы («ear»), повторов нет
+const beginnerOf = (st) => ((st.profile || {}).level) === 'beginner';
 const quickList = (st) => {
   const out = [];
-  (st.quick || QUICK_DEF).forEach((id) => {
+  (st.quick || (beginnerOf(st) ? QUICK_BEGINNER : QUICK_DEF)).forEach((id) => {
     let m = moduleById(id);
     if (!m) return;
     if (isAbsorbed(st, m)) m = repOf(st, m);
@@ -88,7 +90,7 @@ export function homeLayout(st) {
   // новые блоки — на своё место по умолчанию
   HOME_BLOCKS.forEach((k, i) => { if (!order.includes(k)) order.splice(Math.min(i, order.length), 0, k); });
   // по умолчанию маскот на главной молчит: он — в уведомлениях (решение автора); включить — «Главный экран»
-  return { order, off: new Set((h.off || ['voice']).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
+  return { order, off: new Set((h.off || (beginnerOf(st) ? ['voice', 'league', 'review', 'events', 'reading'] : ['voice'])).filter((k) => HOME_BLOCKS.includes(k))), size: h.size || {} };
 }
 export function setHomeLayout(st, L) {
   st.home = { order: L.order.slice(), off: [...L.off], size: Object.fromEntries(Object.entries(L.size).filter(([k, v]) => HOME_BLOCKS.includes(k) && v !== 'm')) };
@@ -283,7 +285,15 @@ export function homeHTML(app) {
       return '<div class="stile3 hsong" style="--g:' + (g ? g.color : 'var(--l3)') + '"><button class="grow" data-song="' + s.id + '" style="text-align:left;min-width:0"><div class="ttl">' + esc(s.title) +
         '</div><div class="st">' + esc(sub) + '</div></button><button class="playmini2" aria-label="' + esc(t('home.playSong', { title: s.title })) + '" data-play="' + s.id + '">' + PLAY + '</button></div>';
     }).join('') + '</div>');
-  return topbar(logoHTML(), leftBtns(app)) + '<div class="hlist">' + blocks(st, P) + '</div>';
+  return topbar(logoHTML(), leftBtns(app)) + '<div class="hlist">' + levelUpHTML(app) + blocks(st, P) + '</div>';
+}
+
+// Одно предложение повысить уровень (слово автора 25.11.2026): без давления, «Не сейчас» больше не спрашивает про этот уровень
+function levelUpHTML(app) {
+  const st = app.store.state.settings, want = levelUpOffer(st, app.store.sessions());
+  if (!want) return '';
+  return '<div class="hcard hlvl"><div class="grow"><b>' + esc(t('lvlup.title', { lv: t('level.' + want) })) + '</b><div class="l2">' + t('lvlup.text') + '</div></div>' +
+    '<div class="hlvlb"><button class="btn fill" data-act="lvlup" data-v="' + want + '">' + t('lvlup.yes') + '</button><button class="link" data-act="lvlno" data-v="' + want + '">' + t('lvlup.no') + '</button></div></div>';
 }
 
 // Долгое нажатие на инструмент (главная — быстрый доступ, вкладка «Инструменты»): меню у кнопки —
