@@ -5,6 +5,10 @@ import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { describe as describeP } from '../ai/proposals.js';
 import { mascotName } from '../ai/index.js';
 import { LIMITS } from '../ai/attach.js';
+import { brandOf } from '../ai/brand.js';
+
+// Значок нейросети: свой кружок с буквой, цвет по фирме (официальных логотипов нет — товарные знаки)
+export const badge = (b, size = 28) => '<i class="aibadge" style="--bh:' + b.hue + ';--bs:' + size + 'px" aria-hidden="true">' + esc(b.mark) + '</i>';
 
 const CLIP = '<svg viewBox="0 0 24 24"><path d="M8.5 12.5l6-6a3.2 3.2 0 0 1 4.5 4.5l-8.2 8.2a5 5 0 0 1-7-7l7.6-7.6"/></svg>';
 const LINK = '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
@@ -26,9 +30,11 @@ function propHTML(m, p, songs) {
 export function openChat(app, { onSettings = () => {} } = {}) {
   const chat = app.ai.chat(), name = mascotName();
   let off = null, draft = '', atts = [], reading = 0, linkOpen = false;
-  const html = () => snav(name) + '<div class="aichat"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
+  const html = () => snav(name) + '<div class="aibrand" data-aibrand></div><div class="aichat"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
     '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="2" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
   sheet(html, (el) => {
+    const brandEl = el.querySelector('[data-aibrand]');
+    const drawBrand = () => { const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + '</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
     const list = el.querySelector('[data-aimsgs]'), ctx = el.querySelector('[data-aictx]'), ta = el.querySelector('[data-aiin]'), chips = el.querySelector('[data-aiatt]'), tools = el.querySelector('[data-aitools]'), fin = el.querySelector('[data-aifile]');
     const drawAtt = () => {
       const c = app.ai.cfg();
@@ -47,8 +53,9 @@ export function openChat(app, { onSettings = () => {} } = {}) {
       }
     };
     const draw = () => {
+      drawBrand();
       const songs = app.store.state.songs || [], msgs = chat.messages;
-      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t('ai.hello', { name }) + '</p>') + msgs.map((m) => (m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs)).join('')).join('') +
+      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t('ai.hello', { name }) + '</p>') + msgs.map((m) => (m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
         (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
       list.scrollTop = list.scrollHeight;

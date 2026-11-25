@@ -2924,5 +2924,6 @@
   "ai.att.err.off": "Ilovalar sozlamalarda oʻchirilgan",
   "ai.att.err.format": "Fayl shikastlangan",
   "ai.att.err.net": "Aloqa yoʻq",
-  "ai.att.err.timeout": "Sahifa juda uzoq javob beryapti"
+  "ai.att.err.timeout": "Sahifa juda uzoq javob beryapti",
+  "ai.by": "Javob beryapti: {name}"
 }

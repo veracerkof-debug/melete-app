@@ -149,3 +149,20 @@ describe('чат с нейросетью: беседа (имитация API)', 
     chat.clear(); expect(chat.messages).toEqual([]); expect(JSON.parse(st.getItem('melete.ai.chat'))).toEqual([]);
   });
 });
+
+import { brandOf } from '../src/core/ai/brand.js';
+describe('чат с нейросетью: кто отвечает', () => {
+  const b = (model, url) => brandOf({ model, url });
+  it('фирма — по модели, затем по адресу; свои цвета и буквы, без логотипов', () => {
+    expect(b('claude-haiku-5-5', 'https://api.anthropic.com')).toMatchObject({ id: 'claude', name: 'Claude', mark: 'C' });
+    expect(b('gemini-2.5-flash', 'https://generativelanguage.googleapis.com/v1beta/openai/')).toMatchObject({ id: 'gemini', name: 'Gemini' });
+    expect(b('gpt-4o-mini', 'https://api.openai.com/v1')).toMatchObject({ id: 'openai', name: 'ChatGPT' });
+    expect(b('anthropic/claude-sonnet-5-5', 'https://openrouter.ai/api/v1').id).toBe('claude');       // OpenRouter: по модели
+    expect(b('google/gemini-2.5-pro', 'https://openrouter.ai/api/v1').id).toBe('gemini');
+    expect(b('deepseek-chat', 'https://api.deepseek.com').id).toBe('deepseek'); expect(b('mistral-large-latest', 'https://api.mistral.ai/v1').id).toBe('mistral');
+    expect(b('', 'https://api.anthropic.com/v1').id).toBe('claude');                                  // нет модели — по адресу
+    expect(b('my-model', 'https://api.example.com/v1')).toMatchObject({ id: 'other', name: 'Example', mark: 'E' }); // неизвестная — по имени сайта
+    expect(b('', '')).toMatchObject({ id: 'other', mark: 'A' });
+    expect(typeof b('claude-x', '').hue).toBe('number');
+  });
+});

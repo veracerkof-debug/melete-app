@@ -86,8 +86,10 @@ test('нейросеть: вложения — файл и ссылка уход
   expect(await page.locator('[data-ai-f="model"]').evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
   await expect(page.locator('[data-ai-sw="att:files"]')).toBeChecked(); await expect(page.locator('[data-ai-sw="att:links"]')).toBeChecked();
   if (process.env.UPD_SHOTS) { await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-settings1.png' }); await page.evaluate(() => document.querySelector('#panelLayer').scrollTo(0, 800)); await page.waitForTimeout(300); await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-settings2.png' }); }
+  await expect(page.locator('.aistat .aibadge')).toHaveText('E'); // у «api.example.com» и модели «m» фирма неизвестна — по имени сайта
   await page.click('[data-ai-act="open"]'); await page.waitForTimeout(500);
   await expect(page.locator('[data-aiin]')).toBeVisible();
+  await expect(page.locator('.aibrand')).toContainText('Отвечает: Example');
   expect(await page.locator('[data-aiin]').evaluate((el) => getComputedStyle(el).textAlign)).toBe('left');
   // файл
   await page.setInputFiles('[data-aifile]', { name: 'аккорды.txt', mimeType: 'text/plain', buffer: Buffer.from('Am  G\nСлова песни') });
@@ -99,6 +101,7 @@ test('нейросеть: вложения — файл и ссылка уход
   if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-chat-att.png' });
   await page.fill('[data-aiin]', 'Забери аккорды'); await page.click('[data-ai="send"]');
   await expect(page.locator('.aim.a').first()).toContainText('Разобрал', { timeout: 8000 });
+  await expect(page.locator('.aim.a .aiwho').first()).toContainText('Example');
   const calls = await page.evaluate(() => window.__aiCalls); const sent = calls[0].body.messages.at(-1).content;
   expect(sent).toContain('=== ВЛОЖЕНИЕ: аккорды.txt ==='); expect(sent).toContain('Am  G'); expect(sent).toContain('Куплет: Am G C'); expect(sent).toContain('Песня на сайте');
   await expect(page.locator('.aim.u .aiatl')).toContainText('аккорды.txt');
@@ -114,5 +117,22 @@ test('нейросеть: ссылки по умолчанию выключен�
   await page.waitForTimeout(400);
   await page.locator('.mascotb[data-act="aichat"]').click(); await page.waitForTimeout(500);
   await expect(page.locator('[data-ai="file"]')).toBeVisible(); await expect(page.locator('[data-ai="link"]')).toHaveCount(0);
+  void errors;
+});
+
+test('нейросеть: значок и название — Claude и Gemini по модели, сами', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, { ...CFG, format: 'anthropic', url: 'https://api.anthropic.com', model: 'claude-haiku-5-5' });
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => { window.__melete.ai.__test({ avail: true }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await page.locator('.mascotb[data-act="aichat"]').click(); await page.waitForTimeout(500);
+  await expect(page.locator('.aibrand')).toContainText('Отвечает: Claude'); await expect(page.locator('.aibrand')).toContainText('claude-haiku-5-5'); await expect(page.locator('.aibrand .aibadge')).toHaveText('C');
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/ai-brand.png' });
+  // сменить модель на Gemini — значок меняется сам
+  await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('melete.ai')); c.model = 'gemini-2.5-flash'; c.url = 'https://generativelanguage.googleapis.com/v1beta/openai/'; c.format = 'openai'; localStorage.setItem('melete.ai', JSON.stringify(c)); });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await page.locator('.mascotb[data-act="aichat"]').click(); await page.waitForTimeout(500);
+  await expect(page.locator('.aibrand')).toContainText('Отвечает: Gemini'); await expect(page.locator('.aibrand .aibadge')).toHaveText('G');
   void errors;
 });

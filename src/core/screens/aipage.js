@@ -4,6 +4,8 @@
 import { t } from '../../i18n/index.js';
 import { esc, toast, confirm } from '../../ui/index.js';
 import { checkUrl, FORMATS, LEVELS } from '../ai/config.js';
+import { brandOf } from '../ai/brand.js';
+import { badge } from './aichat.js';
 
 const sw = (k, on, l) => '<label class="sw"><input type="checkbox" data-ai-sw="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(l) + '"><i></i></label>';
 const field = (k, label, val, o = {}) => '<label class="aifield"><span>' + esc(label) + '</span>' + (o.area
@@ -16,8 +18,8 @@ export function aiHTML(app) {
   if (!ai.avail) return '<div class="large">' + t('page.ai') + '</div><p class="ftr keep">' + t('ai.noPlatform') + '</p>';
   const u = c.url ? checkUrl(c.url) : { ok: true }, ok = ai.ready();
   let h = '<div class="large">' + t('page.ai') + '</div>' +
-    '<div class="aistat' + (ok ? ' ok' : '') + '"><i class="aiic" aria-hidden="true">' + ICON + '</i><span class="grow"><b>' + t(ok ? 'ai.st.ready' : c.on ? 'ai.st.setup' : 'ai.st.off') + '</b>' +
-    '<span class="l2">' + (c.on && c.model ? esc(t('ai.fmt.' + c.format) + ' · ' + c.model) : t('ai.intro.short')) + '</span></span>' +
+    '<div class="aistat' + (ok ? ' ok' : '') + '">' + (c.on && c.model ? badge(brandOf(c), 40) : '<i class="aiic" aria-hidden="true">' + ICON + '</i>') + '<span class="grow"><b>' + t(ok ? 'ai.st.ready' : c.on ? 'ai.st.setup' : 'ai.st.off') + '</b>' +
+    '<span class="l2">' + (c.on && c.model ? esc(brandOf(c).name + ' · ' + c.model) : t('ai.intro.short')) + '</span></span>' +
     '<label class="sw"><input type="checkbox" data-ai-sw="on"' + (c.on ? ' checked' : '') + ' aria-label="' + esc(t('ai.on')) + '"><i></i></label></div>';
   if (!c.on) return h + '<p class="ftr keep">' + t('ai.intro') + '</p>';
   h += '<div class="group aicard"><button class="cell act aiopen" data-ai-act="open"' + (ok ? '' : ' disabled') + '>' + t('ai.open') + '</button></div>' +
