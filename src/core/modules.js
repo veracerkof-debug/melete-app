@@ -22,6 +22,7 @@ import { guardOpen, guardClose } from './guard.js';
 import * as MF from './mediafolders.js';
 import { isOn, setFeature } from './settings.js';
 import { lessonOpen } from './classroom.js';
+import { studentOn } from './student.js';
 import { moduleById } from '../modules/index.js';
 import { createSetlists } from './metrosets.js';
 import { outBtnHTML, bindOutput, outRefresh } from './screens/outputsheet.js';
@@ -138,6 +139,7 @@ export function makeCtx(app, mod) {
     get profile() { return app.store.state.settings.profile || null; },
     // урок закрыт учителем (режим «Ученик», classroom.js: lessonOpen)
     lessonLocked: (id) => !lessonOpen(app.store.state.settings, id),
+    isStudent: () => studentOn(app.store.state.settings), // режим «Ученик»: облегчённая «Теория»
     presets: (kind) => presetsApi(app, kind),
     // Стих-эпиграф (Пс 89:12) — помодоро и секундомер
     epigraph: () => epigraphHTML(),

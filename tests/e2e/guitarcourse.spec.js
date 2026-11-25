@@ -8,7 +8,7 @@ test('гитара с нуля: путь, устройство гитары, с�
   await melete.tools({ book: { book: { lvl: 'beginner', sec: 'first' } } }); await melete.free('F', ['book']);
   await page.waitForSelector('.pane .book', { timeout: 15_000 });
   await expect(page.locator('.book .bcard[data-bch="g1"]')).toHaveCount(1);
-  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(20);
+  await expect(page.locator('.book .bcard[data-bch^="g"]')).toHaveCount(27);
   await expect(page.locator('.book .bpath.guitar')).toHaveCount(1);
   // устройство: касание части меняет подпись
   await page.locator('.book .bcard[data-bch="g2"]').click();
@@ -50,6 +50,19 @@ test('гитара с нуля: путь, устройство гитары, с�
   await page.locator('.book .bcard[data-bch="g18"]').click();
   await page.waitForSelector('.bkgbox');
   await expect(page.locator('.bkgch')).toHaveCount(6);
+  // барре: полоса на схеме; арпеджио: пальцы p i m a по струнам
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g24"]').click();
+  await page.waitForSelector('.bkgbox');
+  await expect(page.locator('.bkgbox .barre')).toHaveCount(1);
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-barre.png' });
+  await page.locator('.book [data-btoc]').first().click();
+  await page.locator('.book .bcard[data-bch="g21"]').click();
+  await page.waitForSelector('.bkgarp');
+  await expect(page.locator('.bkgarp .dot')).toHaveCount(4);
+  await page.locator('.bkgch[data-a="s:p6"]').click();
+  await expect(page.locator('.bkgarp .dot')).toHaveCount(6);
+  if (process.env.UPD_SHOTS) await page.screenshot({ path: process.env.UPD_SHOTS + '/guitar-arp.png' });
   // посадка и упражнения только для гитары, без выбора инструмента
   await page.locator('.book [data-btoc]').first().click();
   await page.locator('.book .bcard[data-bch="g1"]').click();

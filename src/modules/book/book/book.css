@@ -482,3 +482,8 @@ span.rgc{display:flex;align-items:center;justify-content:center}
 .bkgprog{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .bkgpc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;background:var(--cell)}
 .bkgpc b{font-size:16px}.bkgpc i{font-style:normal;font-size:12px;color:var(--l2)}.bkgpc .bkgbox{width:100%}
+.bkgbox .barre{fill:var(--tint)}
+.bkgarp{width:100%;max-width:340px;height:auto;display:block}
+.bkgarp .str{stroke:var(--l2);stroke-width:1}.bkgarp .sn{fill:var(--l2);font-size:9px}
+.bkgarp .dot{fill:var(--tint)}.bkgarp .fn{fill:var(--on,white);font-size:10px;font-weight:700}.bkgarp .stp{fill:var(--l2);font-size:9px}
+.bkgch{letter-spacing:0}

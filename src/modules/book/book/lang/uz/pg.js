@@ -6,8 +6,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 export const S = {
   'ls.teacherLock': 'Bu darsni oʻqituvchi ochadi',
   'bk.part9': 'Noldan gitara',
-  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '20 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, bogʻlamlar',
-  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy va akkord bogʻlamlari.',
+  'lp.guitar.kicker': 'Klassik gitara', 'lp.guitar.title': 'Noldan gitara', 'lp.guitar.sub': '27 ta dars: oʻtirish, tuzilish, sozlash, akkordlar, boy, arpedjio, barre, bogʻlamlar',
+  'lp.guitar.lead': 'Klassik gitara (neylon torlar) uchun. Avval qanday oʻtirish va gitara nimadan iborat, keyin sozlash va akkord sxemalarini oʻqish, soʻng major va minor akkordlar, septakkordlar, boy, arpedjio, barre va akkord bogʻlamlari.',
   'ls.g1': 'Oʻtirish', 'ls.g2': 'Gitara tuzilishi', 'ls.g3': 'Sozlash', 'ls.g4': 'Ogʻriqsiz qoʻllar', 'ls.g5': 'Akkord sxemasini oʻqish',
   'ls.g6': 'C akkordi', 'ls.g7': 'G akkordi', 'ls.g8': 'D akkordi', 'ls.g9': 'Akkord almashish va birinchi qoʻshiq',
 
@@ -129,6 +129,51 @@ export const S = {
   'gp.prog.pop': 'pop',
   'gp.prog.min': 'minor',
   'gp.prog.hint': 'Pogʻonalar: {r}. "Tinglash" bogʻlamni akkordga ikki hisobdan chaladi.',
+  // арпеджио, барре, септаккорды на минор (25.11.2026)
+  'ls.g21': 'Arpedjio',
+  'ls.g22': 'Bogʻlamlarda arpedjio',
+  'ls.g23': 'Kichik barre',
+  'ls.g24': 'F akkordi (barre)',
+  'ls.g25': 'Bm akkordi (barre)',
+  'ls.g26': 'Am7, Em7, Dm7',
+  'ls.g27': 'Cmaj7 va septakkord bogʻlamlari',
+  'lx.g21.g': '<ul><li>Chap qoʻl Am ni qoʻyadi; oʻng qoʻl torlar ustida: p — akkordning bas tori (Am da bu 5-tor), i — 3-tor, m — 2-tor, a — 1-tor ustida.</li><li>Har barmoq oʻz torini yuqoriga va sal ichkariga tortadi, navbat bilan: p i m a — toʻrt tovush, metronom 60 da har hisobga bittadan.</li><li>Keyin oltita (p i m a m i) va sakkizta (p i m i a i m i) tovush.</li></ul>',
+  'lx.g21.t': 'Har bir chizmani tinglab, barmoqlar torlar boʻylab qanday yurishini tasavvur qiling.',
+  'lx.g21.easy': 'Arpedjio — akkordning bir-bir chalingan tovushlari. Oʻng qoʻl har bir barmogʻining oʻz tori bor: p — bas, i m a — uchta ingichka tor.',
+  'lx.g21.fix': '<ul><li>Barmoqlar bir-biriga xalaqit beradi — qoʻlni xotirjam tuting, i m a barmoqlari sal bukilgan.</li><li>Tovushlar turli balandlikda — barcha barmoqlarni bir xil, silkinishsiz torting.</li></ul>',
+  'lx.g22.g': '<ul><li>Am – C – G – Em – Am ni p i m a m i chizmasi bilan metronom 60 da chaling: akkordga bir takt.</li><li>Akkordni taktning oxirgi hisobida almashtiring; oʻng qoʻl toʻxtamaydi.</li><li>Oʻzingizni yozib tinglang: arpedjio tekis ketyaptimi?</li></ul>',
+  'lx.g22.t': 'Yozuvni tinglab, boy bilan solishtiring: tovush nimasi bilan farq qiladi?',
+  'lx.g22.easy': 'Bir xil bogʻlam har xil jaranglaydi: boy bilan — shijoatli, arpedjio bilan — yumshoq va ohangdor.',
+  'lx.g22.fix': '<ul><li>Arpedjio almashishda adashadi — sekinlashtiring: metronom 50, chap qoʻl akkordni qidirayotganda oʻng qoʻl chalaveradi.</li><li>Bas tor akkord bilan almashadi — yangi akkordning basi qayerdaligini sxemadan koʻring.</li></ul>',
+  'lx.g23.g': '<ul><li>Koʻrsatkich barmoqni eng ingichka ikki torning (1- va 2-) 1-ladiga qoʻying va barmoq yon tomoni bilan, tirnoqqa yaqin joyi bilan bosing.</li><li>Qolgan barmoqlar: 2 — 3-torning 2-ladida, 3 — 4-torning 3-ladida. Toʻrtta ingichka torni chaling.</li><li>Har torni alohida tekshiring: toʻrttasi ham jaranglayaptimi?</li></ul>',
+  'lx.g23.t': 'Shaklni oʻrganing: ikki torda yotiq barmoq va yonida zinapoya shaklidagi ikki barmoq.',
+  'lx.g23.easy': 'Barre — bitta barmoq bir ladda bir nechta torni birdaniga bosganda. Kichik barre — atigi ikki tor, toʻliq barredan oldingi zina.',
+  'lx.g23.fix': '<ul><li>Torlar ovozsiz — ladga yaqin (ladlar oʻrtasida emas) va barmoq yon tomoni bilan bosing.</li><li>Barmoq ogʻriydi — bu odatiy; akkordni qisqa ushlang, dam oling, har xil kunlarda oz-ozdan takrorlang.</li></ul>',
+  'lx.g24.g': '<ul><li>Koʻrsatkichni 1-ladda barcha oltita tor boʻylab qoʻying; qolgan barmoqlar bir lad siljitilgan Em akkordidagidek: 3-barmoq 5-torning 3-ladida, 4-barmoq 4-torning 3-ladida, 2-barmoq 3-torning 2-ladida.</li><li>Barcha oltita torni chalish.</li><li>Torlarni birma-bir tekshirib, ovozsizini toping: jaranglaguncha barmoqni siljiting.</li></ul>',
+  'lx.g24.t': 'F va Em ni ketma-ket tinglang — bir xil shakl, boʻyin boʻylab siljigan.',
+  'lx.g24.easy': 'F — bir lad yuqoriga siljitilgan tanish Em va koʻrsatkich barmoq bilan barre.',
+  'lx.g24.fix': '<ul><li>3- yoki 2-tor ovozsiz — barre toʻliq bosmayapti; koʻrsatkichni sal qirrasiga, tirnoqqa yaqin buring.</li><li>Qoʻl charchaydi — yelkani boʻshating, orqadan bosh barmoq bilan boʻyinni siqmang.</li></ul>',
+  'lx.g25.g': '<ul><li>Koʻrsatkichni besh torning (5-dan 1-gacha) 2-ladiga qoʻying; qolgan barmoqlar ikki lad siljitilgan Am dagidek: 3-barmoq 4-torning 4-ladida, 4-barmoq 3-torning 4-ladida, 2-barmoq 2-torning 3-ladida.</li><li>Besh torni chalish (5-dan 1-gacha), 6-ga tegmaslik.</li><li>Har torni alohida tekshiring.</li></ul>',
+  'lx.g25.t': 'Am va Bm ni ketma-ket tinglang — bir xil shakl, ikki ladga siljigan.',
+  'lx.g25.easy': 'Barre akkordlar — boʻyin boʻylab siljitilgan tanish shakllar: Em shakli F ni, Am shakli Bm ni beradi.',
+  'lx.g25.fix': '<ul><li>Hamma tor jaranglamayapti — koʻrsatkichni ladga yaqinroq qoʻying va sal buring.</li><li>Nafas tutilyapti — akkordni qisqa ushlang va takrorlar orasida qoʻyib yuboring.</li></ul>',
+  'lx.g26.g': '<ul><li>Am7: Am ga oʻxshash, lekin 3-barmoqsiz; Em7: Em ga oʻxshash, lekin 3-barmoqsiz; Dm7: koʻrsatkich ikki ingichka torning 1-ladini bosadi, 2-barmoq 3-torning 2-ladida.</li><li>Am7 – Em7 – Dm7 ni metronom 60 da har biriga toʻrt hisobdan chaling.</li><li>Minor septakkord oddiy minordan qanchalik yumshoqligini tinglang.</li></ul>',
+  'lx.g26.t': 'Am va Am7 ni, Em va Em7 ni quloq bilan solishtiring.',
+  'lx.g26.easy': 'Minor septakkord — yumshoq septima qoʻshilgan minor. Tanish shakl, bitta barmoq olingan.',
+  'lx.g26.fix': '<ul><li>Ortiqcha bas torlar jaranglaydi — Am7 va Dm7 da 6-torni chalmang.</li><li>Dm7: koʻrsatkich ikkala ingichka torni 1-ladda bosishi kerak.</li></ul>',
+  'lx.g27.g': '<ul><li>Cmaj7: C ga oʻxshash, lekin 1-barmoqsiz — 3- va 2-tor ochiq jaranglaydi.</li><li>Dm7 – G7 – Cmaj7 («ii–V–I») bogʻlamini, keyin Am7 – Dm7 – G7 – Cmaj7 ni metronom 60 da akkordga ikki taktdan chaling.</li><li>Boy yoki arpedjio bilan chalib, oʻzingizni yozib oling.</li></ul>',
+  'lx.g27.t': 'G7 Cmaj7 ga qanday «intilishini» tinglang: tarangilik va xotirjamlik.',
+  'lx.g27.easy': 'Dm7 – G7 – Cmaj7: yon tomonga qadam, tarangilik va xotirjamlik. Bu bogʻlam qoʻshiqlarda, balladalarda va jazzda uchraydi.',
+  'lx.g27.fix': '<ul><li>Almashishga ulgurmayapti — sekinlashtiring: metronom 50, taktga bitta akkord.</li><li>Cmaj7 C kabi jaranglayapti — 1-barmoq olinganini va 2-tor ochiqligini tekshiring.</li></ul>',
+  'gp.lbl.F3': 'F (kichik)',
+  'gp.arp.p4': 'p i m a',
+  'gp.arp.p6': 'p i m a m i',
+  'gp.arp.p8': 'p i m i a i m i',
+  'gp.arp.aria': 'Arpedjio chizmasi: oʻng qoʻl barmoqlari torlarda',
+  'gp.arp.hint': 'Qatorlar — torlar (6 — yoʻgʻon, 1 — ingichka), doiralar — hisob boʻyicha oʻng qoʻl barmoqlari. «Tinglash» daqiqasiga 80 urishda ikki aylanishni chaladi.',
+  'gp.prog.ii': 'ii–V–I',
+  'gp.prog.vi': 'vi–ii–V–I',
+  'gp.prog.bal': 'I–vi–ii–V',
 };
 export const TERMS = {};
 export const CH = [
@@ -276,5 +321,54 @@ ${tip('Har bogʻlamni metronom 60 da chaling: akkordga toʻrt hisobdan.')}
 <p>Metronom 70 da boy bilan chaling: akkord almashtirish — taktning oxirgi hisobida, qoʻl toʻxtamaydi.</p>
 ${key('Bitta bogʻlam, bitta boy — almashish toza boʻlguncha. Keyin keyingisi.')}
 ${tip('Bogʻlamni tanlab, boy bilan ikki aylanish chalib, oʻzingizni yozib oling.')}
+` },
+  { id: 'g21', t: 'Arpedjio', s: 'Akkord tovushlari bir-bir', src: '', h: `
+<p>Arpedjio — akkord tovushlarini ketma-ket, bir-bir chalish, xuddi akkord «ochilgandek». Oʻng qoʻl chaladi: har barmoqning oʻz tori bor.</p><p><b>p</b> (bosh barmoq) akkordning bas torini, <b>i</b> (koʻrsatkich) — 3-torni, <b>m</b> (oʻrta) — 2-torni, <b>a</b> (nomsiz) — 1-torni chaladi.</p>
+{{lab:garp}}
+<p>Barmoqlar torlar ustida oldindan turadi va torni yuqoriga va sal ichkariga tortadi. Avval toʻrt tovush «p i m a» teng, toʻrt qadamdek; keyin oltita va sakkizta.</p>
+${key('Arpedjio teng tovushlarga tayanadi: bir xil balandlik va teng hisob tezlikdan muhimroq.')}
+${tip('Am ni qoʻyib, «p i m a» ni metronom 60 da chaling — har hisobga bitta tovush.')}
+` },
+  { id: 'g22', t: 'Bogʻlamlarda arpedjio', s: 'Xuddi shu akkordlar — yumshoqroq', src: '', h: `
+<p>Endi tanish akkordlarda arpedjio: Am, C, G, Em. «p i m a m i» chizmasi — akkordga oltita tovush, metronomga teng.</p>
+{{lab:garp6}}
+<p>Akkordni taktning oxirgi hisobida almashtiring; oʻng qoʻl toʻxtamaydi. Bas tor akkord bilan almashadi, shuning uchun p har safar boshqa torni chaladi.</p>
+${key('Chap qoʻl yangi akkordni oʻng qoʻl hali eskisini chalayotganda tayyorlaydi.')}
+${tip('Am – C – G – Em – Am ni «p i m a m i» bilan chalib, oʻzingizni yozib oling.')}
+` },
+  { id: 'g23', t: 'Kichik barre', s: 'Bitta barmoq bir nechta torda', src: '', h: `
+<p>Barre — bitta barmoq (odatda koʻrsatkich) bir ladda bir nechta torni birdaniga bosganda. Bu boshlovchi uchun eng qiyin qadam, shuning uchun zina-zina boramiz. Birinchisi — eng ingichka ikki torda kichik barre.</p>
+{{lab:gboxb}}
+<p>Toʻrt torli F akkordi (sxemada «F (kichik)»): koʻrsatkich 1- va 2-torning 1-ladida yotadi, 2-barmoq 3-torning 2-ladida, 3-barmoq 4-torning 3-ladida.</p>
+${key('Koʻrsatkichning yon tomoni bilan, tirnoqqa yaqin joyi bilan va ladga yaqin bosing — barmoq oʻrtasi bilan emas.')}
+${tip('Koʻrsatkichni ikki ingichka torga qoʻyib, ularni torting: ikkalasi ham jaranglashi kerak.')}
+` },
+  { id: 'g24', t: 'F akkordi (barre)', s: 'Birinchi ladda toʻliq barre', src: '', h: `
+<p>Toʻliq F akkordi: koʻrsatkich 1-ladda barcha oltita tor boʻylab yotadi. Qolgan uch barmoq — Em akkordidagidek, faqat bir lad yuqorida.</p>
+{{lab:gboxf}}
+<p>Bu boʻyin boʻylab siljitilgan tanish shakl va barre. Avval chiqmasa — «F (kichik)» ni chalib, bir necha kundan keyin toʻliq shaklga qayting.</p>
+${key('F — bir lad yuqoriga siljitilgan Em va koʻrsatkich barmoq bilan barre.')}
+${tip('F ni qoʻyib, oltita torni birma-bir torting va ovozsizini toping — barmoqni siljiting.')}
+` },
+  { id: 'g25', t: 'Bm akkordi (barre)', s: 'Ikkinchi ladda barre', src: '', h: `
+<p>Bm («si minor»): koʻrsatkich barmoq besh torning (5-dan 1-gacha) 2-ladida. Qolgan uch barmoq — Am akkordidagidek, faqat ikki lad yuqorida.</p>
+{{lab:gboxbm}}
+<p>6-tor chalinmaydi: sxemada uning ustida «×» bor.</p>
+${key('Barre akkordlar — boʻyin boʻylab siljitilgan tanish shakllar: Em shakli F ni, Am shakli Bm ni beradi.')}
+${tip('Am, keyin Bm ni chaling — bir xil shaklni turli ladlarda eshiting.')}
+` },
+  { id: 'g26', t: 'Am7, Em7, Dm7', s: 'Minor septakkordlar', src: '', h: `
+<p>Minor septakkord — yumshoq septima qoʻshilgan minor akkord. U oddiy minordan iliqroq va xotirjamroq jaranglaydi.</p>
+{{lab:gboxm7}}
+<p>Shakllar tanish, har birida bitta barmoq oʻzgargan: Am7 — 3-barmoqsiz Am, Em7 — 3-barmoqsiz Em, Dm7 — ikki ingichka torda koʻrsatkich barresi bilan Dm.</p>
+${key('Bitta barmoq harakati — boshqa kayfiyat.')}
+${tip('Am, keyin Am7 ni chaling — farqni eshiting.')}
+` },
+  { id: 'g27', t: 'Cmaj7 va septakkord bogʻlamlari', s: 'Tarangilik va xotirjamlik', src: '', h: `
+<p>Cmaj7 — koʻrsatkich barmogʻi olingan C: 2- va 3-tor ochiq jaranglaydi. Tovush yumshoq, «havodor».</p>
+{{lab:gprogj}}
+<p>Septakkordli eng mashhur bogʻlam — <b>ii–V–I</b>: Dm7 – G7 – Cmaj7. G7 tarangilik yaratadi, Cmaj7 uni hal qiladi — xotirjamlik. Bu bogʻlam qoʻshiqlarda, balladalarda va jazzda uchraydi.</p>
+${key('Dm7 – G7 – Cmaj7: yon tomonga qadam, tarangilik va uyga qaytish.')}
+${tip('Dm7 – G7 – Cmaj7 ni boy yoki arpedjio bilan metronom 60 da chalib, oʻzingizni yozib oling.')}
 ` },
 ];

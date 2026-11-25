@@ -88,3 +88,18 @@ test('ученик: задание-инструмент — кнопка «От�
   await expect(page.locator('.tview, .pane').first()).toBeVisible();
   void errors;
 });
+
+test('ученик: «Теория» всегда открыта и облегчённая — гаммы, аккорды, интервалы', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ settings: { student: { on: true, salt: '1', hash: 'x', open: [], openLessons: [], tasks: [], teacher: { key: 'k', name: 'У', at: 1 } } } });
+  await melete.tools({ theory: { sec: 'circle', scale: { pc: 0, type: 'dorian' } } }); await melete.free('F', ['theory']);
+  await page.waitForSelector('.pane .comp', { timeout: 15_000 });
+  const tabs = page.locator('.pane .tswb');
+  await expect(tabs).toHaveCount(3);               // круг и транспонирование ученику не показываются
+  expect((await tabs.allTextContents()).join(' ')).not.toMatch(/Круг|Транспон/);
+  await page.locator('.pane .tswb').first().click(); await page.waitForTimeout(300);
+  // виды гамм — только основные; прежний «дорийский» вернулся в мажор
+  const types = await page.locator('.pane [data-x="stype"]').allTextContents();
+  expect(types.length).toBeLessThanOrEqual(4);
+  void errors;
+});

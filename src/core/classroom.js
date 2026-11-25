@@ -38,7 +38,7 @@ export function toggleOpen(rec, kind, id, on) {
   rec[key] = [...set]; return true;
 }
 // Уроки курса «Гитара с нуля» открываются подряд: первые n (учитель двигает ползунок «+/−»)
-export const COURSE_LESSONS = 20;
+export const COURSE_LESSONS = 27;
 export function setLessons(rec, n) { n = Math.max(0, Math.min(COURSE_LESSONS, Math.round(+n) || 0)); rec.lessons = Array.from({ length: n }, (_, i) => 'g' + (i + 1)); return n; }
 export const lessonsCount = (rec) => rec.lessons.filter((x) => /^g\d+$/.test(x)).length;
 // Песни из заданий-«песен»: файл `.melete` обычным JSON (share.js) — ученик принимает его теми же правилами, что присланный файл

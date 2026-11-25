@@ -177,7 +177,7 @@ test('учебник: уровни — новичку «Первые шаги»,
   await open(melete, page, 'book');
   await expect(page.locator('.book .bklvl [data-blvl="beginner"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.book .bsecs')).toHaveCount(0);
-  await expect(page.locator('.book .bcard')).toHaveCount(44);
+  await expect(page.locator('.book .bcard')).toHaveCount(51);
   await page.locator('.book [data-bpath="first"]').click();
   await page.locator('.book .bpgo').click();
   await expect(page.locator('.book .bkhead h2')).toHaveText('Музыка из звуков');

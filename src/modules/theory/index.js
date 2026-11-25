@@ -20,8 +20,16 @@ const SECS = ['circle', 'scales', 'chords', 'keys', 'intervals'];
 // Определитель — выключен по умолчанию везде, включается в «Модулях и функциях» (слово автора 06.11.2026: вкладка
 // портит вид; settings.theory.find)
 const findOn = () => ctx.data().find === true;
-const secs = () => (findOn() ? [...SECS, 'find'] : SECS);
-const curSec = () => { const s = TH().sec || 'circle'; return secs().includes(s) ? s : 'circle'; }; // «Учебник» и «Джаз» теперь — отдельный инструмент
+// Ученик (режим «Ученик», слово автора 25.11.2026): облегчённая «Теория» — гаммы, аккорды, интервалы; основные виды гамм и аккордов,
+// без круга квинт, транспонирования и определителя. Для остальных — как раньше
+const learner = () => !!(ctx.isStudent && ctx.isStudent());
+const L_SECS = ['scales', 'chords', 'intervals'], L_SCALES = ['major', 'minor', 'pmaj', 'pmin'], L_CHORDS = ['maj', 'min', '7', 'maj7', 'm7'];
+const scaleTypes = () => (learner() ? L_SCALES : SCALE_TYPES);
+const chordTypes = () => (learner() ? CHORDS.filter((c) => L_CHORDS.includes(c[0])) : CHORDS);
+const secs = () => (learner() ? L_SECS : findOn() ? [...SECS, 'find'] : SECS);
+const curSec = () => { const s = TH().sec || secs()[0]; return secs().includes(s) ? s : secs()[0]; };
+// у ученика сохранённый вид гаммы или аккорда мог остаться «взрослым» — вернуть в разрешённые
+const clampLearner = () => { if (!learner()) return; const th = TH(); if (th.scale && !L_SCALES.includes(th.scale.type)) th.scale = { ...th.scale, type: 'major' }; if (th.ctype && !L_CHORDS.includes(th.ctype)) th.ctype = 'maj'; }; // «Учебник» и «Джаз» теперь — отдельный инструмент
 const I = {
   play: '<svg viewBox="0 0 24 24" class="f" style="width:18px"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.4 0-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg>',
   wave: '<svg viewBox="0 0 24 24"><path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/></svg>',
@@ -178,7 +186,7 @@ function scalesHTML() {
       (vw === 'fret' ? fretHTML(new Set(k.pcs), k.rootPc, 12) : kbHTML(60, 15, new Set(k.pcs), k.rootPc)) + '</div></div>';
   }
   const head = '<div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="sroot" data-v="' + i + '" aria-pressed="' + (sc.pc === i) + '">' + enh(i) + '</button>').join('') +
-    '</div><div class="hscroll">' + SCALE_TYPES.map((x) => '<button class="pill" data-x="stype" data-v="' + x + '" aria-pressed="' + (sc.type === x) + '">' + scaleName(x) + '</button>').join('') + '</div>';
+    '</div><div class="hscroll">' + scaleTypes().map((x) => '<button class="pill" data-x="stype" data-v="' + x + '" aria-pressed="' + (sc.type === x) + '">' + scaleName(x) + '</button>').join('') + '</div>';
   const acts = '<div class="ctrl4">' + play + icb('data-x="sdrone"', I.drone, t('droneTonic')) + icb('data-x="spiano"', I.piano, t('onPiano')) +
     '<button class="ic txt' + (th.scMore ? ' act' : '') + '" data-x="smore" aria-pressed="' + !!th.scMore + '" aria-label="' + t('schemeTitle') + '">' + t('schemeBtn') + '</button></div>';
   const tog = '<div class="vtog"><div class="seg" style="width:auto"><button data-x="tview" data-v="fret" aria-pressed="' + (vw === 'fret') + '">' + t('fret') +
@@ -276,7 +284,7 @@ function chordsHTML() {
       icb('data-x="carp"', I.wave, t('arp'), 'sm') + icb('data-x="cplay"', I.play, t('playChord'), 'sm') + '</div>' + notes + '<div class="sviz">' + fretHTML(new Set(k.pcs), k.pc, 12) + '</div></div>';
   }
   return '<div class="swrap"><div class="hscroll">' + SH.map((n, i) => '<button class="pill" data-x="croot" data-v="' + i + '" aria-pressed="' + (k.pc === i) + '">' + enh(i) + '</button>').join('') + '</div>' +
-    '<div class="hscroll">' + CHORDS.map((c) => '<button class="pill" data-x="ctype" data-v="' + c[0] + '" aria-pressed="' + (c[0] === k.id) + '" aria-label="' + ui.esc(t('chord.' + c[0])) + '">' + (c[1] || 'maj') + '</button>').join('') + '</div>' +
+    '<div class="hscroll">' + chordTypes().map((c) => '<button class="pill" data-x="ctype" data-v="' + c[0] + '" aria-pressed="' + (c[0] === k.id) + '" aria-label="' + ui.esc(t('chord.' + c[0])) + '">' + (c[1] || 'maj') + '</button>').join('') + '</div>' +
     '<div class="ch2"><b class="cname">' + k.name + '</b><span class="l2">' + ui.esc(desc) + '</span></div>' + notes + chordCircle(k, desc) + (TH().chMore ? fretHTML(new Set(k.pcs), k.pc, 15) : '') +
     '<div class="ctrl4" style="margin-top:10px">' + play + icb('data-x="carp"', I.wave, t('arp')) + icb('data-x="cpiano"', I.piano, t('onPiano')) + icb('data-x="cdrone"', I.drone, t('droneTonic')) +
     '<button class="ic txt' + (TH().chMore ? ' act' : '') + '" data-x="cmore" aria-pressed="' + !!TH().chMore + '" aria-label="' + t('fretTitle') + '">' + t('fretBtn') + '</button></div>' + (TH().chMore ? bookLink('chords') : '') + '</div>'; // гриф и ссылка — по кнопке (без прокрутки)
@@ -386,10 +394,11 @@ function view() {
   const s = curSec(), big = size === 'full' || size === 'half', { t } = ctx;
   // «Определитель» — не отдельная вкладка, а переключатель внутри «Гамм» (слово автора 21.11.2026: все разделы должны помещаться на экране)
   const on = (k) => k === s || (k === 'scales' && s === 'find');
-  const sub = findOn() && (s === 'scales' || s === 'find') ? '<div class="tsw tsub" role="tablist">' + ['scales', 'find'].map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' + t('sec.' + k) + '</button>').join('') + '</div>' : '';
-  const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + SECS.map((k) => '<button class="tswb' + (on(k) ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + on(k) + '">' +
+  const sub = !learner() && findOn() && (s === 'scales' || s === 'find') ? '<div class="tsw tsub" role="tablist">' + ['scales', 'find'].map((k) => '<button class="tswb' + (k === s ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + (k === s) + '">' + t('sec.' + k) + '</button>').join('') + '</div>' : '';
+  const sw = big ? '<div class="tswrow"><div class="tsw" role="tablist">' + (learner() ? L_SECS : SECS).map((k) => '<button class="tswb' + (on(k) ? ' on' : '') + '" data-x="tsec" data-v="' + k + '" role="tab" aria-selected="' + on(k) + '">' +
     t('sec.' + k) + '</button>').join('') + '</div></div>'
     : '<div class="csw"><button class="cswb on txt" data-x="tsecnext" aria-label="' + t('secNext') + '">' + t('sec.' + s) + ' ›</button></div>';
+  clampLearner();
   const body = s === 'circle' ? circleHTML() : s === 'keys' ? keysHTML() : s === 'scales' ? scalesHTML() : s === 'chords' ? chordsHTML() : s === 'find' ? findHTML() : intervalsHTML();
   return '<div class="comp ' + size + '"' + (sw ? ' data-swtabs' : '') + '>' + sw + sub + '<div class="cbody">' + body + '</div></div>';
 }
@@ -421,8 +430,8 @@ function render() {
 // Шторка выбора гаммы или аккорда
 function typeSheet(kind) {
   const { t, ui } = ctx, th = TH();
-  const list = kind === 'sc' ? SCALE_TYPES.map((k) => [k, scaleName(k).replace(/^./, (c) => c.toUpperCase()), ''])
-    : CHORDS.map((c) => [c[0], c[1] || 'maj', t('chord.' + c[0])]);
+  const list = kind === 'sc' ? scaleTypes().map((k) => [k, scaleName(k).replace(/^./, (c) => c.toUpperCase()), ''])
+    : chordTypes().map((c) => [c[0], c[1] || 'maj', t('chord.' + c[0])]);
   const cur = kind === 'sc' ? th.scale.type : th.ctype || 'maj';
   ui.sheet(() => ui.snav(t(kind === 'sc' ? 'sheet.scale' : 'sheet.chord')) + '<div class="group">' + list.map(([v, n, d]) => '<button class="cell" data-tp="' + v + '" aria-pressed="' + (v === cur) +
     '"><span class="grow"><b style="font-weight:600">' + ui.esc(n) + '</b>' + (d ? ' <span class="l2" style="font-size:14px">' + ui.esc(d) + '</span>' : '') + '</span>' + (v === cur ? ui.icons.check : '') + '</button>').join('') + '</div>',
@@ -508,7 +517,7 @@ function act(a, el) {
     case 'sroot': th.scale.pc = +el.dataset.v; save(); break;
     case 'srootp': case 'srootn': th.scale.pc = (th.scale.pc + (a === 'srootn' ? 1 : 11)) % 12; save(); break;
     case 'stype': th.scale.type = el.dataset.v; save(); break;
-    case 'stypenext': th.scale.type = SCALE_TYPES[(SCALE_TYPES.indexOf(th.scale.type) + 1) % SCALE_TYPES.length]; save(); break;
+    case 'stypenext': { const ty = scaleTypes(); th.scale.type = ty[(ty.indexOf(th.scale.type) + 1) % ty.length]; save(); break; }
     case 'splay': A.playSeq(scaleInfo(th.scale.pc, th.scale.type).seq, { step: 0.28 }); break;
     case 'sdrone': { const k = scaleInfo(th.scale.pc, th.scale.type); droneOn(k.rootPc, k.root); break; }
     case 'spiano': { const k = scaleInfo(th.scale.pc, th.scale.type); highlight(k.pcs, k.rootPc, k.root + ' ' + scaleName(th.scale.type)); break; }
@@ -516,7 +525,7 @@ function act(a, el) {
     case 'croot': th.croot = +el.dataset.v; save(); break;
     case 'crootp': case 'crootn': th.croot = ((th.croot || 0) + (a === 'crootn' ? 1 : 11)) % 12; save(); break;
     case 'ctype': th.ctype = el.dataset.v; save(); break;
-    case 'ctypenext': { const k = CHORDS.map((c) => c[0]); th.ctype = k[(k.indexOf(th.ctype || 'maj') + 1) % k.length]; save(); break; }
+    case 'ctypenext': { const k = chordTypes().map((c) => c[0]); th.ctype = k[(k.indexOf(th.ctype || 'maj') + 1) % k.length]; save(); break; }
     case 'cplay': A.playChord(chordInfo(th.croot || 0, th.ctype).midis); break;
     case 'carp': { const m = chordInfo(th.croot || 0, th.ctype).midis; A.playSeq(m.concat(m.slice(0, -1).reverse()), { step: 0.22 }); break; }
     case 'cpiano': { const k = chordInfo(th.croot || 0, th.ctype); highlight(k.pcs, k.pc, k.name); break; }

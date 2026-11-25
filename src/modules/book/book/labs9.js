@@ -21,6 +21,15 @@ export const GCH = {
   G7: { f: [3, 2, 0, 0, 0, 1], p: [3, 2, 0, 0, 0, 1] },
   C7: { f: [-1, 3, 2, 3, 1, 0], p: [0, 3, 2, 4, 1, 0] },
   B7: { f: [-1, 2, 1, 2, 0, 2], p: [0, 2, 1, 3, 0, 4] },
+  // барре: указательный палец прижимает несколько струн сразу (на схеме — полоса); F3 — малое барре на двух струнах
+  F3: { f: [-1, -1, 3, 2, 1, 1], p: [0, 0, 3, 2, 1, 1], label: true },
+  F: { f: [1, 3, 3, 2, 1, 1], p: [1, 3, 4, 2, 1, 1] },
+  Bm: { f: [-1, 2, 4, 4, 3, 2], p: [0, 1, 3, 4, 2, 1] },
+  // септаккорды на минор и большая септима
+  Am7: { f: [-1, 0, 2, 0, 1, 0], p: [0, 0, 2, 0, 1, 0] },
+  Em7: { f: [0, 2, 0, 0, 0, 0], p: [0, 2, 0, 0, 0, 0] },
+  Dm7: { f: [-1, -1, 0, 2, 1, 1], p: [0, 0, 0, 2, 1, 1] },
+  Cmaj7: { f: [-1, 3, 2, 0, 0, 0], p: [0, 3, 2, 0, 0, 0] },
 };
 export const midisOf = (name) => GCH[name].f.map((f, i) => (f < 0 ? null : OPEN[i] + f)).filter((m) => m != null);
 
@@ -31,8 +40,14 @@ export function chordBoxSVG(name, aria) {
   s += '<line class="nut" x1="' + x0 + '" x2="' + (x0 + 5 * dx) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
   for (let f = 1; f <= 4; f++) s += '<line class="fw" x1="' + x0 + '" x2="' + (x0 + 5 * dx) + '" y1="' + (y0 + f * dy) + '" y2="' + (y0 + f * dy) + '"/>';
   for (let i = 0; i < 6; i++) s += '<line class="str" x1="' + (x0 + i * dx) + '" x2="' + (x0 + i * dx) + '" y1="' + y0 + '" y2="' + (y0 + 4 * dy) + '"/>';
+  // барре: один палец на одном ладу сразу на нескольких струнах — полоса от первой до последней из них
+  const grp = {}; c.f.forEach((f, i) => { if (f > 0 && c.p[i] > 0) (grp[c.p[i] + ':' + f] ||= []).push(i); });
+  const bars = Object.entries(grp).filter(([, v]) => v.length >= 2).map(([k, v]) => ({ fin: +k.split(':')[0], fr: +k.split(':')[1], a: Math.min(...v), b: Math.max(...v) }));
+  bars.forEach((r) => { const y = y0 + (r.fr - 0.5) * dy; s += '<rect class="barre" x="' + (x0 + r.a * dx - 7) + '" y="' + (y - 7) + '" width="' + ((r.b - r.a) * dx + 14) + '" height="14" rx="7"/><text class="fn" x="' + (x0 + r.a * dx) + '" y="' + (y + 3.6) + '" text-anchor="middle">' + r.fin + '</text>'; });
+  const inBar = (i) => bars.some((r) => c.p[i] === r.fin && c.f[i] === r.fr && i >= r.a && i <= r.b);
   c.f.forEach((f, i) => {
     const x = x0 + i * dx;
+    if (f > 0 && inBar(i)) return;
     if (f < 0) s += '<text class="mk" x="' + x + '" y="' + (y0 - 8) + '" text-anchor="middle">×</text>';
     else if (f === 0) s += '<circle class="op" cx="' + x + '" cy="' + (y0 - 10) + '" r="3.6"/>';
     else s += '<circle class="dot" cx="' + x + '" cy="' + (y0 + (f - 0.5) * dy) + '" r="7"/><text class="fn" x="' + x + '" y="' + (y0 + (f - 0.5) * dy + 3.6) + '" text-anchor="middle">' + c.p[i] + '</text>';
@@ -92,7 +107,7 @@ export function guitarLabs({ T, snd }) {
     st: { ch: start },
     render(s) {
       const c = GCH[s.ch];
-      return '<div class="bkgrow">' + list.map((n) => '<button type="button" class="bkgch' + (n === s.ch ? ' on' : '') + '" data-a="c:' + n + '" aria-pressed="' + (n === s.ch) + '">' + n + '</button>').join('') + '</div>' +
+      return '<div class="bkgrow">' + list.map((n) => '<button type="button" class="bkgch' + (n === s.ch ? ' on' : '') + '" data-a="c:' + n + '" aria-pressed="' + (n === s.ch) + '">' + (GCH[n].label ? T('gp.lbl.' + n) : n) + '</button>').join('') + '</div>' +
         '<div class="bkgwrap">' + chordBoxSVG(s.ch, T('gp.box.aria', { n: s.ch })) + '</div>' +
         '<ul class="bkgleg flat">' + c.f.map((f, i) => '<li><b>' + (6 - i) + '</b> ' + (f < 0 ? T('gp.box.mute') : f === 0 ? T('gp.box.open') : T('gp.box.fret', { f, p: c.p[i] })) + '</li>').join('') + '</ul>' +
         '<div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
@@ -110,6 +125,11 @@ export function guitarLabs({ T, snd }) {
   LABS.gboxa = boxLab(MAJ, 'A');
   LABS.gboxe = boxLab(MAJ, 'E');
   LABS.gboxs = boxLab(['E7', 'A7', 'D7', 'G7', 'C7', 'B7']);
+  const BAR = ['F3', 'F', 'Bm'], SEV = ['Am7', 'Em7', 'Dm7', 'Cmaj7'];
+  LABS.gboxb = boxLab(BAR, 'F3');
+  LABS.gboxf = boxLab(BAR, 'F');
+  LABS.gboxbm = boxLab(BAR, 'Bm');
+  LABS.gboxm7 = boxLab(SEV);
   const MIN = ['Am', 'Em', 'Dm'];
   LABS.gboxm = boxLab(MIN);
   LABS.gboxem = boxLab(MIN, 'Em');
@@ -144,13 +164,15 @@ export function guitarLabs({ T, snd }) {
   LABS.gstrumf = strumLab('f', 'C');
 
   // Связки аккордов: готовые последовательности открытых аккордов; схемы всех аккордов связки рядом и «Послушать»
-  const PROG = { g: ['G', 'C', 'D', 'G'], d: ['D', 'G', 'A', 'D'], a: ['A', 'D', 'E', 'A'], e: ['E', 'A', 'B7', 'E'], pop: ['G', 'D', 'Em', 'C'], min: ['Am', 'Dm', 'E', 'Am'] };
-  const ROMAN = { g: 'I – IV – V – I', d: 'I – IV – V – I', a: 'I – IV – V – I', e: 'I – IV – V – I', pop: 'I – V – vi – IV', min: 'i – iv – V – i' };
-  const progLab = (start) => ({
+  const PROG = { g: ['G', 'C', 'D', 'G'], d: ['D', 'G', 'A', 'D'], a: ['A', 'D', 'E', 'A'], e: ['E', 'A', 'B7', 'E'], pop: ['G', 'D', 'Em', 'C'], min: ['Am', 'Dm', 'E', 'Am'],
+    ii: ['Dm7', 'G7', 'Cmaj7', 'Cmaj7'], vi: ['Am7', 'Dm7', 'G7', 'Cmaj7'], bal: ['Cmaj7', 'Am7', 'Dm7', 'G7'] };
+  const ROMAN = { g: 'I – IV – V – I', d: 'I – IV – V – I', a: 'I – IV – V – I', e: 'I – IV – V – I', pop: 'I – V – vi – IV', min: 'i – iv – V – i', ii: 'ii – V – I – I', vi: 'vi – ii – V – I', bal: 'I – vi – ii – V' };
+  const BASIC = ['g', 'd', 'a', 'e', 'pop', 'min'], SEVENTH = ['ii', 'vi', 'bal'];
+  const progLab = (start, keys = BASIC) => ({
     st: { p: start },
     render(s) {
       const ch = PROG[s.p];
-      return '<div class="bkgrow">' + Object.keys(PROG).map((k) => '<button type="button" class="bkgch' + (k === s.p ? ' on' : '') + '" data-a="p:' + k + '" aria-pressed="' + (k === s.p) + '">' + T('gp.prog.' + k) + '</button>').join('') + '</div>' +
+      return '<div class="bkgrow">' + keys.map((k) => '<button type="button" class="bkgch' + (k === s.p ? ' on' : '') + '" data-a="p:' + k + '" aria-pressed="' + (k === s.p) + '">' + T('gp.prog.' + k) + '</button>').join('') + '</div>' +
         '<div class="bkgprog">' + ch.map((n, i) => '<div class="bkgpc"><b>' + n + '</b>' + chordBoxSVG(n, T('gp.box.aria', { n })) + '<i>' + ROMAN[s.p].split(' – ')[i] + '</i></div>').join('') + '</div>' +
         '<p class="bkhint">' + T('gp.prog.hint', { r: ROMAN[s.p] }) + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
     },
@@ -164,5 +186,37 @@ export function guitarLabs({ T, snd }) {
   });
   LABS.gprog = progLab('g');
   LABS.gprogp = progLab('pop');
+  LABS.gprogj = progLab('ii', SEVENTH); // с септаккордами: ii–V–I в C и другие
+
+  // Арпеджио (перебор): правая рука p (большой) играет басовую струну аккорда, i — 3-ю, m — 2-ю, a — 1-ю; рисунок — по долям
+  const ARP = { p4: ['p', 'i', 'm', 'a'], p6: ['p', 'i', 'm', 'a', 'm', 'i'], p8: ['p', 'i', 'm', 'i', 'a', 'i', 'm', 'i'] };
+  const FSTR = { i: 3, m: 4, a: 5 }; // индексы струн: 0 — 6-я … 5 — 1-я
+  const bassOf = (c) => c.f.findIndex((f) => f >= 0);
+  const stringOf = (c, fin) => { const k = fin === 'p' ? bassOf(c) : FSTR[fin]; return c.f[k] >= 0 ? k : bassOf(c); };
+  const arpSVG = (name, pat, aria) => {
+    const c = GCH[name], seq = ARP[pat], W = 30 + seq.length * 30, H = 108;
+    let g = '<svg class="bkgarp" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + aria + '">';
+    for (let k = 0; k < 6; k++) { const y = 14 + (5 - k) * 16; g += '<line class="str" x1="22" x2="' + (W - 6) + '" y1="' + y + '" y2="' + y + '"/><text class="sn" x="8" y="' + (y + 3.6) + '">' + (6 - k) + '</text>'; }
+    seq.forEach((fin, j) => { const k = stringOf(c, fin), x = 38 + j * 30, y = 14 + (5 - k) * 16; g += '<circle class="dot" cx="' + x + '" cy="' + y + '" r="7.5"/><text class="fn" x="' + x + '" y="' + (y + 3.6) + '" text-anchor="middle">' + fin + '</text><text class="stp" x="' + x + '" y="' + (H - 4) + '" text-anchor="middle">' + (j + 1) + '</text>'; });
+    return g + '</svg>';
+  };
+  const arpLab = (ch, pat) => ({
+    st: { ch, pat },
+    render(s) {
+      return '<div class="bkgrow">' + ['Am', 'C', 'G', 'Em'].map((n) => '<button type="button" class="bkgch' + (n === s.ch ? ' on' : '') + '" data-a="c:' + n + '" aria-pressed="' + (n === s.ch) + '">' + n + '</button>').join('') + '<span class="bkgsp"></span>' +
+        Object.keys(ARP).map((k) => '<button type="button" class="bkgch' + (k === s.pat ? ' on' : '') + '" data-a="s:' + k + '" aria-pressed="' + (k === s.pat) + '">' + T('gp.arp.' + k) + '</button>').join('') + '</div>' +
+        '<div class="bkgwrap">' + arpSVG(s.ch, s.pat, T('gp.arp.aria')) + '</div><p class="bkhint">' + T('gp.arp.hint') + '</p><div class="bkrow">' + playBtn('data-a="hear"', T('gp.box.hear')) + '</div>';
+    },
+    on(sx, a) {
+      if (a.startsWith('c:') && GCH[a.slice(2)]) { sx.ch = a.slice(2); return; }
+      if (a.startsWith('s:') && ARP[a.slice(2)]) { sx.pat = a.slice(2); return; }
+      if (a !== 'hear') return false;
+      const c = GCH[sx.ch], seq = ARP[sx.pat], step = 60 / 80 / 2, list = [];
+      for (let r = 0; r < 2; r++) seq.forEach((fin, j) => { const k = stringOf(c, fin); list.push([(r * seq.length + j) * step, [OPEN[k] + c.f[k]], 0.9]); });
+      snd.hits(list); return false;
+    },
+  });
+  LABS.garp = arpLab('Am', 'p4');
+  LABS.garp6 = arpLab('C', 'p6');
   return LABS;
 }

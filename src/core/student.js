@@ -3,9 +3,9 @@
 import { sha256 } from './integrity.js';
 
 // Базовый набор ученика: метроном, тюнер, пианино, ноты/табы/аккорды, диктофон, справочник новичка (учебник)
-export const STUDENT_BASE = ['metro', 'tuner', 'piano', 'notes', 'voice', 'book'];
+export const STUDENT_BASE = ['metro', 'tuner', 'piano', 'notes', 'voice', 'book', 'theory']; // «Теория» — облегчённая (modules/theory: learner)
 // Что учитель может открыть дополнительно (тренажёры, теория, вокал и т. д.); остальное закрыто всегда
-export const STUDENT_OPENABLE = ['beat', 'ear', 'vocal', 'theory', 'drone', 'audio', 'timer', 'glider', 'theremin', 'looper', 'studio', 'spectrum', 'convert'];
+export const STUDENT_OPENABLE = ['beat', 'ear', 'vocal', 'drone', 'audio', 'timer', 'glider', 'theremin', 'looper', 'studio', 'spectrum', 'convert'];
 
 const hashOf = (code, salt) => sha256('student|' + salt + '|' + String(code).trim());
 const norm = (code) => String(code == null ? '' : code).trim();

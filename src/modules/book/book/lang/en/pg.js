@@ -6,8 +6,8 @@ const ul = (...xs) => '<ul>' + xs.map((x) => '<li>' + x + '</li>').join('') + '<
 export const S = {
   'ls.teacherLock': 'The teacher will open this lesson',
   'bk.part9': 'Guitar from scratch',
-  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '20 lessons: posture, parts, tuning, chords, strumming, progressions',
-  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming and chord progressions.',
+  'lp.guitar.kicker': 'Classical guitar', 'lp.guitar.title': 'Guitar from scratch', 'lp.guitar.sub': '27 lessons: posture, parts, tuning, chords, strumming, arpeggios, barre, progressions',
+  'lp.guitar.lead': 'For classical guitar (nylon strings). First how to sit and what the guitar is made of, then tuning and reading chord diagrams, then major and minor chords, seventh chords, strumming, arpeggios, barre and chord progressions.',
   'ls.g1': 'Posture', 'ls.g2': 'Parts of the guitar', 'ls.g3': 'Tuning', 'ls.g4': 'Pain-free hands', 'ls.g5': 'Reading a chord diagram',
   'ls.g6': 'Chord C', 'ls.g7': 'Chord G', 'ls.g8': 'Chord D', 'ls.g9': 'Chord changes and a first song',
 
@@ -129,6 +129,51 @@ export const S = {
   'gp.prog.pop': 'pop',
   'gp.prog.min': 'minor',
   'gp.prog.hint': 'Degrees: {r}. "Listen" plays the progression, one chord per two beats.',
+  // арпеджио, барре, септаккорды на минор (25.11.2026)
+  'ls.g21': 'Arpeggios',
+  'ls.g22': 'Arpeggios on progressions',
+  'ls.g23': 'Small barre',
+  'ls.g24': 'Chord F (barre)',
+  'ls.g25': 'Chord Bm (barre)',
+  'ls.g26': 'Am7, Em7, Dm7',
+  'ls.g27': 'Cmaj7 and seventh-chord progressions',
+  'lx.g21.g': '<ul><li>The left hand sets Am; the right hand waits over the strings: p over the bass string (for Am it is the 5th), i over the 3rd, m over the 2nd, a over the 1st.</li><li>Each finger pulls its string up and slightly in, one after another: p i m a — four notes, one per beat at 60.</li><li>Then six notes (p i m a m i) and eight (p i m i a i m i).</li></ul>',
+  'lx.g21.t': 'Listen to each pattern and picture the fingers moving across the strings.',
+  'lx.g21.easy': 'An arpeggio is a chord played one note at a time. Each right-hand finger has its own string: p is bass, i m a are the three thin strings.',
+  'lx.g21.fix': '<ul><li>The fingers get in each other\'s way — keep the hand calm, fingers i m a slightly curved.</li><li>Notes of uneven loudness — pull all fingers the same way, without jerks.</li></ul>',
+  'lx.g22.g': '<ul><li>Play Am – C – G – Em – Am with the pattern p i m a m i at 60: one bar per chord.</li><li>Change the chord on the last beat of the bar; the right hand does not stop.</li><li>Record yourself and listen: is the picking even?</li></ul>',
+  'lx.g22.t': 'Listen to the recording and compare with strumming: how does it sound different?',
+  'lx.g22.easy': 'The same progression sounds different: strummed — energetic, as arpeggios — soft and singing.',
+  'lx.g22.fix': '<ul><li>The picking slips on the change — slow down: metronome 50, the right hand keeps playing while the left finds the chord.</li><li>The bass string changes with the chord — look at the diagram for the new chord\'s bass.</li></ul>',
+  'lx.g23.g': '<ul><li>Lay the index finger on fret 1 of the two thinnest strings (1st and 2nd) and press them with the side of the finger, close to the nail.</li><li>The other fingers: 2 on fret 2 of string 3, 3 on fret 3 of string 4. Play the four thin strings.</li><li>Check each string separately: do all four ring?</li></ul>',
+  'lx.g23.t': 'Learn the shape: a finger flat across two strings and two fingers like stairs beside it.',
+  'lx.g23.easy': 'A barre is when one finger presses several strings at one fret. The small barre is only two strings, a step before the full one.',
+  'lx.g23.fix': '<ul><li>Dead strings — press right next to the fret (not in the middle between frets) and with the side of the finger.</li><li>The finger hurts — normal; hold the chord briefly, rest, repeat a little on different days.</li></ul>',
+  'lx.g24.g': '<ul><li>Lay the index across all six strings at fret 1; the other fingers as in an Em chord shifted one fret: finger 3 on fret 3 of string 5, finger 4 on fret 3 of string 4, finger 2 on fret 2 of string 3.</li><li>Play all six strings.</li><li>Go through the strings one by one and find a dead one: move the finger until it rings.</li></ul>',
+  'lx.g24.t': 'Listen to F and Em in a row — the same shape, shifted along the neck.',
+  'lx.g24.easy': 'F is the familiar Em shifted one fret up, plus a barre with the index finger.',
+  'lx.g24.fix': '<ul><li>The 3rd or 2nd string is dead — the barre does not press fully; turn the index slightly onto its edge, close to the nail.</li><li>The hand tires — relax the shoulder and do not squeeze the neck with the thumb behind it.</li></ul>',
+  'lx.g25.g': '<ul><li>Lay the index on fret 2 of five strings (5th to 1st); the other fingers as in an Am chord shifted two frets: finger 3 on fret 4 of string 4, finger 4 on fret 4 of string 3, finger 2 on fret 3 of string 2.</li><li>Play five strings (5th to 1st), skip the 6th.</li><li>Check each string separately.</li></ul>',
+  'lx.g25.t': 'Listen to Am and Bm in a row — the same shape moved two frets.',
+  'lx.g25.easy': 'Barre chords are familiar shapes moved along the neck: the Em shape gives F, the Am shape gives Bm.',
+  'lx.g25.fix': '<ul><li>Not all strings ring — set the index closer to the fret and turn it slightly.</li><li>Holding the breath — hold the chord briefly and release between repeats.</li></ul>',
+  'lx.g26.g': '<ul><li>Am7: like Am but without finger 3; Em7: like Em but without finger 3; Dm7: the index presses fret 1 of the two thin strings, finger 2 on fret 2 of string 3.</li><li>Play Am7 – Em7 – Dm7, four beats each at 60.</li><li>Listen to how a minor seventh is softer than a plain minor.</li></ul>',
+  'lx.g26.t': 'Compare Am and Am7, Em and Em7 by ear.',
+  'lx.g26.easy': 'A minor seventh chord is a minor with an added soft seventh. A familiar shape with one finger removed.',
+  'lx.g26.fix': '<ul><li>Extra bass strings ring — do not play the 6th on Am7 and Dm7.</li><li>Dm7: the index must press both thin strings at fret 1.</li></ul>',
+  'lx.g27.g': '<ul><li>Cmaj7: like C but without finger 1 — the 3rd and 2nd strings ring open.</li><li>Play the progression Dm7 – G7 – Cmaj7 ("ii–V–I"), then Am7 – Dm7 – G7 – Cmaj7, two bars per chord at 60.</li><li>Play strummed or arpeggiated and record yourself.</li></ul>',
+  'lx.g27.t': 'Listen to how G7 "wants" to go to Cmaj7: tension and rest.',
+  'lx.g27.easy': 'Dm7 – G7 – Cmaj7: a step aside, tension and rest. This progression is in songs, ballads and jazz.',
+  'lx.g27.fix': '<ul><li>Cannot keep up with the changes — slow down: metronome 50, one chord per bar.</li><li>Cmaj7 sounds like C — check that finger 1 is off and the 2nd string is open.</li></ul>',
+  'gp.lbl.F3': 'F (small)',
+  'gp.arp.p4': 'p i m a',
+  'gp.arp.p6': 'p i m a m i',
+  'gp.arp.p8': 'p i m i a i m i',
+  'gp.arp.aria': 'Arpeggio pattern: right-hand fingers on the strings',
+  'gp.arp.hint': 'Rows are strings (6 thick, 1 thin), circles are right-hand fingers by beat. "Listen" plays two rounds at 80 beats per minute.',
+  'gp.prog.ii': 'ii–V–I',
+  'gp.prog.vi': 'vi–ii–V–I',
+  'gp.prog.bal': 'I–vi–ii–V',
 };
 export const TERMS = {};
 export const CH = [
@@ -276,5 +321,54 @@ ${tip('Play each progression at 60: four beats per chord.')}
 <p>Strum at 70: change on the last beat of the bar, the hand does not stop.</p>
 ${key('One progression, one strum, until the change is clean. Then the next.')}
 ${tip('Pick a progression, strum two rounds and record yourself.')}
+` },
+  { id: 'g21', t: 'Arpeggios', s: 'The notes of a chord one at a time', src: '', h: `
+<p>An arpeggio is the notes of a chord played one after another, as if the chord "opened up". The right hand plays: each finger has its own string.</p><p><b>p</b> (thumb) plays the bass string of the chord, <b>i</b> (index) the 3rd, <b>m</b> (middle) the 2nd, <b>a</b> (ring) the 1st.</p>
+{{lab:garp}}
+<p>The fingers wait over the strings and pull up and slightly in. First four notes "p i m a" evenly, like four steps; then six and eight.</p>
+${key('Picking rests on even notes: equal loudness and a steady count matter more than speed.')}
+${tip('Set Am and play "p i m a" at 60 — one note per beat.')}
+` },
+  { id: 'g22', t: 'Arpeggios on progressions', s: 'The same chords, softer', src: '', h: `
+<p>Now arpeggios on familiar chords: Am, C, G, Em. The pattern "p i m a m i" gives six notes per chord, evenly to the metronome.</p>
+{{lab:garp6}}
+<p>Change the chord on the last beat of the bar; the right hand does not stop. The bass string changes with the chord, so p plays a different string each time.</p>
+${key('The left hand prepares the new chord while the right still plays the old one.')}
+${tip('Play Am – C – G – Em – Am with "p i m a m i" and record yourself.')}
+` },
+  { id: 'g23', t: 'Small barre', s: 'One finger on several strings', src: '', h: `
+<p>A barre is when one finger (usually the index) presses several strings at one fret. It is the hardest step for a beginner, so we go in stairs. The first is a small barre on the two thinnest strings.</p>
+{{lab:gboxb}}
+<p>Chord F on four strings ("F (small)" in the diagram): the index lies on fret 1 of strings 1 and 2, finger 2 on fret 2 of string 3, finger 3 on fret 3 of string 4.</p>
+${key('Press with the side of the index finger, close to the nail, and right next to the fret — not with the middle of the pad.')}
+${tip('Lay the index on the two thin strings and pluck them: both must ring.')}
+` },
+  { id: 'g24', t: 'Chord F (barre)', s: 'A full barre on the first fret', src: '', h: `
+<p>The full chord F: the index lies across all six strings at fret 1. The other three fingers are as in an Em chord, one fret higher.</p>
+{{lab:gboxf}}
+<p>It is a familiar shape moved along the neck plus a barre. If it does not work at first, play "F (small)" and come back to the full one in a few days.</p>
+${key('F is Em moved one fret up with an index-finger barre.')}
+${tip('Set F, pluck the six strings one by one and find a dead one — move the finger.')}
+` },
+  { id: 'g25', t: 'Chord Bm (barre)', s: 'A barre on the second fret', src: '', h: `
+<p>Bm ("B minor"): the index finger on fret 2 of five strings (5th to 1st). The other three fingers are as in an Am chord, two frets higher.</p>
+{{lab:gboxbm}}
+<p>The 6th string is not played: there is an "×" above it in the diagram.</p>
+${key('Barre chords are familiar shapes moved along the neck: the Em shape gives F, the Am shape gives Bm.')}
+${tip('Play Am, then Bm — hear the same shape on different frets.')}
+` },
+  { id: 'g26', t: 'Am7, Em7, Dm7', s: 'Minor seventh chords', src: '', h: `
+<p>A minor seventh chord is a minor chord with an added soft seventh. It sounds warmer and calmer than a plain minor.</p>
+{{lab:gboxm7}}
+<p>The shapes are familiar, each with one finger changed: Am7 is Am without finger 3, Em7 is Em without finger 3, Dm7 is Dm with an index barre on the two thin strings.</p>
+${key('One finger\'s move, a different mood.')}
+${tip('Play Am, then Am7 — hear the difference.')}
+` },
+  { id: 'g27', t: 'Cmaj7 and seventh-chord progressions', s: 'Tension and rest', src: '', h: `
+<p>Cmaj7 is C with the index finger lifted: the 2nd and 3rd strings ring open. The sound is soft and airy.</p>
+{{lab:gprogj}}
+<p>The best-known progression with sevenths is <b>ii–V–I</b>: Dm7 – G7 – Cmaj7. G7 creates tension, Cmaj7 resolves it — rest. This progression is in songs, ballads and jazz.</p>
+${key('Dm7 – G7 – Cmaj7: a step aside, tension, and back home.')}
+${tip('Play Dm7 – G7 – Cmaj7 strummed or arpeggiated at 60 and record yourself.')}
 ` },
 ];

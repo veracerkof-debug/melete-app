@@ -175,3 +175,21 @@ describe('«Гитара с нуля»: схемы аккордов', () => {
     expect(midisOf('G')).toEqual([43, 47, 50, 55, 59, 67]);
   });
 });
+
+describe('«Гитара с нуля»: барре, арпеджио, септаккорды', () => {
+  it('барре рисуется полосой, пальцы согласованы; арпеджио — по струнам аккорда', async () => {
+    const { GCH, chordBoxSVG, midisOf, guitarLabs } = await import('../src/modules/book/book/labs9.js');
+    expect(chordBoxSVG('F', 'x')).toContain('class="barre"'); expect(chordBoxSVG('Bm', 'x')).toContain('class="barre"'); expect(chordBoxSVG('Dm7', 'x')).toContain('class="barre"');
+    expect(chordBoxSVG('C', 'x')).not.toContain('class="barre"'); expect(chordBoxSVG('Am', 'x')).not.toContain('class="barre"');
+    expect(midisOf('F')).toEqual([41, 48, 53, 57, 60, 65]); // F C F A C F
+    expect(midisOf('Cmaj7')).toEqual([48, 52, 55, 59, 64]); // C E G B E
+    const T = (k, o) => k + (o ? JSON.stringify(o) : ''), played = [];
+    const L = guitarLabs({ T, snd: { hits: (l) => played.push(l) } });
+    for (const lab of ['garp', 'garp6']) {
+      const st = JSON.parse(JSON.stringify(L[lab].st)); expect(L[lab].render(st)).not.toMatch(/undefined|NaN/);
+      ['Am', 'C', 'G', 'Em'].forEach((c) => { L[lab].on(st, 'c:' + c); ['p4', 'p6', 'p8'].forEach((p) => { L[lab].on(st, 's:' + p); expect(L[lab].render(st)).not.toMatch(/undefined|NaN/); L[lab].on(st, 'hear'); }); });
+    }
+    expect(played.length).toBe(24); played.forEach((l) => l.forEach((n) => expect(n[1][0]).toBeGreaterThanOrEqual(40)));
+    ['gboxb', 'gboxf', 'gboxbm', 'gboxm7', 'gprogj'].forEach((k) => expect(L[k].render(JSON.parse(JSON.stringify(L[k].st)))).not.toMatch(/undefined|NaN/));
+  });
+});
