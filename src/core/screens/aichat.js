@@ -6,6 +6,7 @@ import { describe as describeP } from '../ai/proposals.js';
 import { mascotName } from '../ai/index.js';
 import { LIMITS } from '../ai/attach.js';
 import { brandOf } from '../ai/brand.js';
+import { TASKS } from '../../music/anaai.js';
 
 // Значок нейросети: свой кружок с буквой, цвет по фирме (официальных логотипов нет — товарные знаки)
 export const badge = (b, size = 28) => '<i class="aibadge" style="--bh:' + b.hue + ';--bs:' + size + 'px" aria-hidden="true">' + esc(b.mark) + '</i>';
@@ -33,25 +34,34 @@ function propHTML(m, p, songs, recs = [], show = null) {
   return '<div class="aip' + (st === 'pending' ? ' pend' : '') + '"><b>' + esc(head) + '</b>' + (st === 'blocked' || (st === 'invalid' && !(p.errors && p.errors.length)) ? '' : body) + btns + '</div>';
 }
 
-export async function openChat(app, { onSettings = () => {}, studio = false } = {}) {
+export async function openChat(app, { onSettings = () => {}, studio = false, rec = null } = {}) {
   // из студии: ИИ видит проект студии и предлагает партии (слово автора 26.11.2026); сначала — разрешение, один раз
   if (studio && (app.ai.cfg().access.studio || 'none') === 'none') {
     const ok = await confirm(t('ai.studio.askTitle'), t('ai.studio.askText'), t('ai.studio.askYes'));
     if (!ok) return;
     app.ai.save({ access: { studio: 'write' } });
   }
-  const chat = app.ai.chat(), name = mascotName();
+  // «Улучшить разбор» (слово автора 26.11.2026): одна запись — сжатая сводка по тактам; правки по тактам с пометкой «от ИИ»
+  const recRec = rec && app.files ? app.files.get(rec) : null;
+  if (rec && !recRec) return;
+  if (rec && (app.ai.cfg().access.media || 'none') !== 'write') {
+    const ok = await confirm(t('ai.rec.askTitle'), t('ai.rec.askText'), t('ai.rec.askYes'));
+    if (!ok) return;
+    app.ai.save({ access: { media: 'write' } });
+  }
+  if (rec) app.aiFocus = { rec };
+  const manual = studio || !!rec, chat = app.ai.chat(), name = mascotName();
   let off = null, draft = '', atts = [], reading = 0, linkOpen = false;
   const GEAR = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>' }) + '<div class="aibrand" data-aibrand></div><div class="aichat' + (studio ? ' studio' : '') + '"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
+  const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>' }) + '<div class="aibrand" data-aibrand></div><div class="aichat' + (manual ? ' studio' : '') + '"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
     '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="1" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
   sheet(html, (el) => {
     const brandEl = el.querySelector('[data-aibrand]');
-    const drawBrand = () => { if (studio && !app.ai.ready()) { brandEl.innerHTML = '<span class="aibn"><b>' + esc(t('ai.studio.manual')) + '</b><i>' + esc(t('ai.studio.manualSub')) + '</i></span>'; return; } const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + '</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
+    const drawBrand = () => { if (manual && !app.ai.ready()) { brandEl.innerHTML = '<span class="aibn"><b>' + esc(t('ai.studio.manual')) + '</b><i>' + esc(t('ai.studio.manualSub')) + '</i></span>'; return; } const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + '</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
     const list = el.querySelector('[data-aimsgs]'), ctx = el.querySelector('[data-aictx]'), ta = el.querySelector('[data-aiin]'), chips = el.querySelector('[data-aiatt]'), tools = el.querySelector('[data-aitools]'), fin = el.querySelector('[data-aifile]');
     const drawAtt = () => {
       const c = app.ai.cfg();
-      tools.innerHTML = (studio ? '<button class="ic sm aitool" data-ai="copyprompt" aria-label="' + esc(t('ai.studio.copy')) + '" title="' + esc(t('ai.studio.copy')) + '">' + COPY + '</button><button class="ic sm aitool" data-ai="paste" aria-label="' + esc(t('ai.studio.paste')) + '" title="' + esc(t('ai.studio.paste')) + '">' + PASTE + '</button>' : '') + (c.attach.files ? '<button class="ic sm aitool" data-ai="file" aria-label="' + esc(t('ai.att.addFile')) + '"' + (chat.busy ? ' disabled' : '') + '>' + CLIP + '</button>' : '') +
+      tools.innerHTML = (manual ? '<button class="ic sm aitool" data-ai="copyprompt" aria-label="' + esc(t('ai.studio.copy')) + '" title="' + esc(t('ai.studio.copy')) + '">' + COPY + '</button><button class="ic sm aitool" data-ai="paste" aria-label="' + esc(t('ai.studio.paste')) + '" title="' + esc(t('ai.studio.paste')) + '">' + PASTE + '</button>' : '') + (c.attach.files ? '<button class="ic sm aitool" data-ai="file" aria-label="' + esc(t('ai.att.addFile')) + '"' + (chat.busy ? ' disabled' : '') + '>' + CLIP + '</button>' : '') +
         (c.attach.links ? '<button class="ic sm aitool' + (linkOpen ? ' on' : '') + '" data-ai="link" aria-label="' + esc(t('ai.att.addLink')) + '"' + (chat.busy ? ' disabled' : '') + '>' + LINK + '</button>' : '');
       chips.innerHTML = (linkOpen ? '<div class="ailink"><input class="ain" data-ailink inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…" aria-label="' + esc(t('ai.att.addLink')) + '"><button class="link b" data-ai="linkgo">' + t('ai.att.add') + '</button></div>' : '') +
         (atts.length || reading ? '<div class="aichips">' + atts.map((a) => '<span class="aichip"><b>' + esc(a.name) + '</b><i>' + (a.kind === 'image' ? t('ai.att.image') : t('ai.att.chars', { n: a.chars }) + (a.trimmed ? ' · ' + t('ai.att.cut') : '')) + '</i><button data-ai="rm" data-id="' + a.id + '" aria-label="' + esc(t('ai.att.rm')) + '">✕</button></span>').join('') + (reading ? '<span class="aichip"><i>' + t('ai.att.reading') + '</i></span>' : '') + '</div>' : '');
@@ -68,7 +78,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
     const draw = () => {
       drawBrand();
       const songs = app.store.state.songs || [], recs = app.files ? app.files.list('audio') : [], msgs = chat.messages;
-      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(studio ? 'ai.studio.hello' : 'ai.hello', { name }) + '</p>' + (studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show)).join('')).join('') +
+      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(rec ? 'ai.rec.hello' : studio ? 'ai.studio.hello' : 'ai.hello', { name, file: recRec ? recRec.name : '' }) + '</p>' + (rec ? '<div class="aichips2">' + TASKS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t('ai.task.' + k.id + '.tz')) + '">' + esc(t('ai.task.' + k.id)) + '</button>').join('') + '</div>' : studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
         (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
       list.scrollTop = list.scrollHeight;
@@ -76,7 +86,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
       const cats = pv.parts.map((p) => t(CATS[p.cat])).concat(atts.length ? [t('ai.ctx.att', { n: atts.length })] : []);
       ctx.innerHTML = (cats.length ? t('ai.ctx', { cats: cats.join(', '), n: pv.tokens }) : t('ai.ctxNone')) + ' · <button class="link" data-ai="settings">' + t('ai.access') + '</button>';
       drawAtt();
-      el.querySelector('[data-ai="send"]').disabled = chat.busy || (studio && !app.ai.ready());
+      el.querySelector('[data-ai="send"]').disabled = chat.busy || (manual && !app.ai.ready());
     };
     off = chat.subscribe(draw); draw();
     // поле ввода — одна строка, растёт по тексту до разумного предела (≈ 30 % видимой высоты, не больше 160 px), дальше прокручивается
@@ -114,7 +124,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
       else if (a === 'settings') onSettings();
       else if (a === 'chip') { ta.value = b.dataset.t || ''; grow(); ta.focus(); }
       else if (a === 'copyprompt') {
-        const v = ta.value.trim() || t('ai.studio.chip1');
+        const v = ta.value.trim() || (rec ? t('ai.task.chords.tz') : t('ai.studio.chip1'));
         copyText(chat.buildPrompt(v)).then((ok) => toast(t(ok ? 'ai.studio.copied' : 'ai.studio.copyFail')));
       }
       else if (a === 'paste') pasteSheet();
@@ -132,5 +142,5 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
       });
     };
     fin.addEventListener('change', () => { const fs = [...fin.files]; fin.value = ''; addFiles(fs); });
-  }, { onClose: () => { if (off) off(); } });
+  }, { onClose: () => { if (off) off(); if (rec && app.aiFocus && app.aiFocus.rec === rec) app.aiFocus = null; } });
 }

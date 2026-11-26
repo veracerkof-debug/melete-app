@@ -109,11 +109,12 @@ export function markEdited(ana, chords, now = Date.now()) {
   const a = ana || {};
   if (!a.cauto && Array.isArray(a.chords)) a.cauto = a.chords.map((x) => ({ ...x }));
   a.chords = chords; a.cedit = now;
+  delete a.cai; // правка человеком снимает пометку «от ИИ» (нейросеть после правки ставит её заново)
   return a;
 }
 export function resetEdited(ana, now = Date.now()) {
   if (!ana || !Array.isArray(ana.cauto)) return ana;
-  ana.chords = ana.cauto.map((x) => ({ ...x })); delete ana.cauto; ana.cedit = now; // возврат — тоже правка: время новее, синхронизация донесёт его
+  ana.chords = ana.cauto.map((x) => ({ ...x })); delete ana.cauto; delete ana.cai; ana.cedit = now; // возврат — тоже правка: время новее, синхронизация донесёт его
   return ana;
 }
 

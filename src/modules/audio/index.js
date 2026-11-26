@@ -300,14 +300,22 @@ function chordToolsHTML(t) {
   if (!chordsOf(t).length) return '';
   const tr = ctx.t, esc = ctx.ui.esc;
   return '<div class="chtools">' + (AU.chfull ? '<button class="ic sm" data-x="aplay" aria-label="' + esc(tr('playPause')) + '">' + (pl().paused ? I.play : I.pause) + '</button>' : '') +
-    '<span class="grow"></span><button class="btn sm" data-x="achtext">' + esc(tr('ch.toText')) + '</button><button class="btn sm" data-x="achfull" aria-pressed="' + !!AU.chfull + '">' + esc(tr(AU.chfull ? 'ch.exitFull' : 'ch.full')) + '</button></div>';
+    (t.ana && t.ana.cai ? '<span class="aitag" title="' + esc(tr('ai.byAiChords')) + '">' + esc(tr('ai.byAi')) + '</span>' : '') + '<span class="grow"></span>' + (WEB ? '' : '<button class="ic sm aibtn" data-x="aimprove" aria-label="' + esc(tr('ai.improve')) + '" title="' + esc(tr('ai.improve')) + '"><svg viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></button>') + '<button class="btn sm" data-x="achtext">' + esc(tr('ch.toText')) + '</button><button class="btn sm" data-x="achfull" aria-pressed="' + !!AU.chfull + '">' + esc(tr(AU.chfull ? 'ch.exitFull' : 'ch.full')) + '</button></div>';
+}
+// Гипотезы нейросети по записи (r.ai): состав, название, проверка темпа и тональности — всегда с пометкой «гипотеза», данные записи они не меняют
+function aiNoteHTML(t) {
+  const a = t && t.ai; if (!a) return '';
+  const tr = ctx.t, TEMPO = { ok: 'ai.chk.ok', double: 'ai.chk.double', half: 'ai.chk.half', unsure: 'ai.chk.unsure' };
+  const rows = [a.instruments && a.instruments.length ? tr('ai.note.inst') + ': ' + a.instruments.join(', ') : '', [a.title, a.artist, a.genre].filter(Boolean).join(' · '),
+    a.check ? tr('ai.note.check') + ': ' + [a.check.tempo ? tr(TEMPO[a.check.tempo]) : '', a.check.key ? tr('ai.note.key', { k: a.check.key }) : '', a.check.confidence != null ? Math.round(a.check.confidence * 100) + ' %' : ''].filter(Boolean).join(', ') : '', a.note || (a.check && a.check.note) || ''].filter(Boolean);
+  return rows.length ? '<div class="ainote" role="note"><span class="aitag">' + esc(tr('ai.hypo')) + '</span>' + rows.map((x) => '<span>' + esc(x) + '</span>').join('') + '</div>' : '';
 }
 function pviewHTML(c, d, half) {
   const t = AU.cur, v = pview();
   if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
   if (v === 'sing') return SING.html(t) + atimes({ ...c, chord: '' }, d, anaTxt(t));
   if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
-  if (v === 'chords') return chordToolsHTML(t) + chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)) + marksHTML(); // «сейчас» — в самом виде, строка под ним не нужна
+  if (v === 'chords') return chordToolsHTML(t) + chordsViewHTML(t) + aiNoteHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)) + marksHTML(); // «сейчас» — в самом виде, строка под ним не нужна
   return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
 }
 
@@ -1513,7 +1521,7 @@ function marksSheet() {
     const ms = x.marks || [];
     return ui.snav(t('marks')) + '<div class="group"><button class="cell act" data-mk="add">' + t('markAddAt', { time: fmtT(pl().currentTime) }) + '</button></div>' +
       (ms.length ? '<div class="group">' + ms.map((m, i) => '<div class="cell mkrow"><button class="mkt num" data-mk="go" data-i="' + i + '" aria-label="' + esc(t('markGo', { n: i + 1, time: fmtT(m.t) })) + '"><b>' + (i + 1) +
-        '</b>' + fmtT(m.t) + '</button><input class="inp left grow" data-mn="' + i + '" maxlength="40" placeholder="' + esc(t('markName')) + '" aria-label="' + esc(t('markNameN', { n: i + 1 })) + '" value="' + esc(m.name || '') + '">' +
+        '</b>' + fmtT(m.t) + (m.ai ? '<i class="aitag">' + esc(t('ai.byAi')) + '</i>' : '') + '</button><input class="inp left grow" data-mn="' + i + '" maxlength="40" placeholder="' + esc(t('markName')) + '" aria-label="' + esc(t('markNameN', { n: i + 1 })) + '" value="' + esc(m.name || '') + '">' +
         '<button class="ic txt sm" data-mk="loop" data-i="' + i + '" aria-label="' + t('markLoop') + '">A–B</button><button class="ic sm" data-mk="del" data-i="' + i + '" aria-label="' + t('markDel') + '" style="color:var(--red)">' + I.minus + '</button></div>').join('') + '</div>' : '') +
       '<p class="ftr">' + t('marksInfo') + '</p>';
   };
@@ -1530,7 +1538,7 @@ function marksSheet() {
     el.addEventListener('change', (e) => {
       const n = e.target.closest('[data-mn]');
       if (!n || !x.marks || !x.marks[+n.dataset.mn]) return;
-      x.marks[+n.dataset.mn].name = n.value.trim();
+      x.marks[+n.dataset.mn].name = n.value.trim(); delete x.marks[+n.dataset.mn].ai; // правка человеком снимает «от ИИ»
       ctx.files.save(x);
     });
   }, { onClose: () => render() });
@@ -1827,6 +1835,7 @@ function act(a, el) {
     case 'amj': seekMark(+el.dataset.i); break;
     case 'achfull': AU.chfull = !AU.chfull; render(); break;
     case 'achtext': chordTextSheet(); break;
+    case 'aimprove': if (AU.cur && ctx.ai) ctx.ai.open({ rec: AU.cur.id }); break;
     case 'chedit': { const L = chordsOf(AU.cur), i = chordAt(AU.cur, pl().currentTime + 0.03); if (i >= 0) chordSheet(L[i].t); break; }
     case 'amlist': marksSheet(); break;
     case 'akeysheet': keySheet(); break;

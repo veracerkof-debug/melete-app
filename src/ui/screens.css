@@ -975,3 +975,7 @@ html.desk .hstart .hfree{min-height:64px}
 .aichat.studio .aiin{flex-wrap:wrap}
 .aichat.studio .aiin .aitools{flex-direction:row;flex:0 0 100%;order:-1}
 .aim.t{align-self:center;max-width:90%;background:none;color:var(--l2);font-size:12px;padding:2px 8px;text-align:center}
+/* пометки «от ИИ»: у аккордов, частей и гипотез — всегда видно, что это не измерение */
+.aitag{text-transform:uppercase;display:inline-flex;align-items:center;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:9px;background:color-mix(in srgb,var(--tint) 18%,transparent);color:var(--tint-text,var(--tint));margin:0 6px;white-space:nowrap}
+.ainote{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;margin:6px 0;border-radius:12px;background:color-mix(in srgb,var(--tint) 7%,transparent);font-size:13px;color:var(--l2)}
+.ainote span:not(.aitag){min-width:0}

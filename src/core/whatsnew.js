@@ -147,6 +147,9 @@ export const NEWS = [
   { n: 49, d: '2026-11-26', ru: ['Студия: кнопка нейросети — опишите партию, и она предложит ударные, бас, аккорды, клавиши, пэды или мелодию по проекту, поправит темп и дорожки; можно со своим подключением или копированием запроса в любую нейросеть'],
     en: ['Studio: an AI button — describe a part and it suggests drums, bass, chords, keys, pads or a melody for the project and can adjust tempo and tracks; with your own connection or by copying the request into any AI'],
     uz: ['Studiya: neyrotarmoq tugmasi — partiyani tasvirlang, u loyiha bo‘yicha nog‘ora, bas, akkordlar, klavishlar, pedlar yoki ohang taklif qiladi, temp va treklarni to‘g‘rilaydi; o‘z ulanishingiz bilan yoki so‘rovni istalgan neyrotarmoqqa nusxalab'] },
+  { n: 50, d: '2026-11-26', ru: ['Медиатека: «Улучшить разбор» нейросетью — аккорды по тактам, названия частей песни, проверка темпа и тональности; все правки с пометкой «от ИИ» и отменой'],
+    en: ['Media library: “Improve the analysis” with AI — chords by bar, song section names, tempo and key check; every edit is marked “by AI” and can be undone'],
+    uz: ['Mediateka: tahlilni neyrotarmoq bilan yaxshilash — taktlar bo‘yicha akkordlar, qo‘shiq qismlari nomlari, temp va tonallik tekshiruvi; barcha tuzatishlar «AI» belgisi bilan va bekor qilish mumkin'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

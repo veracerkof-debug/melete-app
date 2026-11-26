@@ -200,7 +200,7 @@ export function makeCtx(app, mod) {
     // Нейросеть для инструмента (студия): готова ли, открыть чат с данными инструмента, подключить правки инструмента (hook: { project(), apply(ops), undo(pid, u) })
     ai: {
       ready: () => !!(app.ai && app.ai.ready()),
-      open: () => import('./screens/aichat.js').then((m) => m.openChat(app, { studio: true, onSettings: () => app.openPanel && app.openPanel('ai') })),
+      open: (o = {}) => import('./screens/aichat.js').then((m) => m.openChat(app, { studio: !o.rec, ...o, onSettings: () => app.openPanel && app.openPanel('ai') })),
       hook: (h) => { app.studioAI = h; },
       unhook: (h) => { if (app.studioAI === h) app.studioAI = null; },
     },

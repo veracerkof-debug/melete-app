@@ -6,6 +6,7 @@ import { deleteSong } from '../library.js';
 import { canWrite } from './config.js';
 import { cleanShowOp, applyShowOps, undoShowOps, describeShow, SHOW_MAX } from './showops.js';
 import { applyItems, markEdited, norm } from '../../music/chordedit.js';
+import { barStarts, barSpan, barItems } from '../../music/anaai.js';
 import { cleanQueries, describeQueries } from './queries.js';
 import { cleanStudioOps, applyStudioOps, undoStudioOps, describeStudioOps } from '../../music/studioai.js';
 
@@ -27,7 +28,33 @@ export function cleanField(k, v) {
 // Правки записи от модели: { op: 'chords' | 'marks', ref: id записи, items: […] } → очищенная правка или null
 const num = (v, lo, hi) => { const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() ? +v : NaN; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 export function cleanRecOp(o) {
-  if (!o || typeof o.ref !== 'string' || !o.ref || !Array.isArray(o.items)) return null;
+  if (!o || typeof o.ref !== 'string' || !o.ref) return null;
+  const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, n);
+  // правки записи по тактам и пометки «от ИИ» («Улучшить разбор», слово автора 26.11.2026)
+  if (o.op === 'meta') {
+    const f = { op: 'meta', ref: o.ref };
+    for (const k of ['title', 'artist', 'genre']) if (o[k] != null && str(o[k], 80)) f[k] = str(o[k], 80);
+    if (Array.isArray(o.instruments)) { const ins = o.instruments.map((x) => str(x, 24)).filter(Boolean).slice(0, 12); if (ins.length) f.instruments = ins; }
+    if (o.note != null && str(o.note, 200)) f.note = str(o.note, 200);
+    return f.title || f.artist || f.genre || f.instruments ? f : null;
+  }
+  if (o.op === 'check') {
+    const f = { op: 'check', ref: o.ref };
+    if (['ok', 'double', 'half', 'unsure'].includes(o.tempo)) f.tempo = o.tempo;
+    if (typeof o.key === 'string' && /^[A-Ga-g][#♯b♭]?m?$/.test(o.key.trim())) f.key = o.key.trim();
+    const c = num(o.confidence, 0, 1); if (c != null) f.confidence = Math.round(c * 100) / 100;
+    if (o.note != null && str(o.note, 200)) f.note = str(o.note, 200);
+    return f.tempo || f.key || f.note ? f : null;
+  }
+  if (!Array.isArray(o.items)) return null;
+  if (o.op === 'barchords') {
+    const items = o.items.slice(0, 400).map((x) => { const bar = x && num(x.bar, 1, 1000), c = x && typeof x.c === 'string' ? x.c.trim().slice(0, 24) : null; return bar == null || !c ? null : { bar: Math.floor(bar), c }; }).filter(Boolean);
+    return items.length ? { op: 'barchords', ref: o.ref, items } : null;
+  }
+  if (o.op === 'parts') {
+    const items = o.items.slice(0, REC_MAX.marks).map((x) => { const bar = x && num(x.bar, 1, 1000), name = x ? str(x.name, MARK_NAME) : ''; return bar == null || !name ? null : { bar: Math.floor(bar), name }; }).filter(Boolean);
+    return items.length ? { op: 'parts', ref: o.ref, items } : null;
+  }
   if (o.op === 'chords') {
     const items = o.items.slice(0, REC_MAX.chords).map((x) => { const t = x && num(x.t, 0, 86400), c = x && typeof x.c === 'string' ? x.c.trim().slice(0, 24) : null; if (t == null || c == null) return null; const d = x.d == null ? null : num(x.d, 0.05, 3600); return d == null && x.d != null ? null : { t, ...(d == null ? {} : { d }), c }; }).filter(Boolean);
     return items.length ? { op: 'chords', ref: o.ref, items } : null;
@@ -103,6 +130,10 @@ export function describe(p, songs, recs = [], show = null) {
   if (p.kind === 'ops') return (p.ops || []).map((o) => { const s = songs.find((q) => q.id === o.ref && !q.deleted); return (s ? s.title : '? ' + o.ref) + ': ' + Object.entries(o.fields).map(([k, v]) => (FIELD_NAME[k] || k) + ' → ' + (k === 'notes' ? '…' : v)).join(', '); });
   if (p.kind === 'rec') {
     return (p.ops || []).map((o) => { const r = recs.find((q) => q.id === o.ref), nm = r ? r.name : '? ' + o.ref;
+      if (o.op === 'barchords') return nm + ': аккорды по тактам — ' + o.items.length + ': ' + o.items.slice(0, 4).map((x) => x.bar + ' ' + x.c).join(', ') + (o.items.length > 4 ? '…' : '') + ' · от ИИ';
+      if (o.op === 'parts') return nm + ': части по тактам — ' + o.items.map((x) => x.bar + ' ' + x.name).join(', ') + ' · от ИИ';
+      if (o.op === 'meta') return nm + ': гипотеза ИИ — ' + [o.title, o.artist, o.genre, o.instruments ? 'состав: ' + o.instruments.join(', ') : '', o.note ? '(' + o.note + ')' : ''].filter(Boolean).join(' · ');
+      if (o.op === 'check') return nm + ': проверка ИИ — ' + [o.tempo ? 'темп: ' + ({ ok: 'верный', double: 'вдвое быстрее', half: 'вдвое медленнее', unsure: 'неясно' }[o.tempo]) : '', o.key ? 'тональность ' + o.key : '', o.confidence != null ? 'уверенность ' + Math.round(o.confidence * 100) + ' %' : '', o.note || ''].filter(Boolean).join(' · ');
       return nm + ': ' + (o.op === 'chords' ? 'аккорды — ' + o.items.length + ': ' + o.items.slice(0, 4).map((x) => Math.floor(x.t / 60) + ':' + String(Math.round(x.t % 60)).padStart(2, '0') + ' ' + x.c).join(', ') + (o.items.length > 4 ? '…' : '')
         : 'части — ' + o.items.map((x) => x.name + ' ' + Math.floor(x.t / 60) + ':' + String(Math.round(x.t % 60)).padStart(2, '0')).join(', ')); });
   }
@@ -150,12 +181,31 @@ export async function apply(app, p) {
     const cp = (a) => (Array.isArray(a) ? a.map((x) => ({ ...x })) : undefined);
     for (const o of p.ops) {
       const r = files.get(o.ref); if (!r || r.kind === 'tab' || r.kind === 'midi' || r.kind === 'bible' || r.kind === 'daw' || r.stem) continue;
-      if (!prev.has(r.id)) prev.set(r.id, { id: r.id, ana: r.ana ? { chords: cp(r.ana.chords), cauto: cp(r.ana.cauto), cedit: r.ana.cedit } : null, marks: cp(r.marks) || [] });
+      if (!prev.has(r.id)) prev.set(r.id, { id: r.id, ana: r.ana ? { chords: cp(r.ana.chords), cauto: cp(r.ana.cauto), cedit: r.ana.cedit } : null, marks: cp(r.marks) || [], cai: r.ana && r.ana.cai ? { ...r.ana.cai } : null, ai: r.ai ? JSON.parse(JSON.stringify(r.ai)) : null });
       if (o.op === 'chords') {
         if (!r.ana) continue; // разбора записи ещё нет — править нечего
         const res = applyItems(Array.isArray(r.ana.chords) ? r.ana.chords : [], o.items, r.dur || 0);
         if (!res.n) continue;
-        markEdited(r.ana, res.chords, now); n += res.n; changed.add(r.id);
+        markEdited(r.ana, res.chords, now); r.ana.cai = { at: now, n: res.n }; n += res.n; changed.add(r.id);
+      } else if (o.op === 'barchords') { // аккорды по номерам тактов (сетка — сильные доли разбора); пометка «от ИИ»
+        if (!r.ana) continue;
+        const starts = barStarts(r.ana, r.dur || 0), bi = barItems(starts, o.items, r.dur || 0);
+        if (!bi.items.length) continue;
+        const res = applyItems(Array.isArray(r.ana.chords) ? r.ana.chords : [], bi.items, r.dur || 0);
+        if (!res.n) continue;
+        markEdited(r.ana, res.chords, now); r.ana.cai = { at: now, n: res.n }; n += o.items.length - bi.bad; changed.add(r.id);
+      } else if (o.op === 'parts') { // части по номерам тактов → метки с пометкой «от ИИ»
+        if (!r.ana) continue;
+        const starts = barStarts(r.ana, r.dur || 0), its = o.items.map((x) => { const sp = barSpan(starts, x.bar, r.dur || 0); return sp ? { t: sp.t0, name: x.name } : null; }).filter(Boolean);
+        if (!its.length) continue;
+        const before = JSON.stringify(r.marks || []);
+        r.marks = mergeMarks(r.marks, its, (r.ana && r.ana.downbeats) || [], r.dur || 0);
+        its.forEach((it) => { const m = r.marks.find((q) => Math.abs(q.t - it.t) < 0.65 && q.name === it.name); if (m) m.ai = true; });
+        if (JSON.stringify(r.marks) !== before) { n += its.length; changed.add(r.id); }
+      } else if (o.op === 'meta' || o.op === 'check') { // гипотезы: хранятся отдельно (r.ai), данные записи не меняют
+        const a = { ...(r.ai || {}), at: now, by: 'ai' };
+        if (o.op === 'meta') { for (const k of ['title', 'artist', 'genre', 'instruments', 'note']) if (o[k] != null) a[k] = o[k]; } else { a.check = { tempo: o.tempo || null, key: o.key || null, confidence: o.confidence ?? null, note: o.note || '' }; }
+        r.ai = a; n++; changed.add(r.id);
       } else if (o.op === 'marks') {
         const before = JSON.stringify(r.marks || []);
         r.marks = mergeMarks(r.marks, o.items, (r.ana && r.ana.downbeats) || [], r.dur || 0);
@@ -185,6 +235,8 @@ export function undo(app, u) {
       const r = files.get(b.id); if (!r) continue;
       if (b.ana && r.ana) { r.ana.chords = b.ana.chords || []; if (b.ana.cauto) r.ana.cauto = b.ana.cauto; else delete r.ana.cauto; if (b.ana.cedit) r.ana.cedit = b.ana.cedit; else delete r.ana.cedit; }
       r.marks = b.marks || [];
+      if (r.ana) { if (b.cai) r.ana.cai = b.cai; else delete r.ana.cai; }
+      if (b.ai) r.ai = b.ai; else delete r.ai;
       Promise.resolve(files.save(r)).catch(() => {});
     }
     return true;
