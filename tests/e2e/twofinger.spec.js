@@ -25,9 +25,12 @@ test('два пальца: громкость вверх/вниз по ходу 
   // вверх на ту же длину — почти вернулась
   await touches(page, Array.from({ length: 9 }, (_, k) => two(195, 500 - k * 25, 80)));
   expect(await master()).toBeGreaterThan(down + 0.15);
-  // развести (80 → 220 px между пальцами) — окно звука инструмента
+  // развести (80 → 220 px между пальцами) — окно во весь экран (слово автора 26.11.2026); свести — обратно
   await touches(page, Array.from({ length: 8 }, (_, k) => two(195, 400, 80 + k * 20)));
   await page.waitForTimeout(500);
-  await expect(page.locator('.sheet')).toBeVisible();
+  await expect(page.locator('.session.pure')).toHaveCount(1);
+  await touches(page, Array.from({ length: 8 }, (_, k) => two(195, 400, 220 - k * 20)));
+  await page.waitForTimeout(500);
+  await expect(page.locator('.session.pure')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

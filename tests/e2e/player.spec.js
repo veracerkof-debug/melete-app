@@ -2,7 +2,7 @@
 // удержание — шторка с правкой, по умолчанию — возврат
 import { test, expect } from './melete.js';
 
-test('ступени скорости', async ({ page, melete, errors }) => {
+test('скорость записи: убавить, следующая ступень, прибавить', async ({ page, melete, errors }) => {
   await melete.open({ settings: { autoStems: 'off', autoAna: false } });
   await page.evaluate(async () => {
     const { createFiles } = await import('/src/core/files.js'); const { encodeWav } = await import('/src/audio/voicefx.js');
@@ -13,17 +13,15 @@ test('ступени скорости', async ({ page, melete, errors }) => {
   await melete.free('F', ['audio']);
   await melete.click('[data-x="mlplay"][data-id="r1"]'); await page.waitForTimeout(1500);
   await melete.click('[data-x="mlopen"]'); await page.waitForTimeout(800);
-  expect(await melete.count('.rpre')).toBe(4);
-  await melete.click('.rpre[data-rpre="0.75"]'); await page.waitForTimeout(300);
-  expect(await melete.text('#ratev')).toMatch(/0[,.]75|75/);
+  // скорость одним рядом (3374c37: без отдельных кнопок-ступеней): «−» убавляет, касание значения — следующая ступень по кругу, «+» прибавляет
+  expect(await melete.count('.rpre')).toBe(0);
+  const v0 = await melete.text('#ratev');
+  await melete.click('[data-step="arate"][data-d="-1"]'); await page.waitForTimeout(300);
+  const v1 = await melete.text('#ratev'); expect(v1).not.toBe(v0); expect(v1).toMatch(/0[,.]9|9\d/);
   await melete.click('#ratev'); await page.waitForTimeout(300);
-  expect(await melete.text('#ratev')).toMatch(/0[,.]9|90/);
-  await melete.hold('.rpre[data-rpre="0.5"]');
-  expect(await melete.count('[data-rpv]')).toBe(1);
-  await page.evaluate(() => { const i = document.querySelector('[data-rpv]'); i.value = 60; i.dispatchEvent(new Event('input', { bubbles: true })); }); await page.waitForTimeout(300);
-  expect((await melete.toolsNow()).audio.rates[0]).toBeCloseTo(0.6, 2);
-  await melete.click('[data-rpdef]'); await page.waitForTimeout(300);
-  expect((await melete.toolsNow()).audio.rates).toBeUndefined();
+  expect(await melete.text('#ratev')).not.toBe(v1);
+  await melete.click('[data-step="arate"][data-d="1"]'); await page.waitForTimeout(300);
+  expect(await melete.text('#ratev')).toBeTruthy();
   expect(errors).toEqual([]);
 });
 

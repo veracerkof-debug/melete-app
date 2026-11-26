@@ -5,7 +5,7 @@ test('норма чтения: включить, карточка дня, дог
   await page.setViewportSize({ width: 390, height: 844 });
   await melete.open({ settings: { church: true } });
   await melete.click('.avatar'); await page.waitForTimeout(500);
-  await page.click('[data-pp="bible"]'); await page.waitForTimeout(500);
+  await page.click('#panelLayer [data-pp="bible"]'); await page.waitForTimeout(500); // в профиле; такая же карточка есть и на главной
   await expect(page.locator('.hdr', { hasText: 'Чтение по норме' })).toBeVisible();
   await page.locator('[data-bn-sw="on"]').evaluate((el) => el.click()); await page.waitForTimeout(400);
   let s = await melete.settings();
