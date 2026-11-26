@@ -38,7 +38,7 @@ import { I } from './icons.js';
 import { createRecording } from './record.js';
 import { loopsHTML, loopsBind } from './loops.js';
 import { loopById, placeLoop, spanFrom, FAMILIES as LP_FAMS } from '../../music/studioloops.js';
-import { applyStudioOps, undoStudioOps } from '../../music/studioai.js';
+import { applyStudioOps, undoStudioOps, addedClips } from '../../music/studioai.js';
 const UNDO_MAX = 40;
 
 let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null, offPad = null, offLoops = null;
@@ -767,8 +767,8 @@ function aiApply(ops) {
   const p = proj(); if (!p || rec.busy) return null;
   const r = applyStudioOps(p, ops); if (!r.n) return null;
   save();
-  const c = p.clips.find((x) => x.id === r.undo.clips[0]);
-  if (c) { V.cursor = c.at; if (pl) pl.cursor = c.at; V.sel = r.undo.clips.slice(); }
+  const ids = addedClips(r.undo), c = p.clips.find((x) => x.id === ids[0]);
+  if (c) { V.cursor = c.at; if (pl) pl.cursor = c.at; V.sel = ids.slice(); }
   if (c && ctx.audio.unlock()) { if (seq.playing) seq.stop(); seq.start(c.at); } else if (seq.playing) seq.audioChanged();
   render();
   if (pl) { pl.selection = V.sel; selBar(pl.selection); pl.draw(); }

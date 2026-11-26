@@ -26,7 +26,8 @@ function propHTML(m, p, songs, recs = [], show = null) {
   const lines = describeP(p, songs, recs, show), head = t('ai.prop.' + p.kind);
   const st = p.status;
   const body = '<div class="aipl">' + lines.slice(0, 12).map((x) => '<span>' + esc(x) + '</span>').join('') + (lines.length > 12 ? '<span class="l2">' + t('ai.more', { n: lines.length - 12 }) + '</span>' : '') + '</div>';
-  const btns = st === 'pending' ? '<div class="aipb"><button class="link b" data-ai="apply" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.apply') + '</button><button class="link" data-ai="reject" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.reject') + '</button></div>'
+  const btns = st === 'pending' && p.kind === 'query' ? '<div class="aipb"><button class="link b" data-ai="qcopy" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.studio.qcopy') + '</button><button class="link" data-ai="reject" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.hide') + '</button></div>'
+    : st === 'pending' ? '<div class="aipb"><button class="link b" data-ai="apply" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.apply') + '</button><button class="link" data-ai="reject" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.reject') + '</button></div>'
     : st === 'applied' ? '<div class="aipb"><span class="l2">✓ ' + t('ai.applied', { n: p.n || 0 }) + '</span>' + (p.undo ? '<button class="link" data-ai="undo" data-m="' + m.id + '" data-p="' + p.id + '">' + t('ai.undo') + '</button>' : '') + '</div>'
     : '<div class="aipb"><span class="l2">' + t('ai.st.' + st) + '</span></div>';
   return '<div class="aip' + (st === 'pending' ? ' pend' : '') + '"><b>' + esc(head) + '</b>' + (st === 'blocked' || (st === 'invalid' && !(p.errors && p.errors.length)) ? '' : body) + btns + '</div>';
@@ -67,7 +68,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
     const draw = () => {
       drawBrand();
       const songs = app.store.state.songs || [], recs = app.files ? app.files.list('audio') : [], msgs = chat.messages;
-      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(studio ? 'ai.studio.hello' : 'ai.hello', { name }) + '</p>' + (studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show)).join('')).join('') +
+      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(studio ? 'ai.studio.hello' : 'ai.hello', { name }) + '</p>' + (studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
         (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
       list.scrollTop = list.scrollHeight;
@@ -117,6 +118,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false } = 
         copyText(chat.buildPrompt(v)).then((ok) => toast(t(ok ? 'ai.studio.copied' : 'ai.studio.copyFail')));
       }
       else if (a === 'paste') pasteSheet();
+      else if (a === 'qcopy') { const txt = chat.answerQuery(b.dataset.m, b.dataset.p); if (txt) copyText(txt).then((ok) => toast(t(ok ? 'ai.studio.qcopied' : 'ai.studio.copyFail'))); }
     });
     // вставка ответа любой нейросети: текстовое поле (системное меню «Вставить» работает всегда), разбор — как у обычного ответа
     const pasteSheet = () => {

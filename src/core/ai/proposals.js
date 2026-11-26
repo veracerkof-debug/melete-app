@@ -6,11 +6,12 @@ import { deleteSong } from '../library.js';
 import { canWrite } from './config.js';
 import { cleanShowOp, applyShowOps, undoShowOps, describeShow, SHOW_MAX } from './showops.js';
 import { applyItems, markEdited, norm } from '../../music/chordedit.js';
+import { cleanQueries, describeQueries } from './queries.js';
 import { cleanStudioOps, applyStudioOps, undoStudioOps, describeStudioOps } from '../../music/studioai.js';
 
 export const REC_MAX = { ops: 20, chords: 2000, marks: 100 }, MARK_NAME = 40;
 export const OPS_MAX = 100, FIELDS = ['title', 'artist', 'genre', 'key', 'targetBpm', 'notes', 'capo'];
-const BLOCK = /```(melete-json|melete-ops|melete-rec|melete-show|melete-studio)[ \t]*\r?\n([\s\S]*?)```/g;
+const BLOCK = /```(melete-json|melete-ops|melete-rec|melete-show|melete-studio|melete-query)[ \t]*\r?\n([\s\S]*?)```/g;
 
 // Значение поля → допустимое или undefined (не применять)
 export function cleanField(k, v) {
@@ -57,10 +58,14 @@ const pid = () => 'p' + Date.now().toString(36) + (seq++).toString(36);
 export function extract(reply, cfg) {
   const proposals = [];
   const text = String(reply || '').replace(BLOCK, (all, kind, body) => {
-    const k0 = kind === 'melete-json' ? 'songs' : kind === 'melete-rec' ? 'rec' : kind === 'melete-show' ? 'show' : kind === 'melete-studio' ? 'studio' : 'ops';
-    const mk = (extra) => proposals.push({ id: pid(), kind: k0, status: canWrite(cfg, k0 === 'rec' || k0 === 'show' ? 'media' : k0 === 'studio' ? 'studio' : 'songs') ? 'pending' : 'blocked', ...extra });
+    const k0 = kind === 'melete-json' ? 'songs' : kind === 'melete-rec' ? 'rec' : kind === 'melete-show' ? 'show' : kind === 'melete-studio' ? 'studio' : kind === 'melete-query' ? 'query' : 'ops';
+    const mk = (extra) => proposals.push({ id: pid(), kind: k0, status: k0 === 'query' ? 'pending' : canWrite(cfg, k0 === 'rec' || k0 === 'show' ? 'media' : k0 === 'studio' ? 'studio' : 'songs') ? 'pending' : 'blocked', ...extra });
     try {
       const j = JSON.parse(body);
+      if (kind === 'melete-query') {
+        const queries = cleanQueries(j);
+        if (queries.length) mk({ queries }); else proposals.push({ id: pid(), kind: 'query', status: 'invalid' });
+      } else
       if (kind === 'melete-studio') {
         const r = cleanStudioOps(j);
         if (r.ops.length) mk({ ops: r.ops, errors: r.errors }); else proposals.push({ id: pid(), kind: 'studio', status: 'invalid', errors: r.errors });
@@ -91,6 +96,7 @@ export function extract(reply, cfg) {
 const FIELD_NAME = { title: 'название', artist: 'исполнитель', genre: 'жанр', key: 'тональность', targetBpm: 'темп', notes: 'текст', capo: 'каподастр' };
 // Строки для карточки: что именно изменится
 export function describe(p, songs, recs = [], show = null) {
+  if (p.kind === 'query') return describeQueries(p.queries);
   if (p.kind === 'studio') return describeStudioOps(p.ops || []).concat((p.ops || []).flatMap((o) => (o.warns || []).map((x) => '⚠ ' + x)), p.errors || []);
   if (p.kind === 'show') return describeShow(p.ops || [], show);
   if (p.kind === 'songs' && p.manifest) { const plan = planImport(songs, p.manifest); return plan.map((x) => (x.match ? '↻ ' : '+ ') + x.x.title + (x.x.artist ? ' — ' + x.x.artist : '') + (x.x.key ? ' (' + x.x.key + ')' : '')); }

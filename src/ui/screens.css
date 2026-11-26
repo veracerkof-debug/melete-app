@@ -974,3 +974,4 @@ html.desk .hstart .hfree{min-height:64px}
 /* чат из студии: кнопки копирования и вставки рядом с вложением — в один ряд над полем, чтобы не отнимать ширину */
 .aichat.studio .aiin{flex-wrap:wrap}
 .aichat.studio .aiin .aitools{flex-direction:row;flex:0 0 100%;order:-1}
+.aim.t{align-self:center;max-width:90%;background:none;color:var(--l2);font-size:12px;padding:2px 8px;text-align:center}

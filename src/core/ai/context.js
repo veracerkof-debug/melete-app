@@ -27,6 +27,10 @@ export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = D
     ].join('\n') : '',
     wm ? '4) Программа выступления (Пульт): блок ```melete-show с массивом [{"op":"number","ref":"<id номера>","set":{"eq":"flat|warm|bright|vocal|bass|thin|cut|air","tempo":0.5–1.5,"shift":-12…12,"level":0–100,"fadeIn":с,"fadeOut":с,"mix":{"vocals":0–1.5,"drums":…,"bass":…,"inst":…} (только у разделённых записей; 0 — выключить дорожку, 1 — как есть)},"prog":[{"t":секунды записи,"key":полутоны,"tempo":0.5–1.5,"level":0–100,"mix":{"vocals":0},"ramp":секунд плавно}]},{"op":"pad","ref":"<id пада>","set":{"level","speed":0.5–2,"shift":-12…12,"eq","mode":"shot|loop|hold","from","to"}}]. prog заменяет программу номера целиком; поле, которого нет, не меняется. Ты не слышишь звук: для «фонового» номера понижай level, для плохого сведения предлагай пресет эквалайзера, для плавной смены тональности/темпа ставь ramp.' : '',
     ws ? STUDIO_PROMPT : canRead(cfg, 'studio') ? 'Студия (проект ниже) открыта только для чтения: советуй партии словами и числами, не предлагай блоков.' : '',
+    (canRead(cfg, 'songs') || canRead(cfg, 'media') || canRead(cfg, 'studio')) ? [
+      '6) Запросы данных (только чтение): блок ```melete-query с массивом [{"q":"project"},{"q":"projects"},{"q":"recordings"},{"q":"recording","id":"<id записи>"},{"q":"songs"},{"q":"song","id":"<id песни>"},{"q":"instruments"}]. Приложение ответит данными (темп, тональность, аккорды записи по времени, содержимое проекта, список звуков) — используй, когда в данных ниже не хватает подробностей. Не больше ' + 6 + ' запросов за раз; закрытая категория вернёт отказ — скажи об этом человеку. Тексты песен не выдаются.',
+      'Если у записи нет разбора (темп, тональность, аккорды), скажи об этом: разбор запускает человек в медиатеке. Не выдумывай темп и тональность записи.',
+    ].join('\n') : '',
     cfg.instruction ? 'Дополнительно от человека: ' + cfg.instruction : '',
     'Сегодня: ' + new Date(now).toISOString().slice(0, 10) + '.',
   ].filter(Boolean).join('\n\n');
@@ -43,6 +47,14 @@ export function songsContext(songs, max = LIMITS.songs) {
 const NOTE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const keyOf = (a) => (a && a.pc != null ? NOTE[a.pc] + (a.minor ? 'm' : '') : '');
 const sec = (x) => String(Math.round(x * 10) / 10);
+// Подробно одна запись: тональность, темп, сильные доли, аккорды по времени, части (метки). Звука нет — только разбор компьютера и метки человека
+export function recDetail(cur) {
+  const a = cur.ana || {}, ch = (a.chords || []).slice(0, LIMITS.chords), dn = (a.downbeats || []).slice(0, LIMITS.downs);
+  if (!cur.ana) return cur.id + ' (' + one(cur.name) + '): разбора записи ещё нет (темп, тональность и аккорды неизвестны) — его запускает человек в медиатеке.';
+  return cur.id + ' (' + one(cur.name) + ')\nТональность: ' + keyOf(a) + (a.bpm ? ', темп ' + a.bpm : '') + (a.bpb ? ', в такте ' + a.bpb + ' доли' : '') + ', длина ' + Math.round(cur.dur || 0) + ' с' + (a.cedit ? ' (аккорды уже правились)' : '') +
+    '\nСильные доли, с: ' + dn.map(sec).join(' ') + '\nАккорды (время с: аккорд, N — нет): ' + ch.map((c) => sec(c.t) + ':' + labelText(c.c)).join(' ') + ((a.chords || []).length > ch.length ? ' … (ещё ' + (a.chords.length - ch.length) + ')' : '') +
+    '\nЧасти (метки): ' + ((cur.marks || []).map((m) => sec(m.t) + ':' + one(m.name || '—')).join(' ') || 'нет');
+}
 export function mediaContext(recs, used = {}, songs = [], max = LIMITS.recs) {
   const at = (r) => Math.max(r.created || 0, used[r.id] || 0);
   const list = recs.filter((r) => r.kind === 'audio' || !r.kind).sort((a, b) => at(b) - at(a)), shown = list.slice(0, max);
@@ -50,12 +62,7 @@ export function mediaContext(recs, used = {}, songs = [], max = LIMITS.recs) {
   const head = 'ЗАПИСИ МЕДИАТЕКИ (' + list.length + (list.length > shown.length ? ', показаны последние ' + shown.length : '') + '). Строка: id | файл | песня | длина с | тональность | темп | аккордов | частей (меток)';
   let text = head + '\n' + shown.map((r) => [r.id, one(r.name), titles(r), Math.round(r.dur || 0), keyOf(r.ana), (r.ana && r.ana.bpm) || '', r.ana && r.ana.chords ? r.ana.chords.length : 0, (r.marks || []).length].join(' | ')).join('\n');
   const cur = shown.find((r) => r.ana && Array.isArray(r.ana.chords) && r.ana.chords.length);
-  if (cur) {
-    const a = cur.ana, ch = a.chords.slice(0, LIMITS.chords), dn = (a.downbeats || []).slice(0, LIMITS.downs);
-    text += '\n\nЗАПИСЬ, КОТОРУЮ СЛУШАЛИ ПОСЛЕДНЕЙ: ' + cur.id + ' (' + one(cur.name) + ')\nТональность: ' + keyOf(a) + (a.bpm ? ', темп ' + a.bpm : '') + (a.bpb ? ', в такте ' + a.bpb + ' доли' : '') + ', длина ' + Math.round(cur.dur || 0) + ' с' + (a.cedit ? ' (аккорды уже правились)' : '') +
-      '\nСильные доли, с: ' + dn.map(sec).join(' ') + '\nАккорды (время с: аккорд, N — нет): ' + ch.map((c) => sec(c.t) + ':' + labelText(c.c)).join(' ') + (a.chords.length > ch.length ? ' … (ещё ' + (a.chords.length - ch.length) + ')' : '') +
-      '\nЧасти (метки): ' + ((cur.marks || []).map((m) => sec(m.t) + ':' + one(m.name || '—')).join(' ') || 'нет');
-  }
+  if (cur) text += '\n\nЗАПИСЬ, КОТОРУЮ СЛУШАЛИ ПОСЛЕДНЕЙ: ' + recDetail(cur);
   return text;
 }
 const DAY = 864e5, mins = (s) => Math.round(s / 60);

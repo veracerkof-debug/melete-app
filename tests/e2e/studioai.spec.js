@@ -83,3 +83,53 @@ test('студия: прямой чат — модель отвечает бло
   // автоприменения для студии нет: даже с «Применять правки сразу» предложение ждёт кнопки (проверено юнитом)
   expect(errors).toEqual([]);
 });
+
+test('студия: любая партия — аккорды, мелодия, пэды, правка темпа и тональности; откат возвращает как было', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStudio(page, melete);
+  const ALL = '```melete-studio\n' + JSON.stringify([
+    { op: 'project', set: { bpm: 96, key: 'Am', swing: 0.2 } },
+    { op: 'add', at: 1, bars: 4, fam: 'chords', chords: [['Am7', 1], ['Dm', 1], ['G7', 1], ['Cmaj7', 1]] },
+    { op: 'add', at: 1, bars: 4, fam: 'pads', inst: 'wair', hold: 0 },
+    { op: 'add', at: 1, bars: 4, fam: 'keys', inst: 'fmep', ev: [[[2, 2], [6, 2], [10, 2], [14, 2]]] },
+    { op: 'add', at: 1, bars: 2, fam: 'notes', inst: 'piano', notes: [['E5', 0, 1, 0.9], ['G5', 1, 0.5], ['A5', 1.5, 0.5], ['C6', 2, 2]] },
+  ]) + '\n```';
+  await page.locator('.tview [data-x="ai"]').click(); await page.waitForTimeout(500);
+  await page.getByRole('button', { name: 'Разрешить' }).click(); await page.waitForTimeout(600);
+  await page.locator('[data-ai="paste"]').click(); await page.waitForTimeout(300);
+  await page.locator('[data-pta]').fill('Вот всё сразу.\n' + ALL); await page.locator('[data-pgo]').click(); await page.waitForTimeout(500);
+  const card = page.locator('.aip.pend'); await expect(card).toContainText('Аккорды'); await expect(card).toContainText('Мелодия'); await expect(card).toContainText('темп → 96');
+  const before = await proj(melete);
+  await page.locator('[data-ai="apply"]').click(); await page.waitForTimeout(900);
+  const p = await proj(melete);
+  expect(p.bpm).toBe(96); expect(p.key).toEqual({ pc: 9, minor: true }); expect(p.swing).toBe(0.2);
+  const kinds = p.clips.map((c) => p.tracks.find((t) => t.id === c.tr).kind);
+  expect(kinds.filter((k) => k === 'chords').length).toBe(1); expect(kinds.filter((k) => k === 'notes').length).toBe(3); // пэды, клавиши, мелодия
+  const chords = p.clips.find((c) => p.tracks.find((t) => t.id === c.tr).kind === 'chords');
+  expect(chords.data.chords.map((x) => x.pc)).toEqual([9, 2, 7, 0]);
+  await page.locator('[data-ai="undo"]').click(); await page.waitForTimeout(700);
+  const q = await proj(melete);
+  expect(q.bpm).toBe(before.bpm); expect(q.key).toEqual(before.key); expect(q.clips.length).toBe(0); expect(q.tracks.length).toBe(before.tracks.length);
+  expect(errors).toEqual([]);
+});
+
+test('чат: ИИ просит данные записи — приложение отвечает само, модель получает темп и тональность', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify({ on: true, format: 'openai', url: 'https://api.example.com/v1', model: 'm', key: 'sk-SECRET', access: { media: 'read' }, auto: false, instruction: '' })); } catch { /* */ } });
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => {
+    window.__aiCalls = []; const answers = ['Смотрю запись.\n```melete-query\n[{"q":"recordings"}]\n```', 'Темп уточнить нечем: у записи нет разбора.'];
+    window.__melete.ai.__test({ avail: true, post: async (req) => { window.__aiCalls.push(JSON.stringify(req.body)); return { status: 200, data: JSON.stringify({ choices: [{ message: { content: answers[window.__aiCalls.length - 1] } }] }) }; } });
+    window.__melete.render();
+  });
+  await page.waitForTimeout(500);
+  await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(500);
+  await page.locator('[data-aiin]').fill('Какой темп у моих записей?'); await page.locator('[data-ai="send"]').click(); await page.waitForTimeout(1200);
+  const calls = await page.evaluate(() => window.__aiCalls);
+  expect(calls.length).toBe(2); expect(calls[1]).toContain('ОТВЕТ ПРИЛОЖЕНИЯ НА ЗАПРОСЫ'); expect(calls[0]).toContain('melete-query');
+  await expect(page.locator('.aim.t')).toContainText('recordings');
+  await expect(page.locator('.aim.a').last()).toContainText('нет разбора');
+  expect(errors).toEqual([]);
+});

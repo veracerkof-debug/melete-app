@@ -6,6 +6,7 @@ import { buildSystem, buildContext, tokensOf } from './context.js';
 import { extract, apply, undo } from './proposals.js';
 import { canWrite, ready, KEY } from './config.js';
 import { textBlock, imagesOf, textChars } from './attach.js';
+import { answerQueries, describeQueries, ROUNDS_MAX } from './queries.js';
 
 export const HISTORY_MAX = 40, TURNS = 16, SAVE_MAX = 250_000;
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -16,7 +17,7 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
   try { const j = JSON.parse(storage.getItem(SK)); if (Array.isArray(j)) messages = j.slice(-HISTORY_MAX); } catch { /* пусто */ }
   const emit = () => subs.forEach((f) => { try { f(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   const persist = () => {
-    let s = JSON.stringify(messages.slice(-HISTORY_MAX));
+    let s = JSON.stringify(messages.slice(-HISTORY_MAX).map((m) => (m.role === 'tool' && m.result && m.result.length > 4000 ? { ...m, result: m.result.slice(0, 4000) + '\n… (в истории обрезано)' } : m)));
     if (s.length > SAVE_MAX) s = JSON.stringify(messages.slice(-HISTORY_MAX).map((m) => ({ ...m, proposals: (m.proposals || []).map(({ undo: _u, ...p }) => p) })));
     try { storage.setItem(SK, s); } catch { /* места нет — история только в памяти */ }
   };
@@ -40,22 +41,39 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
     if (!t || busy) return { ok: false, why: busy ? 'busy' : 'empty' };
     if (!ready(c)) return { ok: false, why: 'config' };
     messages.push({ id: uid(), role: 'user', text: t, at: now(), ...(atts.length ? { att: atts.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars || 0 })) } : {}) }); busy = true; error = null; persist(); emit();
+    const userId = messages[messages.length - 1].id;
     try {
-      const ctx = buildContext(c, data()), sys = buildSystem(c, { mascot: mascot(), lang: lang(), now: now() }) + (ctx.text ? '\n\n=== ДАННЫЕ ===\n' + ctx.text : '');
-      const past = messages.slice(-TURNS * 2), last = past.length - 1;
-      const hist = past.map((m, i) => (i === last && atts.length ? { role: m.role, content: m.text + (textBlock(atts) ? '\n\n' + textBlock(atts) : ''), images: imagesOf(atts) } : { role: m.role, content: m.text + (m.att && m.att.length ? '\n[вложения были: ' + m.att.map((a) => a.name).join(', ') + ']' : '') }));
-      const res = await post(buildRequest(c, { system: sys, messages: hist }));
-      const out = parseResponse(c, res.status, res.data);
-      if (!out.ok) { error = { kind: out.kind, message: out.message }; return { ok: false, why: out.kind }; }
-      const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
-      messages.push(msg);
-      // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»
-      if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
-      return { ok: true };
+      // круги: ИИ просит данные (melete-query) — приложение отвечает само (только чтение) и ИИ продолжает; не больше ROUNDS_MAX кругов
+      for (let round = 0; ; round++) {
+        const ctx = buildContext(c, data()), sys = buildSystem(c, { mascot: mascot(), lang: lang(), now: now() }) + (ctx.text ? '\n\n=== ДАННЫЕ ===\n' + ctx.text : '');
+        const past = messages.slice(-TURNS * 2);
+        const hist = past.map((m) => (m.role === 'tool' ? { role: 'user', content: '=== ОТВЕТ ПРИЛОЖЕНИЯ НА ЗАПРОСЫ ===\n' + (m.result || '') }
+          : m.id === userId && atts.length ? { role: m.role, content: m.text + (textBlock(atts) ? '\n\n' + textBlock(atts) : ''), images: imagesOf(atts) }
+          : { role: m.role, content: m.text + (m.att && m.att.length ? '\n[вложения были: ' + m.att.map((a) => a.name).join(', ') + ']' : '') }));
+        const res = await post(buildRequest(c, { system: sys, messages: hist }));
+        const out = parseResponse(c, res.status, res.data);
+        if (!out.ok) { error = { kind: out.kind, message: out.message }; return { ok: false, why: out.kind }; }
+        const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
+        messages.push(msg);
+        // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»; студия и запросы — никогда
+        if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && p.kind !== 'query' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
+        const qp = msg.proposals.filter((p) => p.kind === 'query' && p.status === 'pending');
+        if (!qp.length || round >= ROUNDS_MAX) return { ok: true };
+        const result = qp.map((p) => { p.status = 'answered'; return answerQueries(p.queries, data(), c); }).join('\n\n');
+        messages.push({ id: uid(), role: 'tool', text: qp.flatMap((p) => describeQueries(p.queries)).join(', '), result, at: now() });
+        persist(); emit();
+      }
     } catch (e) { error = { kind: (e && e.kind) || 'net', message: String((e && e.message) || '').slice(0, 200) }; return { ok: false, why: error.kind }; }
     finally { busy = false; persist(); emit(); }
   }
   // Без своего API (любой чат нейросети): запрос целиком — для копирования; ответ нейросети — вставить, и он разбирается как обычный ответ
+  // Ручной режим: запрос данных от нейросети → ответ приложения для копирования (и пометка «передано»)
+  function answerQuery(mid, pidv) {
+    const f = find(mid, pidv); if (!f || f.p.kind !== 'query') return null;
+    const text = answerQueries(f.p.queries, data(), cfg());
+    f.p.status = 'answered'; persist(); emit();
+    return '=== ОТВЕТ ПРИЛОЖЕНИЯ НА ЗАПРОСЫ ===\n' + text;
+  }
   function buildPrompt(text) {
     const c = cfg(), ctx = buildContext(c, data()), sys = buildSystem(c, { mascot: mascot(), lang: lang(), now: now() });
     return sys + (ctx.text ? '\n\n=== ДАННЫЕ ===\n' + ctx.text : '') + '\n\n=== ЗАПРОС ЧЕЛОВЕКА ===\n' + String(text || '').trim() + '\n\nОтветь коротко и приложи блок(и) melete-… из инструкции выше.';
@@ -70,7 +88,7 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
   return {
     get messages() { return messages; }, get busy() { return busy; }, get error() { return error; },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
-    preview, sendText, buildPrompt, addReply, apply: applyProposal, reject: rejectProposal, undo: undoProposal,
+    preview, sendText, buildPrompt, addReply, answerQuery, apply: applyProposal, reject: rejectProposal, undo: undoProposal,
     clear() { messages = []; error = null; persist(); emit(); },
     dismissError() { error = null; emit(); },
   };
