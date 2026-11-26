@@ -21,10 +21,11 @@ import { log } from './log.js';
 export const AUTO_MODES = ['off', '2', '4', '6'];
 // Телефон — только вокал и инструментал (MDX-Net): прежние «4» и «6» становятся «2»; компьютер — все режимы, по умолчанию 4.
 // Телефон Melete DEV с полным разделением (fullStems) — тоже все, по умолчанию 2
-export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '4' : '2'; return !desk && !fullStems() && m !== 'off' ? '2' : m; };
+export const autoMode = (settings, desk = isDesktop()) => { const m = AUTO_MODES.includes(settings.autoStems) ? settings.autoStems : desk ? '6' : '2'; return !desk && !fullStems() && m !== 'off' ? '2' : m; };
+// 26.11.2026: компьютер делит на все дорожки, что есть в записи (шесть, пустые не сохраняются — stemEmpty); умолчание — 6
 // Что телефон заказывает у компьютера (решение автора 21.11.2026: всё, кроме вокала и инструментала, — только компьютер)
 export const PC_STEMS = ['off', '4', '6'];
-export const pcStems = (settings) => (PC_STEMS.includes(settings.pcStems) ? settings.pcStems : '4');
+export const pcStems = (settings) => (PC_STEMS.includes(settings.pcStems) ? settings.pcStems : '6');
 export const autoAna = (settings) => settings.autoAna !== false;
 export const autoHq = (settings) => settings.autoHq === true; // улучшенное разделение (вторая очередь)
 export const autoLyr = (settings) => settings.autoLyr !== false; // текст песни (только где есть whisper — Windows)
