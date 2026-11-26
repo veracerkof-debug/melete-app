@@ -33,5 +33,6 @@ export const I = {
   keys: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8M6.5 13h3M10.5 13h3M14.5 13h3"/></svg>',
   loops: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="6" rx="1.5"/><rect x="13" y="4" width="8" height="6" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/><path d="M14 16.5h7M14 19.5h4"/></svg>',
   ai: '<svg viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" style="fill:currentColor"/><circle cx="12" cy="12" r="1.8" style="fill:currentColor"/><circle cx="19" cy="12" r="1.8" style="fill:currentColor"/></svg>',
   mutec: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><path d="M6 17 18 7"/></svg>',
 };

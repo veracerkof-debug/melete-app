@@ -210,3 +210,16 @@
   .stwrap.side .stlpc{width:auto}
   .stwrap.side .stlph{display:none}
 }
+
+/* полоса транспорта: шесть главных значков, остальное — меню «⋯» (слово автора 26.11.2026) */
+.sttop{position:relative}
+.stmore{position:absolute;right:0;bottom:calc(100% + 6px);z-index:30;min-width:208px;width:max-content;max-width:min(300px,calc(100vw - 24px));padding:6px;border-radius:16px;background:var(--bg);box-shadow:0 8px 30px rgba(0,0,0,.22);border:.5px solid var(--sep);display:flex;flex-direction:column}
+.stmore[hidden]{display:none}
+.stmi{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 12px;border-radius:10px;font-size:15px;text-align:left;color:var(--ink)}
+.stmi svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.stmi span{flex:1;min-width:0}
+.stmi.on{color:var(--tint)}.stmi[disabled]{opacity:.35}
+.stmk svg{width:16px;height:16px}
+@media (orientation: landscape) and (max-height: 520px){.stwrap.side .stmore{right:calc(100% + 6px);bottom:0}}
+.stselbar{max-width:calc(100% - 12px);overflow:visible}
+.stselbar .stmore{right:0;bottom:calc(100% + 8px)}

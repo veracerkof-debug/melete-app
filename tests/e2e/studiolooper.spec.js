@@ -14,15 +14,16 @@ test('студия: кнопка «Лупер» — цикл по касанию
   await melete.tab('tools');
   await melete.click('[data-open-tool="studio"]'); await page.waitForTimeout(1200);
   await melete.click('.tview .stproj'); await page.waitForTimeout(1000);
-  const btn = page.locator('.tview [data-x="looper"]');
-  await expect(btn).toHaveCount(1);
-  await expect(page.locator('.tview [data-x="looper"].on')).toHaveCount(0); // кнопка «горит», пока есть цикл (p.region)
-  await btn.click(); await page.waitForTimeout(300);
-  await expect(page.locator('.tview [data-x="looper"].on')).toHaveCount(1);
-  await page.locator('.tview [data-x="looper"]').click(); await page.waitForTimeout(300);
-  await expect(page.locator('.tview [data-x="looper"].on')).toHaveCount(0);
+  // «Лупер» — в меню «⋯»: пункт «горит», пока есть цикл (p.region); касание включает и выключает цикл, удержание открывает лупер
+  const more = async () => { await page.locator('.tview [data-x="more"]').click(); await page.waitForTimeout(200); };
+  const item = () => page.locator('.tview .stmore [data-x="looper"]');
+  await more(); await expect(item()).toHaveCount(1); await expect(page.locator('.tview .stmore [data-x="looper"].on')).toHaveCount(0);
+  await item().click(); await page.waitForTimeout(300);
+  await more(); await expect(page.locator('.tview .stmore [data-x="looper"].on')).toHaveCount(1);
+  await item().click(); await page.waitForTimeout(300);
+  await more(); await expect(page.locator('.tview .stmore [data-x="looper"].on')).toHaveCount(0);
   // удержание — лупер
-  const box = await page.locator('.tview [data-x="looper"]').boundingBox();
+  const box = await item().boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
   await expect(page.locator('.looper, .lpwrap, [data-tool="looper"]').first()).toBeVisible({ timeout: 8000 });
   void errors;

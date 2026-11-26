@@ -16,7 +16,7 @@ test('студия: панель «Рисунки» — касание, пере
   await melete.click('[data-open-tool="studio"]'); await page.waitForTimeout(1200);
   await melete.click('.tview .stproj'); await page.waitForTimeout(1000);
   await expect(page.locator('.tview .stlps')).toHaveCount(0);
-  await page.locator('.tview [data-x="loops"]').click(); await page.waitForTimeout(400);
+  await page.locator('.tview [data-x="more"]').click(); await page.waitForTimeout(150); await page.locator('.tview .stmore [data-x="loops"]').click(); await page.waitForTimeout(400);
   await expect(page.locator('.tview .stlps')).toHaveCount(1);
   await expect(page.locator('.tview .stlpc').first()).toBeVisible();
   // плитки не вылезают за окно по вертикали, плейлист остался

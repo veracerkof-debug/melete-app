@@ -123,17 +123,35 @@ function listHTML() {
     '<button class="btn fill block" style="margin-top:14px" data-x="new">' + ui.esc(t('new')) + '</button></div>'; // главное действие экрана — залитая кнопка
 }
 // Полоса транспорта внизу (как в FL Studio Mobile): проекты, микшер, настройки | в начало, играть, темп, клик | отмена, помощь
+// Полоса транспорта: только главное — в начало, запись, играть, темп и тональность, отмена и «⋯»; остальное — в меню «⋯» (слово автора 26.11.2026:
+// всё должно умещаться, второстепенное — не за прокруткой, а за тремя точками)
 function transportHTML(p) {
-  const { t, ui } = ctx, playing = seq && seq.playing;
+  const { t, ui } = ctx, playing = seq && seq.playing, canUndo = undo.pid === p.id && undo.stack.length;
   return '<div class="sttop">' +
-    '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + (V.view === 'song' ? ui.icb('data-x="loops"', I.loops, t('lp.open'), 'sm plain' + (V.loops ? ' on' : '')) + ui.icb('data-x="ai"', I.ai, t('aiStudio'), 'sm plain') : '') + '</div>' +
-    '<div class="stgrp mid">' + ui.icb('data-x="rewind"', I.rewind, t('rewind'), 'sm plain') +
+    ui.icb('data-x="rewind"', I.rewind, t('rewind'), 'sm plain') +
     ui.icb('data-x="rec"', I.rec, t(rec.busy ? 'rec.stop' : 'rec.title'), 'sm plain strec' + (rec.busy ? ' on' : '')) +
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
     '<button class="stinfo" data-x="settings" aria-label="' + ui.esc(t('settings')) + '"><b class="num">' + p.bpm + '</b><span>' + ui.esc(keyLabel(p.key) + ' · ' + p.num + '/' + p.den) + '</span><i class="num" id="stpos">1.1</i><em class="stld" id="stld" hidden></em></button>' +
-    ui.icb('data-x="click"', I.click, t('click'), 'sm plain' + (seq && seq.click ? ' on' : '')) + '</div>' +
-    '<div class="stgrp">' + ui.icb('data-x="looper"', I.loop, t('looper.btn'), 'sm plain' + (p.region ? ' on' : '')) + (clipBuf && clipBuf.length ? ui.icb('data-x="paste"', I.paste, t('clip.pasteHere'), 'sm plain') : '') + ui.icb('data-x="undo"' + (undo.pid === p.id && undo.stack.length ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') + ui.icb('data-x="redo"' + (undo.pid === p.id && undo.redo.length ? '' : ' disabled'), I.redo, t('redo'), 'sm plain') + '</div></div>';
+    ui.icb('data-x="undo"' + (canUndo ? '' : ' disabled'), I.undo, t('undo'), 'sm plain') +
+    ui.icb('data-x="more"', I.more, t('more'), 'sm plain') +
+    '<div class="stmore" id="stmore" role="menu" hidden></div></div>';
 }
+// Меню «⋯»: проекты, микшер, рисунки, нейросеть, клик, лупер, вставить, повторить, настройки проекта
+function moreHTML(p) {
+  const { t, ui } = ctx, song = V.view === 'song', redoOk = undo.pid === p.id && undo.redo.length;
+  const it = (x, icon, label, on, dis) => '<button class="stmi' + (on ? ' on' : '') + '" role="menuitem" data-x="' + x + '"' + (dis ? ' disabled' : '') + '>' + icon + '<span>' + ui.esc(label) + '</span>' + (on ? '<i class="stmk">' + ui.icons.check + '</i>' : '') + '</button>';
+  return it('back', I.list, t('toList')) + it('mixer', I.mixer, t('mixer')) +
+    (song ? it('loops', I.loops, t('lp.open'), V.loops) : '') + (song && ctx.ai ? it('ai', I.ai, t('aiStudio')) : '') +
+    it('click', I.click, t('click'), !!(seq && seq.click)) + it('looper', I.loop, t('looper.short'), !!p.region) +
+    (clipBuf && clipBuf.length ? it('paste', I.paste, t('clip.pasteHere')) : '') + it('redo', I.redo || I.undo, t('redo'), false, !redoOk) + it('settings', I.gear, t('settings'));
+}
+const moreEl = () => host && host.querySelector('#stmore');
+function moreToggle() {
+  const el = moreEl(), p = proj(); if (!el || !p) return;
+  if (!el.hidden) { el.hidden = true; return; }
+  el.innerHTML = moreHTML(p); el.hidden = false;
+}
+const moreClose = () => { const el = moreEl(); if (el) el.hidden = true; const s = host && host.querySelector('#stsel .stmore'); if (s) s.hidden = true; };
 // Шапка редактора клипа: назад, дорожка · такты куска (−/+), сетка (ноты), файл (запись)
 function clipHeadHTML(p, c, tr) {
   const { t, ui } = ctx, d = c.data;
@@ -509,21 +527,24 @@ function selBar(ids) {
   if (!cs.length) { el.hidden = true; el.innerHTML = ''; return; }
   const { t, ui } = ctx, one = cs.length === 1, pieces = cs.filter((c) => trackOf(p, c).kind !== 'audio'), loopOn = cs.every((c) => c.loop);
   el.hidden = false;
+  // главное — в строке; повтор, звук клипа, в буфер и «вырезать» — под «⋯»
+  const mi = (k, icon, label, on) => '<button class="stmi' + (on ? ' on' : '') + '" role="menuitem" data-sb="' + k + '">' + icon + '<span>' + ui.esc(label) + '</span>' + (on ? '<i class="stmk">' + ui.icons.check + '</i>' : '') + '</button>';
   el.innerHTML = '<span class="stseln num">' + cs.length + '</span>' +
     (one ? ui.icb('data-sb="edit"', I.pen, t('clip.edit'), 'sm plain') : '') +
     ui.icb('data-sb="split"', I.cut, t('clip.split'), 'sm plain') +
     ui.icb('data-sb="dup"', I.copy, t('clip.dup'), 'sm plain') +
-    ui.icb('data-sb="loop"', I.loop, t(loopOn ? 'clip.toOnce' : 'clip.toLoop'), 'sm plain' + (loopOn ? ' on' : '')) +
-    ui.icb('data-sb="mute"', I.mutec, t(cs.every((c) => c.mute) ? 'clip.unmute' : 'clip.mute'), 'sm plain') +
-    ui.icb('data-sb="copy"', I.paste, t('clip.copy'), 'sm plain') + ui.icb('data-sb="cut"', I.scissors || I.cut, t('clip.cut'), 'sm plain') +
     ui.icb('data-sb="del"', I.del, t('clip.delete'), 'sm plain danger') +
-    ui.icb('data-sb="none"', '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('sel.clear'), 'sm plain');
+    ui.icb('data-sb="more"', I.more, t('more'), 'sm plain') +
+    ui.icb('data-sb="none"', '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('sel.clear'), 'sm plain') +
+    '<div class="stmore" role="menu" hidden>' + mi('loop', I.loop, t(loopOn ? 'clip.toOnce' : 'clip.toLoop'), loopOn) + mi('mute', I.mutec, t(cs.every((c) => c.mute) ? 'clip.unmute' : 'clip.mute'), cs.every((c) => c.mute)) +
+    mi('copy', I.paste, t('clip.copy')) + mi('cut', I.scissors || I.cut, t('clip.cut')) + '</div>';
   void pieces;
 }
 function selAct(k) {
   const p = proj(), { t } = ctx, cs = (V.sel || []).map((id) => clipById(p, id)).filter(Boolean);
   if (!cs.length) return;
   const done = (ids = V.sel) => { save(); seq.audioChanged(); if (pl) { pl.selection = ids; pl.draw(); } selBar(ids); };
+  if (k === 'more') { const m = host && host.querySelector('#stsel .stmore'); if (m) m.hidden = !m.hidden; return; }
   if (k === 'edit') { clipEditSheet(cs[0]); return; }
   if (k === 'none') { done([]); return; }
   if (k === 'split') { // по курсору (линия на линейке); не попал ни в один — подсказка про двойное касание
@@ -800,6 +821,7 @@ function act(x, el) {
   const p = proj();
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
+    case 'more': moreToggle(); break;
     case 'ai': if (ctx.ai) ctx.ai.open(); break;
     case 'loops': V.loops = !V.loops; loopsMount(V.loops); { const b = host && host.querySelector('.sttop [data-x="loops"]'); if (b) b.classList.toggle('on', V.loops); } break;
     case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
@@ -855,8 +877,9 @@ function act(x, el) {
 function onClick(e) {
   const p = proj(), g = (s) => e.target.closest(s);
   let b;
-  if ((b = g('[data-x]'))) { act(b.dataset.x, b); return; }
-  if ((b = g('[data-sb]'))) { selAct(b.dataset.sb); return; }
+  if (!g('.stmore, [data-x="more"], [data-sb="more"]')) moreClose(); // касание мимо закрывает меню «⋯»
+  if ((b = g('[data-x]'))) { if (b.dataset.x !== 'more') moreClose(); act(b.dataset.x, b); return; }
+  if ((b = g('[data-sb]'))) { if (b.dataset.sb !== 'more') moreClose(); selAct(b.dataset.sb); return; }
   if ((b = g('[data-open]'))) { V.pid = b.dataset.open; V.view = 'song'; V.cid = null; V.bar = 0; render(); return; }
   if (!p) return;
   if ((b = g('[data-rkbar]'))) { V.bar = +b.dataset.rkbar; stepsBar(host, V.bar); return; }

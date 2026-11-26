@@ -12,10 +12,10 @@
 // (маркер, снять петлю). Касание значка дорожки — её меню, «+» внизу — новая дорожка.
 // Без зависимости от модуля: получает проект и обратные вызовы.
 import { chordsTimeline } from '../../music/studioloops.js';
-import { clipsOf, trackOf, songBars, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, piecePasses, DRUMS, TQ } from '../../music/project.js';
+import { clipsOf, trackOf, songBars, SONG_BARS_MAX, moveClip, resizeClip, trimClipStart, dataBeats, chordName, setRegion, setAutoPoint, removeAutoPoint, autoPointAt, autoAt, piecePasses, DRUMS, TQ } from '../../music/project.js';
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(12); } catch { /* нет вибрации */ } };
 
-const HEAD = 56, RULER = 30, ROW0 = 64, ROW_MIN = 34, ROW_MAX = 168, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8, ZMIN = 6, ZMAX = 2400;
+const HEAD = 56, RULER = 30, ROW0 = 64, ROW_MIN = 34, ROW_MAX = 168, GAP = 3, EDGE = 16, HOLD_MS = 450, MIN_BARS = 8, EXT_PAD = 16, ZMIN = 6, ZMAX = 2400;
 
 // Автоматизация (get().auto = { tr, kind }): поверх ряда дорожки — огибающая; касание — точка, вести — сдвинуть,
 // удержать — убрать; значок этой дорожки — выйти.
@@ -34,13 +34,17 @@ export function createPlaylist(host, get, on) {
   const setSel = (ids) => { V.sels = new Set(ids); on.sel && on.sel([...V.sels]); };
   const colors = () => css || (css = (() => { const s = getComputedStyle(host); const v = (k) => s.getPropertyValue(k).trim(); return { ink: v('--ink'), l2: v('--l2'), sep: v('--sep'), fill: v('--fill'), fill2: v('--fill2') || v('--fill'), cell: v('--cell'), tint: v('--tint'), bg: v('--bg'), red: v('--red') || '#D2463F' }; })());
   const P = () => get().p;
-  const bars = () => Math.max(MIN_BARS, songBars(P()) + 2);
+  // полотно продолжается (слово автора 26.11.2026): за правым краем всегда есть ещё такты — партию можно поставить дальше, на минуты вперёд;
+  // V.ext — до какого такта полотно уже раскрыто (растёт по мере прокрутки, не больше предела проекта)
+  const bars = () => Math.max(MIN_BARS, songBars(P()) + 2, V.ext || 0);
   // сетка по масштабу: мелко — такт, крупнее — доля, ¼, 1/16; совсем крупно — без сетки (до 1/960 доли — миллисекунды)
   const snap = () => (V.pxb < 22 ? P().num : V.pxb < 70 ? 1 : V.pxb < 200 ? 0.25 : V.pxb < 700 ? 1 / 16 : 0);
   const xOf = (b) => HEAD + b * V.pxb - V.x, bOf = (x) => (x - HEAD + V.x) / V.pxb;
   const yOf = (i) => RULER + i * V.row - V.y, rowOf = (y) => Math.floor((y - RULER + V.y) / V.row);
   const clampView = () => {
     const p = P();
+    const edge = Math.ceil((V.x + (W - HEAD)) / (V.pxb * p.num));
+    if (edge + EXT_PAD > (V.ext || 0)) V.ext = Math.min(SONG_BARS_MAX, edge + EXT_PAD);
     V.x = Math.max(0, Math.min(Math.max(0, bars() * p.num * V.pxb - (W - HEAD)), V.x));
     V.y = Math.max(0, Math.min(Math.max(0, (p.tracks.length + 1) * V.row + RULER - H), V.y));
   };
