@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scaleOf, clampScale, normLay, arrange, moveBlock, moveTo, isEditing, setEditing, rowsOf, togglePair, clampRatio, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
+import { scaleOf, clampScale, normLay, arrange, moveBlock, moveTo, tierOf, isEditing, setEditing, rowsOf, togglePair, clampRatio, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
 
 const B = [{ id: 'a', html: '<i>A</i>' }, { id: 'b', html: '<i>B</i>' }, { id: 'c', html: '<i>C</i>' }, { id: 'd', html: '' }];
 const ids = ['a', 'b', 'c', 'd'];
@@ -14,6 +14,18 @@ describe('размер блока', () => {
   it('normLay чинит данные и выбрасывает мусор', () => {
     const o = normLay({ order: 'x', hidden: null, size: { a: 'm', b: 'zz', c: NaN } });
     expect(o.order).toEqual([]); expect(o.hidden).toEqual([]); expect(Object.keys(o.size)).toEqual(['a']);
+  });
+});
+
+describe('ступень размера (data-z для stagefit.css)', () => {
+  it('xs ≤ 0,65 < s ≤ 0,9 < m ≤ 1,25 < l ≤ 1,7 < xl', () => {
+    expect([0.5, 0.65, 0.66, 0.9, 1, 1.25, 1.26, 1.7, 1.71, 2.2].map(tierOf)).toEqual(['xs', 'xs', 's', 's', 'm', 'm', 'l', 'l', 'xl', 'xl']);
+  });
+  it('arrange отдаёт ступень и в обычном виде, и в правке', () => {
+    const lay = { size: { a: 0.5, c: 2 } };
+    expect(arrange(B, lay)).toContain('data-lb="a" style="--lz:0.5" data-z="xs"');
+    expect(arrange(B, lay)).toContain('data-z="xl"');
+    setEditing(lay, true); expect(arrange(B, lay, { t: (k) => k })).toContain('data-z="xs"'); setEditing(lay, false);
   });
 });
 

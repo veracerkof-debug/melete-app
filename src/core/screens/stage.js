@@ -8,6 +8,7 @@
 // перезапуска приложение предлагает вернуться; экран не гаснет; выход — с подтверждением.
 import { holdScreen } from '../screenon.js';
 import '../../ui/stage.css';
+import '../../ui/stagefit.css';
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, toast, confirm, icons } from '../../ui/index.js';
 import { lyricsHTML } from '../../music/lyrics.js';
@@ -714,7 +715,7 @@ export function openStage(app, evId, i = 0) {
       { id: 'chips', html: (() => { const inn = 
         chip('track', !!S.track, '♪ ' + (trName || t('stage.track')) + (fileKey(it && it.track) ? ' · ' + fileKey(it.track) : ''), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) +
         (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : ''); return inn ? '<div class="sgchips">' + inn + '</div>' : ''; })() },
-      { id: 'keys', html: pk.keys },
+      { id: 'keys', html: pk.keys ? '<div class="sgkw">' + pk.keys + '</div>' : '' },
       { id: 'pads', html: pk.pads },
       // «играть/стоп» — справа (слово автора 26.11.2026: правша), громкости — слева и крупнее
       { id: 'bar', html: '<div class="sgbar"><div class="sgknobs" role="group" aria-label="' + esc(t('stage.vol')) + '">' + KNOBS.map((k) => knobHTML(k)).join('') + '</div>' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :

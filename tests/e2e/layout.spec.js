@@ -158,7 +158,54 @@ test('сцена: мелкие кнопки пэдов — настройки и
   await page.click('[data-sgap="set"]'); await page.waitForTimeout(800);
   await expect(page.locator('#sheetLayer .sheet')).toBeVisible();
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
   await page.click('[data-sgap="wave"]'); await page.waitForTimeout(500);
   await expect(page.locator('[data-sgap="wave"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(errors).toEqual([]);
+});
+
+// Размеры блоков: при любом сжатии и увеличении, в узком блоке рядом — ничего не вылезает, главное остаётся нажимаемым (stagefit.css)
+test('сцена: размеры блоков — сжатие, увеличение и узкие пары: ничего не вылезает, главное остаётся', async ({ page, melete, errors }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  const IDS = ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'];
+  const apply = async (size, pair) => {
+    await page.evaluate(([sz, pr]) => { const L = window.__melete.store.state.settings.layout.stage; L.size = sz; L.pair = pr; }, [size, pair]);
+    await hold(page, page.locator('.sgplayer, .sgtempo').first()); await page.waitForTimeout(250);
+    await page.click('[data-ly="done"]'); await page.waitForTimeout(350);
+  };
+  const audit = (label) => page.evaluate((lb) => {
+    const bad = [];
+    for (const blk of document.querySelectorAll('.lyb[data-lb]')) {
+      const br = blk.getBoundingClientRect(), inner = blk.firstElementChild; if (!inner) continue;
+      const ir = inner.getBoundingClientRect();
+      for (const e of blk.querySelectorAll('button, [role="slider"]')) {
+        const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue; // скрытые правилом — в порядке
+        const edge = e.closest('.sgsongs, .sgtext'); if (edge) continue;
+        if (r.left < ir.left - 1.5 || r.right > ir.right + 1.5) bad.push(lb + ' ' + blk.dataset.lb + ' вылезает ' + (e.className || e.tagName) + ' ' + Math.round(r.left) + '..' + Math.round(r.right) + ' из ' + Math.round(ir.left) + '..' + Math.round(ir.right));
+        if (Math.min(r.width, r.height) < 24) bad.push(lb + ' ' + blk.dataset.lb + ' мелко ' + (e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+      }
+    }
+    const need = [['.sgbpm', 'метроном'], ['.sgbtn.main', 'старт'], ['.sgkey', 'клавиши'], ['.sgpad', 'пэды'], ['[data-sgpl="pp"]', 'плеер']];
+    for (const [s, n] of need) { const e = document.querySelector(s); if (e) { const r = e.getBoundingClientRect(); if (!r.width || !r.height) bad.push(lb + ' пропал ' + n); } }
+    return bad;
+  }, label);
+  const fails = [];
+  for (const z of [0.5, 0.65, 0.9, 1.3, 1.8, 2.2]) { // весь экран одним размером
+    await apply(Object.fromEntries(IDS.map((i) => [i, z])), {});
+    fails.push(...await audit('размер ' + z));
+    if (process.env.SHOTDIR) await page.screenshot({ path: process.env.SHOTDIR + '/z' + z + '.png' });
+  }
+  for (const r of [0.25, 0.5, 0.75]) for (const z of [0.5, 1, 2]) { // клавиши рядом с метрономом, пэды рядом с громкостями — узкие половины
+    await apply(Object.fromEntries(IDS.map((i) => [i, z])), { keys: r, bar: r });
+    fails.push(...await audit('пара ' + r + ' размер ' + z));
+    if (process.env.SHOTDIR && z === 1) await page.screenshot({ path: process.env.SHOTDIR + '/p' + r + '.png' });
+  }
+  expect(fails).toEqual([]);
   expect(errors).toEqual([]);
 });

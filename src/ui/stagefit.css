@@ -1,0 +1,82 @@
+/* Сцена: блоки сжимаются и растут без поломок (слово автора 26.11.2026). Тот же принцип, что у окон практики (full / half / quarter / strip):
+   чем меньше места, тем меньше второстепенного — остаётся самое нужное, и оно остаётся удобным.
+   Две оси:
+   • высота — ступень размера блока `data-z` на `.lyb` (src/ui/layout.js: tierOf): xs ≤ 0.65, s ≤ 0.9, m ≤ 1.25, l ≤ 1.7, xl;
+   • ширина — контейнер самого блока (в ряду из двух блоков он вдвое уже): @container, пороги ниже.
+   Что остаётся в самом тесном случае, по блокам (подробно — docs/tech/core.md, «Размеры блоков сцены»):
+     текст и песни — только текст (список песен прячется при узком блоке);  плеер — ▶ и полоса, без времени и тональности;
+     метроном — цифры темпа во всю ширину (касание — старт/стоп, вверх-вниз — темп);  клавиши — те же 12, ниже и без значков;
+     пэды звуков — цветные плитки без подписей;  громкости — общая и ▶.
+   Касаемые цели не мельче 34 px (мельче палец не попадает); пэды ударных на ходу — не мельче 28 px. */
+@media (min-height:521px),(orientation:portrait){
+  .sgmain,.sgplayer,.sgtempo,.sgkw,.sgpads,.sgbar,.sgseek{container-type:inline-size}
+}
+
+/* ---- крупнее: шрифты и значки растут вместе с блоком (до 1,8 — дальше не нужно), чтобы крупный блок не был «пустым» ---- */
+.sgbpm b{font-size:calc(var(--fs-7) * clamp(1, var(--lz, 1), 1.8))}
+.sgbpm small{font-size:calc(var(--fs-1) * clamp(1, var(--lz, 1), 1.5))}
+.sgpad b{font-size:calc(var(--fs-1) * clamp(1, var(--lz, 1), 1.7))}
+.sgpads .sgkey,.sgkey{font-size:calc(var(--fs-6) * clamp(1, var(--lz, 1), 1.6))}
+.sgknob b{font-size:calc(var(--fs-4) * clamp(1, var(--lz, 1), 1.6))}
+.sgkn span{font-size:calc(var(--fs-1) * clamp(1, var(--lz, 1), 1.5))}
+.sgbar .sgbtn.main svg{width:calc(34px * clamp(1, var(--lz, 1), 1.8));height:calc(34px * clamp(1, var(--lz, 1), 1.8))}
+.sgplseek{font-size:calc(var(--fs-3) * clamp(1, var(--lz, 1), 1.5))}
+.sgsong{font-size:calc(var(--fs-3) * clamp(1, var(--lz, 1), 1.4))}
+/* крупный блок — цели не больше ширины: крутилки и клавиши не вылезают за блок */
+.sgknob{width:min(calc(60px * var(--lz, 1)), 17cqw);height:min(calc(60px * var(--lz, 1)), 17cqw);min-width:34px;min-height:34px}
+
+/* ---- мельче: цели не меньше 34 px ---- */
+.sgtempo .sgic,.sgbpm,.sgplayer .sgic,.sgplseek{min-height:34px}
+.sgtempo .sgab{min-height:30px}
+.sgpads .sgkey,.sgkey{min-height:max(30px, calc(56px * var(--lz, 1)))}
+.sgpad{min-height:max(28px, calc(40px * var(--lz, 1)))}
+.sgbar .sgbtn.main{min-height:max(34px, calc(72px * var(--lz, 1)))}
+.sgkeys{grid-template-columns:repeat(6, minmax(0, 1fr))}
+.sgpgrid{grid-template-columns:repeat(var(--c, 4), minmax(0, 1fr))}
+
+/* ---- высота: ступень блока ---- */
+/* s: подписи мельче */
+[data-z="s"] .sgkn span{font-size:10px}
+[data-z="s"] .sgpad b{font-size:10px}
+/* xs: только главное */
+[data-z="xs"] .sgkn span,[data-z="xs"] .sgplseek em,[data-z="xs"] .sgtrk,[data-z="xs"] .sgtime,[data-z="xs"] .sgpad b,[data-z="xs"] .sgbpm small{display:none}
+[data-z="xs"] .sgtempo .sgap,[data-z="xs"] .sgtempo [data-sgbpm],[data-z="xs"] .sgtempo .tapb{display:none}
+[data-z="xs"] .sgtempo .sgbpm{flex:1 1 auto;max-width:none}                 /* метроном — одна широкая кнопка */
+[data-z="xs"] .sgsong small{display:none}
+[data-z="xs"] .sgknobs{padding:0}
+[data-z="xs"] .sgknob b{font-size:10px}
+[data-z="xs"] .sgbar{padding-top:2px;padding-bottom:4px}
+[data-z="xs"] .sgplayer [data-sgpl="key"]{display:none}
+[data-z="xs"] .sgkey{border-width:1px}
+
+/* Ширина в @container — внутренняя (без отступов блока), поэтому пороги чуть меньше ширины блока. */
+/* ---- ширина: метроном (метроном, ± и TAP важнее кнопок пэдов; пэды уходят по важности: волна → арп/глайд → настройки) ---- */
+@container (max-width: 359px){ .sgtempo [data-sgap="wave"]{display:none} }
+@container (max-width: 289px){ .sgtempo [data-sgap="arp"],.sgtempo [data-sgap="glide"]{display:none} }
+@container (max-width: 229px){ .sgtempo .sgap,.sgtempo .tapb{display:none} }
+@container (max-width: 159px){ .sgtempo [data-sgbpm]{display:none} .sgtempo .sgbpm{flex:1 1 auto;max-width:none} }
+
+/* плеер: тональность и время уходят первыми, потом выбор записи */
+@container (max-width: 339px){ .sgplayer .sgtrk,.sgplseek em{display:none} }
+@container (max-width: 219px){ .sgplayer [data-sgpl="pick"]{display:none} .sgplseek span{display:none} }
+
+/* клавиши пэда: 12 тональностей — 6 в ряд, в узком блоке 4 (три ряда), в самом узком 3; подпись мельче */
+@container (max-width: 259px){ .sgkeys{grid-template-columns:repeat(4, minmax(0, 1fr));gap:6px;padding-left:8px;padding-right:8px} }
+@container (max-width: 169px){ .sgkeys{grid-template-columns:repeat(3, minmax(0, 1fr));gap:4px} .sgkey{font-size:var(--fs-4)} }
+@container (max-width: 119px){ .sgkeys{grid-template-columns:repeat(2, minmax(0, 1fr));padding-left:4px;padding-right:4px} }
+
+/* пэды звуков: 4 → 3 → 2 в ряд; подписи уходят, остаются цветные плитки */
+@container (max-width: 299px){ .sgpgrid{grid-template-columns:repeat(2, minmax(0, 1fr))} }
+@container (max-width: 139px){ .sgpgrid{grid-template-columns:minmax(0, 1fr)} }
+
+/* громкости: общая и ▶ важнее остальных */
+@container (max-width: 359px){ .sgkn span{display:none} .sgknob{min-width:34px} }
+@container (max-width: 279px){ .sgkn:has([data-sgkn="media"]),.sgkn:has([data-sgkn="metro"]){display:none} }
+@container (max-width: 209px){ .sgkn:has([data-sgkn="sounds"]),.sgkn:has([data-sgkn="pad"]){display:none} .sgbar .sgbtn.main{flex:1 1 0} }
+
+/* текст и список песен: узкий блок — только текст */
+@container (max-width: 299px){ .sgsongs{display:none} }
+@container (max-width: 199px){ .sgmain>.sgtext{padding-left:var(--sp-2);padding-right:var(--sp-1)} }
+
+/* полоса перемотки: узкая — без времени */
+@container (max-width: 259px){ .sgtime{display:none} }

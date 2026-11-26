@@ -23,6 +23,8 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? clampScale(v) 
 // Размер блока числом: ступень или своё значение; нет — 1
 export const scaleOf = (lay, id) => (lay && lay.size && num(lay.size[id])) || 1;
 
+// Ступень размера блока для CSS (`data-z`): что убирается при сжатии и что растёт при увеличении — src/ui/stagefit.css
+export const tierOf = (z) => (z <= 0.65 ? 'xs' : z <= 0.9 ? 's' : z <= 1.25 ? 'm' : z <= 1.7 ? 'l' : 'xl');
 export const normLay = (lay) => {
   const o = lay && typeof lay === 'object' ? lay : {};
   o.order = Array.isArray(o.order) ? o.order : [];
@@ -53,8 +55,8 @@ export function arrange(blocks, lay, opts = {}) {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const one = (b) => {
     const z = scaleOf(lay, b.id);
-    if (!editing) return '<div class="lyb" data-lb="' + b.id + '" style="--lz:' + z + '">' + b.html + '</div>';
-    return '<div class="lyb ed' + (grow.includes(b.id) ? ' lyg' : '') + '" data-lb="' + b.id + '" style="--lz:' + z + '"><div class="lyi">' + b.html + '</div>' +
+    if (!editing) return '<div class="lyb" data-lb="' + b.id + '" style="--lz:' + z + '" data-z="' + tierOf(z) + '">' + b.html + '</div>';
+    return '<div class="lyb ed' + (grow.includes(b.id) ? ' lyg' : '') + '" data-lb="' + b.id + '" style="--lz:' + z + '" data-z="' + tierOf(z) + '"><div class="lyi">' + b.html + '</div>' +
       '<span class="lyn">' + esc(name(b.id)) + '</span>' +
       '<div class="lyh" data-ly="grip" role="slider" aria-label="' + esc(t('lay.grip')) + '" aria-valuemin="' + SCALE_MIN + '" aria-valuemax="' + SCALE_MAX + '" aria-valuenow="' + z + '"><i></i></div></div>';
   };
@@ -253,11 +255,11 @@ export function bindLayout(root, apiOrFn, skip = '') {
       if (ninner) dy = Math.max(-(h0 - 40), Math.min(hn0 - 40, dy)); // ни один блок не уже 40 px
       const want = Math.max(40, h0 + dy), cur = inner.getBoundingClientRect().height || h0;
       s = clampScale(s * Math.pow(want / cur, 1.4)); // высота растёт не пропорционально размеру — подгоняем по факту
-      blk.style.setProperty('--lz', s);
+      blk.style.setProperty('--lz', s); blk.dataset.z = tierOf(s);
       if (ninner) {
         const wantN = Math.max(40, hn0 - dy), curN = ninner.getBoundingClientRect().height || hn0;
         sn = clampScale(sn * Math.pow(wantN / curN, 1.4));
-        nb.style.setProperty('--lz', sn);
+        nb.style.setProperty('--lz', sn); nb.dataset.z = tierOf(sn);
       }
     };
     const end = () => {
