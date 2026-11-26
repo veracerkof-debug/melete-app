@@ -83,7 +83,8 @@ export const SCALE_MIN = 0.7, SCALE_MAX = 1.4, SCALE_STEP = 0.05;
 // Авто (слово автора 25.11.2026: «в целом на 10 % мельче»): на экране помещается больше — абзац и схема не уходят за экран.
 // Маленькие телефоны — 80 %, обычные — 90 %, планшеты — 100 %; вручную от 70 до 140 % (Оформление → Размер интерфейса).
 // Ширина раскладки считается по видимой области (без полосы кнопок навигации) и пересчитывается — экран не «едет»
-export const autoScale = (short) => (short < 340 ? 0.8 : short < 600 ? 0.9 : 1);
+// 26.11.2026: умолчание — 105 % (так автор смотрит и проверяет все экраны); совсем маленькие экраны — 90 %
+export const autoScale = (short) => (short < 340 ? 0.9 : 1.05);
 export const screenShort = () => (typeof screen !== 'undefined' ? Math.min(screen.width, screen.height) : 390);
 export function uiScale(settings, short = screenShort()) {
   const s = +settings.uiScale;

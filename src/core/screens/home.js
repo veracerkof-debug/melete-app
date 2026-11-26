@@ -58,7 +58,7 @@ import { homeworkCard } from './studentpage.js';
 import { classCard } from './classpage.js';
 
 // Тренажёр слуха временно убран (вернётся на этапе 2) — вместо него пэды
-export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone'];
+export const QUICK_DEF = ['metro', 'tuner', 'piano', 'drone', 'looper'];
 const QUICK_MAX = 8;
 const QUICK_BEGINNER = ['metro', 'tuner', 'book']; // новичку — три кнопки (слово автора 25.11.2026)
 
@@ -177,7 +177,7 @@ function readingCard(app, mono = false) {
   if (!st.church || !app.bible) return '';
   const r = app.bible.today();
   // план не выбран (или закончился) — приглашение выбрать готовый или свой
-  if (!r) return '<button class="' + (mono ? 'mread' : 'hread') + '" data-pp="feat"><span class="hrt">' + t('read.title') + '</span><span class="hrr">' + t('read.noPlan') + '</span><span class="hrs">' + t('read.pick') + '</span></button>';
+  if (!r) return '<button class="' + (mono ? 'mread' : 'hread') + '" data-pp="bible"><span class="hrt">' + t('read.title') + '</span><span class="hrr">' + t('read.noPlan') + '</span><span class="hrs">' + t('read.pick') + '</span></button>';
   const all = r.done === r.keys.length, next = nextOf(app.bible.st(), r);
   // по норме (readnorm.js): без «дня N из M»; минуты — по занятиям в Библии; свободное чтение — без списка глав
   const nm = r.norm, status = nm ? (r.kind === 'min' ? t('read.normMin', { done: r.min, n: r.n }) : r.status.todayDone ? t('read.done') : t('read.progress', { done: r.status.today, n: r.n })) : all ? t('read.done') : t('read.progress', { done: r.done, n: r.keys.length });
@@ -297,7 +297,7 @@ export function homeHTML(app) {
       return '<span class="day ' + (w.per[i] > 0 ? 'done t' + tn3 : wp.off[i] ? 'off' : plan[i] ? 'plan' : 'rest') + (i === today ? ' today' : '') + '" title="' +
         esc(w.per[i] ? fmtDur(w.per[i]) : wp.off[i] ? offText(wp.off[i]) : plan[i] ? t('home.dayPlan') : t('home.dayRest')) + '"><span class="d">' + (tn3 === 3 && daily > 0 ? CHK : '') + '</span>' + d + '</span>'; }).join('') + '</button>' +
     todayHTML(app, dayGoal, dayDone) +
-    (wp.now ? '<button class="hlink" data-pp="stats">' + esc(offText(wp.now)) + ' ›</button>' : !st.configured ? '<button class="hlink" data-pp="week">' + t('home.setup') + ' ›</button>' : '') + '</div>';
+    (wp.now ? '<button class="hlink" data-pp="stats">' + esc(offText(wp.now)) + ' ›</button>' : '') + '</div>';
   P.league = gemIn ? '' : gemRow(app);
   P.reading = readingCard(app);
   P.study = (plain ? '' : studyCard(app)) + homeworkCard(app) + classCard(app); // у ученика — «Домашка» от учителя, у учителя — сводка по ученикам // учёба: учебник, слух, ритм — часы в неделю

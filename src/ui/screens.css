@@ -962,3 +962,4 @@ html.desk .qgrid2 .qbtn{width:64px;height:64px;max-height:none}
 .hgoal.done .hgt{color:var(--l2)}
 .hstart .hfree{flex:none;width:76px;min-height:50px;padding:0 8px;border-radius:18px;background:var(--cell);color:var(--ink);font-size:13px;font-weight:700;line-height:1.15}
 html.desk .hstart .hfree{min-height:64px}
+.day.plan{overflow:visible;background:none;border-radius:0}

@@ -322,14 +322,14 @@ function notifHTML(app) {
 
 // Размер интерфейса: «Авто» или −/+ с шагом 5 %; предпросмотр главной и инструментов — телефон или планшет
 function sizeHTML(app) {
-  const st = app.store.state.settings, s = uiScale(st), auto = !(+st.uiScale), pct = Math.round(s * 100);
+  const st = app.store.state.settings, s = uiScale(st), pct = Math.round(s * 100);
   // предпросмотр — этого устройства (выбора «телефон / планшет» нет: всё подстраивается само, слово автора 06.11.2026)
   const dev = screenShort() < 600 ? 'phone' : 'tablet';
   return '<div class="hdr">' + t('look.size') + '</div><div class="group"><div class="cellcol">' +
     '<div class="szrow"><button class="ic sm" data-uisz="-1" aria-label="' + esc(t('look.smaller')) + '"' + (s <= SCALE_MIN + 1e-6 ? ' disabled' : '') + '>' + IC.minus + '</button>' +
     '<b class="num szval">' + pct + '%</b>' +
     '<button class="ic sm" data-uisz="1" aria-label="' + esc(t('look.bigger')) + '"' + (s >= SCALE_MAX - 1e-6 ? ' disabled' : '') + '>' + IC.plus + '</button>' +
-    '<button class="pill szauto" data-uisz="auto" aria-pressed="' + auto + '">' + t('look.sizeAuto') + (auto ? '' : ' · ' + Math.round(autoScale(screenShort()) * 100) + '%') + '</button></div>' +
+    '</div>' +
     '<div class="szprev" data-szprev="' + dev + '"><figure><div class="szfr"></div><figcaption>' + t('look.prevHome') + '</figcaption></figure>' +
     '<figure><div class="szfr"></div><figcaption>' + t('look.prevTools') + '</figcaption></figure></div></div></div>' +
     '<p class="ftr">' + t('look.sizeHint') + '</p>';
