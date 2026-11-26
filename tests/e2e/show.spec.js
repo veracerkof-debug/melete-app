@@ -41,7 +41,7 @@ test('пульт: выступление, номер с меткой, пад с�
   // звуки: пустой пад → редактор → свой файл
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await page.click(T + '[data-page="pads"]');
-  await expect(page.locator(T + '.shdock .shpad')).toHaveCount(2);
+  await expect(page.locator(T + '.shdock .shpad')).toHaveCount(1); // пустые ячейки не рисуются: одна «+»
   await page.locator(T + '.shbanks [data-bank]').first().click(); // готовые «Ударные» — отдельной полосой сверху, во вкладках — свои банки; первый — пустой
   await page.click(T + '.shpads .shpad[data-cell="0"]');
   await page.fill('.sheet [data-f="name"]', 'Дробь');
@@ -149,34 +149,28 @@ test('фон: шум своим файлом, наплыв, пэд на квин
   // ГО запускает номер и включает его шум (шторка «Программа» закрывается)
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.click(T + '[data-x="pp"]');
-  await expect(page.locator(T + '.shstrip:not(.shnk) [data-knob]')).toHaveCount(4);
+  await expect(page.locator(T + '.shbar [data-vol="master"]')).toHaveCount(1);
   await page.click(T + '[data-page="pads"]'); await page.click(T + '[data-x="bedsheet"]');
   await expect(page.locator('.sheet .shnoise.on')).toHaveCount(1, { timeout: 8000 });
   expect(errors).toEqual([]);
 });
 
-test('громкость: крутилки внизу «Программы» и «Звуков», общая громкость; двойное касание — на 0', async ({ page, melete, errors }) => {
+test('громкость: общая — ползунок внизу «Эфира» и «Звуков», остальные — в шторке «Звук»; значения общие для страниц', async ({ page, melete, errors }) => {
   await melete.open();
   await melete.free('F', ['show']);
   await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
   const T = '.session .pane[data-tool="show"] ';
   await page.click(T + '[data-page="pads"]');
-  await expect(page.locator(T + '[data-knob]')).toHaveCount(4); // страница «Звуки»
-  const kn = T + '[data-knob="master"]', b = await page.locator(kn).boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 + 42, { steps: 6 }); await page.mouse.up(); // вниз на 42 px ≈ −30
-  const v = +(await page.locator(kn).getAttribute('aria-valuenow'));
-  expect(v).toBeGreaterThan(60); expect(v).toBeLessThan(80);
+  await expect(page.locator(T + '[data-knob]')).toHaveCount(0); // крутилок на экране больше нет
+  await page.locator(T + '[data-vol="master"]').fill('70');
   await page.click(T + '[data-page="desk"]');
-  await expect(page.locator(T + '.shstrip:not(.shnk) [data-knob]')).toHaveCount(4);
-  await page.click(T + '[data-page="pads"]');
-  await expect(page.locator(T + '[data-knob="master"]')).toHaveAttribute('aria-valuenow', String(v)); // то же значение на другой странице
-  await page.locator(T + '[data-knob="pads"]').focus(); await page.keyboard.press('ArrowDown');
-  await expect(page.locator(T + '[data-knob="pads"]')).toHaveAttribute('aria-valuenow', '84');
-  await page.click(T + '[data-page="desk"]');
-  await expect(page.locator(T + '.shstrip:not(.shnk) [data-knob]')).toHaveCount(4);
+  await expect(page.locator(T + '[data-vol="master"]')).toHaveValue('70'); // то же значение на другой странице
+  await page.click(T + '[data-x="levels"]');
+  await expect(page.locator('.sheet [data-vol]')).toHaveCount(3); // трек, фон, звуки
+  await page.locator('.sheet [data-vol="pads"]').fill('84');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   const sh = (await melete.toolsNow()).show;
-  expect(sh.master).toBe(v); expect(sh.level).toBe(84);
+  expect(sh.master).toBe(70); expect(sh.level).toBe(84);
   expect(errors).toEqual([]);
 });
 
@@ -203,13 +197,11 @@ test('нормализация и громкости номера: запись 
   await page.click(T + '[data-page="desk"]'); await page.click(T + '[data-x="pp"]');
   await expect(page.locator(T + '.shpick.playing')).toHaveCount(1, { timeout: 15_000 }); // трек пошёл — страница перерисована, крутилку не выдернет из-под пальца
   await page.waitForTimeout(400);
-  await expect(page.locator(T + '[data-knob="deck"]')).toBeVisible({ timeout: 10_000 });
-  const kn = T + '.shstrip [data-knob="deck"]', b = await page.locator(kn).boundingBox();
-  const v0 = +(await page.locator(kn).getAttribute('aria-valuenow'));
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - 28, { steps: 5 }); await page.mouse.up(); // вверх на 28 px ≈ +20
-  const v1 = +(await page.locator(kn).getAttribute('aria-valuenow'));
-  expect(v1 === 100 || v1 > v0 + 10).toBe(true);
+  await page.click(T + '[data-x="levels"]');
+  await expect(page.locator('.sheet [data-vol="deck"]')).toBeVisible({ timeout: 10_000 });
+  const v0 = +(await page.locator('.sheet [data-vol="deck"]').inputValue()), v1 = Math.min(100, v0 + 12);
+  await page.locator('.sheet [data-vol="deck"]').fill(String(v1)); // у номера с записью — громкость самой песни
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   const sh = (await melete.toolsNow()).show, n = sh.events[0].numbers[0];
   expect(n.level).toBe(v1);
   // настройки: цель нормализации

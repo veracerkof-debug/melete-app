@@ -35,11 +35,11 @@ test('пульт: единый список, плавный переход же�
   await expect(page.locator(T + '.shpick.done')).toHaveCount(0);
   await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/desk.png' : 'test-results/desk.png' });
   // общая громкость всегда на виду
-  await expect(page.locator(T + '[data-knob="master"]')).toBeVisible();
+  await expect(page.locator(T + '[data-vol="master"]')).toBeVisible();
   // «Звуки»: фон там же
   await page.click(T + '[data-page="pads"]'); await page.waitForTimeout(300);
   await expect(page.locator(T + '[data-x="bedtoggle"]')).toBeVisible();
-  await expect(page.locator(T + '[data-knob="master"]')).toBeVisible();
+  await expect(page.locator(T + '[data-vol="master"]')).toBeVisible();
   await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/pads.png' : 'test-results/pads.png' });
   expect(errors).toEqual([]);
 });
@@ -59,7 +59,7 @@ test('пульт: тональность и темп номера правятс
   await page.fill('.sheet [data-f="bpm"]', '96'); await page.press('.sheet [data-f="bpm"]', 'Tab');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
-  await expect(page.locator(T + '.shpick em').first()).toContainText('G');
+  await expect(page.locator(T + '.shpick small').first()).toContainText('G');
   await expect(page.locator(T + '.shpick[data-pick]')).toContainText('96');
   expect(errors).toEqual([]);
 });

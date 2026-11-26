@@ -187,7 +187,7 @@ export function parseHhmm(str) {
 }
 
 /* ---------- всё хранилище ---------- */
-export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true, strip: true, deskPads: false }; // deskPads — избранные пады справа на «Эфире» (закреплённый ряд); по умолчанию выключены
+export const DEFAULT_UI = { info: true, buzz: true, timer: true, awake: true, confirmStop: false, dock: true, strip: true, deskPads: false, drums: false }; // deskPads — избранные пады справа на «Эфире» (закреплённый ряд); по умолчанию выключены
 export function normalizeShow(s = {}) {
   const o = { ...s };
   o.v = 1;

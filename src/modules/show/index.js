@@ -212,17 +212,20 @@ function bedBarHTML() {
 }
 // «Звуки»: фон (дрон), драм-пэды (готовый банк «Ударные» — компактно, как клавиши фона), свои звуки (банки с вкладками — всё остальное место), закреплённые, крутилки
 const padCell = (p, i, dock) => (p ? padHTML(p, dock) : '<button class="shpad empty" data-cell="' + i + '"' + (dock ? ' data-dock="1"' : '') + ' aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>');
+// Пустые ячейки не рисуются (слово автора 26.11.2026): только занятые и одна «+» следом; в правке видны все
+const filled = (p) => !!(p && (p.file || p.synth));
+const shownCells = (pads) => { if (edit) return pads.map((p, i) => [p, i]); let L = -1; pads.forEach((p, i) => { if (filled(p)) L = i; }); return pads.slice(0, Math.min(pads.length, L + 2)).map((p, i) => [p, i]); };
 function padsBlocks() {
   const banks = S.banks.filter((x) => !x.pinned), drum = banks.find((x) => x.preset === 'drums'), sound = banks.filter((x) => x !== drum), d = S.ui.dock ? M.dockOf(S) : null;
   let b = M.bankOf(S); if (drum && b && b.id === drum.id) b = sound[0] || null;
   if (!b) b = sound[0] || drum || null;
   const blocks = [{ id: 'bed', html: bedBarHTML() }];
-  if (drum) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
+  if (drum && S.ui.drums) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
   blocks.push({ id: 'sounds', html: '<div class="shbanks" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + '</button>').join('') +
     '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
-    (b && b !== drum ? '<div class="shpads" style="--c:' + b.cols + ';--r:' + b.rows + '">' + b.pads.map((p, i) => padCell(p, i)).join('') + '</div>' : '') });
+    (b && b !== drum ? (() => { const cs = shownCells(b.pads); return '<div class="shpads" style="--c:' + b.cols + ';--r:' + Math.max(1, Math.ceil(cs.length / b.cols)) + '">' + cs.map(([p, i]) => padCell(p, i)).join('') + '</div>'; })() : '') });
   const foot = (h) => '<div class="shfoot">' + h + barHTML() + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
-  blocks.push({ id: 'dock', html: foot(d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + d.pads.map((p, i) => padCell(p, i, true)).join('') + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>'
+  blocks.push({ id: 'dock', html: foot(d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + shownCells(d.pads).map(([p, i]) => padCell(p, i, true)).join('') + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>'
     : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') });
   return blocks;
 }
@@ -290,7 +293,15 @@ function panic() {
 }
 function barHTML() {
   const n = M.currentNumber(S), own = !!(deck && n && n.kind === 'track' && deck.state.file === n.file && deck.state.playing);
-  return '<div class="shstrip shbar" role="group" aria-label="' + esc(t('desk.levels')) + '"><button class="shplay' + (own ? ' on' : '') + '" id="shpp" data-x="pp" aria-label="' + esc(t(own ? 'desk.pause' : 'desk.play')) + '">' + esc(own ? '❚❚' : '▶') + '</button><button class="shpanic' + (panicAt ? ' armed' : '') + '" data-x="panic" aria-label="' + esc(t('desk.panic')) + '">' + esc(panicAt ? t('desk.panicAgain') : '■') + '</button>' + KNOBS.map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
+  return '<div class="shstrip shbar" role="group" aria-label="' + esc(t('desk.levels')) + '"><button class="shplay' + (own ? ' on' : '') + '" id="shpp" data-x="pp" aria-label="' + esc(t(own ? 'desk.pause' : 'desk.play')) + '">' + esc(own ? '❚❚' : '▶') + '</button><button class="shpanic' + (panicAt ? ' armed' : '') + '" data-x="panic" aria-label="' + esc(t('desk.panic')) + '">' + esc(panicAt ? t('desk.panicAgain') : '■') + '</button>' + '<label class="shmv"><span>' + esc(t('desk.master')) + '</span><input type="range" class="range shmr" data-vol="master" min="0" max="100" value="' + S.master + '" aria-label="' + esc(t('desk.master')) + '"><b class="num" data-vols="master">' + S.master + '</b></label><button class="shsnd" data-x="levels" aria-label="' + esc(t('desk.levels')) + '">' + esc(t('desk.sound')) + '</button></div>';
+}
+// Шторка «Звук» (слово автора 26.11.2026): на экране только общая громкость, остальные уровни — здесь; нажал, подправил, закрыл
+function levelsSheet() {
+  const row = ([k, lb]) => '<div class="sslider"><div class="ssl"><span>' + esc(t(lb)) + '</span><b class="num" data-vols="' + k + '">' + volOf(k) + '</b></div><input type="range" class="range" data-vol="' + k + '" min="0" max="100" value="' + volOf(k) + '" aria-label="' + esc(t(lb)) + '"></div>';
+  ctx.ui.sheet(() => '<div class="shprog"><div class="hdr">' + esc(t('desk.levels')) + '</div><div class="group sgroup" style="margin-top:6px">' + KNOBS.slice(1).map(row).join('') + '</div></div>', (el) => {
+    el.addEventListener('input', onInput);
+    el.addEventListener('change', onChange);
+  });
 }
 function stripHTML() {
   return '<div class="shstrip" role="group" aria-label="' + esc(t('desk.levels')) + '">' + KNOBS.map(([k, lb]) => knobHTML(k, lb)).join('') + '</div>';
@@ -314,14 +325,16 @@ async function jumpTo(n, sec) {
 // смахнуть влево — плавно перейти к номеру, смахнуть вправо по проигранному — вернуть в программу, удержать — настройки номера
 function pickHTML() {
   const e = cur(); if (!e) return '';
-  const st = deck ? deck.state : null;
+  const st = deck ? deck.state : null, nx = M.nextNumber(S);
   return '<div class="shpicks" role="list" aria-label="' + esc(t('pick.list')) + '">' + e.numbers.map((n, i) => {
     const k = numKey(n), b = numBpm(n), f = n.kind === 'track' ? fileOf(n.file) : null, on = !!(st && st.playing && n.kind === 'track' && st.file === n.file);
-    // сверху — название номера, под ним — что в нём играет (трек) или заметка
-    const sub = n.kind === 'track' ? (f ? f.name : t('num.noFile')) : (n.note ? n.note.split('\n')[0] : '');
-    return '<button class="shpick' + (n.id === S.cur ? ' cur' : '') + (n.done ? ' done' : '') + (on ? ' playing' : '') + '" role="listitem" data-pick="' + n.id + '" aria-pressed="' + on + '"' + (n.id === S.cur ? ' aria-current="true"' : '') + '><i>' + (on ? '■' : i + 1) + '</i>' +
-      '<span class="shpt"><b>' + esc(n.title || t('num.untitled', { n: i + 1 })) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
-      (k ? '<em>' + esc(k) + '</em>' : '') + (b ? '<em>' + b + '</em>' : '') + '</button>';
+    // слово автора 26.11.2026: играющий и следующий номера выделены цветом, размер строк у всех один; под названием — тональность · темп · длина · заметка
+    const note = n.note ? n.note.split('\n')[0] : '', dur = n.dur || (f && f.dur) || 0;
+    const meta = [k, b ? String(b) : '', dur ? M.mmss(dur) : '', note || (n.kind === 'track' ? (f ? f.name : t('num.noFile')) : '')].filter(Boolean).join(' · ');
+    const isNx = !!(nx && nx.id === n.id && n.id !== S.cur);
+    return '<button class="shpick' + (n.id === S.cur ? ' cur' : '') + (isNx ? ' nx' : '') + (n.done ? ' done' : '') + (on ? ' playing' : '') + '" role="listitem" data-pick="' + n.id + '" aria-pressed="' + on + '"' + (n.id === S.cur ? ' aria-current="true"' : '') + '><i>' + (on ? '■' : i + 1) + '</i>' +
+      '<span class="shpt"><b>' + esc(n.title || t('num.untitled', { n: i + 1 })) + '</b>' + (meta ? '<small>' + esc(meta) + '</small>' : '') + '</span>' +
+      '<span class="shrt" data-at="' + esc(n.at != null ? M.hhmm(n.at) : '') + '">' + esc(n.at != null ? M.hhmm(n.at) : '') + '</span>' + (n.id === S.cur ? '<u class="shpg"></u>' : '') + '</button>';
   }).join('') + '<button class="shpick add" data-x="numnew">+ ' + esc(t('num.add')) + '</button></div>';
 }
 // Плавный переход к номеру: идущий затухает за время его выхода, выбранный входит со своим нарастанием; прежний — проигран, выбранный — снова в программе
@@ -383,6 +396,9 @@ function deskPaint(force) {
     cn.className = 'shcueln' + (live ? ' now' : c.next && c.in < 10 && own ? ' soon' : '');
     cn.textContent = live ? t('desk.now') + ' · ' + live.text : c.next ? t('desk.in', { t: M.mmss(c.in) }) + ' · ' + c.next.text : '';
   }
+  const pg = host.querySelector('.shpick.cur .shpg'), rt = host.querySelector('.shpick.cur .shrt');
+  if (pg) pg.style.width = own && dur > 0 ? Math.min(100, time / dur * 100) + '%' : '0%';
+  if (rt) rt.textContent = own && st.playing && dur > 0 ? t('desk.left', { t: M.mmss(Math.max(0, dur - time)) }) : rt.dataset.at || '';
   const cv = host.querySelector('#shwave'); if (cv && n) drawWave(cv, n, time, dur, own);
 }
 function drawWave(cv, n, time, dur, own) {
@@ -496,6 +512,7 @@ function onClick(e) {
     case 'bedoff': S.bed.pad.on = false; S.bed.noise.cur = null; save(); if (bed) { bed.padOff(S.goFade); bed.stopNoise(S.goFade); } render(); break;
     case 'pp': playPause(); break;
     case 'panic': panic(); break;
+    case 'levels': levelsSheet(); break;
     case 'fadeout': if (deck) deck.stop(S.goFade); break;
     case 'mark': addMark(); break;
     default: break;
@@ -506,12 +523,15 @@ function stopAll() {
   if (S.ui.confirmStop) ctx.ui.confirm(t('stopAllAsk'), '', t('stopAll')).then((ok) => { if (ok) run(); }); else run();
 }
 function onChange(e) {
+  if (e.target.dataset && e.target.dataset.vol) { save(); return; }
   if (e.target.dataset.sw === 'bpad') {
     S.bed.pad.on = e.target.checked; save();
     if (S.bed.pad.on) padStart(M.currentNumber(S)); else if (bed) bed.padOff(S.goFade);
   }
 }
 function onInput(e) {
+  const vk = e.target.dataset && e.target.dataset.vol;
+  if (vk) { fdSet(vk === 'deck' && songKnob() ? 'nlevel' : vk, +e.target.value); return; }
   const sk = e.target.dataset && e.target.dataset.s;
   if (sk && ['padlvl', 'noiselvl', 'xfade'].includes(sk)) {
     const v = +e.target.value, o = (e.target.closest('.shprog') || host).querySelector('[data-o="' + sk + '"]');
@@ -582,6 +602,8 @@ function fdSet(k, v) {
   host.querySelectorAll('[data-fader="' + k + '"]').forEach((tr) => { tr.style.setProperty('--v', v + '%'); tr.setAttribute('aria-valuenow', v); });
   host.querySelectorAll('[data-knob="' + k + '"]').forEach((kn) => { kn.setAttribute('aria-valuenow', v); kn.querySelector('.kv').setAttribute('stroke-dasharray', v * 0.99 + ' 100'); kn.querySelector('b').textContent = v; });
   host.querySelectorAll('[data-fv="' + k + '"]').forEach((o) => { o.textContent = v; });
+  document.querySelectorAll('input[data-vol="' + k + '"]').forEach((i) => { i.value = v; });
+  document.querySelectorAll('[data-vols="' + k + '"]').forEach((o) => { o.textContent = v; });
   host.querySelectorAll('[data-fo="' + k + '"]').forEach((o) => { o.textContent = M.dbText(v) + ' ' + t('db'); });
 }
 // Крутилка: тянуть вверх-вниз (140 px — весь ход); двойное касание — на 0 и обратно; стрелки на клавиатуре — по единице
@@ -752,6 +774,7 @@ const TILES = [
   ['strip', '<circle cx="12" cy="12" r="7"/><path d="M12 12l3-4"/>'],
   ['info', '<rect x="4" y="6" width="16" height="12" rx="1"/><path d="M8 14h5"/>'],
   ['deskPads', '<rect x="15" y="4" width="5" height="16" rx="1"/><path d="M4 8h8M4 12h8M4 16h8"/>'],
+  ['drums', '<rect x="4" y="5" width="7" height="6" rx="1"/><rect x="13" y="5" width="7" height="6" rx="1"/><rect x="4" y="13" width="7" height="6" rx="1"/><rect x="13" y="13" width="7" height="6" rx="1"/>'],
   ['dock', '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 15h18"/>'],
   ['buzz', '<path d="M8 6v12M16 6v12M4 9v6M20 9v6"/>'],
   ['confirmStop', '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'],
