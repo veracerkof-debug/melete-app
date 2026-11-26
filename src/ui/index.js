@@ -194,6 +194,8 @@ export function sheet(render, init, { onClose, hints } = {}) {
     if (e.button > 0 || e.target.closest('input,textarea,select,[contenteditable],.sw,.seg,[role="slider"],canvas[data-stone],canvas[data-eq]')) return;
     const head = e.target.closest('.grab,.snav');
     if (!head && el.scrollTop > 0) return;
+    // внутри прокручиваемого списка (чат, длинный текст) тянет не шторку, а список: иначе шторка ползёт за пальцем и отскакивает назад
+    if (!head) for (let n = e.target; n && n !== el; n = n.parentElement) { if (n.scrollHeight > n.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return; }
     drag = { y: e.clientY, t: performance.now(), dy: 0, id: e.pointerId, head: !!head };
   });
   el.addEventListener('pointermove', (e) => {

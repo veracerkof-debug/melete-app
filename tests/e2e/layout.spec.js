@@ -276,3 +276,20 @@ test('сцена: ряд «Пэд: управление» и метронома 
   }
   expect(errors).toEqual([]);
 });
+
+test('шторка: листание вниз внутри прокручиваемого списка не тянет шторку за пальцем', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open();
+  await page.evaluate(async () => {
+    const { sheet } = await import('/src/ui/index.js');
+    sheet(() => '<div id="tscr" style="height:240px;overflow-y:auto">' + Array.from({ length: 60 }, (_, i) => '<p style="margin:8px 0">строка ' + i + '</p>').join('') + '</div><p id="tfoot">низ</p>', (el) => { const s = el.querySelector('#tscr'); s.scrollTop = 200; });
+  });
+  await page.waitForTimeout(500);
+  const b = await page.locator('#tscr').boundingBox(), x = b.x + b.width / 2, y = b.y + 60;
+  await page.evaluate(([x, y]) => {
+    const t = document.querySelector('#tscr'), ev = (type, cy) => t.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 5, isPrimary: true, pointerType: 'touch', clientX: x, clientY: cy }));
+    ev('pointerdown', y); ev('pointermove', y + 30); ev('pointermove', y + 70);
+  }, [x, y]);
+  expect(await page.evaluate(() => document.querySelector('.sheet').style.transform)).toBe(''); // шторка осталась на месте, листается список
+  expect(errors).toEqual([]);
+});

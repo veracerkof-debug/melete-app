@@ -835,11 +835,11 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 
 /* Чат с нейросетью (screens/aichat.js): шторка на весь экран, лента, карточки предложений */
 .aichat{display:flex;flex-direction:column;height:calc((100dvh - var(--kb,0px)) * .94 - 140px);min-height:200px}
-.aimsgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}
+.aimsgs{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}
 .aihint{color:var(--l2);font-size:14px;text-align:center;margin:24px 12px}
 .aim{max-width:86%;padding:10px 12px;border-radius:14px;font-size:15px;line-height:1.4;word-break:break-word}
 .aim.u{align-self:flex-end;background:var(--tint);color:var(--on,#fff)}
-.aim.a{align-self:flex-start;background:var(--cell)}
+.aim.a{align-self:flex-start;background:var(--cell);content-visibility:auto;contain-intrinsic-size:auto 160px}
 .aim.think{display:flex;gap:5px;padding:14px}
 .aim.think i{width:7px;height:7px;border-radius:50%;background:var(--l2);animation:aidot 1s infinite ease-in-out}
 .aim.think i:nth-child(2){animation-delay:.15s}.aim.think i:nth-child(3){animation-delay:.3s}
