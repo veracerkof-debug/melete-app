@@ -2713,6 +2713,7 @@
   "stage.cat.dict": "Diktofon",
   "stage.cat.video": "Video",
   "stage.pads": "Padlar",
+  "stage.padLevel": "Pad balandligi",
   "stage.padsEdit": "Sahnadagi padlar",
   "stage.padsAll": "Barchasi banklar bo'yicha",
   "stage.padsHint": "Sahnada ko'rsatiladigan padlarni belgilang (12 tagacha), belgilangan tartibda. Belgisiz — to'liq banklar.",

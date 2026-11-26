@@ -6,6 +6,7 @@ import { createFxPanel } from '../../ui/fxpanel.js';
 export { defaultFxMode, fmtFreq } from '../../ui/fxpanel.js';
 
 export function openFx(app, bus) {
+  if (bus === 'metro') return; // слово автора 26.11.2026: метроном без эквалайзера и эффектов — клик должен звучать чисто
   const mixer = app.audio.mixer;
   const panel = createFxPanel({ get: () => mixer.fx(bus), set: (fx) => mixer.setFx(bus, fx), profile: app.store.state.settings.profile });
   return sheet(() => snav(t('fx.title', { src: t('mix.' + bus) })) + panel.html(), (el, api) => panel.bind(el, api));

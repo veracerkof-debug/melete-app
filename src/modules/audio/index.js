@@ -1,6 +1,7 @@
 // Медиатека: минусы, партии, уроки и записи (аудио и видео) — только на устройстве. Плеер с волной или винилом,
 // замедление без изменения высоты, повтор A–B, тренер темпа (+5 % с каждым повтором), тайм-коды, привязка к песням.
 // Перенесено из legacy/practice.html (AU, auLoad, audioHTML, wformHTML, medLibHTML, trackSheet, mlMenu, vinylHTML, VIN).
+import { chordText } from '../../music/chordtext.js';
 import './audio.css';
 import './media.css';
 import ru from './i18n/ru.json';
@@ -294,12 +295,19 @@ function pswHTML() {
   return '<div class="pvsw" role="tablist">' + PVIEWS.map((k) => '<button class="pvb' + (k === v ? ' on' : '') + '" role="tab" aria-selected="' + (k === v) + '" data-x="apv" data-v="' + k + '" aria-label="' + ctx.ui.esc(tr('pv.' + k)) + '">' + ic[k] + '<span>' + ctx.ui.esc(tr('pv.' + k)) + '</span></button>').join('') + '</div>';
 }
 // тело панели по виду (full и half); волна — как раньше
+// Над аккордами: «на весь экран» (вид без органов управления — смотреть и разбирать гармонию) и «в текст» (копировать или добавить в песню)
+function chordToolsHTML(t) {
+  if (!chordsOf(t).length) return '';
+  const tr = ctx.t, esc = ctx.ui.esc;
+  return '<div class="chtools">' + (AU.chfull ? '<button class="ic sm" data-x="aplay" aria-label="' + esc(tr('playPause')) + '">' + (pl().paused ? I.play : I.pause) + '</button>' : '') +
+    '<span class="grow"></span><button class="btn sm" data-x="achtext">' + esc(tr('ch.toText')) + '</button><button class="btn sm" data-x="achfull" aria-pressed="' + !!AU.chfull + '">' + esc(tr(AU.chfull ? 'ch.exitFull' : 'ch.full')) + '</button></div>';
+}
 function pviewHTML(c, d, half) {
   const t = AU.cur, v = pview();
   if (v === 'stems') return stemsViewHTML(t) + atimes(c, d, anaTxt(t));
   if (v === 'sing') return SING.html(t) + atimes({ ...c, chord: '' }, d, anaTxt(t));
   if (v === 'text') return lyricsViewHTML(t) + atimes(c, d, anaTxt(t));
-  if (v === 'chords') return chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)) + marksHTML(); // «сейчас» — в самом виде, строка под ним не нужна
+  if (v === 'chords') return chordToolsHTML(t) + chordsViewHTML(t) + atimes({ ...c, chord: '' }, d, anaTxt(t)) + marksHTML(); // «сейчас» — в самом виде, строка под ним не нужна
   return half ? '<div class="wfbox">' + wformHTML('h2') + '<span class="wft num">' + c.time + '</span></div>' + c.lyr + marksHTML() : wformHTML('f') + atimes(c, d) + c.lyr + marksHTML();
 }
 
@@ -399,6 +407,30 @@ function lyricsToSong(tr, sh) {
   if (!song) { ui.toast(t('lyr.noSong')); sh.close(); menuSheet(tr.id); return; }
   const write = () => { if (ctx.songText(song.id, lyricsText(lines))) ui.toast(t('lyr.toSongDone', { name: song.title })); };
   if (song.text) ui.confirm(t('lyr.replaceTitle'), t('lyr.replaceText', { name: song.title }), write); else write();
+}
+
+// Аккорды записи → текст песни: показать, скопировать или добавить в конец текста песни (слово автора 26.11.2026)
+function chordTextSheet() {
+  const { t, ui } = ctx, tr = AU.cur; if (!tr || !tr.ana) return;
+  const text = chordText(tr.ana, { marks: tr.marks || [], lines: (tr.lyr && tr.lyr.lines) || [] });
+  if (!text) { ui.toast(t('ch.noText')); return; }
+  const linked = (tr.songs || []).map((id) => ctx.songs().find((x) => x.id === id)).filter(Boolean);
+  const all = ctx.songs();
+  ui.sheet(() => ui.snav(t('ch.toText'), { right: '<button class="link b r" data-close>' + ui.esc(t('editDone')) + '</button>' }) +
+    '<div class="group"><textarea class="shfield area chtext" readonly aria-label="' + ui.esc(t('ch.toText')) + '" style="min-height:200px;font:500 15px/1.5 var(--mono,monospace)">' + ui.esc(text) + '</textarea></div>' +
+    '<div class="group" style="margin-top:12px"><button class="cell act" data-cc="copy"><span class="grow">' + ui.esc(t('ch.copy')) + '</span></button>' +
+    '<button class="cell act" data-cc="share"><span class="grow">' + ui.esc(t('ch.share')) + '</span></button></div>' +
+    '<div class="hdr">' + ui.esc(t('ch.toSong')) + '</div><div class="group">' + (linked.length ? linked : all.slice(0, 40)).map((s) => '<button class="cell act" data-cs="' + s.id + '"><span class="grow">' + ui.esc(s.title || '—') + (s.artist ? '<span class="st l2" style="display:block;font-size:13px">' + ui.esc(s.artist) + '</span>' : '') + '</span></button>').join('') + (all.length ? '' : '<p class="ftr">' + ui.esc(t('ch.noSongs')) + '</p>') + '</div>',
+  (el, sh) => el.addEventListener('click', async (e) => {
+    const cp = e.target.closest('[data-cc]'), sg = e.target.closest('[data-cs]');
+    if (cp && cp.dataset.cc === 'copy') { try { await navigator.clipboard.writeText(text); ui.toast(t('ch.copied')); } catch { ui.toast(t('ch.copyErr')); } return; }
+    if (cp && cp.dataset.cc === 'share') { ctx.sendText(text, tr.name); return; }
+    if (sg) {
+      const s = ctx.songs().find((x) => x.id === sg.dataset.cs); if (!s) return;
+      const old = ctx.songNotes ? ctx.songNotes(s.id) : '';
+      if (ctx.songText(s.id, old ? old.replace(/\s+$/, '') + '\n\n' + text : text)) { ui.toast(t('ch.added', { name: s.title })); sh.close(); }
+    }
+  }));
 }
 
 function stemsSheet() {
@@ -1111,12 +1143,12 @@ function playerHTML() {
   const sf = sid ? all.filter((x) => inSong(x, sid)) : [];
   const chips = (cls) => '<div class="chips nowrap afiles' + cls + '">' + sf.map((x) => '<button class="chip' + (x.id === AU.cur.id ? ' on' : '') + '" data-x="aload2" data-id="' + x.id + '">' + esc(x.name) + '</button>').join('') + '</div>';
   if (size === 'half') {
-    return '<div class="ah2">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
+    return '<div class="ah2' + (AU.chfull && pview() === 'chords' ? ' chfull' : '') + '">' + c.back2 + '<div class="arow3">' + (sf.length > 1 ? chips(' sgrow') : '<div class="aname sgrow" style="text-align:left">' + esc(AU.cur.name) + '</div>') +
       '<div class="vrow tight">' + c.rate + c.key + c.click + c.stems + c.sty('sm') + '</div></div>' + pviewHTML(c, d, true) + pswHTML() + '<div class="ctrl5">' +
       c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av pv" data-swtabs style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
-    '<div class="vrow tight arow2">' + c.rate + c.rpre + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
+  return '<div class="mcard av pv' + (AU.chfull && pview() === 'chords' ? ' chfull' : '') + '" data-swtabs style="position:relative">' + c.sty('corner') + c.back2 + (sf.length > 1 ? chips('') : name) + pviewHTML(c, d, false) +
+    '<div class="vrow tight arow2">' + c.rate + c.key + '</div><div class="vrow tight arow2">' + c.stepb + c.click + c.stems + '</div>' + pswHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
 // строка времени: аккорд, положение, посередине — A–B, иначе подсказка волны (на волне) или тональность и темп (в других видах)
@@ -1133,7 +1165,7 @@ function videoHTML(c, name, all, sid) {
     return '<div class="ah2 vidh">' + c.back2 + '<div class="arow3"><div class="sgrow" style="min-width:0">' + head + '</div><div class="vrow tight">' + c.rate + c.key + '</div></div>' + vidbox('h') +
       '<div class="wfbox vt">' + wformHTML('s') + '<span class="wft num">' + c.chord + c.time + '</span></div>' + marksHTML() + '<div class="ctrl5">' + c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
   }
-  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.rpre + c.stepb + '</div><div class="vrow tight arow2">' + c.key + c.stems + '</div><div class="ctrl5">' +
+  return '<div class="mcard av vidf">' + c.back2 + head + vidbox('f') + wformHTML('s') + atimes(c, d) + c.lyr + marksHTML() + '<div class="vrow tight arow2">' + c.rate + c.key + '</div><div class="vrow tight arow2">' + c.stepb + c.stems + '</div><div class="ctrl5">' +
     c.list + c.back + c.play + c.fwd + c.abb + '</div></div>';
 }
 
@@ -1793,6 +1825,8 @@ function act(a, el) {
     case 'mlselon': ML.sel = new Set(); render(); break;
     case 'amadd': markAdd(); break;
     case 'amj': seekMark(+el.dataset.i); break;
+    case 'achfull': AU.chfull = !AU.chfull; render(); break;
+    case 'achtext': chordTextSheet(); break;
     case 'chedit': { const L = chordsOf(AU.cur), i = chordAt(AU.cur, pl().currentTime + 0.03); if (i >= 0) chordSheet(L[i].t); break; }
     case 'amlist': marksSheet(); break;
     case 'akeysheet': keySheet(); break;

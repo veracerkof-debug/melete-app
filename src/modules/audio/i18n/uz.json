@@ -317,5 +317,16 @@
   "ce.auto": "Hisoblanganicha",
   "ce.hint": "Tuzatish yozuvda saqlanadi va qayta tahlil bilan oʻchmaydi. «Hamma joyda shu» barcha shunday akkordlarni birdan almashtiradi.",
   "ce.edit": "Akkordni tuzatish",
-  "ce.loop": "Takrorlash"
+  "ce.loop": "Takrorlash",
+  "ch.toText": "Akkordlar matnga",
+  "ch.full": "To‘liq ekran",
+  "ch.exitFull": "Qaytish",
+  "ch.copy": "Nusxa olish",
+  "ch.share": "Ulashish",
+  "ch.toSong": "Qo‘shiq matni oxiriga qo‘shish",
+  "ch.copied": "Nusxalandi",
+  "ch.copyErr": "Nusxalab bo‘lmadi",
+  "ch.added": "Qo‘shildi: {name}",
+  "ch.noText": "Akkord yo‘q",
+  "ch.noSongs": "Kutubxonada qo‘shiq yo‘q"
 }

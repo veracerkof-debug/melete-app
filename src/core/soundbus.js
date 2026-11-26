@@ -2,7 +2,7 @@
 // (эквалайзер, пространство, компрессия…); громкость шины — рядом, в микшере. Какая шина у какого инструмента — здесь.
 import { openFx } from './screens/fx.js';
 
-export const BUS_OF = { metro: 'metro', piano: 'piano', glider: 'glider', theremin: 'glider', drone: 'drone', audio: 'media', show: 'media', studio: 'media',
+export const BUS_OF = { piano: 'piano', glider: 'glider', theremin: 'glider', drone: 'drone', audio: 'media', show: 'media', studio: 'media',
   looper: 'looper', notes: 'notes', theory: 'theory', ear: 'theory', beat: 'theory', book: 'theory', vocal: 'vocal', voice: 'vocal' };
 
 // → true, если окно открылось; у инструмента без звука (тюнер, спектр, таймер…) — подсказка

@@ -192,3 +192,10 @@
 .sgbar .sgbtn.main{min-height:calc(72px * var(--lz, 1))}
 .sgknob{width:calc(var(--hit) * var(--lz, 1));height:calc(var(--hit) * var(--lz, 1))}
 .sgmain{min-height:calc(160px * var(--lz, 1))}
+/* сцена 26.11.2026: играть/стоп справа, громкости слева и крупнее; тональность записи у плеера */
+.sgbar{gap:8px}
+.sgbar .sgbtn.main{flex:0 0 72px;min-height:calc(72px * var(--lz, 1))}
+.sgbar .sgknobs{flex:1}
+.sgknob{width:calc(60px * var(--lz, 1));height:calc(60px * var(--lz, 1))}
+.sgknob b{font-size:var(--fs-4)}
+.sgplseek .sgtrk{flex:none;margin-left:8px;padding:2px 8px;border-radius:var(--r-1);background:var(--tint);color:var(--on-tint);font:700 var(--fs-3) var(--font)}

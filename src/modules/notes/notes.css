@@ -198,3 +198,6 @@
   .nedtop{min-height:42px}.edb.ico{height:36px}
   .neddock{max-height:58vh}
 }
+/* запись — обычная круглая кнопка в ряду (слово автора 26.11.2026: не больше экрана табов) */
+.lvbar2 .bigplay.lvrec{width:52px!important;height:52px!important;min-width:0!important;margin:0;box-shadow:none;flex:none}
+.lvbar2 .bigplay.lvrec svg{width:26px;height:26px}

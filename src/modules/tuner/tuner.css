@@ -12,8 +12,10 @@
 .tcent{font-size:clamp(14px,4cqmin,19px);min-height:24px;color:var(--l2);font-variant-numeric:tabular-nums;transition:color .2s}
 .tcent.ok{color:#1fa64a;font-weight:600}
 .tcent.flat,.tcent.sharp{color:var(--tint-text)}
-.thz{font-size:clamp(12px,3.4cqmin,15px);color:var(--l2);font-variant-numeric:tabular-nums}
-.tmode{font-size:12px;color:var(--l2);margin-top:2px}
+.thz{font-size:clamp(26px,10cqmin,56px);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;transition:color .2s}
+.thz.ok{color:var(--ok)}
+.tmode{order:-3;font-size:clamp(15px,4.6cqmin,20px);font-weight:600;color:var(--ink);margin:0 0 2px;padding-right:44px}
+.tclean.hzt .thz{order:-2}
 .tnomic{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;font-size:14px;color:var(--l2)}
 
 /* стрелка */
@@ -95,7 +97,7 @@
 .tsi.needle i:first-child{position:absolute;left:50%;bottom:0;width:2px;height:26px;background:var(--tint);transform:rotate(18deg);transform-origin:bottom}
 .tsi.strobe{border-radius:6px;background:linear-gradient(var(--fill),var(--fill)) top/100% 55% no-repeat,repeating-linear-gradient(90deg,var(--ink) 0 5px,transparent 5px 10px) bottom/100% 40% no-repeat;opacity:.7}
 .tsi.strobe i:first-child{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--tint)}
-.tclean.half .thz{display:none}
+.tclean.half .thz{font-size:clamp(20px,8cqh,36px)}
 .tclean.half.beg .tvis{max-height:none}
 .tclean.half .tmode{display:none}
 /* Полоса: нота слева, шкала — во всю оставшуюся ширину (раньше шкала сжималась в точку) */
@@ -103,3 +105,8 @@
 .ts .tnoteW{font-size:clamp(32px,60cqh,56px);flex:none}
 .ts .tsmid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:2px}
 .ts .tcent{min-height:0;font-size:13px}
+
+/* уменьшенные окна: стробоскоп и цифры */
+.tq .tpano{height:clamp(44px,26cqh,72px);min-height:44px}
+.tq .thz{font-size:clamp(22px,13cqw,38px)}
+.ts .thz{font-size:clamp(22px,48cqh,46px);flex:1;text-align:left;white-space:nowrap}

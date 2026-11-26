@@ -12,7 +12,6 @@ import { recButtonHTML, bindRec } from './rec.js';
 import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { spread, NOSPREAD } from '../../ui/gestures.js';
-import { soundSettings } from '../soundbus.js';
 import { bareScope } from '../../i18n/index.js';
 import { isAbsorbed, groupMembers, toolLabel, repOf } from '../groups.js';
 
@@ -175,6 +174,6 @@ function openToolViewNow(app, id, onClose) {
     else if (e.target.closest('[data-tv="pure"]')) setPure(true);
   });
   // два пальца: развести — во весь экран, свести — обратно (не в пианино и глайдере — там только кнопки)
-  if (!NOSPREAD_IDS.includes(mod.id)) spread(layer, { ok: (e) => !e.target.closest(NOSPREAD), out: () => soundSettings(app, mod.id, ui.toast, t), inn: () => setPure(!pure) }); // развести — звук инструмента; свести — во весь экран и обратно
+  if (!NOSPREAD_IDS.includes(mod.id)) spread(layer, { ok: (e) => !e.target.closest(NOSPREAD), out: () => { if (!pure) setPure(true); }, inn: () => { if (pure) setPure(false); } }); // развести — во весь экран, свести — обратно (слово автора 26.11.2026: настройки звука жестом не открываются)
   return close;
 }

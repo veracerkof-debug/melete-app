@@ -30,7 +30,6 @@ import { bareScope } from '../../i18n/index.js';
 import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { dragSort, holdMenu, onHold } from '../../ui/hold.js';
 import { spread, swipe, NOSPREAD, addPageSwipe, wideSwipe } from '../../ui/gestures.js';
-import { soundSettings } from '../soundbus.js';
 import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
 import { pickRoutine } from './routine.js';
 import { outBtnHTML, bindOutput, badgeHTML } from './outputsheet.js';
@@ -243,9 +242,9 @@ export function createSessionScreen(app) {
     // (во весь экран — обратно); в пианино и глайдере не действует — там играют несколькими пальцами
     spread(wsEl, {
       ok: (e) => !e.target.closest(NOSPREAD),
-      // слово автора 22.11.2026: развести — окно настроек звука инструмента; свести — окно во весь экран и обратно
-      out: (e) => { const p = e.target.closest('.ws .pane'); if (p) soundSettings(app, p.dataset.group, toast, t); },
-      inn: (e) => { if (pureI >= 0) { setPanePure(-1); return; } const p = e.target.closest('.ws .pane'); if (p) setPanePure(+p.dataset.pane); else soundingPanes(); },
+      // слово автора 26.11.2026: развести — окно во весь экран; свести — обратно, а из обычного вида — окна звучащих инструментов
+      out: (e) => { if (pureI >= 0) return; const p = e.target.closest('.ws .pane'); if (p) setPanePure(+p.dataset.pane); },
+      inn: (e) => { if (pureI >= 0) { setPanePure(-1); return; } soundingPanes(); },
     });
     // удержание значка на панели — перестановка: у песни — свой порядок, у свободного занятия — порядок по умолчанию
     dragSort(ses, '.sdock .tb[data-pill]', 'data-pill', {

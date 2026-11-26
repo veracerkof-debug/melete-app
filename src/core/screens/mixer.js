@@ -23,7 +23,7 @@ export function createMixerDrawer(app) {
   const fader = ([k, c, icon]) => {
     const v = raw(k), mu = muted(k), lab = t('mix.' + k), pct = Math.round(v * 100);
     return '<div class="mxf' + (mu ? ' mu' : '') + '" data-k="' + k + '" style="--c:' + c + '">' +
-      '<button class="mxx' + (mixer.fxActive(k) ? ' on' : '') + '" data-fx="' + k + '" aria-label="' + esc(t('mix.fx', { src: lab })) + '" title="' + esc(t('mix.fx', { src: lab })) + '">' + FX_ICON + '</button>' +
+      (k === 'metro' ? '' : '<button class="mxx' + (mixer.fxActive(k) ? ' on' : '') + '" data-fx="' + k + '" aria-label="' + esc(t('mix.fx', { src: lab })) + '" title="' + esc(t('mix.fx', { src: lab })) + '">' + FX_ICON + '</button>') +
       '<span class="mxv num">' + (mu ? '0' : pct) + '</span>' +
       '<div class="mxt" role="slider" aria-label="' + esc(t('mix.volume', { src: lab })) + '" aria-valuemin="0" aria-valuemax="' + MIX_MAX * 100 + '" aria-valuenow="' + pct + '" tabindex="0">' +
       '<b style="height:' + (v / MIX_MAX) * 100 + '%"></b><i style="bottom:' + (v / MIX_MAX) * 100 + '%"></i><em style="bottom:' + (1 / MIX_MAX) * 100 + '%"></em></div>' +

@@ -318,5 +318,16 @@
   "ce.auto": "As detected",
   "ce.hint": "The edit is kept in the recording and is not overwritten by a re-analysis. “Same everywhere” changes every such chord at once.",
   "ce.edit": "Edit chord",
-  "ce.loop": "Repeat"
+  "ce.loop": "Repeat",
+  "ch.toText": "Chords to text",
+  "ch.full": "Full screen",
+  "ch.exitFull": "Back",
+  "ch.copy": "Copy",
+  "ch.share": "Share",
+  "ch.toSong": "Add to the end of a song’s text",
+  "ch.copied": "Copied",
+  "ch.copyErr": "Could not copy",
+  "ch.added": "Added: {name}",
+  "ch.noText": "No chords",
+  "ch.noSongs": "No songs in the library"
 }

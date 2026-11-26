@@ -195,6 +195,7 @@ export function makeCtx(app, mod) {
     // открыть сцену сет-листа (весь экран, текст, клик, пэд, минусовка)
     openStage: async (id) => { const m = await import('./screens/stage.js'); m.openStage(app, id, 0); },
     // Текст песни (с аккордами) — записать; → true, если песня есть
+    songNotes: (id) => String((app.store.songs().find((x) => x.id === id) || {}).notes || ''),
     songText(id, text) { const s = app.store.songs().find((x) => x.id === id); if (!s) return false; s.notes = String(text || ''); s.updatedAt = app.store.now(); app.store.save(); return true; },
     // Проекты студии (state.projects, в резервной копии вместе с песнями): list(), get(id), save(p), remove(id)
     projects: {

@@ -94,14 +94,15 @@ function view() {
   const { t, ui } = ctx, s = st(), tn = tuning(), style = s.style; // стрелка или стробоскоп
   const cents = '<div id="tcent" class="tcent" aria-live="polite">' + t('play') + '</div>';
   const hz = '<div id="thz" class="thz num">' + t('hzNone') + '</div>';
-  if (size === 'quarter') return '<div class="tq">' + noteHTML() + barHTML('sm') + cents + micNote() + '</div>';
-  if (size === 'strip') return '<div class="ts">' + noteHTML() + '<div class="tsmid">' + barHTML('sm') + cents + '</div>' + micNote() + '</div>';
+  // слово автора 26.11.2026: в уменьшенном окне — стробоскоп; в самом маленьком — только нота и цифры (зелёные, когда нота взята точно)
+  if (size === 'quarter') return '<div class="tq">' + noteHTML() + strobeHTML() + hz + micNote() + '</div>';
+  if (size === 'strip') return '<div class="ts">' + noteHTML() + hz + micNote() + '</div>';
   const vis = style === 'strobe' ? strobeHTML() : '<div class="tgw">' + gaugeSVG() + '</div>';
   // в половине окна — короткое напоминание, чтобы шкале хватило места
   const warn = tn ? '<div class="twarn" role="note">' + WARN + '<span>' + t(size === 'half' ? 'warnShort' : 'warn') + '</span></div>' : '';
   const mode = '<div class="tmode">' + ui.esc(tn ? t('beginner') + ' · ' + tuningName(tn) : t('chromatic')) + ' · ' + t('hz', { f: s.a4 }) + '</div>';
-  return '<div class="tclean ' + size + ' st-' + style + (tn ? ' beg' : '') + '">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') + warn +
-    '<div class="tvis">' + vis + '</div>' + noteHTML() + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + mode + '</div>';
+  return '<div class="tclean ' + size + ' st-' + style + (tn ? ' beg' : '') + (s.hzTop ? ' hzt' : '') + '">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') + mode + warn +
+    '<div class="tvis">' + vis + '</div>' + noteHTML() + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + '</div>';
 }
 
 function render() {
@@ -146,7 +147,7 @@ function showText() {
     nE.textContent = '—';
     if (oE) oE.textContent = '';
     if (cE) { cE.textContent = micErr ? '' : t('play'); cE.className = 'tcent'; }
-    if (hE) hE.textContent = t('hzNone');
+    if (hE) { hE.textContent = t('hzNone'); hE.classList.remove('ok'); }
     if (w) w.classList.remove('ok');
     host.querySelectorAll('.tsb').forEach((b) => b.classList.remove('near'));
     return;
@@ -155,6 +156,7 @@ function showText() {
   if (oE) oE.textContent = R.oct;
   if (cE) { cE.textContent = centsText(R.cents, R.ok, tn); cE.className = 'tcent' + (R.ok ? ' ok' : R.cents < 0 ? ' flat' : ' sharp'); }
   if (hE) hE.textContent = tn ? t('hzTarget', { f: num(R.f, 1), target: num(R.targetHz, 1) }) : t('hz', { f: num(R.f, 1) });
+  if (hE) hE.classList.toggle('ok', R.ok);
   if (w) w.classList.toggle('ok', R.ok);
   host.querySelectorAll('.tsb').forEach((b) => b.classList.toggle('near', +b.dataset.v === R.si));
 }
@@ -324,6 +326,7 @@ function settingsSheet() {
       '<div class="group" style="margin-top:4px"><div class="cell"><span class="grow">' + t('beginner') + '</span>' + ui.sw('tbeg', s.beginner, t('beginner')) + '</div>' +
       (s.beginner ? '<button class="cell" data-tpk><span class="grow">' + t('set.tuning') + '</span><span class="val">' + ui.esc(tn ? tuningName(tn) : t('set.noTuning')) + '</span>' + ui.icons.chev + '</button>' : '') + '</div>' +
       '<p class="ftr">' + t(s.beginner ? 'set.begOn' : 'set.begOff') + '</p>' +
+      '<div class="group"><div class="cell"><span class="grow">' + t('set.hzTop') + '</span>' + ui.sw('thzt', !!s.hzTop, t('set.hzTop')) + '</div></div>' +
       ('<div class="hdr">' + t('set.view') + '</div><div class="tstys" role="group" aria-label="' + t('set.view') + '">' +
       STYLES.map((k) => '<button class="tsty' + (s.style === k ? ' on' : '') + '" data-tsty="' + k + '" aria-pressed="' + (s.style === k) + '"><span class="tsi ' + k +
         '"><i></i><i></i><i></i></span><b>' + t('style.' + k) + '</b></button>').join('') + '</div>') +
@@ -347,6 +350,7 @@ function settingsSheet() {
       changed();
     });
     el.addEventListener('change', (e) => {
+      if (e.target.dataset.sw === 'thzt') { s.hzTop = e.target.checked; changed(); return; }
       if (e.target.dataset.sw !== 'tbeg') return;
       s.beginner = e.target.checked;
       if (s.beginner && (!s.tuning || s.tuning === 'chrom')) s.tuning = 'g_std';

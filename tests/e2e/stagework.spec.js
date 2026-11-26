@@ -36,8 +36,12 @@ test('рабочая сцена: без события, список песен,
   await page.waitForTimeout(150);
   await expect(page.locator('.sgpad.p-kickw.hit')).toHaveCount(1);
   for (const i of [1, 2, 4, 7]) { await page.locator('.sgpad[data-pad]').nth(i).dispatchEvent('pointerdown', { pointerId: 7, isPrimary: true }); await page.waitForTimeout(60); }
-  await page.locator('[data-fx="space"]').fill('90'); await page.locator('[data-fx="echo"]').fill('70');
+  // пространство и эхо — не на экране: удержать драм-пэд (слово автора 26.11.2026); по умолчанию эхо выключено
+  await expect(page.locator('[data-fx="space"]')).toHaveCount(0);
+  await melete.hold('.sgpad.p-kickw', 700); await page.waitForTimeout(400);
+  await page.locator('.sheet [data-pf="space"]').fill('90'); await page.locator('.sheet [data-pf="echo"]').fill('70');
   expect(await page.evaluate(() => sessionStorage.getItem('melete.stage.space'))).toBe('0.9');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   const shot = process.env.ED_SHOTS; if (shot) await page.screenshot({ path: shot + '/stage.png' });
   // инструменты постоянные: панель звуков всегда на экране
   await expect(page.locator('.sgpad[data-pad]').first()).toBeVisible();
