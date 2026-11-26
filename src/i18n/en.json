@@ -2742,6 +2742,7 @@
   "stage.mix.player": "Player",
   "stage.plEmpty": "No audio in the library",
   "stage.plOff": "Turn player off",
+  "stage.soundBtn": "Sound",
   "stage.k.all": "Master",
   "stage.k.metro": "Click",
   "stage.k.pad": "Pad",

@@ -744,7 +744,8 @@ export function openStage(app, evId, i = 0) {
       { id: 'keys', html: pk.keys ? '<div class="sgkw">' + pk.keys + '</div>' : '' },
       { id: 'pads', html: pk.pads },
       // «играть/стоп» — справа (слово автора 26.11.2026: правша), громкости — слева и крупнее
-      { id: 'bar', html: '<div class="sgbar"><div class="sgknobs" role="group" aria-label="' + esc(t('stage.vol')) + '">' + KNOBS.map((k) => knobHTML(k)).join('') + '</div>' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
+      { id: 'bar', html: '<div class="sgbar"><div class="sgmaster" role="group" aria-label="' + esc(t('stage.vol')) + '"><label class="sgmv"><span>' + esc(t('stage.k.all')) + '</span><input type="range" class="sgrng" data-sgall min="0" max="100" value="' + allVal() + '" aria-label="' + esc(t('stage.k.all')) + '"><b class="num">' + allVal() + '</b></label>' +
+        '<button class="sgic txt sgmixb" data-sg="mix" aria-label="' + esc(t('stage.mix')) + '">' + esc(t('stage.soundBtn')) + '</button></div>' + (free ? '<button class="sgbtn main on" data-sg="panic" aria-label="' + esc(t('stage.panic')) + '">' + I.stop + '</button>' :
         '<button class="sgbtn main' + (S.playing ? ' on' : '') + '" data-sg="play" aria-label="' + esc(t(S.playing ? 'stage.stop' : 'stage.play')) + '">' + (S.playing ? I.stop : I.play) + '</button>') + '</div>' },
     ];
     S.el.innerHTML = '<div class="sgtop"><button class="sgic" data-sg="exit" aria-label="' + esc(t('stage.exit')) + '">' + I.x + '</button>' +
@@ -824,6 +825,7 @@ export function openStage(app, evId, i = 0) {
       else if (a === 'next') go(1);
       else if (a === 'list') listSheet();
       else if (a === 'lock') { S.locked = true; render(); }
+      else if (a === 'mix') mixSheet();
       else if (a === 'tap') tap();
       else if (a === 'panic') panic();
       else if (a === 'exit') confirm(t('stage.exitTitle'), t('stage.exitText'), t('stage.exitYes')).then((ok) => ok && close());
@@ -946,7 +948,7 @@ export function openStage(app, evId, i = 0) {
       return;
     }
     const a = e.target.closest && e.target.closest('[data-sgall]');
-    if (a) { mixSet().all = +a.value; MIXES.forEach(([k]) => mixApply(k)); return; }
+    if (a) { mixSet().all = +a.value; MIXES.forEach(([k]) => mixApply(k)); const o = a.parentElement && a.parentElement.querySelector('b'); if (o) o.textContent = a.value; return; }
     const r = e.target.closest && e.target.closest('[data-fx]');
     if (!r) return;
     const v = +r.value / 100;
@@ -966,7 +968,7 @@ export function openStage(app, evId, i = 0) {
   bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'padfx', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t, defaults: stageDefaults,
     live: (id, z, blk) => { if (id !== 'pads') return; const g = blk.querySelector('.sgpgrid'); if (g) { const c = padCols(g.children.length, rowsFor(z)); g.style.setProperty('--c', c); g.dataset.cols = c; } }, busy: () => !!(S.playing || audio.metro.running || droneOn() || (app.sounding && app.sounding())) }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], .sgpfx-more, input, [role="slider"]');
   // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
-  const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgpfx, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
+  const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgmaster, .sgtempo, .sgpfx, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
   let vg = null;
   S.el.addEventListener('pointerdown', (e) => {
     vg = null;
@@ -1007,6 +1009,34 @@ export function openStage(app, evId, i = 0) {
     const up = (ev) => { if (ev.pointerId !== id) return; kn.removeEventListener('pointermove', mv); kn.removeEventListener('pointerup', up); kn.removeEventListener('pointercancel', up); app.store.save(); };
     kn.addEventListener('pointermove', mv); kn.addEventListener('pointerup', up); kn.addEventListener('pointercancel', up);
   });
+
+  // Общая громкость двумя пальцами (слово автора 26.11.2026): медленно вверх — громче, вниз — тише; ~300 px = весь диапазон, чтобы не прыгала.
+  // Два касания, оба идут по вертикали в одну сторону; работает над любым блоком, кроме заблокированной сцены
+  const tfv = { pts: new Map(), on: false, v0: 0, y0: 0, hint: null, t: 0 };
+  const tfvAvg = () => { let a = 0; tfv.pts.forEach((p) => { a += p.y; }); return tfv.pts.size ? a / tfv.pts.size : 0; };
+  const tfvStop = () => { tfv.on = false; if (tfv.hint) { const h = tfv.hint; tfv.t = setTimeout(() => h.remove(), 500); } tfv.hint = null; app.store.save(); };
+  const tfvDown = (e) => { if (e.pointerType === 'mouse' || S.locked) return; tfv.pts.set(e.pointerId, { y: e.clientY, x: e.clientX, y0: e.clientY, x0: e.clientX }); if (tfv.pts.size === 2) { tfv.on = false; tfv.armed = true; tfv.y0 = tfvAvg(); tfv.v0 = allVal(); } else tfv.armed = false; };
+  const tfvMove = (e) => {
+    const p = tfv.pts.get(e.pointerId); if (!p) return; p.y = e.clientY; p.x = e.clientX;
+    if (tfv.pts.size !== 2 || S.locked) return;
+    const q = [...tfv.pts.values()], dy = tfvAvg() - tfv.y0;
+    if (!tfv.on) { // старт: оба пальца сдвинулись по вертикали в одну сторону заметнее, чем по горизонтали
+      const ok = q.every((o) => Math.abs(o.y - o.y0) > 12 && Math.abs(o.y - o.y0) > 1.5 * Math.abs(o.x - o.x0)) && q[0].y - q[0].y0 > 0 === q[1].y - q[1].y0 > 0;
+      if (!tfv.armed || !ok) return;
+      tfv.on = true; tfv.y0 = tfvAvg(); tfv.v0 = allVal(); clearTimeout(tfv.t);
+      if (!tfv.hint) { tfv.hint = document.createElement('div'); tfv.hint.className = 'sgvolhint'; S.el.appendChild(tfv.hint); }
+      return;
+    }
+    const v = knobSet('all', tfv.v0 - dy / 3); // вверх по экрану (dy < 0) — громче
+    const sl = S.el.querySelector('[data-sgall]'); if (sl) { sl.value = v; const o = sl.parentElement.querySelector('b'); if (o) o.textContent = v; }
+    if (tfv.hint) tfv.hint.textContent = t('stage.k.all') + ' ' + v;
+    e.preventDefault();
+  };
+  const tfvUp = (e) => { tfv.pts.delete(e.pointerId); if (tfv.on && tfv.pts.size < 2) tfvStop(); if (!tfv.pts.size) tfv.on = false; };
+  S.el.addEventListener('pointerdown', tfvDown, true);
+  S.el.addEventListener('pointermove', tfvMove, true);
+  S.el.addEventListener('pointerup', tfvUp, true);
+  S.el.addEventListener('pointercancel', tfvUp, true);
   swipe(S.el, { min: 40, left: () => go(1), right: () => go(-1), ok: (e) => !S.locked && !!e.target.closest('.sgsongs') });
   onHold(S.el, '.sgrow', (el) => { const j = +el.dataset.sgrow, sg = list()[j]; if (sg) holdMenu(el, [
     { icon: I.play, label: t('stage.tap.play'), run: () => { if (j !== S.i) goTo(j); S.view = 'text'; sset('view', 'text'); render(); play(); } },

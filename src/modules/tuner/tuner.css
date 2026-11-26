@@ -14,7 +14,8 @@
 .tcent.flat,.tcent.sharp{color:var(--tint-text)}
 .thz{font-size:clamp(26px,10cqmin,56px);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;transition:color .2s}
 .thz.ok{color:var(--ok)}
-.tmode{order:-3;font-size:clamp(15px,4.6cqmin,20px);font-weight:600;color:var(--ink);margin:0 0 2px;padding-right:44px}
+/* подпись режима — вверху, ровно по центру окна, на одной линии с шестерёнкой (слово автора 26.11.2026) */
+.tmode{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;justify-content:center;padding:0 56px;font-size:clamp(15px,4.6cqmin,20px);font-weight:600;color:var(--ink);text-align:center;pointer-events:none;z-index:1}
 .tclean.hzt .thz{order:-2}
 .tnomic{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;font-size:14px;color:var(--l2)}
 

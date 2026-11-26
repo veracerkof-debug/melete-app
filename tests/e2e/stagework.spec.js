@@ -125,13 +125,28 @@ test('сцена: крутилки громкости по источникам 
   await page.locator('.hstage').click(); await page.waitForTimeout(600);
   if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
   await page.waitForTimeout(800);
-  await expect(page.locator('.sgkn')).toHaveCount(5); // общая, клик, пэд, драм, медиа
-  // крутилка «Драм»: тянуть вверх-вниз меняет значение
-  const kn = page.locator('[data-sgkn="sounds"]'), before = +(await kn.getAttribute('aria-valuenow'));
-  const bb = await kn.boundingBox();
-  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down();
-  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2 + 40, { steps: 4 }); await page.mouse.up();
-  expect(+(await kn.getAttribute('aria-valuenow'))).toBeLessThan(before);
+  // внизу — только общая громкость и «Звук»; остальные уровни — в шторке «Звук»
+  await expect(page.locator('.sgkn')).toHaveCount(0);
+  const all = page.locator('[data-sgall]'); await expect(all).toBeVisible();
+  const before = +(await all.inputValue());
+  await all.fill('40'); expect(+(await all.inputValue())).toBe(40);
+  await page.click('[data-sg="mix"]'); await page.waitForTimeout(300);
+  await expect(page.locator('[data-sgmix]')).toHaveCount(5);
+  await page.keyboard.press('Escape'); await page.mouse.click(195, 60); await page.waitForTimeout(300);
+  // два пальца медленно вверх — общая громкость выше, вниз — ниже
+  const two = (dy) => page.evaluate((d) => {
+    const el = document.querySelector('.sgtext'), r = el.getBoundingClientRect(), y = r.top + r.height / 2;
+    const ev = (type, id, x, cy) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: id, isPrimary: id === 7, pointerType: 'touch', clientX: x, clientY: cy }));
+    ev('pointerdown', 7, 120, y); ev('pointerdown', 8, 200, y);
+    for (let i = 1; i <= 10; i++) { ev('pointermove', 7, 120, y + d * i / 10); ev('pointermove', 8, 200, y + d * i / 10); }
+    ev('pointerup', 7, 120, y + d); ev('pointerup', 8, 200, y + d);
+  }, dy);
+  const cur = async () => +(await page.locator('[data-sgall]').inputValue());
+  await two(-60); await page.waitForTimeout(200);
+  const up = await cur(); expect(up).toBeGreaterThan(40);
+  await two(90); await page.waitForTimeout(200);
+  expect(await cur()).toBeLessThan(up);
+  expect(before).toBeGreaterThan(0);
   // жест вверх по экрану: метроном включился; ещё раз — выключился
   const swipeUp = () => page.evaluate(() => {
     const el = document.querySelector('.sgbig') || document.querySelector('.sgtext'), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
