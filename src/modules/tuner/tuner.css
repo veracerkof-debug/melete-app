@@ -40,7 +40,7 @@
 /* полоса */
 .tbar{display:flex;align-items:center;gap:8px;width:100%}
 .tbfs{font-size:20px;font-weight:600;color:var(--l3);transition:color .2s;width:14px}
-.tbar.flat .tbfs:first-child,.tbar.sharp .tbfs:last-child{color:var(--tint)}
+.tbar.flat .tbfs:first-child,.tbar.sharp .tbfs:last-child{color:var(--tint-text)}
 .tbtrack{position:relative;flex:1;height:38px;border-radius:19px;background:var(--fill)}
 .tbsoft,.tbzone{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);border-radius:19px}
 .tbsoft{background:linear-gradient(90deg,transparent,rgba(52,199,89,.22),transparent)}

@@ -9,7 +9,7 @@
 .tabbar .tab.lifting{opacity:.85}
 .tab{padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:500;color:var(--l2);letter-spacing:0}
 .tab svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.tab[aria-current="page"]{color:var(--tint)}
+.tab[aria-current="page"]{color:var(--tint-text)}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px 12px 16px}
 .day{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--l2);font-weight:500}
 .day .d{width:28px;height:28px;border-radius:50%;background:var(--fill);display:flex;align-items:center;justify-content:center}
@@ -28,7 +28,7 @@
 .search input::placeholder{color:var(--l2)}
 .hscroll{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none}
 .hscroll::-webkit-scrollbar{display:none}
-.addbtn{width:34px;height:34px;border-radius:50%;background:var(--fill);color:var(--tint);display:inline-flex;align-items:center;justify-content:center;margin:0 4px 18px}
+.addbtn{width:34px;height:34px;border-radius:50%;background:var(--fill);color:var(--tint-text);display:inline-flex;align-items:center;justify-content:center;margin:0 4px 18px}
 .addbtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .empty{text-align:center;padding:44px 24px;color:var(--l2)}
 .empty b{display:block;color:var(--ink);font-size:20px;font-weight:600;margin-bottom:6px}
@@ -60,7 +60,7 @@ a.cell{color:inherit;text-decoration:none}
 .dots i{width:8px;height:8px;border-radius:50%;background:var(--fill2)}
 .dots i.on{background:var(--tint)}
 .topbar{display:flex;justify-content:space-between;align-items:center;min-height:44px;margin-top:4px}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--fill);color:var(--tint);display:flex;align-items:center;justify-content:center}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--fill);color:var(--tint-text);display:flex;align-items:center;justify-content:center}
 .avatar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 .large{margin-top:8px}
 .panel{position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);animation:up .28s cubic-bezier(.2,.8,.2,1)}
@@ -162,7 +162,7 @@ a.cell{color:inherit;text-decoration:none}
 /* Первая песня: заметный шаг, а не строка в списке */
 .hfirst{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:12px 16px 12px 12px;border-radius:18px;background:var(--cell);text-align:left;border:1.5px dashed color-mix(in srgb,var(--tint) 45%,transparent)}
 .hfirst:active{transform:scale(.98)}
-.hfirst .hfic{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint)}
+.hfirst .hfic{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:color-mix(in srgb,var(--tint) 14%,transparent);color:var(--tint-text)}
 .hfirst .hfic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .hfirst b{display:block;font-size:17px;font-weight:700}
 .hfirst .l2{display:block;font-size:13px;margin-top:2px}
@@ -333,7 +333,7 @@ a.cell{color:inherit;text-decoration:none}
 .mlrow .inp{flex:none;width:auto}
 
 /* Мелета или Мелетий: выбор (src/core/screens/melete.js); бантик Мелеты — цветом оформления */
-.mascot .mbow{color:var(--tint)}
+.mascot .mbow{color:var(--tint-text)}
 .mascot .mbw{stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 :root[data-style="mono"] .mascot .mbow{color:currentColor}
 .mlwho{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
@@ -404,7 +404,7 @@ a.cell{color:inherit;text-decoration:none}
 .tab{position:relative;color:var(--l2)}
 .tab svg{position:relative;z-index:1;transition:color .2s,stroke-width .2s}
 .tab::before{content:"";position:absolute;top:50%;left:50%;width:58px;height:36px;margin:-18px 0 0 -29px;border-radius:18px;background:color-mix(in srgb,var(--tint) 16%,transparent);opacity:0;transform:scale(.6);transition:opacity .2s,transform .25s cubic-bezier(.3,1.4,.5,1)}
-.tab[aria-current="page"]{color:var(--tint)}
+.tab[aria-current="page"]{color:var(--tint-text)}
 .tab[aria-current="page"]::before{opacity:1;transform:none}
 .tab[aria-current="page"] svg{stroke-width:2.1}
 :root[data-style="mono"] .tab::before{display:none}
@@ -441,7 +441,7 @@ html.tablabels:not(.desk) .tab::before{top:5px;margin-top:0;width:54px;height:30
 .sybig{font-size:30px;font-weight:700;letter-spacing:.04em}
 /* ансамбль (screens/ensemble.js): большой счёт и время записи, строка состояния, кнопка записи */
 .ensp{margin:4px 4px 10px;font-size:15px;line-height:1.45}
-.ensbig{font-size:88px;font-weight:700;text-align:center;line-height:1.1;min-height:1.1em;font-variant-numeric:tabular-nums;color:var(--tint)}
+.ensbig{font-size:88px;font-weight:700;text-align:center;line-height:1.1;min-height:1.1em;font-variant-numeric:tabular-nums;color:var(--tint-text)}
 .ensstat{text-align:center;color:var(--l2);margin:2px 0 14px;font-size:15px}
 .ensbtn{min-height:56px;font-size:18px}
 .btn.wide{width:100%}
@@ -632,7 +632,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .gform .gfday.on{background:var(--tint);border-color:var(--tint);color:var(--on-tint)}
 .gform .gfsub{font-size:14px}
 .gform .gfitem{display:flex;align-items:center;gap:8px;min-height:40px;flex-wrap:wrap}
-.gform .gfadd{align-self:flex-start;background:none;border:0;color:var(--tint);font-weight:600;font-size:15px;min-height:40px;padding:0}
+.gform .gfadd{align-self:flex-start;background:none;border:0;color:var(--tint-text);font-weight:600;font-size:15px;min-height:40px;padding:0}
 .gform .gfq{display:flex;align-items:center;gap:8px}
 
 /* Расписание занятий — по образцу Google Календаря (screens/plan.js, 11.11.2026): полоса дней, день по часам */
@@ -642,7 +642,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .pday{flex:1 1 0;min-width:0;min-height:56px;border:0;background:none;color:var(--ink);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 0}
 .pday small{font-size:12px;color:var(--l2);text-transform:capitalize}
 .pday b{font-size:18px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.pday.today b{color:var(--tint)}
+.pday.today b{color:var(--tint-text)}
 .pday.on b{background:var(--tint);color:var(--on-tint)}
 .pday i{width:5px;height:5px;border-radius:50%}
 .pday i.dot{background:var(--tint)}
@@ -682,7 +682,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .rtrow{display:flex;align-items:center;gap:8px}
 .rtrow .rtopen,.rtrow.cell .grow{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:44px;justify-content:center}
 .rtrow .st{font-size:13px}
-.rtplay,.rtrow>svg,.rtfree svg{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--tint)}
+.rtplay,.rtrow>svg,.rtfree svg{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--tint-text)}
 .rtplay svg,.rtrow>svg,.rtfree svg{width:22px;height:22px;fill:currentColor}
 .rtfree{display:flex;align-items:center;gap:8px}
 .rtempty{gap:10px}
@@ -873,7 +873,7 @@ button.stitle2{background:none;border:0;color:var(--ink);font-family:inherit;min
 .aierrl{margin:0;padding:10px 16px;font-size:13px;color:var(--red)}
 .aiopen{font-weight:600}
 .aiin{display:flex;gap:8px;align-items:flex-end}.aiin .aitools{display:flex;flex-direction:column;gap:6px}
-.aitool{width:44px;height:44px}.aitool svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.aitool.on{color:var(--tint)}.aitool:disabled{opacity:.4}
+.aitool{width:44px;height:44px}.aitool svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.aitool.on{color:var(--tint-text)}.aitool:disabled{opacity:.4}
 .aiatt:empty{display:none}.aiatt{display:flex;flex-direction:column;gap:6px;padding:4px 0}
 .aichips{display:flex;flex-wrap:wrap;gap:6px}
 .aichip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 6px 6px 12px;border-radius:999px;background:var(--cell);border:1px solid var(--sep);font-size:13px}
@@ -933,13 +933,13 @@ html.desk .qgrid2 .qbtn{width:64px;height:64px;max-height:none}
 .hhdr.hsm{margin:14px 4px 2px}.hhdr.hsm span{font-size:16px}.hhdr.hsm .link{font-size:13px}
 .hsl{display:flex;flex-direction:column;gap:2px}
 .hsr{display:flex;align-items:center;gap:2px;min-height:46px}
-.hsrp{flex:none;width:40px;height:40px;display:grid;place-items:center;color:var(--tint)}
+.hsrp{flex:none;width:40px;height:40px;display:grid;place-items:center;color:var(--tint-text)}
 .hsrp svg{width:18px;height:18px;fill:currentColor}
 .hsrb{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;padding:3px 8px 3px 4px;border-radius:12px;min-height:44px}
 .hsrb .g{display:flex;flex-direction:column;min-width:0;flex:1}
 .hsrb b{font-size:15px;font-weight:650;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hsrb small{font-size:12px;line-height:1.25;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hsrb .m{flex:none;font-size:13px;color:var(--tint);font-variant-numeric:tabular-nums}
+.hsrb .m{flex:none;font-size:13px;color:var(--tint-text);font-variant-numeric:tabular-nums}
 
 /* Правка главной: ручка размера блока (shell.js) — как ручка разделителя окон; не масштабируется вместе с блоком (--hz) */
 .hblk.hb-n{position:relative}

@@ -3,7 +3,7 @@ import { setBare, setMascotGender } from '../i18n/index.js';
 import { setMascotLook } from '../ui/mascot.js';
 import { watchMarks } from '../ui/marks.js';
 import { studentAllows } from './student.js';
-import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText, bgVars } from './palettes.js';
+import { accentVars, paintTools, hueColor, ACCENT_HUE, forcedText, bgVars, SURFACES } from './palettes.js';
 
 // Функции ядра, которые можно выключить (модули выключаются так же — по id); данные при этом сохраняются
 export const CORE_FEATURES = ['streak', 'mastery', 'quote'];
@@ -121,6 +121,8 @@ export function applyScale(settings) {
 
 const BG_KEYS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--bar'];
 export function applyTheme(settings, de = document.documentElement) {
+  applyTheme.last = [settings, de];
+  if (!applyTheme.bound && typeof matchMedia === 'function') { applyTheme.bound = true; try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(...applyTheme.last)); } catch { /* старый WebView */ } }
   const t = settings.theme;
   if (t === 'system' || !THEMES.includes(t)) de.removeAttribute('data-theme');
   else de.setAttribute('data-theme', t);
@@ -136,7 +138,11 @@ export function applyTheme(settings, de = document.documentElement) {
   applyScale(settings);
   // палитра: инструменты и акцент (в «Минимал» — без цвета)
   paintTools(settings);
-  const vars = isMono(settings) ? null : accentVars(settings), keys = ['--tint', '--tint-text', '--on-tint', '--red'];
+  // фон темы — чтобы текст акцентом читался на нём (светлая, «Бумага», тёмная, OLED, «система», свой фон)
+  const sysDark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches, bgv0 = bgVars(settings.ownBg);
+  const tk = bgv0 ? (bgv0.dark ? 'dark' : 'light') : t === 'dark' || t === 'oled' || t === 'paper' ? t : (t === 'light' ? 'light' : sysDark ? 'dark' : 'light');
+  const surf = bgv0 ? [bgv0.vars['--bg'], bgv0.vars['--cell']] : SURFACES[tk];
+  const vars = isMono(settings) ? null : accentVars(settings, { dark: tk === 'dark' || tk === 'oled', surfaces: surf }), keys = ['--tint', '--tint-text', '--on-tint', '--red'];
   keys.forEach((k) => { if (!vars || !(k in vars)) de.style.removeProperty(k); });
   if (vars) Object.entries(vars).forEach(([k, v]) => de.style.setProperty(k, v));
   // свой фон (settings.ownBg): все цвета поверхности — из него; тёмный фон — тёмная схема (не в «Минимале»)

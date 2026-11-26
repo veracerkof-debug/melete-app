@@ -11,9 +11,9 @@
 .lpic svg{position:static;width:min(22cqw,16cqh,88px);height:min(22cqw,16cqh,88px);transform:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .lpbtn.idle .lpic{color:var(--red)}
 .lpbtn.rec .lpic,.lpbtn.dub .lpic{color:var(--red);animation:lpblink 1s ease-in-out infinite}
-.lpbtn.play .lpic{color:var(--tint)}
+.lpbtn.play .lpic{color:var(--tint-text)}
 .lpbtn.idle .lpic svg path{fill:currentColor}
-.lpcount{font-size:min(26cqw,20cqh,110px);font-weight:300;line-height:1;color:var(--tint)}
+.lpcount{font-size:min(26cqw,20cqh,110px);font-weight:300;line-height:1;color:var(--tint-text)}
 @keyframes lpblink{50%{opacity:.35}}
 .lplab{position:absolute;bottom:14%;left:0;right:0;text-align:center;font-size:clamp(11px,3.2cqmin,15px);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--l2)}
 .lptime{font-size:clamp(14px,4.5cqmin,22px);color:var(--l2);min-height:1.3em}

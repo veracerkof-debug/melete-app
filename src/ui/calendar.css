@@ -132,10 +132,10 @@
 /* Строка календаря на главной: ближайшее событие, касание — экран календаря */
 .hcalrow{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
 .hcal{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 14px;border-radius:18px;background:var(--cell);color:var(--ink);text-align:left}
-.hcali{flex:none;width:32px;height:32px;display:grid;place-items:center;color:var(--tint)}
+.hcali{flex:none;width:32px;height:32px;display:grid;place-items:center;color:var(--tint-text)}
 .hcali svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .hcalt{flex:1;min-width:0;display:flex;flex-direction:column}
 .hcalt b{font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hcalt small{font-size:13px;color:var(--l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hcalmore{flex:none;font-style:normal;font-size:13px;font-weight:700;color:var(--tint)}
+.hcalmore{flex:none;font-style:normal;font-size:13px;font-weight:700;color:var(--tint-text)}
 .hcalgo{flex:none;font-size:22px;color:var(--l2)}

@@ -14,7 +14,7 @@
 .stwrap .sttop .ic.sm{width:36px;height:36px;min-width:36px;padding:0;flex:none}
 .sttop .ic svg{width:20px;height:20px}
 .sttop .ic.plain{background:none;color:var(--l2)}
-.sttop .ic.plain.on{color:var(--tint)}
+.sttop .ic.plain.on{color:var(--tint-text)}
 .sttop .ic[disabled]{opacity:.3}
 .stplay{width:46px;height:46px;border-radius:50%;background:var(--tint);color:var(--on-tint);display:grid;place-items:center;flex:none;box-shadow:0 3px 10px color-mix(in srgb,var(--tint) 40%,transparent)}
 .stplay.on{background:var(--red);box-shadow:none}
@@ -134,7 +134,7 @@
 .stselbar{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px 6px;border-radius:16px;background:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.18),0 0 0 1px var(--sep);max-width:calc(100% - 16px);overflow-x:auto;z-index:2}
 .stselbar[hidden]{display:none}
 .stselbar .ic.sm{width:40px;height:40px;min-width:40px;padding:0;flex:none;background:none;color:var(--ink)}
-.stselbar .ic.on{color:var(--tint)}
+.stselbar .ic.on{color:var(--tint-text)}
 .stselbar .ic.danger{color:var(--red)}
 .stselbar .ic svg{width:20px;height:20px}
 .stseln{min-width:24px;height:24px;border-radius:12px;background:var(--tint);color:var(--on-tint,#fff);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin:0 4px}
@@ -218,7 +218,7 @@
 .stmi{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 12px;border-radius:10px;font-size:15px;text-align:left;color:var(--ink)}
 .stmi svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .stmi span{flex:1;min-width:0}
-.stmi.on{color:var(--tint)}.stmi[disabled]{opacity:.35}
+.stmi.on{color:var(--tint-text)}.stmi[disabled]{opacity:.35}
 .stmk svg{width:16px;height:16px}
 @media (orientation: landscape) and (max-height: 520px){.stwrap.side .stmore{right:calc(100% + 6px);bottom:0}}
 .stselbar{max-width:calc(100% - 12px);overflow:visible}

@@ -54,3 +54,22 @@ describe('свои цвета', () => {
     expect(onColor(l.vars['--ink'])).toBe('#ffffff');
   });
 });
+
+describe('контраст текста акцентом (слово автора 26.11.2026)', () => {
+  it('--tint-text читается на фоне и ячейках в каждой палитре, акценте и теме (≥ 4,5:1)', async () => {
+    const { contrast, SURFACES, ACCENT_HUE } = await import('../src/core/palettes.js');
+    for (const palette of ['bright', 'pastel', 'neon', 'jewel', 'lunar', 'own']) {
+      for (const accent of Object.keys(ACCENT_HUE)) {
+        for (const theme of ['light', 'paper', 'dark', 'oled']) {
+          const v = accentVars({ palette, accent, ownMain: '#2EC4B6' }, { dark: theme === 'dark' || theme === 'oled', surfaces: SURFACES[theme] });
+          if (!v) continue;
+          SURFACES[theme].forEach((bg) => expect(contrast(v['--tint-text'], bg), palette + '/' + accent + '/' + theme).toBeGreaterThanOrEqual(4.5));
+        }
+      }
+    }
+  });
+  it('значок на цвете: выбор по контрасту', async () => {
+    const { contrast } = await import('../src/core/palettes.js');
+    ['#5EC4BD', '#00C7BE', '#7CC7D8', '#30B0C7'].forEach((c) => { const t = onColor(c); expect(contrast(c, t)).toBeGreaterThanOrEqual(3.5); });
+  });
+});

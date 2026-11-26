@@ -2,7 +2,7 @@
 .outbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;min-width:40px;padding:0 10px;border-radius:999px;background:var(--fill);color:var(--ink);font:600 14px var(--font);white-space:nowrap;max-width:46vw;position:relative;-webkit-tap-highlight-color:transparent}
 .outbtn svg{flex:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .outbtn .outl{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.outbtn.away{background:color-mix(in srgb,var(--tint) 16%,var(--fill));color:var(--tint)}
+.outbtn.away{background:color-mix(in srgb,var(--tint) 16%,var(--fill));color:var(--tint-text)}
 .outbtn .outdot{display:none;position:absolute;top:5px;right:5px}
 .outbtn.away .outdot{display:block}
 .outdot{width:8px;height:8px;border-radius:50%;background:var(--l3);flex:none}

@@ -144,7 +144,7 @@
 /* Зона нажатия доли — шире самой полоски */
 .whit{fill:transparent;pointer-events:all;cursor:pointer;-webkit-tap-highlight-color:transparent}
 /* Включённые сигналы без звука — под колесом */
-.msig{display:flex;justify-content:center;gap:10px;margin:6px auto 0;min-height:40px;padding:0 10px;border-radius:999px;color:var(--tint);align-items:center}
+.msig{display:flex;justify-content:center;gap:10px;margin:6px auto 0;min-height:40px;padding:0 10px;border-radius:999px;color:var(--tint-text);align-items:center}
 .msig .msi{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600}
 .msig svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .vs .msig{margin:2px auto}

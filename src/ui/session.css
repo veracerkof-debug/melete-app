@@ -11,7 +11,7 @@
 .tbar::-webkit-scrollbar{display:none}
 .tb{width:46px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;color:var(--l2)}
 .tb svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tb[aria-selected="true"]{background:var(--fill);color:var(--tint)}
+.tb[aria-selected="true"]{background:var(--fill);color:var(--tint-text)}
 @media (min-width:900px){
   .tbar{max-width:1100px}
   .sin{max-width:820px}
@@ -166,8 +166,8 @@
 .mxm.mu .mxi{background:transparent;opacity:.55}
 /* Значки окон сессии: открытый в окне — цветной, в фокусе — в цветной капсуле; остальные приглушены */
 .sdock .tb{color:var(--l3);position:relative}
-.sdock .tb.used{color:var(--tint);background:color-mix(in srgb,var(--tint) 9%,transparent)}
-.sdock .tb[aria-selected="true"]{color:var(--tint);background:color-mix(in srgb,var(--tint) 20%,transparent)}
+.sdock .tb.used{color:var(--tint-text);background:color-mix(in srgb,var(--tint) 9%,transparent)}
+.sdock .tb[aria-selected="true"]{color:var(--tint-text);background:color-mix(in srgb,var(--tint) 20%,transparent)}
 .sdock .tb.small{opacity:.38}
 .sdock .tb[aria-selected="true"] svg,.sdock .tb.used svg{stroke-width:2.1}
 .sdock .tb[aria-selected="true"]::after{content:"";position:absolute;bottom:4px;left:50%;width:16px;height:3px;margin-left:-8px;border-radius:2px;background:var(--tint)}
@@ -177,7 +177,7 @@
 /* Полный экран окна — видимая кнопка в углу окна; в полном экране — «Свернуть» поверх, не перехватывает игру вокруг */
 .pfbtn{position:absolute;top:0;right:2px;width:40px;height:26px;z-index:5;display:flex;align-items:center;justify-content:center;border:0;padding:0;background:none;color:var(--l3);border-radius:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pfbtn svg{width:16px;height:16px}
-.pfbtn:active{background:var(--fill);color:var(--tint)}
+.pfbtn:active{background:var(--fill);color:var(--tint-text)}
 .session .ws .pane.toolhost,.session .ws .pane.toolhost.quarter{padding-top:22px}
 .session .ws .pane.toolhost.strip{padding-top:20px!important}
 .session.toolmode .ws .pane.toolhost{padding-top:22px}

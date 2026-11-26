@@ -103,7 +103,7 @@ b.fcinp{border-color:transparent;display:inline-block}
 .gltab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;border-radius:14px;font-size:12px;font-weight:600;color:var(--l2);padding:4px 2px;transition:background .15s,color .15s}
 .gltab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gltab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.gltab[aria-selected="true"]{background:var(--fill);color:var(--tint)}
+.gltab[aria-selected="true"]{background:var(--fill);color:var(--tint-text)}
 /* эффект свёрнут в одну строку: название и что включено; подробности — по нажатию */
 .glfxh{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:52px;padding:0;text-align:left;color:inherit}
 .glfxh .grow{align-items:flex-start}

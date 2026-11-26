@@ -79,7 +79,7 @@
 .pvsw{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;flex:none;margin-top:4px}
 .pvb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 4px;border-radius:12px;background:transparent;color:var(--l2);font-size:11px;line-height:1;min-height:44px}
 .pvb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.pvb.on{background:var(--fill);color:var(--tint)}
+.pvb.on{background:var(--fill);color:var(--tint-text)}
 .mono .pvb span{display:none}
 /* дорожки: строки микшера, ползунки на всю ширину */
 .pstems{display:flex;flex-direction:column;gap:2px;padding:4px 0}
@@ -172,7 +172,7 @@
 .cesh .chip{min-width:44px;min-height:44px}
 .cesh .chip[disabled]{opacity:.35}
 
-.chmk{position:absolute;right:5px;top:2px;max-width:70%;font-style:normal;font-size:10px;font-weight:700;color:var(--tint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.chmk{position:absolute;right:5px;top:2px;max-width:70%;font-style:normal;font-size:10px;font-weight:700;color:var(--tint-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .chedit{width:40px;height:40px;min-width:40px}
 .amk.loop{box-shadow:inset 0 0 0 2px var(--tint)}
 /* аккорды: панель над видом; «весь экран» — только гармония и кнопка свернуть (слово автора 26.11.2026) */

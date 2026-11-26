@@ -100,7 +100,8 @@ export function onColor(hex) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
   if (!m) return '#fff';
   const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i], 16) / 255);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6 ? '#1c1c1e' : '#ffffff';
+  const pick = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6 ? '#1c1c1e' : '#ffffff', hex6 = '#' + m[1] + m[2] + m[3], other = pick === '#ffffff' ? '#1c1c1e' : '#ffffff';
+  return contrast(hex6, pick) < 3.5 && contrast(hex6, other) > contrast(hex6, pick) ? other : pick;
 }
 
 // Инструменты перекрашиваются на месте (их цвет читают все экраны): own — цвет из описания модуля
@@ -118,8 +119,21 @@ export function paintTools(settings) {
   });
 }
 
+/* ---------- контраст текста акцентом (слово автора 26.11.2026: «контраста 0») ---------- */
+const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+const relL = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16))); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+export const contrast = (a, b) => { const x = relL(a), y = relL(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const mixHex = (a, b, k) => { const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16)); return '#' + pa.map((v, i) => Math.round(v * k + pb[i] * (1 - k)).toString(16).padStart(2, '0')).join('').toUpperCase(); };
+// Цвет текста акцентом: цвет оттенка, затемнённый (на тёмном фоне — осветлённый) ровно настолько, чтобы читался на фоне и ячейках (AA, 4,6:1)
+export function readableOn(c, surfaces, ink, startK = 1, min = 4.6) {
+  for (let k = startK; k >= 0; k -= 0.04) { const m = mixHex(c, ink, k); if (surfaces.every((x) => contrast(m, x) >= min)) return m; }
+  return ink;
+}
+export const SURFACES = { light: ['#F3F2EE', '#FFFFFF'], paper: ['#F4EFE6', '#FBF8F2'], dark: ['#000000', '#1C1C1E'], oled: ['#000000', '#0E0E10'] };
+
 // Переменные акцента для <html>: null — оставить цвета темы как есть (классическая палитра, охра)
-export function accentVars(settings) {
+// env: { dark, surfaces } — какой фон у темы (для расчёта читаемого текста); без него — светлая тема
+export function accentVars(settings, env = {}) {
   const p = paletteOf(settings), accent = settings.accent || 'orange';
   if (p === 'classic' && accent === 'orange') return forced ? { '--on-tint': forced } : null; // цвета темы как есть
   // свой цвет: акцент — сам основной цвет
@@ -127,7 +141,7 @@ export function accentVars(settings) {
   const deep = (x, k) => 'color-mix(in srgb,' + x + ' ' + k + '%,var(--ink))';
   return {
     '--tint': P.soft ? deep(c, 80) : c, // пастель на светлом фоне: акцент чуть глубже, иначе вкладки и ссылки не читаются
-    '--tint-text': deep(c, P.soft || accent === 'graphite' ? 62 : p === 'neon' ? 72 : 78),
+    '--tint-text': readableOn(c, env.surfaces || SURFACES.light, env.dark ? '#FFFFFF' : '#161514', P.soft || accent === 'graphite' ? 0.62 : p === 'neon' ? 0.72 : 0.78),
     '--on-tint': onColor(c),
     // «опасные» кнопки остаются красными в серой и своей палитре — смысл важнее цвета
     ...(p === 'classic' || p === 'lunar' || p === 'own' ? {} : { '--red': P.soft ? deep(P.red, 70) : P.red }),
