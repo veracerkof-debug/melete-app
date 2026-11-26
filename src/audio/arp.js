@@ -151,7 +151,8 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
   function tick() {
     const c = getContext(mixer.state.mode), a = normalizeArp(getArp());
     lastC = c; lastTick = performance.now();
-    if (!c || !a.on || !dOn()) { stop(); return; }
+    // арпеджио и глайдер — отдельные инструменты (слово автора 26.11.2026): каждый звучит без другого, общие только пэд и тональность
+    if (!c || !(a.on || a.glide.on) || !dOn()) { stop(); return; }
     const d = getDrone(), per = RATES[a.rate], st = beatLen() / per, steps = per * 4;
     const anc = anchor();
     if (anc != null) { const k = Math.ceil((next - anc) / st - 0.001); const snap = anc + k * st; if (Math.abs(snap - next) > 0.004) next = Math.max(c.currentTime + 0.02, snap); }
@@ -171,7 +172,8 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
     // Рисунок, ритм, жизнь, плотность, длина, свинг, диапазон сменились — новый такт строится сразу, с того же шага
     const ps = [a.style, a.rate, a.life, a.density, a.gate, a.swing, a.range].join();
     if (ps !== psig) { psig = ps; bar = null; }
-    while (next < c.currentTime + lookahead) {
+    if (!a.on) { next = c.currentTime + 0.1; step = 0; bar = null; } // арпеджио выключено — его сетка стоит, начнётся с начала
+    while (a.on && next < c.currentTime + lookahead) {
       if (!bar || step % steps === 0) { bar = barNotes(a, lad, steps, prevName, Math.random, scale); prevName = bar.name; }
       const n = bar.notes[step % steps], sw = a.swing && per === 2 && step % 2 === 1 ? a.swing * st * 0.33 : 0;
       if (!n.rest) {
@@ -270,7 +272,7 @@ export function createArp({ drone, synth, metro, mixer, getArp, getDrone, getA4 
     glideOff();
   }
   // пэд зазвучал или смолк, настройку включили — арпеджиатор сам идёт или стоит
-  const sync = () => { const a = normalizeArp(getArp()); if (a.on && dOn()) start(); else stop(); };
+  const sync = () => { const a = normalizeArp(getArp()); if ((a.on || a.glide.on) && dOn()) start(); else stop(); };
   drone.subscribe(sync);
   // trace и time — для окна сигнала в настройках (только чтение)
   return { sync, start, stop, trace, time: () => (lastC ? lastC.currentTime : 0), get running() { return !!timer; } };

@@ -3,6 +3,20 @@
 import { test, expect } from './melete.js';
 
 const hold = async (page, loc) => { const b = await loc.boundingBox(); await page.mouse.move(b.x + 4, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up(); };
+// удержать блок и перетащить в точку (fx, fy) блока target; смахнуть блок вбок
+const dragTo = async (page, id, target, fx, fy) => {
+  const a = await page.locator('.lyb.ed[data-lb="' + id + '"]').boundingBox(), b = await page.locator('.lyb.ed[data-lb="' + target + '"]').boundingBox();
+  const x0 = a.x + a.width / 2, y0 = a.y + Math.min(a.height / 2, 40), x1 = b.x + b.width * fx, y1 = b.y + b.height * fy;
+  await page.mouse.move(x0, y0); await page.mouse.down(); await page.waitForTimeout(450);
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x0 + (x1 - x0) * i / 10, y0 + (y1 - y0) * i / 10);
+  await page.mouse.up(); await page.waitForTimeout(300);
+};
+const swipe = async (page, id) => {
+  const a = await page.locator('.lyb.ed[data-lb="' + id + '"]').boundingBox(), y = a.y + Math.min(a.height / 2, 40);
+  await page.mouse.move(a.x + 20, y); await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(a.x + 20 + a.width * 0.8 * i / 10, y);
+  await page.mouse.up(); await page.waitForTimeout(300);
+};
 const lay = (page) => page.evaluate(() => window.__melete.store.state.settings.layout.stage);
 
 test('сцена: правка вида — размер, порядок, скрыть/вернуть, «Готово» замораживает', async ({ page, melete, errors }) => {
@@ -26,13 +40,15 @@ test('сцена: правка вида — размер, порядок, скр
   await page.mouse.up(); await page.waitForTimeout(300);
   const z = (await lay(page)).size.tempo;
   expect(typeof z).toBe('number'); expect(z).toBeGreaterThan(1.05); expect(z).toBeLessThanOrEqual(2.2);
-  // порядок: ↓ у темпа
+  // кнопок нет, блоки вплотную, инструмент не нажимается
+  await expect(page.locator('[data-ly="up"], [data-ly="down"], [data-ly="hide"], [data-ly="pair"]')).toHaveCount(0);
+  // порядок: удержать темп и перетащить под следующий блок
   const before = await page.evaluate(() => [...document.querySelectorAll('.lyb.ed')].map((e) => e.dataset.lb));
-  await page.click('.lyb[data-lb="tempo"] [data-ly="down"]'); await page.waitForTimeout(200);
+  await dragTo(page, 'tempo', before[before.indexOf('tempo') + 1], 0.5, 0.9);
   const after = await page.evaluate(() => [...document.querySelectorAll('.lyb.ed')].map((e) => e.dataset.lb));
   expect(after).not.toEqual(before); expect(after.indexOf('tempo')).toBe(before.indexOf('tempo') + 1);
-  // скрыть плеер и вернуть из «Скрыто»
-  await page.click('.lyb[data-lb="player"] [data-ly="hide"]'); await page.waitForTimeout(200);
+  // скрыть плеер смахиванием и вернуть из «Скрыто»
+  await swipe(page, 'player'); await page.waitForTimeout(200);
   await expect(page.locator('.lyb[data-lb="player"]')).toHaveCount(0);
   await page.click('[data-ly="show"][data-id="player"]'); await page.waitForTimeout(200);
   await expect(page.locator('.lyb[data-lb="player"]')).toHaveCount(1);
@@ -60,8 +76,8 @@ test('сцена: блоки рядом — пара, ширина планко�
   await expect(page.locator('.lyrow')).toHaveCount(0); // без пар разметка прежняя: рядов нет
   await hold(page, page.locator('.sgplayer'));
   await expect(page.locator('.lybar')).toBeVisible();
-  // «рядом с предыдущим»: чипы встают рядом с темпом
-  await page.click('.lyb[data-lb="keys"] [data-ly="pair"]'); await page.waitForTimeout(250);
+  // рядом: перетащить клавиши к правому краю темпа
+  await dragTo(page, 'keys', 'tempo', 0.92, 0.5); await page.waitForTimeout(250);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="tempo"]')).toHaveCount(1);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="keys"]')).toHaveCount(1);
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });

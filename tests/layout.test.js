@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scaleOf, clampScale, normLay, arrange, moveBlock, isEditing, setEditing, rowsOf, togglePair, clampRatio, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
+import { scaleOf, clampScale, normLay, arrange, moveBlock, moveTo, isEditing, setEditing, rowsOf, togglePair, clampRatio, SCALE_MIN, SCALE_MAX } from '../src/ui/layout.js';
 
 const B = [{ id: 'a', html: '<i>A</i>' }, { id: 'b', html: '<i>B</i>' }, { id: 'c', html: '<i>C</i>' }, { id: 'd', html: '' }];
 const ids = ['a', 'b', 'c', 'd'];
@@ -30,7 +30,9 @@ describe('arrange: обычный вид заморожен и прост', () =
     const lay = { hidden: ['b'] }; setEditing(lay, true);
     expect(isEditing(lay)).toBe(true);
     const h = arrange(B, lay, { t: (k) => k, name: (i) => 'имя-' + i });
-    expect(h).toContain('data-ly="done"'); expect(h).toContain('data-ly="grip"'); expect(h).toContain('data-ly="up"'); expect(h).toContain('имя-a');
+    expect(h).toContain('data-ly="done"'); expect(h).toContain('data-ly="grip"'); expect(h).toContain('имя-a');
+    // кнопок «выше / ниже / скрыть / рядом» нет — место и скрытие жестами
+    for (const k of ['up', 'down', 'hide', 'pair']) expect(h).not.toContain('data-ly="' + k + '"');
     expect(h).toContain('data-ly="show" data-id="b"'); expect(h).not.toContain('data-lb="b"');
     setEditing(lay, false); expect(isEditing(lay)).toBe(false);
   });
@@ -77,9 +79,19 @@ describe('несколько блоков рядом', () => {
     expect(h).toContain('<div class="lyrow lyg" style="--lw:0.4">'); expect((h.match(/class="lyb"/g) || []).length).toBe(3);
     expect(h.indexOf('data-lb="a"')).toBeLessThan(h.indexOf('data-lb="b"'));
   });
-  it('arrange в правке: планка ширины и кнопка «рядом/разделить»', () => {
+  it('arrange в правке: планка ширины между блоками пары', () => {
     const lay = { pair: { b: 0.5 } }; setEditing(lay, true);
     const h = arrange(B, lay, { t: (k) => k });
-    expect(h).toContain('data-ly="width"'); expect(h).toContain('lay.unpair'); expect(h).toContain('lay.pair');
+    expect(h).toContain('data-ly="width"');
+  });
+  it('moveTo: до / после, рядом (к боку одиночного блока), из пары, ширина сохраняется', () => {
+    const lay = {};
+    expect(moveTo(lay, ids, 'c', 'a', 'before')).toBe(true); expect(lay.order.slice(0, 3)).toEqual(['c', 'a', 'b']);
+    expect(moveTo(lay, ids, 'a', 'b', 'right')).toBe(true); expect(rowsOf(lay, ids)).toEqual([['c'], ['b', 'a'], ['d']]); expect(lay.pair.a).toBe(0.5);
+    lay.pair.a = 0.4;
+    expect(moveTo(lay, ids, 'd', 'b', 'left')).toBe(false); // у пары бока нет — встаёт после ряда, а там уже стоит
+    expect(rowsOf(lay, ids)).toEqual([['c'], ['b', 'a'], ['d']]);
+    expect(moveTo(lay, ids, 'a', 'c', 'after')).toBe(true); expect(rowsOf(lay, ids)).toEqual([['c'], ['a'], ['b'], ['d']]); expect(lay.pair.a).toBeUndefined();
+    expect(moveTo(lay, ids, 'a', 'a', 'before')).toBe(false); expect(moveTo(lay, ids, 'a', 'zz', 'before')).toBe(false);
   });
 });

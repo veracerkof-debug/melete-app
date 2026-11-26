@@ -3,13 +3,15 @@
 //  • обычный (выступление): раскладка ЗАМОРОЖЕНА — меню у блока нет, размер и порядок не меняются ни случайным касанием,
 //    ни на ходу; вывод разметки такой же, как был до правки (никаких лишних обёрток);
 //  • правка: включается удержанием блока и только в тишине (api.busy — что-то звучит → «остановите звук»). У блока:
-//    размер — тянуть планку внизу (плавно, 0,5–2,2), «выше» / «ниже», «скрыть»; сверху — «Как было» и «Готово»,
-//    внизу — скрытые блоки (касание возвращает). Содержимое блоков в правке не нажимается. «Готово» — вид сохранён и заморожен.
+//    блоки стоят вплотную, как окна свободной практики, без кнопок и подписей-меню: инструмент затемнён, поверх — его название;
+//    размер — тянуть границу под блоком (плавно, 0,5–2,2), место — удержать блок и перетащить (к боку другого — рядом), скрыть — смахнуть
+//    вбок; сверху — «Как было» и «Готово», внизу — скрытые блоки (касание возвращает). Содержимое блоков в правке не нажимается
+//    и ничего не звучит (слово автора 26.11.2026). «Готово» — вид сохранён и заморожен.
 // Рядом: блок можно поставить в один ряд с предыдущим (до двух в ряду, как окна свободной практики); ширина — планка между ними (25–75 %).
 // Хранится в `lay` = { order: [id], hidden: [id], size: { id: 's'|'m'|'l' | число }, pair: { id: доля ширины первого блока } } там, где экран хранит свои данные.
 // Блок обёрнут в display:contents — раскладка CSS не меняется, а размер приходит переменной --lz, которую блок использует сам.
 import './layout.css';
-import { onHold } from './hold.js';
+import { onHold, buzz } from './hold.js';
 import { toast } from './index.js';
 
 export const SIZES = ['s', 'm', 'l']; // прежние три ступени (остаются в данных и читаются как числа)
@@ -52,10 +54,8 @@ export function arrange(blocks, lay, opts = {}) {
   const one = (b) => {
     const z = scaleOf(lay, b.id);
     if (!editing) return '<div class="lyb" data-lb="' + b.id + '" style="--lz:' + z + '">' + b.html + '</div>';
-    const paired = rows.find((r) => r.includes(b.id)).length === 2;
     return '<div class="lyb ed" data-lb="' + b.id + '" style="--lz:' + z + '"><div class="lyi">' + b.html + '</div>' +
-      '<div class="lyc"><span class="lyn">' + esc(name(b.id)) + '</span><span class="lyx"><button data-ly="pair" aria-label="' + esc(t(paired ? 'lay.unpair' : 'lay.pair')) + '">' + (paired ? '↕' : '⇆') + '</button>' +
-      '<button data-ly="up" aria-label="' + esc(t('lay.up')) + '">↑</button><button data-ly="down" aria-label="' + esc(t('lay.down')) + '">↓</button><button data-ly="hide" aria-label="' + esc(t('lay.hide')) + '">✕</button></span></div>' +
+      '<span class="lyn">' + esc(name(b.id)) + '</span>' +
       '<div class="lyh" data-ly="grip" role="slider" aria-label="' + esc(t('lay.grip')) + '" aria-valuemin="' + SCALE_MIN + '" aria-valuemax="' + SCALE_MAX + '" aria-valuenow="' + z + '"><i></i></div></div>';
   };
   const body = rows.map((r) => {
@@ -66,7 +66,7 @@ export function arrange(blocks, lay, opts = {}) {
   }).join('');
   if (!editing) return body;
   const hid = lay.hidden.filter((i) => ids.includes(i) && blocks.find((b) => b.id === i && b.html));
-  return '<div class="lybar" role="toolbar" data-lybar><span>' + esc(t('lay.editHint')) + '</span><button data-ly="reset">' + esc(t('lay.reset')) + '</button><button class="done" data-ly="done">' + esc(t('lay.done')) + '</button></div>' + body +
+  return '<div class="lybar" role="toolbar" data-lybar><span>' + esc(t('lay.editHint')) + '</span><button data-ly="reset">' + esc(t('lay.reset')) + '</button><button class="done" data-ly="done">' + esc(t('lay.done')) + '</button></div>' + body + '<div class="lyend"></div>' +
     (hid.length ? '<div class="lytray" data-lybar><span>' + esc(t('lay.hiddenList')) + '</span>' + hid.map((i) => '<button data-ly="show" data-id="' + i + '">＋ ' + esc(name(i)) + '</button>').join('') + '</div>' : '');
 }
 
@@ -99,6 +99,25 @@ export function moveBlock(lay, ids, id, d) {
   return true;
 }
 
+// Перенос блока id (слово автора 26.11.2026): where — 'before' / 'after' ряда target, 'left' / 'right' — рядом с target (если он один в ряду,
+// иначе — после ряда). Ширина пары сохраняется, если пара прежняя, иначе пополам. → изменилось ли
+export function moveTo(lay, ids, id, target, where) {
+  lay = normLay(lay);
+  if (id === target) return false;
+  const shown = rowsOf(lay, ids), flat0 = shown.flat();
+  if (!flat0.includes(id) || !flat0.includes(target)) return false;
+  const was = shown.map((r) => r.join());
+  const rows = shown.map((r) => r.filter((x) => x !== id)).filter((r) => r.length);
+  const i = rows.findIndex((r) => r.includes(target));
+  if ((where === 'left' || where === 'right') && rows[i].length === 1) rows[i] = where === 'left' ? [id, target] : [target, id];
+  else rows.splice(where === 'before' ? i : i + 1, 0, [id]);
+  const keep = { ...lay.pair };
+  for (const x of flat0) delete lay.pair[x];
+  for (const r of rows) if (r.length === 2) lay.pair[r[1]] = keep[r[1]] != null ? keep[r[1]] : 0.5;
+  lay.order = [...rows.flat(), ...lay.hidden];
+  return rows.map((r) => r.join()).join('|') !== was.join('|') || JSON.stringify(keep) !== JSON.stringify(lay.pair);
+}
+
 // Ширина пары: тянуть планку между блоками; долю видно сразу, значение пишется на отпускании
 function dragWidth(e, w, api, lay) {
   e.preventDefault(); e.stopPropagation();
@@ -108,6 +127,78 @@ function dragWidth(e, w, api, lay) {
   const move = (ev) => { r = clampRatio((ev.clientX - rc.left) / rc.width); row.style.setProperty('--lw', r); };
   const end = () => { w.removeEventListener('pointermove', move); w.removeEventListener('pointerup', end); w.removeEventListener('pointercancel', end); lay.pair[second] = r; api.save(); api.render(); };
   w.addEventListener('pointermove', move); w.addEventListener('pointerup', end); w.addEventListener('pointercancel', end);
+}
+
+
+// Жест на блоке в правке: смахнуть вбок — скрыть; удержать и перетащить — на другое место (у бока другого блока — рядом).
+// Вертикальная прокрутка остаётся за браузером (touch-action: pan-y), перетаскивание начинается после удержания.
+function blockGesture(e, blk, api, lay) {
+  if (e.button > 0 || !e.isPrimary) return;
+  const root = blk.closest('.lyedit') || blk.parentElement, id = blk.dataset.lb, pid = e.pointerId;
+  const x0 = e.clientX, y0 = e.clientY, st0 = root.scrollTop;
+  let mode = '', tm = 0, tgt = null, pos = '', lastX = x0, lastY = y0;
+  const done = () => { api.save(); api.render(); };
+  const others = () => [...root.querySelectorAll('.lyb.ed')].filter((b) => b !== blk);
+  const mark = () => { root.querySelectorAll('.lyt').forEach((b) => b.classList.remove('lyt', 'lyt-before', 'lyt-after', 'lyt-left', 'lyt-right')); if (tgt && pos) tgt.classList.add('lyt', 'lyt-' + pos); };
+  const pick = (x, y) => {
+    tgt = null; pos = '';
+    for (const b of others()) {
+      const r = b.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+      const alone = !b.parentElement.classList.contains('lyrow'), fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
+      tgt = b; pos = alone && fx < 0.22 ? 'left' : alone && fx > 0.78 ? 'right' : fy < 0.5 ? 'before' : 'after';
+      break;
+    }
+    mark();
+  };
+  const noScroll = (ev) => { if (mode === 'drag' && ev.cancelable) ev.preventDefault(); };
+  const place = (dx, dy) => { blk.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; };
+  let edge = 0;
+  const cleanup = () => {
+    clearTimeout(tm); clearInterval(edge);
+    blk.removeEventListener('pointermove', move); blk.removeEventListener('pointerup', up); blk.removeEventListener('pointercancel', up);
+    document.removeEventListener('touchmove', noScroll);
+    try { blk.releasePointerCapture(pid); } catch { /* уже */ }
+  };
+  const move = (ev) => {
+    if (ev.pointerId !== pid) return;
+    const dx = ev.clientX - x0, dy = ev.clientY - y0; lastX = ev.clientX; lastY = ev.clientY;
+    if (!mode) {
+      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.4) { mode = 'swipe'; clearTimeout(tm); blk.classList.add('lysw'); try { blk.setPointerCapture(pid); } catch { /* */ } }
+      else if (Math.hypot(dx, dy) > 10) clearTimeout(tm); // это прокрутка
+      else return;
+    }
+    if (mode === 'swipe') { place(dx, 0); blk.style.opacity = String(Math.max(0.25, 1 - Math.abs(dx) / (blk.offsetWidth || 1))); }
+    else if (mode === 'drag') { place(dx, dy + (root.scrollTop - st0)); pick(ev.clientX, ev.clientY); }
+  };
+  const up = (ev) => {
+    if (ev.pointerId !== pid) return;
+    const dx = ev.clientX - x0, was = mode;
+    cleanup(); blk.style.transform = ''; blk.style.opacity = ''; blk.classList.remove('lysw', 'lydrag');
+    if (ev.type === 'pointercancel') { mark(); if (was === 'drag') api.render(); return; }
+    if (was === 'swipe') {
+      if (Math.abs(dx) > (blk.offsetWidth || 1) * 0.33) {
+        const vis = orderOf(lay, api.ids).filter((i) => !lay.hidden.includes(i));
+        if (vis.length > 1) { lay.hidden = [...lay.hidden, id]; done(); return; }
+        toast(api.t('lay.lastOne'));
+      }
+    } else if (was === 'drag') {
+      const t = tgt, w = pos; tgt = null; pos = ''; mark();
+      if (t && w) {
+        const on = [...root.querySelectorAll('.lyb[data-lb]')].map((b) => b.dataset.lb);
+        if (moveTo(lay, orderOf(lay, api.ids).filter((i) => on.includes(i) || lay.hidden.includes(i)), id, t.dataset.lb, w)) { done(); return; }
+      }
+      api.render();
+    }
+  };
+  blk.addEventListener('pointermove', move); blk.addEventListener('pointerup', up); blk.addEventListener('pointercancel', up);
+  tm = setTimeout(() => {
+    if (mode) return;
+    mode = 'drag'; buzz(); blk.classList.add('lydrag'); try { blk.setPointerCapture(pid); } catch { /* */ }
+    document.addEventListener('touchmove', noScroll, { passive: false });
+    // у края окна список сам прокручивается
+    edge = setInterval(() => { const r = root.getBoundingClientRect(), d = lastY < r.top + 70 ? -14 : lastY > r.bottom - 70 ? 14 : 0; if (d) { root.scrollTop += d; place(lastX - x0, lastY - y0 + (root.scrollTop - st0)); pick(lastX, lastY); } }, 30);
+  }, 320);
 }
 
 // Правка экрана. root — корень экрана (на нём слушаются события); apiOrFn → { lay, ids, name(id), save(), render(), t, busy?() }.
@@ -129,17 +220,13 @@ export function bindLayout(root, apiOrFn, skip = '') {
     const api = A(), lay = normLay(api.lay);
     if (!EDIT.has(lay)) return;
     const b = e.target.closest && e.target.closest('[data-ly]');
-    if (!b || !root.contains(b)) return;
+    if (!b || !root.contains(b)) { if (e.target.closest && e.target.closest('.lyb.ed')) { e.preventDefault(); e.stopPropagation(); } return; } // инструмент в правке не нажимается
+    if (b.dataset.ly === 'grip' || b.dataset.ly === 'width') { e.preventDefault(); e.stopPropagation(); return; }
     e.preventDefault(); e.stopPropagation();
-    const k = b.dataset.ly, blk = b.closest('.lyb'), id = blk ? blk.dataset.lb : b.dataset.id;
+    const k = b.dataset.ly, id = b.dataset.id;
     const done = () => { api.save(); api.render(); };
     if (k === 'done') { leave(api, lay); return; }
     if (k === 'reset') { lay.order = []; lay.hidden = []; lay.size = {}; lay.pair = {}; done(); return; }
-    // двигаем и ставим в пару только те блоки, что сейчас на экране (пустые, без содержимого, не считаются — ↓ всегда сдвигает видимо)
-    const shownIds = () => { const on = [...root.querySelectorAll('.lyb[data-lb]')].map((e) => e.dataset.lb); return orderOf(lay, api.ids).filter((i) => on.includes(i) || lay.hidden.includes(i)); };
-    if (k === 'pair') { if (togglePair(lay, shownIds(), id)) done(); return; }
-    if (k === 'up' || k === 'down') { if (moveBlock(lay, shownIds(), id, k === 'up' ? -1 : 1)) done(); return; }
-    if (k === 'hide') { const vis = orderOf(lay, api.ids).filter((i) => !lay.hidden.includes(i)); if (vis.length > 1) { lay.hidden = [...lay.hidden, id]; done(); } return; }
     if (k === 'show') { lay.hidden = lay.hidden.filter((i) => i !== id); done(); }
   }, true);
   // размер — тянуть планку внизу блока; блок следует за пальцем (высота подгоняется несколькими шагами), значение сохраняется на отпускании
@@ -149,7 +236,7 @@ export function bindLayout(root, apiOrFn, skip = '') {
     const w = e.target.closest && e.target.closest('.lyv');
     if (w && root.contains(w)) { dragWidth(e, w, api, lay); return; }
     const g = e.target.closest && e.target.closest('.lyh');
-    if (!g || !root.contains(g)) return;
+    if (!g || !root.contains(g)) { const blk = e.target.closest && e.target.closest('.lyb.ed'); if (blk && root.contains(blk)) { e.stopPropagation(); blockGesture(e, blk, api, lay); } return; } // ничего из экрана не звучит и не нажимается
     e.preventDefault(); e.stopPropagation();
     const blk = g.closest('.lyb'), inner = blk.querySelector(':scope > .lyi'), id = blk.dataset.lb;
     // граница между блоками, как разделитель окон (слово автора 26.11.2026): тянем вниз — этот блок растёт, следующий под ним сужается на столько же,
