@@ -979,3 +979,8 @@ html.desk .hstart .hfree{min-height:64px}
 .aitag{text-transform:uppercase;display:inline-flex;align-items:center;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:9px;background:color-mix(in srgb,var(--tint) 18%,transparent);color:var(--tint-text,var(--tint));margin:0 6px;white-space:nowrap}
 .ainote{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;margin:6px 0;border-radius:12px;background:color-mix(in srgb,var(--tint) 7%,transparent);font-size:13px;color:var(--l2)}
 .ainote span:not(.aitag){min-width:0}
+/* чат: строка «что уйдёт в запрос» — одной мелкой строкой, ссылка не крупнее текста; в альбомной ориентации — без вводного абзаца, чтобы хватало места ленте */
+.aictx .link{font-size:inherit;min-height:0;padding:0;display:inline}
+@media (max-height:520px){.aichat .aihint{display:none}.aichips2{padding-bottom:4px}.aichat .aiin .aitools{gap:4px}}
+/* альбомная ориентация: кнопки копирования, вставки и вложения — в одну строку с полем ввода (ширины хватает, высота дорога) */
+@media (orientation:landscape) and (max-height:520px){.aichat.studio .aiin{flex-wrap:nowrap}.aichat.studio .aiin .aitools{flex:none;order:0;flex-direction:row}}

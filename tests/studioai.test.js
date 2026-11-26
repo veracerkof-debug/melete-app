@@ -105,7 +105,7 @@ describe('блок melete-studio в ответе', () => {
   });
   it('карточка описывает партии и замечания', () => {
     const lines = describeP(extract(REPLY, clean({ access: { studio: 'write' } })).proposals[0], [], []);
-    expect(lines[0]).toContain('Ударные'); expect(lines[0]).toContain('kick'); expect(lines[1]).toContain('Бас');
+    expect(lines[0]).toContain('Ударные'); expect(lines[0]).toContain('бочка'); expect(lines[1]).toContain('Бас');
     expect(describeStudioOps([{ op: 'replace', clip: 'c1', loop: { fam: 'bass', bars: 1, ev: [[[0, 2, 'r']]] } }])[0]).toContain('заменить клип c1');
   });
 });

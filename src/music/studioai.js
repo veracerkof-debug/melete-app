@@ -359,7 +359,8 @@ export function describeStudioOps(ops) {
     if (o.op === 'track') return 'Дорожка ' + o.id + ': ' + Object.entries(o.set).map(([k, v]) => ({ vol: 'громкость', pan: 'панорама', mute: 'выкл', solo: 'соло', inst: 'звук', name: 'название' }[k] || k) + ' → ' + v).join(', ');
     if (o.op === 'clip') return 'Клип ' + o.id + ': ' + (o.act === 'remove' ? 'убрать' : o.act === 'copy' ? 'копия ×' + o.count + ' с такта ' + o.at : Object.entries(o.set).map(([k, v]) => ({ at: 'с такта', len: 'тактов', mute: 'выкл', loop: 'повтор', gain: 'громкость', semi: 'сдвиг' }[k] || k) + ' → ' + v).join(', '));
     const l = o.loop || o.spec, where = o.op === 'replace' ? 'заменить клип ' + o.clip : 'с такта ' + o.at;
-    const body = l.fam === 'drums' ? Object.entries(l.lanes).map(([k, rows]) => k + ' ' + rows.reduce((n, r) => n + (r.match(/x/g) || []).length, 0)).join(', ')
+    const LANE = { kick: 'бочка', snare: 'малый', hat: 'хэт', ohat: 'открытый хэт', clap: 'хлопок' };
+    const body = l.fam === 'drums' ? Object.entries(l.lanes).map(([k, rows]) => (LANE[k] || k) + ' ' + rows.reduce((n, r) => n + (r.match(/x/g) || []).length, 0)).join(', ')
       : l.fam === 'chords' ? l.chords.map((c) => chordName(c.pc, c.type) + (c.bars !== 1 ? '×' + c.bars : '')).join(' ')
       : l.fam === 'notes' ? l.notes.length + ' нот (' + (l.inst || 'piano') + ')'
       : l.fam === 'pads' ? (l.voice || 'пэд') : (l.ev || []).reduce((n, b) => n + b.length, 0) + ' нот';

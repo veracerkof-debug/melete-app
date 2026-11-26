@@ -29,7 +29,7 @@ test('студия: ИИ без своего API — копировать зап
   if (process.env.SHOTDIR) await page.screenshot({ path: process.env.SHOTDIR + '/studio-bar.png' });
   await page.locator('.tview [data-x="ai"]').click(); await page.waitForTimeout(500);
   // сначала — разрешение (один раз)
-  await expect(page.locator('.alert, .ask').first()).toContainText('проект студии');
+  await expect(page.locator('.alert, .ask').first()).toContainText('проекте студии');
   await page.getByRole('button', { name: 'Разрешить' }).click(); await page.waitForTimeout(600);
   await expect(page.locator('.aichat')).toBeVisible();
   await expect(page.locator('[data-ai="chip"]').first()).toBeVisible();
@@ -39,7 +39,7 @@ test('студия: ИИ без своего API — копировать зап
   await page.locator('[data-ai="chip"]').first().click();
   await page.locator('[data-ai="copyprompt"]').click(); await page.waitForTimeout(400);
   const clip = await page.evaluate(() => navigator.clipboard.readText().catch(() => ''));
-  if (clip) { expect(clip).toContain('melete-studio'); expect(clip).toContain('СТУДИЯ'); expect(clip).toContain('рок-бит'); expect(clip).not.toContain('sk-'); }
+  if (clip) { expect(clip).toContain('melete-studio'); expect(clip).toContain('СТУДИЯ'); expect(clip).toContain('Рок-ритм'); expect(clip).not.toContain('sk-'); }
   // вставка ответа любой нейросети → предложение с карточкой
   await page.locator('[data-ai="paste"]').click(); await page.waitForTimeout(400);
   await page.locator('[data-pta]').fill(REPLY);
@@ -60,7 +60,7 @@ test('студия: ИИ без своего API — копировать зап
   await page.locator('[data-ai="paste"]').click(); await page.waitForTimeout(300);
   await page.locator('[data-pta]').fill('Просто совет: играйте тише.');
   await page.locator('[data-pgo]').click(); await page.waitForTimeout(400);
-  await expect(page.locator('.toast, #toast').last()).toContainText('нет блока');
+  await expect(page.locator('.toast, #toast').last()).toContainText('не найден блок');
   expect(errors).toEqual([]);
 });
 
