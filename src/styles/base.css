@@ -122,3 +122,6 @@ html.pip .tview, html.pip .session { inset: 0 !important; border-radius: 0 !impo
 .hcsi svg{width:24px;height:24px;fill:none;stroke:var(--hc,var(--tint));stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .hcsi i{position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--hc,var(--tint));color:var(--on-tint,white);font:700 11px/18px var(--font);font-style:normal;text-align:center}
 .hcst{font-size:13px;line-height:1.35;color:var(--ink)}
+
+/* Экраны инструментов не двигаются вбок: лишнее по ширине (шрифт шире, чем на проверке) обрезается, а не растягивает экран */
+.tview { overflow-x: clip; }
