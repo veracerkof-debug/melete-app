@@ -254,12 +254,30 @@ export function openStage(app, evId, i = 0) {
   };
   const plSeekTo = (frac) => { const el = S.pl && S.pl.el; if (el && el.duration > 0) { el.currentTime = Math.max(0, Math.min(1, frac)) * el.duration; if (S.pl) S.pl.ended = false; } };
   // тональность записи (по разбору) — рядом с названием: на сцене это иногда важнее всего
-  const fileKey = (id) => { const r = id && app.files ? app.files.get(id) : null; return r && r.ana && r.ana.pc != null ? recKey(r.ana.pc, !!r.ana.minor) : ''; };
+  const fileKey = (id) => { const r = id && app.files ? app.files.get(id) : null; return r && r.ana && r.ana.pc != null ? recKey(r.ana.pc, !!r.ana.minor) : r && r.ukey ? r.ukey : ''; };
   const plHTML = () => {
     const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
     return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '"><button class="sgic" data-sgpl="pp" aria-pressed="' + playing + '" aria-label="' + esc(t(playing ? 'stage.plPause' : 'stage.plPlay')) + '">' + (playing ? '❚❚' : I.play) + '</button>' +
-      '<div class="sgplseek" data-sgplseek role="slider" aria-label="' + esc(t('stage.seek')) + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + (d ? Math.round(el.currentTime / d * 1000) / 10 : 0) + '%"></i><span>' + esc(S.pl ? S.pl.name : t('stage.plPick')) + '</span>' + (S.pl && fileKey(S.pl.id) ? '<b class="sgtrk num">' + esc(fileKey(S.pl.id)) + '</b>' : '') + '<em class="num">' + (el ? fmtDur(el.currentTime || 0) + (d ? ' / ' + fmtDur(d) : '') : '') + '</em></div>' +
+      '<div class="sgplseek" data-sgplseek role="slider" aria-label="' + esc(t('stage.seek')) + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + (d ? Math.round(el.currentTime / d * 1000) / 10 : 0) + '%"></i><span>' + esc(S.pl ? S.pl.name : t('stage.plPick')) + '</span><em class="num">' + (el ? fmtDur(el.currentTime || 0) + (d ? ' / ' + fmtDur(d) : '') : '') + '</em></div>' +
+      // тональность записи: по разбору компьютера или вручную (касание — выбрать); нет ни того ни другого — «—»
+      (S.pl ? '<button class="sgic txt sgtrk num" data-sgpl="key" aria-label="' + esc(t('stage.trackKey')) + '">' + esc(fileKey(S.pl.id) || '—') + '</button>' : '') +
       '<button class="sgic txt" data-sgpl="pick" aria-label="' + esc(t('stage.player')) + '">♫</button></div>';
+  };
+  const keySheet = (id) => {
+    const r = id && app.files ? app.files.get(id) : null; if (!r) return;
+    const roots = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+    const cur = () => r.ukey || '', minor = () => /m$/.test(cur());
+    const body = () => snav(t('stage.trackKey'), { right: '<button class="link b r" data-close>' + esc(t('ui.done')) + '</button>' }) +
+      '<div class="group"><div class="cellcol"><div class="shchips" role="group">' + roots.map((n) => { const v = n + (minor() ? 'm' : ''); return '<button class="sgchip' + (cur() === v ? ' on' : '') + '" data-uk="' + esc(v) + '" aria-pressed="' + (cur() === v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="cellcol"><div class="shchips"><button class="sgchip' + (!minor() ? ' on' : '') + '" data-ukm="0">' + esc(t('stage.keyMaj')) + '</button><button class="sgchip' + (minor() ? ' on' : '') + '" data-ukm="1">' + esc(t('stage.keyMin')) + '</button></div></div></div>' +
+      '<div class="group" style="margin-top:12px"><button class="cell act" data-ukclear><span class="grow">' + esc(t('stage.keyClear')) + '</span></button></div>';
+    const save = () => { Promise.resolve(app.files.save(r)).catch(() => {}); };
+    sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+      const k = e.target.closest('[data-uk]'), m = e.target.closest('[data-ukm]');
+      if (k) { r.ukey = k.dataset.uk; save(); sh.update(); }
+      else if (m) { const base = cur().replace(/m$/, ''); if (base) { r.ukey = base + (m.dataset.ukm === '1' ? 'm' : ''); save(); } else r.ukey = ''; sh.update(); }
+      else if (e.target.closest('[data-ukclear]')) { delete r.ukey; save(); sh.update(); }
+    }), { onClose: () => render() });
   };
   const plPaint = () => {
     const bar = S.el && S.el.querySelector('.sgplseek'), el = S.pl && S.pl.el; if (!bar || !el) return;
@@ -681,9 +699,9 @@ export function openStage(app, evId, i = 0) {
         '<button class="sgbpm' + (run ? ' on' : '') + '" data-sgmetro aria-pressed="' + run + '" aria-label="' + esc(t('stage.metroBtn')) + '"><b class="num">' + bpm + '</b><small>bpm</small></button>' +
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
         '<button class="sgic txt tapb" data-sg="tap" aria-label="' + esc(t('stage.tapTempo')) + '">TAP</button></div>' },
-      { id: 'chips', html: '<div class="sgchips">' + 
+      { id: 'chips', html: (() => { const inn = 
         chip('track', !!S.track, '♪ ' + (trName || t('stage.track')) + (fileKey(it && it.track) ? ' · ' + fileKey(it.track) : ''), !!(it && it.track)) + chip('tab', S.view === 'tab', t('stage.tabs'), tabsOf().length > 0) +
-        (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : '') + '</div>' },
+        (next ? '<span class="sgnext">' + esc(t('stage.next', { title: next.title })) + '</span>' : ''); return inn ? '<div class="sgchips">' + inn + '</div>' : ''; })() },
       { id: 'keys', html: pk.keys },
       { id: 'pads', html: pk.pads },
       // «играть/стоп» — справа (слово автора 26.11.2026: правша), громкости — слева и крупнее
@@ -749,7 +767,7 @@ export function openStage(app, evId, i = 0) {
     } else if ((b = e.target.closest('[data-sgt]'))) toggle(b.dataset.sgt);
     else if ((b = e.target.closest('[data-sgbank]'))) { sd().bank = b.dataset.sgbank; S.bank = b.dataset.sgbank; app.saveDevice(); render(); }
     else if ((b = e.target.closest('[data-sgtab]'))) { S.scoreId = b.dataset.sgtab; S.scoreKind = null; render(); }
-    else if ((b = e.target.closest('[data-sgpl]'))) { if (b.dataset.sgpl === 'pp') { plToggle(); plPaint(); } else plSheet(); }
+    else if ((b = e.target.closest('[data-sgpl]'))) { if (b.dataset.sgpl === 'pp') { plToggle(); plPaint(); } else if (b.dataset.sgpl === 'key') keySheet(S.pl && S.pl.id); else plSheet(); }
     else if ((b = e.target.closest('[data-sgreel]'))) { const j = +b.dataset.sgreel; if (j !== S.i) goTo(j); }
     else if ((b = e.target.closest('[data-sgrow]'))) rowTap(+b.dataset.sgrow);
     else if ((b = e.target.closest('[data-sgbpm]'))) setBpm(curBpm() + +b.dataset.sgbpm);
