@@ -89,7 +89,7 @@ button { cursor: pointer; border: 0; background: none; padding: 0; }
 .hclist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:15px;line-height:1.4}
 .hctip{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--fill);font-size:14px;line-height:1.4}
 .helpcard .abtns button:disabled{opacity:.35}
-.hcnever{display:flex;align-items:center;gap:10px;margin:14px 0 0;min-height:44px;padding:6px 12px;border-radius:12px;border:2px solid var(--tint);background:color-mix(in srgb,var(--tint) 16%,transparent);font-size:15px;font-weight:600;color:var(--ink);cursor:pointer}
+.hcnever{display:flex;align-items:center;gap:10px;margin:14px 0 0;min-height:44px;padding:6px 12px;border-radius:12px;border:2px solid var(--tint);background:color-mix(in srgb,var(--tint) 22%,transparent);font-size:15px;font-weight:600;color:var(--ink);cursor:pointer}
 .hcnever input{width:24px;height:24px;margin:0;accent-color:var(--tint);flex:none}
 .hcnever:has(input:checked){background:color-mix(in srgb,var(--tint) 30%,transparent)}
 

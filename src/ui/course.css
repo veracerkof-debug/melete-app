@@ -3,7 +3,7 @@
 /* полоска — только сам тренажёр: переключатель режимов занимал половину окна (выбор — в окне побольше) */
 .pane.strip .crsmode{display:none}
 .crs{display:flex;flex-direction:column;gap:10px}
-.crsplace{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:color-mix(in srgb,var(--tint) 10%,var(--cell));box-shadow:inset 0 0 0 1px var(--sep)}
+.crsplace{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:20px;background:color-mix(in srgb,var(--tint) 22%,var(--cell));box-shadow:inset 0 0 0 1px var(--sep)}
 .crsplace span{font-size:14px;color:var(--l2)}
 .crsrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
 .crsrow .btn{min-height:44px;font-size:15px;padding:6px 8px;line-height:1.2}
@@ -24,7 +24,7 @@
 .crsnum{width:24px;height:24px;border-radius:12px;background:var(--fill2,var(--fill));display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .crsbook svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 .crsl{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 10px;border-radius:12px;text-align:left;background:none}
-.crsl.cur{background:color-mix(in srgb,var(--tint) 12%,transparent)}
+.crsl.cur{background:color-mix(in srgb,var(--tint) 22%,transparent)}
 .crsmk{width:26px;height:26px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--fill);font-size:12px}
 .crsmk i{font-style:normal;color:var(--l2)}
 .crsl.ok .crsmk{background:var(--ok)}

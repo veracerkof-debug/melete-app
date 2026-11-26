@@ -239,7 +239,7 @@
 .shpick .shpt b{font-size:var(--fs-6)}
 .shpick .shpt small{flex:none;text-align:left;font-size:var(--fs-1);color:var(--l2)}
 .shpick .shrt{flex:none;font-size:var(--fs-1);font-variant-numeric:tabular-nums;color:var(--l2);text-align:right;max-width:30%}
-.shpick.cur{background:color-mix(in srgb,var(--tint) 14%,transparent);border-color:var(--tint)}
+.shpick.cur{background:color-mix(in srgb,var(--tint) 22%,transparent);border-color:var(--tint)}
 .shpick.cur .shrt,.shpick.playing .shrt{color:var(--tint-text);font-weight:600}
 .shpick.nx{background:transparent;border:1.5px dashed var(--tint)}
 .shpick.done{opacity:.5;text-decoration:none}
@@ -258,3 +258,23 @@
 /* «Звуки» (слово автора 26.11.2026): пэды фона крупнее — четыре в ряд; ударных по умолчанию нет, место отдано своим звукам */
 .shbedkeys{grid-template-columns:repeat(4,1fr)}
 .shdk{min-height:calc(58px * var(--lz, 1))}
+
+/* «Звуки» как в макете (слово автора 26.11.2026): светлые плитки с видимой границей, цвет пада — в рамке и лёгкой заливке; играющий — заливка плотнее;
+   пэды фиксированной высоты (не растягиваются на весь экран), пустая ячейка — одна «+» */
+.shbedkeys{gap:6px}
+.shdk{background:var(--cell);border:1px solid var(--l3);border-radius:13px;min-height:calc(56px * var(--lz, 1))}
+.shdk::before{display:none}
+.shdk:active{background:var(--fill2)}
+.shdk.cur{border-color:var(--tint);box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 35%,transparent)}
+.shdk.on{background:var(--tint);color:var(--on-tint);border-color:var(--tint)}
+.shpads{gap:8px;padding:0 10px}
+.shpads:not(.drm){flex:none;grid-template-rows:none;grid-auto-rows:calc(88px * var(--lz, 1))}
+.shpad{border-radius:13px;padding:8px 10px;background:color-mix(in srgb,var(--pc) 16%,var(--cell));border:1px solid color-mix(in srgb,var(--pc) 55%,transparent)}
+.shpad b{color:var(--ink)}
+.shpad.play{background:color-mix(in srgb,var(--pc) 38%,var(--cell));border:1.5px solid var(--pc);color:var(--ink)}
+.shpad.play span{color:var(--l2)}
+.shpad.empty{background:transparent;border:1.5px dashed var(--l3);color:var(--l2)}
+.shdock{gap:8px;padding:8px 10px 0}
+.shstop{border-radius:13px;border:1px solid var(--l3);background:var(--cell)}
+.shbanks button{border:1px solid var(--l3)}
+.shbanks button.on{border-color:var(--ink)}

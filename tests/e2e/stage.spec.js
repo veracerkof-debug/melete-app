@@ -29,5 +29,10 @@ test('автопрокрутка, педаль, ночь', async ({ page, melete
   await melete.hold('.sgsongs');
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /Ночь|Night|Tun/.test(x.textContent)); b && b.click(); }); await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.querySelector('.stage')?.classList.contains('night'))).toBe(true);
+  // «Ночь» не прячет управление: клавиши, «Арп», «Глайд», темп и ▶ остаются на месте (слово автора 26.11.2026)
+  await expect(page.locator('.stage.night .sgkey').first()).toBeVisible();
+  await expect(page.locator('.stage.night [data-sgap="arp"]')).toBeVisible();
+  await expect(page.locator('.stage.night .sgtempo [data-sgbpm]').first()).toBeVisible();
+  await expect(page.locator('.stage.night .sgbtn.main')).toBeVisible();
   expect(errors).toEqual([]);
 });

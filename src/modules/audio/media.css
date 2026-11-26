@@ -98,7 +98,7 @@
 .chbn{align-self:center;font-size:11px;color:var(--l2);text-align:center}
 .chc{width:100%;height:52px;min-height:52px;border-radius:9px;background:var(--fill);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;padding:0 4px;overflow:hidden}
 .chc b{white-space:nowrap}
-.chbar.on .chc{background:color-mix(in srgb,var(--tint) 16%,var(--fill))}
+.chbar.on .chc{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}
 .chc.on{background:var(--tint);color:var(--on-tint)}
 .pchords.flat{flex-direction:row;flex-wrap:wrap;align-content:flex-start}
 .pchords.flat .chc{flex-direction:column;gap:2px;min-width:64px;font-size:17px}
@@ -128,7 +128,7 @@
 .chbn{position:absolute;left:6px;top:3px;font-size:10px;color:var(--l2)}
 .chps{position:absolute;inset:14px 4px 6px;display:flex;gap:2px}
 .chps i{font-style:normal;display:flex;align-items:center;justify-content:center;min-width:0;border-radius:6px;font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
-.chps i.fn-t{background:color-mix(in srgb,var(--tint) 16%,transparent)}
+.chps i.fn-t{background:color-mix(in srgb,var(--tint) 22%,transparent)}
 .chps i.fn-s{background:color-mix(in srgb,var(--ok) 16%,transparent)}
 .chps i.fn-d{background:color-mix(in srgb,#A75750 16%,transparent)}
 .chps i.rep{color:var(--l2);font-weight:500}

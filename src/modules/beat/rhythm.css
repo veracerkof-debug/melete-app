@@ -41,7 +41,7 @@
 /* площадка ударов */
 .rypad{flex:1;min-height:120px;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
   background:color-mix(in srgb,#D2693C 8%,var(--fill));touch-action:none;user-select:none;-webkit-user-select:none;transition:background .25s}
-.rypad[data-ph="count"]{background:color-mix(in srgb,var(--tint) 10%,var(--fill))}
+.rypad[data-ph="count"]{background:color-mix(in srgb,var(--tint) 22%,var(--fill))}
 .rypad[data-ph="listen"]{background:color-mix(in srgb,#567198 14%,var(--fill))}
 .rypad[data-ph="play"]{background:color-mix(in srgb,#D2693C 20%,var(--fill))}
 .rypad[data-ph="silent"]{background:color-mix(in srgb,#3E8C8C 18%,var(--fill))}

@@ -53,9 +53,11 @@
 /* «Ночь»: чёрный фон, крупнее, только три кнопки */
 .stage.night{--bg:#000;--ink:#fff;--l2:#8D8D93;--l3:#48484A;--tint:#BC9361;--tint-text:#FFD97A;--on-tint:#1A0E00;--red:#B96E65;background:var(--bg);color:var(--ink)}
 .stage.night .sgtext{font-size:1.3em}
-.stage.night .sgchips,.stage.night .sgic.txt,.stage.night .sgnext{display:none}
+/* «Ночь» — чёрный фон и крупнее; кнопки, клавиши и темп не прячутся (слово автора 26.11.2026: пропадали «Арп», «Глайд», клавиши, ▶ не видно) */
 .stage.night .sgtext .chd{color:#FFD97A}
-.stage.night .sgbtn{background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.stage.night .sgbtn:not(.main){background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.stage.night .sgbtn.main{background:var(--tint);color:var(--on-tint)}
+.stage.night .sgbtn.main.on{background:var(--red);color:var(--bg)}
 
 /* ---- «Сцена — один экран» (слово автора 22.11.2026): сет-лист, текст, темп, барабанные пэды с залом и эхом, минусовка, замок ---- */
 .stage{--gold:rgb(232 194 122);--coral:rgb(242 140 107)}
@@ -65,7 +67,7 @@
 .sgtime{position:absolute;right:10px;top:0;line-height:22px;font-size:12px;color:color-mix(in srgb,var(--ink) 80%,transparent);pointer-events:none}
 .sgtempo{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 10px 0}
 .sgtempo .sgic{width:48px;height:44px}
-.sgbpm{min-width:120px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--tint) 14%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.sgbpm{min-width:120px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--tint) 22%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
 .sgbpm b{font-size:24px;font-weight:700;color:var(--tint-text)}
 .sgbpm small{font-size:11px;color:color-mix(in srgb,var(--ink) 60%,transparent);letter-spacing:.03em}
 .sgpads{flex:none;padding:4px 10px 0}
@@ -93,7 +95,6 @@
   .sgseek,.sgtempo,.sgmain{grid-column:1}
   .stage:not(.pads) .sgtempo,.stage:not(.pads) .sgseek{grid-column:1}
 }
-.stage.night .sgtempo .sgic,.stage.night .sgseek{display:none}
 
 /* ---- сцена: метроном одной полосой, клавиши пэда, список, цвета падов из «Звуков» (слово автора 22.11.2026) ---- */
 .sgbpm{touch-action:none;user-select:none;-webkit-user-select:none;border:1.5px solid transparent}
@@ -117,7 +118,6 @@
 .sgrow .sgm{flex:none;font-size:14px;color:var(--tint-text);font-variant-numeric:tabular-nums}
 .sgrow .sgn{width:22px;text-align:center;color:color-mix(in srgb,var(--ink) 50%,transparent)}
 .sgbig.free{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:16px;color:color-mix(in srgb,var(--ink) 70%,transparent);text-align:center}
-.stage.night .sgkeys{display:none}
 
 /* ---- панель табов и нот на сцене ---- */
 .sgscore{display:flex;flex-direction:column;gap:6px;padding:6px 8px}
@@ -136,7 +136,7 @@
 .sgst{flex:1;min-width:0;display:flex;flex-direction:column}
 .sgst b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sgst small{font-size:var(--fs-1);color:color-mix(in srgb,var(--ink) 70%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sgsong.cur{opacity:1;color:var(--tint-text);background:color-mix(in srgb,var(--tint) 14%,transparent);border-radius:var(--r-2)}
+.sgsong.cur{opacity:1;color:var(--tint-text);background:color-mix(in srgb,var(--tint) 22%,transparent);border-radius:var(--r-2)}
 .sgsong.cur .sgst b{font-weight:700}
 .sgsong.cur .sgst small{color:inherit}
 .sgsong:first-child{margin-top:var(--sp-5)}.sgsong:last-child{margin-bottom:var(--sp-5)}

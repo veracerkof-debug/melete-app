@@ -58,7 +58,7 @@
 .cgh{margin-top:14px}
 .hnext{margin-bottom:4px}
 .cal0{padding:32px 12px}
-.cal0i{width:64px;height:64px;border-radius:20px;background:color-mix(in srgb,var(--tint) 14%,var(--cell));color:var(--tint-text);display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.cal0i{width:64px;height:64px;border-radius:20px;background:color-mix(in srgb,var(--tint) 22%,var(--cell));color:var(--tint-text);display:flex;align-items:center;justify-content:center;margin-bottom:6px}
 .cal0i svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 
 /* неделя */

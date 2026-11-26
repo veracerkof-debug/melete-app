@@ -6,7 +6,7 @@
 .dtile{position:relative;background:color-mix(in srgb,var(--tint) 7%,var(--cell));color:var(--ink);border-radius:4px;font-size:clamp(30px,6.4vh,52px);font-weight:500;letter-spacing:-.02em;
   display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.05);
   transition:transform .14s ease,background .2s,color .2s,box-shadow .3s}
-.dtile.sh{background:color-mix(in srgb,var(--tint) 15%,var(--cell));color:color-mix(in srgb,var(--ink) 78%,var(--bg))}
+.dtile.sh{background:color-mix(in srgb,var(--tint) 22%,var(--cell));color:color-mix(in srgb,var(--ink) 78%,var(--bg))}
 .dtile .acc{font-size:.6em;margin-left:1px;vertical-align:.3em}
 .dtile{flex-direction:column;gap:0}
 .dtile .dlab{display:flex;flex-direction:column;align-items:center;line-height:1.05;pointer-events:none}
@@ -81,12 +81,12 @@
 .dcirc{height:min(72vh,680px)}
 .pane .dcirc{flex:1;height:auto;min-height:0}
 .dseg path{stroke:var(--bg);stroke-width:1.4;stroke-linejoin:round}
-.dseg.maj path{fill:color-mix(in srgb,var(--tint) 10%,var(--cell))}
+.dseg.maj path{fill:color-mix(in srgb,var(--tint) 22%,var(--cell))}
 .dseg.min path{fill:color-mix(in srgb,var(--tint) 6%,var(--cell))}
 .dseg.dim path{fill:color-mix(in srgb,var(--tint) 3%,var(--cell))}
 .dseg.dia.maj path{fill:color-mix(in srgb,var(--tint) 30%,var(--cell))}
 .dseg.dia.min path{fill:color-mix(in srgb,var(--tint) 22%,var(--cell))}
-.dseg.dia.dim path{fill:color-mix(in srgb,var(--tint) 16%,var(--cell))}
+.dseg.dia.dim path{fill:color-mix(in srgb,var(--tint) 22%,var(--cell))}
 .dseg text.deg{font-weight:700;fill:var(--tint-text)}
 .dseg.dim:not(.dia) text{fill:var(--l2)}
 .dseg text,.dctr text{text-anchor:middle;dominant-baseline:central;fill:var(--ink);font-weight:600;pointer-events:none}
@@ -96,7 +96,7 @@
 @keyframes dsegb{50%{filter:brightness(1.1) drop-shadow(0 0 5px color-mix(in srgb,var(--tint) 60%,transparent))}}
 .dctr circle{fill:var(--cell);stroke:color-mix(in srgb,var(--tint) 30%,var(--bg));stroke-width:1.2}
 .dctr text{font-size:12px;fill:var(--l2)}
-.dctr.on circle{fill:color-mix(in srgb,var(--tint) 16%,var(--cell))}
+.dctr.on circle{fill:color-mix(in srgb,var(--tint) 22%,var(--cell))}
 .dctr.on text{fill:var(--tint-text);font-size:13px}
 @media (prefers-reduced-motion:reduce){.dseg.on path{animation:none}}
 /* низкая полоска (альбомный телефон, окна стопкой): двенадцать тонов в один ряд — второй ряд не срезан */

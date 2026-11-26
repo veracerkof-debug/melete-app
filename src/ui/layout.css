@@ -16,7 +16,7 @@
 .lyb.ed.lyg{flex:1 1 auto;min-height:0}
 .lyb.ed>.lyi{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;pointer-events:none;opacity:.32;filter:blur(2px) saturate(.5);overflow:hidden}
 .lyn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 16px;font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:var(--ink);pointer-events:none;z-index:2}
-.lyb.ed.lydrag{z-index:8;opacity:.92;box-shadow:0 10px 30px rgba(0,0,0,.35);border-radius:10px;background:color-mix(in srgb,var(--tint) 14%,var(--bg))}
+.lyb.ed.lydrag{z-index:8;opacity:.92;box-shadow:0 10px 30px rgba(0,0,0,.35);border-radius:10px;background:color-mix(in srgb,var(--tint) 22%,var(--bg))}
 /* граница под блоком — ручка размера: линия во всю ширину и «ушко» посередине */
 .lyh{position:absolute;left:0;right:0;bottom:-13px;height:26px;display:grid;place-items:center;touch-action:none;cursor:ns-resize;z-index:3}
 .lyh i{width:54px;height:6px;border-radius:3px;background:var(--tint);box-shadow:0 1px 5px rgba(0,0,0,.3)}

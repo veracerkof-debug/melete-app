@@ -100,7 +100,7 @@
 .lvkey{position:relative;flex:1;min-width:0;min-height:68px;border-radius:12px;background:var(--cell);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:none}
 .lvkey b{font-size:16px;font-weight:700}
 .lvkey small{font-size:11px;color:var(--l2)}
-.lvkey.tn{background:color-mix(in srgb,var(--tint) 16%,var(--cell))}
+.lvkey.tn{background:color-mix(in srgb,var(--tint) 22%,var(--cell))}
 .lvkey.dn{background:color-mix(in srgb,var(--tint) 30%,var(--cell))}
 .lvkey[data-sw]:not([data-sw=""])::before{content:attr(data-sw);position:absolute;top:2px;font-size:13px;font-weight:700;color:var(--tint-text)}
 .lvk:active{filter:brightness(.94)}

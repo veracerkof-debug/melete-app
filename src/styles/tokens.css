@@ -4,7 +4,7 @@
    приглушённые (settings.js: CALM). */
 :root {
   --bg: #F3F2EE; --cell: #FFFFFF; --ink: #161514; --l2: #66635D; --l3: #C6C3BC;
-  --sep: rgba(60,55,45,.15); --fill: rgba(120,115,105,.12); --fill2: rgba(120,115,105,.2);
+  --sep: rgba(60,55,45,.15); --fill: rgba(120,115,105,.17); --fill2: rgba(120,115,105,.26);
   --ok: #5F8568; --tint: #946B3E; --tint-text: #6F5434; --on-tint: #FFFFFF; --red: #A75750; --bar: rgba(248,247,243,.84);
   --gold: #A87A00; --gold-bg: rgba(212,160,23,.14); /* строгие часы */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
@@ -37,14 +37,14 @@
 
 :root[data-theme="paper"] {
   --bg: #F4EFE6; --cell: #FBF8F2; --ink: #2B2620; --l2: #665D51; --l3: #C9BFB1;
-  --sep: rgba(90,70,40,.16); --fill: rgba(120,95,60,.10); --fill2: rgba(120,95,60,.18); --bar: rgba(244,239,230,.85);
+  --sep: rgba(90,70,40,.16); --fill: rgba(120,95,60,.15); --fill2: rgba(120,95,60,.24); --bar: rgba(244,239,230,.85);
   color-scheme: light;
 }
 
 :root[data-theme="oled"] {
   --ws-tone: color-mix(in srgb, var(--fill) 70%, transparent);
   --bg: #000; --cell: #0E0E10; --ink: #fff; --l2: #8D8D93; --l3: #3A3A3C;
-  --sep: rgba(84,84,88,.45); --fill: rgba(118,118,128,.18); --fill2: rgba(118,118,128,.28);
+  --sep: rgba(84,84,88,.45); --fill: rgba(118,118,128,.22); --fill2: rgba(118,118,128,.32);
   --ok: #6FA37B; --tint: #BC9361; --tint-text: #BC9361; --on-tint: #1A0E00; --red: #B96E65; --bar: rgba(0,0,0,.85);
   --gold: #FFD43B; --gold-bg: rgba(255,212,59,.16);
   color-scheme: dark;
