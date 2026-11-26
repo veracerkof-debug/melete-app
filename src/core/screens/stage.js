@@ -15,7 +15,7 @@ import { lyricsHTML } from '../../music/lyrics.js';
 import { keyLabel, shiftKey, parseNote } from '../../music/transpose.js';
 import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX, capoClamp, WORK, workEvent, toggleWorkSong, tapTempo } from '../stage.js';
 import { getContext } from '../../audio/context.js';
-import { normalizeArp } from '../../audio/arp.js';
+import { normalizeArp, STYLES as ARP_STYLES, RATES as ARP_RATES } from '../../audio/arp.js';
 import { createShowPads } from '../../audio/showpads.js';
 import { KITS as DRUM_KITS, DEF_KIT, DEF_VEL } from '../../audio/stagepads.js';
 import * as SM from '../../music/show.js';
@@ -23,7 +23,7 @@ import { DIRS, SENS } from '../../audio/drone.js';
 import { saveEvent, liveEvents } from '../calendar.js';
 import { setlistsOf } from '../metrosets.js';
 import * as MF from '../mediafolders.js';
-import { arrange, bindLayout, isEditing } from '../../ui/layout.js';
+import { arrange, bindLayout, isEditing, rowsFor, scaleOf } from '../../ui/layout.js';
 import { keyName as recKey } from '../songinfo.js';
 import { metroForSession } from '../session.js';
 import { logErr } from '../log.js';
@@ -267,6 +267,18 @@ export function openStage(app, evId, i = 0) {
     '<button class="sgic txt sgab' + (a.glide.on ? ' on' : '') + '" data-sgap="glide" aria-pressed="' + a.glide.on + '">' + esc(t('stage.glide')) + '</button>' +
     '<button class="sgic sgab ic' + (w ? ' on' : '') + '" data-sgap="wave" aria-pressed="' + w + '" aria-label="' + esc(t('stage.wave')) + '">' + WAVE + '</button>' +
     '<button class="sgic sgab ic" data-sgap="set" aria-label="' + esc(t('stage.padSet')) + '">' + GEAR + '</button></span>'; };
+  // Блок «Пэд: управление» (слово автора 26.11.2026): мелко — ряд кнопок; крупно (ступени l, xl) — ещё громкости, рисунок и ритм арпеджиатора, эхо и подвижность глайдера.
+  // Свой блок раскладки: двигается, ставится рядом, растягивается и скрывается как остальные
+  const padfxHTML = () => {
+    const a = arpState(), d = app.device.drone, pct = (v) => Math.round(v * 100);
+    const sl = (k, label, v, min, max, step) => '<label class="sgpfs"><span>' + esc(label) + '</span><input type="range" class="sgrng" data-pfx="' + k + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" aria-label="' + esc(label) + '"><b class="num">' + pct(v) + '</b></label>';
+    const chips = (attr, list, cur, label) => '<div class="sgpfc" role="group">' + list.map((k) => '<button class="sgchip' + (cur === k ? ' on' : '') + '" ' + attr + '="' + esc(k) + '" aria-pressed="' + (cur === k) + '">' + esc(label(k)) + '</button>').join('') + '</div>';
+    return '<div class="sgpfx">' + arpBtns() + '<div class="sgpfx-more">' +
+      sl('vol', t('stage.pfx.vol'), d.vol == null ? 0.7 : d.vol, 0, 1, 0.01) +
+      (a.on ? sl('alvl', t('stage.pfx.arpLvl'), a.lvl, 0, 1, 0.025) + chips('data-pfx-sty', ARP_STYLES, a.style, (k) => t('stage.st.' + k)) + chips('data-pfx-rate', Object.keys(ARP_RATES), a.rate, (k) => k) : '') +
+      (a.glide.on ? sl('glvl', t('stage.pfx.glideLvl'), a.glide.lvl, 0, 1, 0.025) + sl('gecho', t('stage.pfx.echo'), a.glide.echo, 0, 1, 0.05) + sl('gbusy', t('stage.pfx.busy'), a.glide.busy, 0, 1, 0.05) : '') +
+      '</div></div>';
+  };
   const plHTML = () => {
     const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
     return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '">' +
@@ -662,7 +674,21 @@ export function openStage(app, evId, i = 0) {
       });
     });
   };
-  const layOf = () => { const st = app.store.state.settings; const L = (st.layout ||= {}); return (L.stage ||= { order: [], hidden: [], size: {} }); };
+  // Вид сцены по умолчанию: «Пэд: управление» (арп, глайд, волна, настройки) слева от метронома в одном ряду; у прежних видов блок встаёт перед метрономом
+  const PAD_FX_PAIR = 0.48;
+  const stageDefaults = (lay) => { if (lay.pair.tempo == null && !lay.hidden.includes('padfx') && !lay.hidden.includes('tempo')) lay.pair.tempo = PAD_FX_PAIR; };
+  const layOf = () => {
+    const st = app.store.state.settings, L = (st.layout ||= {}), lay = (L.stage ||= { order: [], hidden: [], size: {} });
+    lay.pair = lay.pair && typeof lay.pair === 'object' ? lay.pair : {}; lay.hidden = Array.isArray(lay.hidden) ? lay.hidden : [];
+    if (!(lay.v >= 2)) { // один раз: прежняя раскладка получает новый блок рядом с метрономом
+      lay.v = 2;
+      if (Array.isArray(lay.order) && lay.order.length && !lay.order.includes('padfx')) { const i = lay.order.indexOf('tempo'); lay.order.splice(i < 0 ? lay.order.length : i, 0, 'padfx'); }
+      stageDefaults(lay);
+      app.store.save();
+    }
+    return lay;
+  };
+  const padCols = (n, rows) => Math.max(1, Math.min(8, Math.ceil(n / rows)));
   const padsParts = () => {
     const sdo = sd(), banks = sdo.banks.filter((b) => !b.pinned), b = bank();
     const nm = (x, i) => x.name || (x.preset === 'drums' ? t('stage.drums') : t('stage.bankN', { n: i + 1 }));
@@ -677,10 +703,9 @@ export function openStage(app, evId, i = 0) {
     const bg = '<div class="sgkeys" role="group" aria-label="' + esc(t('stage.keys')) + '">' + NOTES.map((n, k) => '<button class="sgkey' + (pad && app.device.drone.pc === k ? ' on' : '') + '" data-sgk="' + k + '" aria-pressed="' + (pad && app.device.drone.pc === k) + '">' + n + (pad && app.device.drone.pc === k ? CSUF[audio.drone.chord] || '' : '') + '</button>').join('') + '</div>';
     // свой список пэдов на сцене (settings.stagePads — id по порядку): вместо банков — только отмеченные; правка — «✎ Пэды»
     const custom = stagePadList();
-    if (custom) return { keys: bg, pads: '<div class="sgpads"><div class="sgpgrid" style="--c:' + Math.min(4, custom.length) + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + custom.map(cell).join('') + '</div></div>' };
-    return { keys: bg, pads: '<div class="sgpads">' + 
-      '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
-      '</div>' };
+    // ряды (слово автора 26.11.2026): блок ниже — меньше рядов, плитки не сжимаются, а перестраиваются (8 пэдов: 2×4 → 1×8)
+    const rows = rowsFor(scaleOf(layOf(), 'pads')), shown = custom || b.pads.filter((p) => p && (p.file || p.synth)), cols = padCols(shown.length, rows);
+    return { keys: bg, pads: '<div class="sgpads"><div class="sgpgrid" data-cols="' + cols + '" style="--c:' + cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + shown.map(cell).join('') + '</div></div>' };
   };
   const render = () => {
     if (!S.el) return;
@@ -706,8 +731,9 @@ export function openStage(app, evId, i = 0) {
       '</div>' },
       { id: 'seek', html: (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') },
       { id: 'player', html: plHTML() },
+      { id: 'padfx', html: padfxHTML() },
       { id: 'tempo', html: // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
-      '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' + arpBtns() +
+      '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
         '<button class="sgic txt" data-sgbpm="-1" aria-label="' + esc(t('stage.bpm') + ' −1') + '">−</button>' +
         '<button class="sgbpm' + (run ? ' on' : '') + '" data-sgmetro aria-pressed="' + run + '" aria-label="' + esc(t('stage.metroBtn')) + '"><b class="num">' + bpm + '</b><small>bpm</small></button>' +
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
@@ -778,6 +804,10 @@ export function openStage(app, evId, i = 0) {
     // правка раскладки: содержимое блоков не нажимается (играть, пэды, метроном молчат); работают только выход и сама правка
     if (isEditing(layOf()) && !e.target.closest('[data-sg="exit"], [data-ly], [data-lybar], .lybar')) return;
     if (S.locked) return; // блокировка: касания игнорируются, снимается удержанием замка
+    if ((b = e.target.closest('[data-pfx-sty], [data-pfx-rate]'))) {
+      const a = arpState(); if (b.dataset.pfxSty) a.style = b.dataset.pfxSty; else a.rate = b.dataset.pfxRate;
+      if (app.saveDevice) app.saveDevice(); safe('arp', () => audio.arp.sync()); render(); return;
+    }
     if ((b = e.target.closest('[data-sgap]'))) {
       if (b.dataset.sgap === 'set' || b.dataset.sgap === 'wave') { padModule(b.dataset.sgap); return; }
       const a = arpState();
@@ -902,8 +932,19 @@ export function openStage(app, evId, i = 0) {
   };
   S.el.addEventListener('pointerup', padUp);
   S.el.addEventListener('pointercancel', (e) => { const g = S.md; if (g && e.pointerId === g.id) { S.md = null; } padUp(e); });
-  S.el.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('[data-sgall]')) app.store.save(); });
+  S.el.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('[data-sgall]')) app.store.save(); else if (e.target.dataset && e.target.dataset.pfx && app.saveDevice) app.saveDevice(); });
   S.el.addEventListener('input', (e) => {
+    const pf = e.target.dataset && e.target.dataset.pfx; // «Пэд: управление» — громкости и глайдер, сразу в звук
+    if (pf) {
+      const v = +e.target.value, a = arpState(), d = app.device.drone, o = e.target.parentElement && e.target.parentElement.querySelector('b');
+      if (pf === 'vol') { d.vol = v; safe('pad', () => audio.drone.vol()); }
+      else if (pf === 'alvl') { a.lvl = v; safe('arp', () => audio.arp.sync()); }
+      else if (pf === 'glvl') a.glide.lvl = v;
+      else if (pf === 'gecho') a.glide.echo = v;
+      else if (pf === 'gbusy') a.glide.busy = v;
+      if (o) o.textContent = Math.round(v * 100);
+      return;
+    }
     const a = e.target.closest && e.target.closest('[data-sgall]');
     if (a) { mixSet().all = +a.value; MIXES.forEach(([k]) => mixApply(k)); return; }
     const r = e.target.closest && e.target.closest('[data-fx]');
@@ -922,9 +963,10 @@ export function openStage(app, evId, i = 0) {
   onHold(S.el, '.sgsongs, .sghead', (el) => stageMenu(el));
   onHold(S.el, '.sgpad[data-pad]', (el) => { if (quiet()) return; const p = SM.padById(sd(), el.dataset.pad); if (p) padOne(p); });
   // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js); пэды, клавиши, крутилки, темп, перемотка — со своими жестами, меню у них не открывается
-  bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t, busy: () => !!(S.playing || audio.metro.running || droneOn() || (app.sounding && app.sounding())) }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], input, [role="slider"]');
+  bindLayout(S.el, () => ({ lay: layOf(), ids: ['main', 'seek', 'player', 'padfx', 'tempo', 'chips', 'keys', 'pads', 'bar'], name: (id) => t('lay.s.' + id), save: () => app.store.save(), render, t, defaults: stageDefaults,
+    live: (id, z, blk) => { if (id !== 'pads') return; const g = blk.querySelector('.sgpgrid'); if (g) { const c = padCols(g.children.length, rowsFor(z)); g.style.setProperty('--c', c); g.dataset.cols = c; } }, busy: () => !!(S.playing || audio.metro.running || droneOn() || (app.sounding && app.sounding())) }), '.sgpad, .sgkey, .sgknob, .sgbpm, .sgsong, .sgsongs, .sghead, [data-sgseek], [data-sgplseek], .sgpfx-more, input, [role="slider"]');
   // вверх-вниз по экрану — программа вкл/выкл. Над текстом, который прокручивается, жест не берём: там вверх-вниз — это чтение
-  const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
+  const NOGEST = '.sgplayer, .sgpads, .sgkeys, .sgknobs, .sgtempo, .sgpfx, .sgseek, .sgsongs, .sgtop, input, [role="slider"]';
   let vg = null;
   S.el.addEventListener('pointerdown', (e) => {
     vg = null;

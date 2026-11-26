@@ -25,6 +25,8 @@ export const scaleOf = (lay, id) => (lay && lay.size && num(lay.size[id])) || 1;
 
 // Ступень размера блока для CSS (`data-z`): что убирается при сжатии и что растёт при увеличении — src/ui/stagefit.css
 export const tierOf = (z) => (z <= 0.65 ? 'xs' : z <= 0.9 ? 's' : z <= 1.25 ? 'm' : z <= 1.7 ? 'l' : 'xl');
+// Число рядов у блока из плиток (драм-пэды): блок ниже — меньше рядов, плитки не сжимаются, а перестраиваются (слово автора 26.11.2026)
+export const rowsFor = (z) => Math.max(1, Math.min(4, Math.round(z * 2)));
 export const normLay = (lay) => {
   const o = lay && typeof lay === 'object' ? lay : {};
   o.order = Array.isArray(o.order) ? o.order : [];
@@ -204,7 +206,7 @@ function blockGesture(e, blk, api, lay) {
   }, 320);
 }
 
-// Правка экрана. root — корень экрана (на нём слушаются события); apiOrFn → { lay, ids, name(id), save(), render(), t, busy?() }.
+// Правка экрана. root — корень экрана (на нём слушаются события); apiOrFn → { lay, ids, name(id), save(), render(), t, busy?(), live?(id, z, blk) — размер тянется, defaults?(lay) — вид «как было» }.
 // skip — элементы со своим удержанием или перетаскиванием (пэды, крутилки, строки списка): на них правка не включается.
 export function bindLayout(root, apiOrFn, skip = '') {
   const A = () => (typeof apiOrFn === 'function' ? apiOrFn() : apiOrFn);
@@ -229,7 +231,7 @@ export function bindLayout(root, apiOrFn, skip = '') {
     const k = b.dataset.ly, id = b.dataset.id;
     const done = () => { api.save(); api.render(); };
     if (k === 'done') { leave(api, lay); return; }
-    if (k === 'reset') { lay.order = []; lay.hidden = []; lay.size = {}; lay.pair = {}; done(); return; }
+    if (k === 'reset') { lay.order = []; lay.hidden = []; lay.size = {}; lay.pair = {}; if (api.defaults) api.defaults(lay); done(); return; }
     if (k === 'show') { lay.hidden = lay.hidden.filter((i) => i !== id); done(); }
   }, true);
   // размер — тянуть планку внизу блока; блок следует за пальцем (высота подгоняется несколькими шагами), значение сохраняется на отпускании
@@ -255,11 +257,11 @@ export function bindLayout(root, apiOrFn, skip = '') {
       if (ninner) dy = Math.max(-(h0 - 40), Math.min(hn0 - 40, dy)); // ни один блок не уже 40 px
       const want = Math.max(40, h0 + dy), cur = inner.getBoundingClientRect().height || h0;
       s = clampScale(s * Math.pow(want / cur, 1.4)); // высота растёт не пропорционально размеру — подгоняем по факту
-      blk.style.setProperty('--lz', s); blk.dataset.z = tierOf(s);
+      blk.style.setProperty('--lz', s); blk.dataset.z = tierOf(s); if (api.live) api.live(id, s, blk);
       if (ninner) {
         const wantN = Math.max(40, hn0 - dy), curN = ninner.getBoundingClientRect().height || hn0;
         sn = clampScale(sn * Math.pow(wantN / curN, 1.4));
-        nb.style.setProperty('--lz', sn); nb.dataset.z = tierOf(sn);
+        nb.style.setProperty('--lz', sn); nb.dataset.z = tierOf(sn); if (api.live) api.live(nid, sn, nb);
       }
     };
     const end = () => {

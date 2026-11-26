@@ -79,26 +79,29 @@ test('сцена: блоки рядом — пара, ширина планко�
   await page.locator('.hstage').click(); await page.waitForTimeout(600);
   if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
   await page.waitForTimeout(800);
-  await expect(page.locator('.lyrow')).toHaveCount(0); // без пар разметка прежняя: рядов нет
+  await expect(page.locator('.lyrow')).toHaveCount(1); // по умолчанию один ряд: «Пэд: управление» рядом с метрономом
   await hold(page, page.locator('.sgplayer'));
   await expect(page.locator('.lybi').first()).toBeVisible();
-  // рядом: перетащить клавиши к правому краю темпа
-  await dragTo(page, 'keys', 'tempo', 0.92, 0.5); await page.waitForTimeout(250);
+  // по умолчанию «Пэд: управление» стоит рядом с метрономом
+  await expect(page.locator('.lyrow.ed > .lyb[data-lb="padfx"]')).toHaveCount(1);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="tempo"]')).toHaveCount(1);
+  // рядом: перетащить клавиши к левому краю драм-пэдов
+  await dragTo(page, 'keys', 'pads', 0.08, 0.5); await page.waitForTimeout(250);
+  await expect(page.locator('.lyrow.ed > .lyb[data-lb="pads"]')).toHaveCount(1);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="keys"]')).toHaveCount(1);
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   // ширина: тянуть планку вправо
-  const v = await page.locator('.lyrow.ed .lyv').boundingBox();
+  const v = await page.locator('.lyrow.ed:has([data-lb="keys"]) .lyv').boundingBox();
   await page.mouse.move(v.x + v.width / 2, v.y + v.height / 2); await page.mouse.down();
   for (let i = 1; i <= 6; i++) await page.mouse.move(v.x + v.width / 2 + i * 10, v.y + v.height / 2);
   await page.mouse.up(); await page.waitForTimeout(300);
-  const r = (await lay(page)).pair.keys;
+  const r = (await lay(page)).pair.pads;
   expect(r).toBeGreaterThan(0.55); expect(r).toBeLessThanOrEqual(0.75);
   await page.click('[data-ly="done"]'); await page.waitForTimeout(300);
   await expect(page.locator('.lybar')).toHaveCount(0);
   // обычный вид: ряд из двух блоков, доля ширины как заданно; метроном по-прежнему работает
-  await expect(page.locator('.lyrow > .lyb')).toHaveCount(2);
-  const w = await page.evaluate(() => { const row = document.querySelector('.lyrow'), [a, b] = [...row.children]; return a.getBoundingClientRect().width / row.getBoundingClientRect().width; });
+  await expect(page.locator('.lyrow > .lyb')).toHaveCount(4); // padfx|tempo и keys|pads
+  const w = await page.evaluate(() => { const row = document.querySelector('.lyrow:has([data-lb="pads"])'), [a, b] = [...row.children]; return a.getBoundingClientRect().width / row.getBoundingClientRect().width; });
   expect(Math.abs(w - r)).toBeLessThan(0.05);
   await page.click('[data-sgmetro]'); await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.querySelector('[data-sgmetro]').getAttribute('aria-pressed'))).toBe('true');
@@ -152,7 +155,7 @@ test('сцена: мелкие кнопки пэдов — настройки и
   // весь ряд метронома — в окне, и на узком экране тоже
   for (const w of [390, 360]) {
     await page.setViewportSize({ width: w, height: 800 }); await page.waitForTimeout(300);
-    const xs = await page.evaluate(() => [...document.querySelectorAll('.sgtempo button')].map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }));
+    const xs = await page.evaluate(() => [...document.querySelectorAll('.sgpfx button, .sgtempo button')].map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }));
     xs.forEach(([l, r]) => { expect(l).toBeGreaterThanOrEqual(0); expect(r).toBeLessThanOrEqual(w + 1); });
   }
   await page.click('[data-sgap="set"]'); await page.waitForTimeout(800);
@@ -173,7 +176,7 @@ test('сцена: размеры блоков — сжатие, увеличен
   await page.locator('.hstage').click(); await page.waitForTimeout(600);
   if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
   await page.waitForTimeout(800);
-  const IDS = ['main', 'seek', 'player', 'tempo', 'chips', 'keys', 'pads', 'bar'];
+  const IDS = ['main', 'seek', 'player', 'padfx', 'tempo', 'chips', 'keys', 'pads', 'bar'];
   const apply = async (size, pair) => {
     await page.evaluate(([sz, pr]) => { const L = window.__melete.store.state.settings.layout.stage; L.size = sz; L.pair = pr; }, [size, pair]);
     await hold(page, page.locator('.sgplayer, .sgtempo').first()); await page.waitForTimeout(250);
@@ -202,10 +205,50 @@ test('сцена: размеры блоков — сжатие, увеличен
     if (process.env.SHOTDIR) await page.screenshot({ path: process.env.SHOTDIR + '/z' + z + '.png' });
   }
   for (const r of [0.25, 0.5, 0.75]) for (const z of [0.5, 1, 2]) { // клавиши рядом с метрономом, пэды рядом с громкостями — узкие половины
-    await apply(Object.fromEntries(IDS.map((i) => [i, z])), { keys: r, bar: r });
+    await apply(Object.fromEntries(IDS.map((i) => [i, z])), { tempo: r, keys: r, bar: r });
     fails.push(...await audit('пара ' + r + ' размер ' + z));
     if (process.env.SHOTDIR && z === 1) await page.screenshot({ path: process.env.SHOTDIR + '/p' + r + '.png' });
   }
   expect(fails).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+// слово автора 26.11.2026: драм-пэды перестраиваются рядами (не сжимаются); «Пэд: управление» крупно — громкости, арп, глайдер
+test('сцена: ряды драм-пэдов от размера блока; крупный «Пэд: управление» с настройками', async ({ page, melete, errors }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  const setLay = async (size) => {
+    await page.evaluate((sz) => { const L = window.__melete.store.state.settings.layout.stage; L.size = sz; }, size);
+    await hold(page, page.locator('.sgplayer')); await page.waitForTimeout(250);
+    await page.click('[data-ly="done"]'); await page.waitForTimeout(350);
+  };
+  const grid = () => page.evaluate(() => { const g = document.querySelector('.sgpgrid'), n = g.children.length, cols = +g.dataset.cols, r = [...g.children].map((e) => e.getBoundingClientRect()); const rows = new Set(r.map((x) => Math.round(x.top))).size; return { n, cols, rows, h: Math.round(r[0].height), w: Math.round(r[0].width) }; });
+  const g2 = await grid(); // обычный размер: 2 ряда
+  expect(g2.rows).toBe(2); expect(g2.cols).toBe(Math.ceil(g2.n / 2));
+  await setLay({ pads: 0.5 }); const g1 = await grid(); // ниже — один ряд, плитки той же высоты
+  expect(g1.rows).toBe(1); expect(g1.cols).toBe(g1.n); expect(Math.abs(g1.h - g2.h)).toBeLessThanOrEqual(2);
+  await setLay({ pads: 1.5 }); const g3 = await grid(); // выше — три ряда
+  expect(g3.rows).toBe(3);
+  if (process.env.SHOTDIR) { await setLay({ pads: 0.5 }); await page.screenshot({ path: process.env.SHOTDIR + '/pads1.png' }); }
+  // «Пэд: управление» крупно: настройки видны, меняют данные
+  await setLay({ padfx: 1.5 });
+  await page.evaluate(() => { const a = window.__melete.device.drone; a.arp = { ...(a.arp || {}), on: true, glide: { ...((a.arp || {}).glide || {}), on: true } }; });
+  await hold(page, page.locator('.sgplayer')); await page.waitForTimeout(250);
+  await page.click('[data-ly="done"]'); await page.waitForTimeout(350);
+  await expect(page.locator('.sgpfx-more')).toBeVisible();
+  await expect(page.locator('[data-pfx="vol"]')).toBeVisible();
+  await page.click('[data-pfx-sty="down"]'); await page.waitForTimeout(250);
+  await page.click('[data-pfx-rate="1/16"]'); await page.waitForTimeout(250);
+  const el = page.locator('[data-pfx="gecho"]'); await el.fill('0.9');
+  const a = await page.evaluate(() => window.__melete.device.drone.arp);
+  expect(a.style).toBe('down'); expect(a.rate).toBe('1/16'); expect(a.glide.echo).toBeCloseTo(0.9, 1);
+  if (process.env.SHOTDIR) await page.screenshot({ path: process.env.SHOTDIR + '/padfx.png' });
+  // обычный размер: настроек нет, только кнопки
+  await setLay({}); await expect(page.locator('.sgpfx-more')).toBeHidden();
   expect(errors).toEqual([]);
 });

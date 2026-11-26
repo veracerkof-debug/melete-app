@@ -200,17 +200,13 @@
 .sgknob b{font-size:var(--fs-4)}
 .sgplseek .sgtrk{flex:none;margin-left:8px;padding:2px 8px;border-radius:var(--r-1);background:var(--tint);color:var(--on-tint);font:700 var(--fs-3) var(--font)}
 /* метроном правее, слева — арпеджиатор и глайдер пэдов (26.11.2026) */
-.sgtempo{justify-content:flex-end}
-.sgtempo .sgap{display:flex;gap:6px;margin-right:auto}
-.sgtempo .sgab{width:auto;min-width:var(--hit-min);padding:0 12px;font:700 var(--fs-3) var(--font)}
-.sgtempo .sgab.on{background:var(--tint);color:var(--on-tint)}
+.sgtempo{justify-content:center}
+.sgpfx .sgab.on{background:var(--tint);color:var(--on-tint)}
 
-/* мелкие кнопки пэдов у метронома: арп, глайд, волна, настройки (26.11.2026); цифры темпа сжимаются, чтобы всё влезало в ширину */
-.sgtempo{gap:4px;padding-left:6px;padding-right:6px;min-width:0}
-.sgtempo .sgap{gap:3px;flex:none}
-.sgtempo .sgab{width:auto;min-width:30px;height:calc(34px * var(--lz, 1));padding:0 6px;font:700 var(--fs-1) var(--font);border-radius:10px}
-.sgtempo .sgab.ic{width:30px;padding:0}
-.sgtempo .sgab.ic svg{width:17px;height:17px}
-.sgtempo .sgbpm{flex:0 1 96px;min-width:56px}
-.sgtempo .tapb{width:44px;padding:0}
-@media (max-width:380px){.sgtempo .sgab{padding:0 4px}.sgtempo .sgab.ic{width:28px}}
+/* «Пэд: управление» (26.11.2026): мелко — ряд кнопок арп, глайд, волна, настройки; крупно — ещё громкости и настройки арпеджиатора и глайдера */
+.sgpfx{display:flex;flex-direction:column;gap:6px;padding:var(--sp-1) 6px 0}
+.sgpfx .sgap{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+.sgpfx .sgab{width:auto;min-width:30px;height:calc(34px * var(--lz, 1));padding:0 8px;font:700 var(--fs-2) var(--font);border-radius:10px}
+.sgpfx .sgab.ic{width:34px;padding:0}
+.sgpfx .sgab.ic svg{width:17px;height:17px}
+.sgpfx-more{display:none}

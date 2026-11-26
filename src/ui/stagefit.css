@@ -9,7 +9,7 @@
      пэды звуков — цветные плитки без подписей;  громкости — общая и ▶.
    Касаемые цели не мельче 34 px (мельче палец не попадает); пэды ударных на ходу — не мельче 28 px. */
 @media (min-height:521px),(orientation:portrait){
-  .sgmain,.sgplayer,.sgtempo,.sgkw,.sgpads,.sgbar,.sgseek{container-type:inline-size}
+  .sgmain,.sgplayer,.sgtempo,.sgpfx,.sgkw,.sgpads,.sgbar,.sgseek{container-type:inline-size}
 }
 
 /* ---- крупнее: шрифты и значки растут вместе с блоком (до 1,8 — дальше не нужно), чтобы крупный блок не был «пустым» ---- */
@@ -27,9 +27,8 @@
 
 /* ---- мельче: цели не меньше 34 px ---- */
 .sgtempo .sgic,.sgbpm,.sgplayer .sgic,.sgplseek{min-height:34px}
-.sgtempo .sgab{min-height:30px}
+.sgpfx .sgab{min-height:30px}
 .sgpads .sgkey,.sgkey{min-height:max(30px, calc(56px * var(--lz, 1)))}
-.sgpad{min-height:max(28px, calc(40px * var(--lz, 1)))}
 .sgbar .sgbtn.main{min-height:max(34px, calc(72px * var(--lz, 1)))}
 .sgkeys{grid-template-columns:repeat(6, minmax(0, 1fr))}
 .sgpgrid{grid-template-columns:repeat(var(--c, 4), minmax(0, 1fr))}
@@ -39,10 +38,11 @@
 [data-z="s"] .sgkn span{font-size:10px}
 [data-z="s"] .sgpad b{font-size:10px}
 /* xs: только главное */
-[data-z="xs"] .sgkn span,[data-z="xs"] .sgplseek em,[data-z="xs"] .sgtrk,[data-z="xs"] .sgtime,[data-z="xs"] .sgpad b,[data-z="xs"] .sgbpm small{display:none}
-[data-z="xs"] .sgtempo .sgap,[data-z="xs"] .sgtempo [data-sgbpm],[data-z="xs"] .sgtempo .tapb{display:none}
+[data-z="xs"] .sgkn span,[data-z="xs"] .sgplseek em,[data-z="xs"] .sgtrk,[data-z="xs"] .sgtime,[data-z="xs"] .sgbpm small{display:none}
+[data-z="xs"] .sgtempo [data-sgbpm],[data-z="xs"] .sgtempo .tapb{display:none}
 [data-z="xs"] .sgtempo .sgbpm{flex:1 1 auto;max-width:none}                 /* метроном — одна широкая кнопка */
 [data-z="xs"] .sgsong small{display:none}
+[data-z="xs"] .sgpfx [data-sgap="wave"]{display:none}
 [data-z="xs"] .sgknobs{padding:0}
 [data-z="xs"] .sgknob b{font-size:10px}
 [data-z="xs"] .sgbar{padding-top:2px;padding-bottom:4px}
@@ -50,11 +50,13 @@
 [data-z="xs"] .sgkey{border-width:1px}
 
 /* Ширина в @container — внутренняя (без отступов блока), поэтому пороги чуть меньше ширины блока. */
-/* ---- ширина: метроном (метроном, ± и TAP важнее кнопок пэдов; пэды уходят по важности: волна → арп/глайд → настройки) ---- */
-@container (max-width: 359px){ .sgtempo [data-sgap="wave"]{display:none} }
-@container (max-width: 289px){ .sgtempo [data-sgap="arp"],.sgtempo [data-sgap="glide"]{display:none} }
-@container (max-width: 229px){ .sgtempo .sgap,.sgtempo .tapb{display:none} }
-@container (max-width: 159px){ .sgtempo [data-sgbpm]{display:none} .sgtempo .sgbpm{flex:1 1 auto;max-width:none} }
+/* метроном: цифры темпа, ±, TAP — TAP и ± уходят в узком блоке, цифры остаются */
+@container (max-width: 189px){ .sgtempo .tapb{display:none} }
+@container (max-width: 139px){ .sgtempo [data-sgbpm]{display:none} .sgtempo .sgbpm{flex:1 1 auto;max-width:none} }
+/* «Пэд: управление»: в узком блоке уходят по важности волна → глайд → арп; настройки остаются */
+@container (max-width: 169px){ .sgpfx [data-sgap="wave"]{display:none} }
+@container (max-width: 125px){ .sgpfx [data-sgap="glide"]{display:none} }
+@container (max-width: 95px){ .sgpfx [data-sgap="arp"]{display:none} }
 
 /* плеер: тональность и время уходят первыми, потом выбор записи */
 @container (max-width: 339px){ .sgplayer .sgtrk,.sgplseek em{display:none} }
@@ -80,3 +82,17 @@
 
 /* полоса перемотки: узкая — без времени */
 @container (max-width: 259px){ .sgtime{display:none} }
+
+/* ---- «Пэд: управление» крупно: громкости, рисунок и ритм арпеджиатора, эхо и подвижность глайдера (ступени l и xl) ---- */
+[data-z="l"] .sgpfx-more,[data-z="xl"] .sgpfx-more{display:flex;flex-direction:column;gap:6px;padding:2px 2px 6px}
+.sgpfs{display:flex;align-items:center;gap:8px;font-size:var(--fs-2);color:color-mix(in srgb,var(--ink) 75%,transparent)}
+.sgpfs span{flex:0 0 5.4em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgpfs .sgrng{flex:1 1 0;min-width:0;height:calc(28px * clamp(1, var(--lz, 1), 1.6))}
+.sgpfs b{flex:0 0 2.4em;text-align:right;font-weight:600;color:var(--ink)}
+.sgpfc{display:flex;flex-wrap:wrap;gap:6px}
+.sgpfc .sgchip{min-height:calc(32px * clamp(1, var(--lz, 1), 1.2));padding:0 8px;font-size:var(--fs-1)}
+.sgpfc{gap:4px}
+@container (max-width: 219px){ .sgpfs span{flex-basis:3.4em} }
+/* пэды звуков: много плиток в ряд — подписи мельче; плитки не сжимаются по высоте, ряды добавляются и убираются границей блока */
+.sgpad{min-height:46px}
+.sgpgrid[data-cols="6"] .sgpad b,.sgpgrid[data-cols="7"] .sgpad b,.sgpgrid[data-cols="8"] .sgpad b{font-size:9px;letter-spacing:0;line-height:1.05;white-space:normal;overflow-wrap:anywhere;text-overflow:clip;text-align:center;padding-bottom:3px}
