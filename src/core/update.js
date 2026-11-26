@@ -66,6 +66,11 @@ export const modeOf = (st) => (st && st.updMode === 'button' ? 'button' : 'auto'
 export const CHECK_EVERY = 30 * 60000;
 export const due = (mem, now) => now - ((mem && mem.at) || 0) >= CHECK_EVERY;
 
+export const PAGES = 'https://' + REPO.split('/')[0] + '.github.io/' + REPO.split('/')[1] + '/rel/';
+export const API_EVERY = 2 * 3600e3; // запасной путь через API GitHub — не чаще
+const API_KEY = 'melete.upd.api';
+const apiAt = () => { try { return +localStorage.getItem(API_KEY) || 0; } catch { return 0; } };
+const markApi = () => { try { localStorage.setItem(API_KEY, String(Date.now())); } catch { /* */ } };
 const REL = 'melete.upd.rel'; // последний ответ GitHub о релизе канала и его ETag — для условного запроса
 const readRel = () => { try { const r = JSON.parse(localStorage.getItem(REL)); return r && r.etag && r.body ? r : null; } catch { return null; } };
 const writeRel = (r) => { try { localStorage.setItem(REL, JSON.stringify(r)); } catch { /* без памяти — полный запрос */ } };
@@ -92,9 +97,25 @@ export function createUpdater(app) {
   const mode = () => modeOf(app.store.state.settings);
   let poll = 0, path = '';
 
+  // Сначала — маленький файл релиза на сайте проекта (GitHub Pages, rel/<канал>.json, его пишет CI после каждой сборки):
+  // у статических страниц нет лимита «60 запросов в час на адрес», который вечно выбирают чужие устройства в общей сети (слово автора 26.11.2026).
+  // API GitHub — запасной путь, не чаще раза в 2 часа (между ними — сохранённый ответ)
+  async function fetchStatic() {
+    try {
+      const r = await fetch(PAGES + CHANNEL + '.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
+      if (!r.ok) return null;
+      const body = await r.json();
+      return body && Array.isArray(body.assets) ? body : null;
+    } catch { return null; }
+  }
   // Запрос к GitHub; сбой сети (смена Wi-Fi ↔ мобильная, сеть ещё не поднялась) — ещё две попытки с паузой.
   // Лимит GitHub (403/429: 60 запросов в час с одного адреса — общий у всех устройств одной сети Wi-Fi) — без повторов.
   async function fetchRelease() {
+    const st = await fetchStatic();
+    if (st) return st;
+    const saved = readRel();
+    if (saved && Date.now() - apiAt() < API_EVERY) return saved.body; // запасной путь недавно использован — не тратить лимит
+    markApi();
     for (let k = 0; ; k++) {
       try {
         const cached = readRel();

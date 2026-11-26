@@ -157,8 +157,28 @@ final class UpdateBg {
         else notice(c, "avail", build);
     }
 
-    // Релиз канала (JSON) или null; запрос условный — «не менялось» берёт сохранённое
+    // Файл релиза на сайте проекта (GitHub Pages): у него нет лимита 60 запросов в час на адрес. null — нет файла или сбой
+    private static String fetchStatic(String channel) {
+        HttpURLConnection h = null;
+        try {
+            h = (HttpURLConnection) new URL("https://veracerkof-debug.github.io/melete-app/rel/" + channel + ".json?t=" + (System.currentTimeMillis() / 60000)).openConnection();
+            h.setConnectTimeout(10000); h.setReadTimeout(15000);
+            h.setRequestProperty("User-Agent", "Melete");
+            if (h.getResponseCode() != 200) return null;
+            try (InputStream in = h.getInputStream(); ByteArrayOutputStream o = new ByteArrayOutputStream()) {
+                byte[] buf = new byte[8192]; int n;
+                while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+                String s = o.toString("UTF-8");
+                return s.contains("\"assets\"") ? s : null;
+            }
+        } catch (Exception e) { return null; }
+        finally { if (h != null) h.disconnect(); }
+    }
+
+    // Релиз канала (JSON) или null; сначала файл на сайте, затем API GitHub (условный запрос — «не менялось» берёт сохранённое)
     private static String fetchRelease(Context c, String channel) throws Exception {
+        String st = fetchStatic(channel);
+        if (st != null) return st;
         SharedPreferences p = prefs(c);
         HttpURLConnection h = (HttpURLConnection) new URL("https://api.github.com/repos/veracerkof-debug/melete-app/releases/tags/" + channel).openConnection();
         try {

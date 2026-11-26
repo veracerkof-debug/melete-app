@@ -202,3 +202,6 @@ Windows (`src-tauri/src/localsend.rs`, `core/localsend.js`): компьютер 
 * **Сеть — только по нажатию кнопки** («Обновить отчёт», «Отправить ученику») и при открытии страницы «Ученики», в своей сети Wi-Fi. **Ученик сам учителя не ищет** (приём — только пока приложение ученика открыто): фонового поиска нет.
 * **Проверено:** юнит-тесты и петля двух сторон через настоящий `handleRequest` (`tests/classroom.test.js`), e2e `classroom.spec.js`. **Не проверено на двух телефонах** (Mesh, QR, Wi-Fi), Java не менялась.
 
+
+## Обновление: файл релиза вместо API (26.11.2026)
+`src/core/update.js: fetchStatic` читает `https://<владелец>.github.io/melete-app/rel/<канал>.json` (пишет `.github/workflows/release-json.yml` после каждой сборки через `build/pages-deploy.sh … rel`); нет файла — API GitHub, не чаще `API_EVERY` (2 ч), между ними `melete.upd.rel`. То же в `UpdateBg.java: fetchStatic`. Корневая выкладка веба (`pages-deploy.sh root`) `rel/` не трогает.

@@ -1,0 +1,45 @@
+# Файлы релизов для обновления приложения (слово автора 26.11.2026): после каждой сборки (Android, Windows, Linux) кладёт в gh-pages/rel/
+# dev.json и pre.json — те же данные о релизе, что отдаёт API GitHub (метки сборок и установочные файлы), но со статической страницы:
+# у неё нет лимита «60 запросов в час на адрес», который вечно выбирают чужие устройства в одной сети. Приложение читает их первыми,
+# API остаётся запасным путём (src/core/update.js, UpdateBg.java).
+name: Файлы релизов (gh-pages/rel)
+
+on:
+  workflow_run:
+    workflows: ["Android APK (dev и pre)", "Windows (dev и pre)", "Linux (dev и pre)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# общая очередь с web.yml и showcase.yml: все выкладки пишут в одну ветку gh-pages
+concurrency:
+  group: web-pages
+  cancel-in-progress: false
+
+jobs:
+  rel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Файлы релизов
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir rel-out
+          for tag in dev pre; do
+            if gh api "repos/${{ github.repository }}/releases/tags/$tag" > "rel-out/$tag.raw" 2>/dev/null; then
+              jq '{tag_name, name, published_at, html_url, assets: [.assets[] | {name, state, size, browser_download_url, updated_at}]}' "rel-out/$tag.raw" > "rel-out/$tag.json"
+            fi
+            rm -f "rel-out/$tag.raw"
+          done
+          ls -la rel-out
+          test -n "$(ls rel-out)"
+
+      - name: Выложить в gh-pages (rel/; остальное остаётся)
+        env:
+          PAGES_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          build/pages-deploy.sh rel-out rel "Релизы: ${GITHUB_SHA::7}"
