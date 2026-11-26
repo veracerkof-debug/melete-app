@@ -257,10 +257,11 @@ export function openStage(app, evId, i = 0) {
   const fileKey = (id) => { const r = id && app.files ? app.files.get(id) : null; return r && r.ana && r.ana.pc != null ? recKey(r.ana.pc, !!r.ana.minor) : r && r.ukey ? r.ukey : ''; };
   const plHTML = () => {
     const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
-    return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '"><button class="sgic" data-sgpl="pp" aria-pressed="' + playing + '" aria-label="' + esc(t(playing ? 'stage.plPause' : 'stage.plPlay')) + '">' + (playing ? '❚❚' : I.play) + '</button>' +
+    return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '">' +
       '<div class="sgplseek" data-sgplseek role="slider" aria-label="' + esc(t('stage.seek')) + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + (d ? Math.round(el.currentTime / d * 1000) / 10 : 0) + '%"></i><span>' + esc(S.pl ? S.pl.name : t('stage.plPick')) + '</span><em class="num">' + (el ? fmtDur(el.currentTime || 0) + (d ? ' / ' + fmtDur(d) : '') : '') + '</em></div>' +
       // тональность записи: по разбору компьютера или вручную (касание — выбрать); нет ни того ни другого — «—»
       (S.pl ? '<button class="sgic txt sgtrk num" data-sgpl="key" aria-label="' + esc(t('stage.trackKey')) + '">' + esc(fileKey(S.pl.id) || '—') + '</button>' : '') +
+      '<button class="sgic" data-sgpl="pp" aria-pressed="' + playing + '" aria-label="' + esc(t(playing ? 'stage.plPause' : 'stage.plPlay')) + '">' + (playing ? '❚❚' : I.play) + '</button>' +
       '<button class="sgic txt" data-sgpl="pick" aria-label="' + esc(t('stage.player')) + '">♫</button></div>';
   };
   const keySheet = (id) => {
@@ -665,7 +666,7 @@ export function openStage(app, evId, i = 0) {
     // свой список пэдов на сцене (settings.stagePads — id по порядку): вместо банков — только отмеченные; правка — «✎ Пэды»
     const custom = stagePadList();
     if (custom) return { keys: bg, pads: '<div class="sgpads"><div class="sgpgrid" style="--c:' + Math.min(4, custom.length) + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + custom.map(cell).join('') + '</div></div>' };
-    return { keys: bg, pads: '<div class="sgpads">' + (banks.length > 1 ? '<div class="sgbanks hscroll" role="tablist">' + banks.map((x, i) => '<button class="sgchip' + (x.id === b.id ? ' on' : '') + '" role="tab" data-sgbank="' + esc(x.id) + '" aria-selected="' + (x.id === b.id) + '">' + esc(nm(x, i)) + '</button>').join('') + '</div>' : '') +
+    return { keys: bg, pads: '<div class="sgpads">' + 
       '<div class="sgpgrid" style="--c:' + b.cols + '" role="group" aria-label="' + esc(t('stage.sounds')) + '">' + b.pads.map(cell).join('') + '</div>' +
       '</div>' };
   };
@@ -753,6 +754,8 @@ export function openStage(app, evId, i = 0) {
   };
   const onClick = (e) => {
     let b;
+    // правка раскладки: содержимое блоков не нажимается (играть, пэды, метроном молчат); работают только выход и сама правка
+    if (isEditing(layOf()) && !e.target.closest('[data-sg="exit"], [data-ly], [data-lybar], .lybar')) return;
     if (S.locked) return; // блокировка: касания игнорируются, снимается удержанием замка
     if ((b = e.target.closest('[data-sg]'))) {
       const a = b.dataset.sg;

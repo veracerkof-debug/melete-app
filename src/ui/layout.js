@@ -152,17 +152,30 @@ export function bindLayout(root, apiOrFn, skip = '') {
     if (!g || !root.contains(g)) return;
     e.preventDefault(); e.stopPropagation();
     const blk = g.closest('.lyb'), inner = blk.querySelector(':scope > .lyi'), id = blk.dataset.lb;
-    const h0 = inner.getBoundingClientRect().height, y0 = e.clientY;
-    let s = scaleOf(lay, id);
+    // граница между блоками, как разделитель окон (слово автора 26.11.2026): тянем вниз — этот блок растёт, следующий под ним сужается на столько же,
+    // тянем вверх — наоборот; у последнего блока граница двигает только его
+    const all = [...root.querySelectorAll('.lyb.ed')], bi = all.indexOf(blk);
+    let nb = all[bi + 1]; if (nb && nb.parentElement === blk.parentElement && blk.parentElement.classList.contains('lyrow')) nb = all[bi + 2];
+    const ninner = nb && nb.querySelector(':scope > .lyi'), nid = nb && nb.dataset.lb;
+    const h0 = inner.getBoundingClientRect().height, hn0 = ninner ? ninner.getBoundingClientRect().height : 0, y0 = e.clientY;
+    let s = scaleOf(lay, id), sn = nid ? scaleOf(lay, nid) : 1;
     try { g.setPointerCapture(e.pointerId); } catch { /* без захвата — события идут по окну */ }
     const move = (ev) => {
-      const want = Math.max(40, h0 + (ev.clientY - y0)), cur = inner.getBoundingClientRect().height || h0;
+      let dy = ev.clientY - y0;
+      if (ninner) dy = Math.max(-(h0 - 40), Math.min(hn0 - 40, dy)); // ни один блок не уже 40 px
+      const want = Math.max(40, h0 + dy), cur = inner.getBoundingClientRect().height || h0;
       s = clampScale(s * Math.pow(want / cur, 1.4)); // высота растёт не пропорционально размеру — подгоняем по факту
       blk.style.setProperty('--lz', s);
+      if (ninner) {
+        const wantN = Math.max(40, hn0 - dy), curN = ninner.getBoundingClientRect().height || hn0;
+        sn = clampScale(sn * Math.pow(wantN / curN, 1.4));
+        nb.style.setProperty('--lz', sn);
+      }
     };
     const end = () => {
       g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', end); g.removeEventListener('pointercancel', end);
       if (Math.abs(s - 1) < 0.03) delete lay.size[id]; else lay.size[id] = s;
+      if (nid) { if (Math.abs(sn - 1) < 0.03) delete lay.size[nid]; else lay.size[nid] = sn; }
       api.save(); api.render();
     };
     g.addEventListener('pointermove', move); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);

@@ -85,3 +85,33 @@ test('сцена: блоки рядом — пара, ширина планко�
   await page.evaluate(() => { window.__melete.store.state.settings.layout.stage.pair = {}; window.__melete.store.save(); });
   expect(errors).toEqual([]);
 });
+
+// слово автора 26.11.2026: в правке раскладки ничто не играет и не нажимается; граница между блоками двигает оба соседних блока
+test('сцена: в правке «играть» и пэды молчат; граница сужает соседа, когда растёт блок', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  await hold(page, page.locator('.sgplayer'));
+  await expect(page.locator('.lybar')).toBeVisible();
+  const pl = await page.locator('.sgbpm').boundingBox();
+  await page.mouse.click(pl.x + pl.width / 2, pl.y + pl.height / 2); await page.waitForTimeout(300);
+  await expect(page.locator('.sgbpm.on')).toHaveCount(0); // метроном в правке не включается
+  const key = await page.locator('.sgkey').first().boundingBox();
+  await page.mouse.click(key.x + key.width / 2, key.y + key.height / 2); await page.waitForTimeout(300);
+  await expect(page.locator('.sgkey.on')).toHaveCount(0);
+  await page.locator('.sgpad[data-pad]').first().dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true });
+  await expect(page.locator('.sgpad.hit')).toHaveCount(0);
+  const g = await page.locator('.lyb[data-lb="tempo"] .lyh').boundingBox();
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2); await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2 + i * 6);
+  await page.mouse.up(); await page.waitForTimeout(300);
+  const L = await lay(page);
+  expect(L.size.tempo).toBeGreaterThan(1.03);
+  const nextId = await page.evaluate(() => { const a = [...document.querySelectorAll('.lyb.ed')].map((e) => e.dataset.lb); return a[a.indexOf('tempo') + 1]; });
+  expect(L.size[nextId]).toBeLessThan(0.97);
+  expect(errors).toEqual([]);
+});
