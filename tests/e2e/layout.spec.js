@@ -61,16 +61,16 @@ test('сцена: блоки рядом — пара, ширина планко�
   await hold(page, page.locator('.sgplayer'));
   await expect(page.locator('.lybar')).toBeVisible();
   // «рядом с предыдущим»: чипы встают рядом с темпом
-  await page.click('.lyb[data-lb="chips"] [data-ly="pair"]'); await page.waitForTimeout(250);
+  await page.click('.lyb[data-lb="keys"] [data-ly="pair"]'); await page.waitForTimeout(250);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="tempo"]')).toHaveCount(1);
-  await expect(page.locator('.lyrow.ed > .lyb[data-lb="chips"]')).toHaveCount(1);
+  await expect(page.locator('.lyrow.ed > .lyb[data-lb="keys"]')).toHaveCount(1);
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   // ширина: тянуть планку вправо
   const v = await page.locator('.lyrow.ed .lyv').boundingBox();
   await page.mouse.move(v.x + v.width / 2, v.y + v.height / 2); await page.mouse.down();
   for (let i = 1; i <= 6; i++) await page.mouse.move(v.x + v.width / 2 + i * 10, v.y + v.height / 2);
   await page.mouse.up(); await page.waitForTimeout(300);
-  const r = (await lay(page)).pair.chips;
+  const r = (await lay(page)).pair.keys;
   expect(r).toBeGreaterThan(0.55); expect(r).toBeLessThanOrEqual(0.75);
   await page.click('[data-ly="done"]'); await page.waitForTimeout(300);
   await expect(page.locator('.lybar')).toHaveCount(0);

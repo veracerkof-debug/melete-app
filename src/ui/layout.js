@@ -135,8 +135,10 @@ export function bindLayout(root, apiOrFn, skip = '') {
     const done = () => { api.save(); api.render(); };
     if (k === 'done') { leave(api, lay); return; }
     if (k === 'reset') { lay.order = []; lay.hidden = []; lay.size = {}; lay.pair = {}; done(); return; }
-    if (k === 'pair') { if (togglePair(lay, api.ids, id)) done(); return; }
-    if (k === 'up' || k === 'down') { if (moveBlock(lay, api.ids, id, k === 'up' ? -1 : 1)) done(); return; }
+    // двигаем и ставим в пару только те блоки, что сейчас на экране (пустые, без содержимого, не считаются — ↓ всегда сдвигает видимо)
+    const shownIds = () => { const on = [...root.querySelectorAll('.lyb[data-lb]')].map((e) => e.dataset.lb); return orderOf(lay, api.ids).filter((i) => on.includes(i) || lay.hidden.includes(i)); };
+    if (k === 'pair') { if (togglePair(lay, shownIds(), id)) done(); return; }
+    if (k === 'up' || k === 'down') { if (moveBlock(lay, shownIds(), id, k === 'up' ? -1 : 1)) done(); return; }
     if (k === 'hide') { const vis = orderOf(lay, api.ids).filter((i) => !lay.hidden.includes(i)); if (vis.length > 1) { lay.hidden = [...lay.hidden, id]; done(); } return; }
     if (k === 'show') { lay.hidden = lay.hidden.filter((i) => i !== id); done(); }
   }, true);
