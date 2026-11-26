@@ -199,3 +199,8 @@
 .sgknob{width:calc(60px * var(--lz, 1));height:calc(60px * var(--lz, 1))}
 .sgknob b{font-size:var(--fs-4)}
 .sgplseek .sgtrk{flex:none;margin-left:8px;padding:2px 8px;border-radius:var(--r-1);background:var(--tint);color:var(--on-tint);font:700 var(--fs-3) var(--font)}
+/* метроном правее, слева — арпеджиатор и глайдер пэдов (26.11.2026) */
+.sgtempo{justify-content:flex-end}
+.sgtempo .sgap{display:flex;gap:6px;margin-right:auto}
+.sgtempo .sgab{width:auto;min-width:var(--hit-min);padding:0 12px;font:700 var(--fs-3) var(--font)}
+.sgtempo .sgab.on{background:var(--tint);color:var(--on-tint)}

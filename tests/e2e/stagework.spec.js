@@ -177,3 +177,24 @@ test('сцена: плеер запоминает запись и всегда �
   await expect(page.locator('[data-sgpl="pp"]')).toHaveAttribute('aria-pressed', 'false');
   expect(errors).toEqual([]);
 });
+
+// слово автора 26.11.2026: арпеджиатор и глайдер пэдов — кнопками рядом с метрономом (метроном правее)
+test('сцена: кнопки арпеджиатора и глайдера у метронома', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  const ap = await page.locator('[data-sgap="arp"]').boundingBox(), bpm = await page.locator('.sgbpm').boundingBox();
+  expect(ap.x).toBeLessThan(bpm.x); // слева от метронома
+  await page.click('[data-sgap="arp"]'); await page.waitForTimeout(200);
+  await expect(page.locator('[data-sgap="arp"].on')).toHaveCount(1);
+  await page.click('[data-sgap="glide"]'); await page.waitForTimeout(200);
+  await expect(page.locator('[data-sgap="glide"].on')).toHaveCount(1);
+  const a = await page.evaluate(() => window.__melete.device.drone.arp);
+  expect(a.on).toBe(true); expect(a.glide.on).toBe(true);
+  await page.click('[data-sgap="arp"]'); await page.waitForTimeout(200);
+  await expect(page.locator('[data-sgap="arp"].on')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

@@ -14,6 +14,7 @@ import { lyricsHTML } from '../../music/lyrics.js';
 import { keyLabel, shiftKey, parseNote } from '../../music/transpose.js';
 import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX, capoClamp, WORK, workEvent, toggleWorkSong, tapTempo } from '../stage.js';
 import { getContext } from '../../audio/context.js';
+import { normalizeArp } from '../../audio/arp.js';
 import { createShowPads } from '../../audio/showpads.js';
 import { KITS as DRUM_KITS, DEF_KIT, DEF_VEL } from '../../audio/stagepads.js';
 import * as SM from '../../music/show.js';
@@ -255,6 +256,10 @@ export function openStage(app, evId, i = 0) {
   const plSeekTo = (frac) => { const el = S.pl && S.pl.el; if (el && el.duration > 0) { el.currentTime = Math.max(0, Math.min(1, frac)) * el.duration; if (S.pl) S.pl.ended = false; } };
   // тональность записи (по разбору) — рядом с названием: на сцене это иногда важнее всего
   const fileKey = (id) => { const r = id && app.files ? app.files.get(id) : null; return r && r.ana && r.ana.pc != null ? recKey(r.ana.pc, !!r.ana.minor) : r && r.ukey ? r.ukey : ''; };
+  // арпеджиатор и глайдер пэдов фона (слово автора 26.11.2026): рядом с метрономом, касание — вкл/выкл; настройки — в инструменте «Дрон»
+  const arpState = () => { const d = app.device.drone; d.arp = normalizeArp(d.arp); return d.arp; };
+  const arpBtns = () => { const a = arpState(); return '<span class="sgap" role="group" aria-label="' + esc(t('stage.arpGroup')) + '"><button class="sgic txt sgab' + (a.on ? ' on' : '') + '" data-sgap="arp" aria-pressed="' + a.on + '">' + esc(t('stage.arp')) + '</button>' +
+    '<button class="sgic txt sgab' + (a.glide.on ? ' on' : '') + '" data-sgap="glide" aria-pressed="' + a.glide.on + '">' + esc(t('stage.glide')) + '</button></span>'; };
   const plHTML = () => {
     const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
     return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '">' +
@@ -695,7 +700,7 @@ export function openStage(app, evId, i = 0) {
       { id: 'seek', html: (it && it.track ? '<div class="sgseek" data-sgseek role="slider" aria-label="' + esc(t('stage.seek')) + '"><i style="width:' + (S.track && S.track.duration > 0 ? Math.round((S.track.currentTime / S.track.duration) * 1000) / 10 : 0) + '%"></i><span class="sgtime num">' + (S.track && S.track.duration > 0 ? fmtDur(S.track.currentTime) + ' / ' + fmtDur(S.track.duration) : '') + '</span></div>' : '') },
       { id: 'player', html: plHTML() },
       { id: 'tempo', html: // метроном одной полосой: цифры темпа — кнопка вкл/выкл; тянуть по ним вверх-вниз — темп
-      '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' +
+      '<div class="sgtempo" role="group" aria-label="' + esc(t('stage.tempo')) + '">' + arpBtns() +
         '<button class="sgic txt" data-sgbpm="-1" aria-label="' + esc(t('stage.bpm') + ' −1') + '">−</button>' +
         '<button class="sgbpm' + (run ? ' on' : '') + '" data-sgmetro aria-pressed="' + run + '" aria-label="' + esc(t('stage.metroBtn')) + '"><b class="num">' + bpm + '</b><small>bpm</small></button>' +
         '<button class="sgic txt" data-sgbpm="1" aria-label="' + esc(t('stage.bpm') + ' +1') + '">+</button>' +
@@ -757,6 +762,14 @@ export function openStage(app, evId, i = 0) {
     // правка раскладки: содержимое блоков не нажимается (играть, пэды, метроном молчат); работают только выход и сама правка
     if (isEditing(layOf()) && !e.target.closest('[data-sg="exit"], [data-ly], [data-lybar], .lybar')) return;
     if (S.locked) return; // блокировка: касания игнорируются, снимается удержанием замка
+    if ((b = e.target.closest('[data-sgap]'))) {
+      const a = arpState();
+      if (b.dataset.sgap === 'arp') a.on = !a.on; else a.glide.on = !a.glide.on;
+      if (app.saveDevice) app.saveDevice();
+      safe('arp', () => audio.arp.sync());
+      if ((a.on || a.glide.on) && !audio.drone.on) toast(t('stage.arpNeedPad'));
+      render(); return;
+    }
     if ((b = e.target.closest('[data-sg]'))) {
       const a = b.dataset.sg;
       if (a === 'play') { if (S.playing) { stop({ keepPad: false }); render(); } else play(); }
