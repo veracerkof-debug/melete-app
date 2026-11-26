@@ -15,6 +15,7 @@ import { keyLabel, shiftKey, parseNote } from '../../music/transpose.js';
 import { itemOf, setItem, moveSong, setSongs, tracksOf, barSec, resumeOk, chordsAbove, TR_MAX, capoClamp, WORK, workEvent, toggleWorkSong, tapTempo } from '../stage.js';
 import { getContext } from '../../audio/context.js';
 import { createShowPads } from '../../audio/showpads.js';
+import { KITS as DRUM_KITS, DEF_KIT, DEF_VEL } from '../../audio/stagepads.js';
 import * as SM from '../../music/show.js';
 import { DIRS, SENS } from '../../audio/drone.js';
 import { saveEvent, liveEvents } from '../calendar.js';
@@ -147,6 +148,9 @@ export function openStage(app, evId, i = 0) {
   const ss = (k, d) => { try { const v = sessionStorage.getItem('melete.stage.' + k); return v == null ? d : v; } catch { return d; } };
   const sset = (k, v) => { try { sessionStorage.setItem('melete.stage.' + k, v); } catch { /* */ } };
   Object.assign(S, { eng: null, held: new Map(), freeBpm: +ss('freeBpm', 0) || 0, freeKey: null, view: ss('view', 'text'), score: null, scoreId: '', scoreKind: null, showPads: true, space: +ss('space', 0.6), echo: +ss('echo', 0), taps: [], locked: false, hushed: false, fade: 0 });
+  // набор драм-пэдов и сила удара (слово автора 26.11.2026): умолчание — электронные, сила 60 %; хранится в настройках
+  { const d = app.store.state.settings.stageDrums || {}; S.kit = DRUM_KITS.includes(d.kit) ? d.kit : DEF_KIT; S.vel = d.vel > 0 && d.vel <= 1 ? d.vel : DEF_VEL; }
+  const saveDrums = () => { app.store.state.settings.stageDrums = { kit: S.kit, vel: S.vel }; app.store.save(); };
   const pedalMode = () => (app.store.state.settings.stagePedal === 'song' ? 'song' : 'page'); // педаль листает страницу или песню
   const list = () => { const ev = evOf(app, evId); return ev ? setSongs(ev, app.store.songById) : []; };
   const item = () => { const ev = evOf(app, evId), s = list()[S.i]; return ev && s ? { s, it: itemOf(ev, s, audioFiles(app)) } : null; };
@@ -291,7 +295,7 @@ export function openStage(app, evId, i = 0) {
     return safe('pads', () => {
       const c = getContext(audio.mixer.state.mode), out = audio.mixer.bus('drone');
       if (!c || !out) return null;
-      S.eng = createShowPads({ dest: out, getBlob: (id) => { const f = app.files && app.files.get(id); return f ? f.blob : null; }, drumFx: () => ({ bpm: curBpm, space: S.space, echo: S.echo }) });
+      S.eng = createShowPads({ dest: out, getBlob: (id) => { const f = app.files && app.files.get(id); return f ? f.blob : null; }, drumFx: () => ({ bpm: curBpm, space: S.space, echo: S.echo, kit: S.kit, vel: S.vel }) });
       S.eng.setLevel(effVal('sounds'));
       return S.eng;
     });
@@ -608,17 +612,23 @@ export function openStage(app, evId, i = 0) {
     const f = p.file && app.files ? app.files.get(p.file) : null, name = p.name || (p.synth ? t('stage.p.' + p.synth) : f ? f.name : '');
     const rng = (k, label, v) => '<div class="cellcol"><span>' + esc(label) + '</span><input type="range" class="sgrng" data-pf="' + k + '" min="0" max="100" value="' + Math.round(v) + '" aria-label="' + esc(label) + '"></div>';
     const body = () => snav(name, { right: '<button class="link b r" data-close>' + esc(t('ui.done')) + '</button>' }) +
-      '<div class="group">' + rng('level', t('stage.padLevel'), p.level == null ? 100 : p.level) + (p.synth ? rng('space', t('stage.space'), S.space * 100) + rng('echo', t('stage.echo'), S.echo * 100) : '') + '</div>' +
+      (p.synth ? '<div class="hdr">' + esc(t('stage.kit')) + '</div><div class="group"><div class="cellcol"><div class="shchips" role="group" aria-label="' + esc(t('stage.kit')) + '">' + DRUM_KITS.map((k) => '<button class="sgchip' + (S.kit === k ? ' on' : '') + '" data-pk="' + k + '" aria-pressed="' + (S.kit === k) + '">' + esc(t('stage.kit.' + k)) + '</button>').join('') + '</div></div></div>' : '') +
+      '<div class="group">' + rng('level', t('stage.padLevel'), p.level == null ? 100 : p.level) + (p.synth ? rng('vel', t('stage.vel'), S.vel * 100) + rng('space', t('stage.space'), S.space * 100) + rng('echo', t('stage.echo'), S.echo * 100) : '') + '</div>' +
       '<div class="group" style="margin-top:12px"><button class="cell act" data-pf-set><span class="grow">' + esc(t('stage.padsEdit')) + '</span></button></div>';
     sheet(body, (el, sh) => {
       el.addEventListener('input', (e) => {
         const k = e.target.dataset && e.target.dataset.pf; if (!k) return;
         const v = +e.target.value;
         if (k === 'level') { p.level = v; if (app.saveDevice) app.saveDevice(); }
+        else if (k === 'vel') { S.vel = Math.max(0.05, v / 100); saveDrums(); if (S.eng) S.eng.setVel(S.vel); }
         else if (k === 'space') { S.space = v / 100; sset('space', S.space); if (S.eng) S.eng.setSpace(S.space); }
         else { S.echo = v / 100; sset('echo', S.echo); if (S.eng) S.eng.setEcho(S.echo); }
       });
-      el.addEventListener('click', (e) => { if (e.target.closest('[data-pf-set]')) { sh.close(); padsSheet(); } });
+      el.addEventListener('click', (e) => {
+        const kb = e.target.closest('[data-pk]');
+        if (kb) { S.kit = kb.dataset.pk; saveDrums(); if (S.eng) S.eng.setKit(S.kit); sh.update(); return; }
+        if (e.target.closest('[data-pf-set]')) { sh.close(); padsSheet(); }
+      });
     });
   };
   const layOf = () => { const st = app.store.state.settings; const L = (st.layout ||= {}); return (L.stage ||= { order: [], hidden: [], size: {} }); };

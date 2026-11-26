@@ -1,4 +1,6 @@
 // Барабанные пэды сцены (слово автора 22.11.2026): ударные «в пространстве» — длинное эхо и большой зал.
+// Три набора (слово автора 26.11.2026): электронные (умолчание), акустические, синтез кода; сэмплы лежат в public/drums/<набор>/<пэд>_a|b.mp3
+// (a — мягкий слой, b — жёсткий), грузятся один раз; пока не загружены — играет синтез. Умолчание: длинный зал, эхо выключено, сила удара 60 %.
 // Синтез без сэмплов (drums.js); у каждого пэда своя доля посыла в зал и эхо (сухая бочка — почти без пространства, «мокрая» бочка,
 // рим, хлопок, крэш — тонут в зале). Эхо — в долях темпа песни (пунктирная восьмая). Все узлы создаются один раз при открытии сцены
 // и не переподключаются: ручки меняют только параметры плавно (принцип 3). Без DOM.
@@ -19,7 +21,12 @@ export const PADS = [
 // Время эха: пунктирная восьмая от темпа (0,75 доли), не короче 0,12 и не длиннее 1,2 с
 export const echoTime = (bpm) => Math.max(0.12, Math.min(1.2, (60 / (+bpm > 0 ? +bpm : 90)) * 0.75));
 
-export function createStagePads(c, out, { bpm = () => 90, space = 0.55, echo = 0.4 } = {}) {
+export const KITS = ['elec', 'muld', 'synth'];
+export const DEF_KIT = 'elec', DEF_VEL = 0.6, DEF_SPACE = 0.6, DEF_ECHO = 0;
+const defaultLoad = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error('drums ' + r.status); return r.arrayBuffer(); });
+const kitUrl = (kit, id, layer) => new URL('drums/' + kit + '/' + id + '_' + layer + '.mp3', typeof document !== 'undefined' ? document.baseURI : 'http://localhost/').href;
+
+export function createStagePads(c, out, { bpm = () => 90, space = DEF_SPACE, echo = DEF_ECHO, kit = DEF_KIT, vel = DEF_VEL, load = defaultLoad } = {}) {
   const N = { dry: c.createGain(), roomBus: c.createGain(), echoBus: c.createGain(), wet: c.createGain(), delay: c.createDelay(1.5), fb: c.createGain(), lp: c.createBiquadFilter(), echoOut: c.createGain() };
   N.dry.connect(out);
   N.wet.gain.value = 1.0; N.wet.connect(out);
@@ -37,15 +44,45 @@ export function createStagePads(c, out, { bpm = () => 90, space = 0.55, echo = 0
     input.connect(N.dry); input.connect(toRoom).connect(N.roomBus); input.connect(toEcho).connect(N.echoBus);
     return { ...p, input };
   });
-  const now = () => c.currentTime, lv = { space, echo };
+  const now = () => c.currentTime, lv = { space, echo, kit: KITS.includes(kit) ? kit : DEF_KIT, vel: Math.max(0.05, Math.min(1, +vel || DEF_VEL)) };
+  // сэмплы набора: { 'набор/пэд_слой': AudioBuffer }; грузятся в фоне один раз, ошибка файла — этот звук остаётся синтезом
+  const bufs = new Map(), loading = new Map();
+  const loadKit = (k) => {
+    if (k === 'synth' || loading.has(k)) return loading.get(k) || Promise.resolve();
+    const job = Promise.all(PADS.flatMap((p) => ['a', 'b'].map((l) => {
+      const key = k + '/' + p.id + '_' + l;
+      return load(kitUrl(k, p.id, l)).then((ab) => c.decodeAudioData(ab)).then((b) => { bufs.set(key, b); }).catch(() => { /* этот звук — синтез */ });
+    }))).then(() => {});
+    loading.set(k, job);
+    return job;
+  };
+  loadKit(lv.kit);
+  const sample = (p) => {
+    if (lv.kit === 'synth') return null;
+    return { soft: bufs.get(lv.kit + '/' + p.id + '_a'), hard: bufs.get(lv.kit + '/' + p.id + '_b') };
+  };
   const set = (g, v) => g.gain.setTargetAtTime(Math.max(0, Math.min(2, v)), now(), 0.03);
   return {
     // Удар по пэду i (0…7); v — сила 0…1. Ошибка одного удара не ломает остальные
-    hit(i, v = 0.85) {
+    hit(i, v = lv.vel) {
       const p = pads[i];
       if (!p || c.state === 'closed') return false;
-      try { drumHit(c, p.input, p.lane, now(), v); return true; } catch { return false; }
+      try {
+        const sm = sample(p), b = sm && (v > 0.62 ? sm.hard || sm.soft : sm.soft || sm.hard);
+        if (b) { // живой или электронный сэмпл: мягкий слой до 60 %, жёсткий выше; громкость растёт с силой
+          const s = c.createBufferSource(), g = c.createGain();
+          s.buffer = b; g.gain.value = 0.35 + 0.65 * v;
+          s.connect(g); g.connect(p.input); s.start(now());
+          s.onended = () => { try { s.disconnect(); g.disconnect(); } catch { /* уже */ } };
+          return true;
+        }
+        drumHit(c, p.input, p.lane, now(), v); return true;
+      } catch { return false; }
     },
+    setKit(k) { if (!KITS.includes(k)) return; lv.kit = k; loadKit(k); },
+    setVel(v) { lv.vel = Math.max(0.05, Math.min(1, +v || DEF_VEL)); },
+    get kit() { return lv.kit; }, get vel() { return lv.vel; },
+    ready: () => lv.kit === 'synth' || PADS.every((p) => bufs.has(lv.kit + '/' + p.id + '_a')),
     // «Пространство» 0…1: уровень зала (и хвоста) для всех пэдов; «Эхо» 0…1; время эха — под темп
     setSpace(v) { lv.space = v; set(N.roomBus, v * 1.5); },
     setEcho(v) { lv.echo = v; set(N.echoOut, v * 1.1); },

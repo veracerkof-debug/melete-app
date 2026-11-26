@@ -101,12 +101,13 @@ export function createShowPads({ dest, getBlob, drumFx = () => ({}), now = () =>
     out, duckNode,
     drums: () => dr, // созданные ударные (или null)
     setSpace(v) { if (dr) dr.setSpace(v); }, setEcho(v) { if (dr) dr.setEcho(v); }, setBpm(b) { if (dr) dr.setBpm(b); },
+    setKit(k) { if (dr) dr.setKit(k); }, setVel(v) { if (dr) dr.setVel(v); },
     // «стоп всё» со сценой: хвосты ударных гасятся, потом возвращаются
     hush(sec) { if (dr) dr.hush(sec); }, unhush() { if (dr) dr.unhush(); },
     load, preload, ready, failed: (fileId) => errs.has(fileId),
     // касание пада; → 'play' | 'stop' | 'wait' (файл ещё раскрывается) | 'empty' (файла нет) | 'error'
     press(pad) {
-      if (pad && pad.synth) { const i = PADS.findIndex((x) => x.id === pad.synth); if (i < 0) return 'empty'; try { return drums().hit(i, 0.85) ? 'play' : 'error'; } catch { return 'error'; } }
+      if (pad && pad.synth) { const i = PADS.findIndex((x) => x.id === pad.synth); if (i < 0) return 'empty'; try { return drums().hit(i) ? 'play' : 'error'; } catch { return 'error'; } }
       if (!pad || !pad.file) return 'empty';
       const live = of(pad.id);
       if (live.length && pad.again !== 'layer') {
