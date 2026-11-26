@@ -14,11 +14,13 @@ import { arrange, bindLayout } from '../../ui/layout.js';
 import * as M from '../../music/show.js';
 import { stemsOf } from '../../core/jobs.js';
 import { holdScreen } from '../../core/screenon.js';
+import { closeAllSheets as closeSheets } from '../../ui/index.js';
 
 const I = {
   gear: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
   pen: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4 9.5-9.5a2 2 0 0 1 3 3L9 18z"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12"/></svg>',
 };
 const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'], NOTE_m = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
@@ -185,8 +187,20 @@ function paint() {
     const pl = eng ? eng.playing(el.dataset.pad) : null, p = M.padById(S, el.dataset.pad);
     el.classList.toggle('play', !!pl);
     el.classList.toggle('err', !!(p && p.file && eng && eng.failed(p.file)));
-    if (pl) { const x = (eng.now() - pl.t0) / pl.len; el.style.setProperty('--p', Math.max(0, Math.min(1, pl.loop ? x % 1 : x)) * 100 + '%'); }
+    if (pl) { const x = (eng.now() - pl.t0) / pl.len; el.style.setProperty('--p', (pl.loop ? 100 : Math.max(0, Math.min(1, x)) * 100) + '%'); }
   });
+  nowPaint();
+}
+// «Сейчас звучат»: по плашке на звук — название, сколько осталось (петля — ∞), ✕ гасит один звук
+function nowPaint() {
+  const box = host && host.querySelector('#shnowp'); if (!box) return;
+  const list = eng ? allPads().map((p) => [p, eng.playing(p.id)]).filter(([, pl]) => pl) : [];
+  const key = list.map(([p]) => p.id).join(',');
+  if (box.dataset.k !== key) {
+    box.dataset.k = key; box.hidden = !list.length;
+    box.innerHTML = list.map(([p, pl]) => '<span class="shnp pc-' + p.color + '"><b>' + esc(p.name || (fileOf(p.file) || {}).name || t('synth.' + p.synth)) + '</b><i data-left="' + p.id + '"></i><button data-stop="' + p.id + '" aria-label="' + esc(t('now.stop')) + '">✕</button></span>').join('');
+  }
+  list.forEach(([p, pl]) => { const i = box.querySelector('[data-left="' + p.id + '"]'); if (i) i.textContent = pl.loop ? '∞' : M.mmss(Math.max(0, pl.len - (eng.now() - pl.t0))); });
 }
 function kick() { paint(); if (!raf && eng && eng.active) raf = requestAnimationFrame(loop); }
 function loop() { paint(); raf = eng && eng.active ? requestAnimationFrame(loop) : 0; }
@@ -203,7 +217,8 @@ function padHTML(p, dock) {
 // Фон — часть экрана «Звуки»: вкл/выкл, тональность, шум одной полосой; подробности — «⋯»
 function bedBarHTML() {
   const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES, man = b.pad.tonic;
-  const key = (v, l, on, cur) => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
+  const nb = [(ton + 7) % 12, (ton + 5) % 12, (ton + 9) % 12, (ton + 3) % 12]; // квинта вверх и вниз, параллельные — подходящие соседи
+  const key = (v, l, on, cur) => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + (nb.includes(+v) ? ' sg' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
   // подпись у группы — маленькая: «Фон F♯» (вкл/выкл), «Авто», «⋯»; сами клавиши — крупные
   return '<div class="shbedbar"><div class="shbedrow"><button class="shcap' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
     '<button class="shcap' + (man == null ? ' on' : '') + '" data-tonic="" aria-pressed="' + (man == null) + '">' + esc(t('bed.tonicAuto')) + '</button>' +
@@ -229,7 +244,7 @@ function padsBlocks() {
   // закреплённые пэды — только занятые (в правке — все); под ними «Ведущий» (пока держат, всё тише на 10 дБ) и «Стоп звуки»
   const dockCells = d ? (edit ? d.pads.map((p, i) => [p, i]) : d.pads.map((p, i) => [p, i]).filter(([p]) => filled(p))) : [];
   const duckRow = '<div class="shduckrow"><button class="shduck" data-duck aria-label="' + esc(t('duck.aria')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>' + esc(t('duck.btn')) + '</span></button><button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>';
-  blocks.push({ id: 'dock', html: foot((dockCells.length ? '<div class="shdock" style="--c:' + Math.max(1, Math.min(d.cols, dockCells.length)) + '">' + dockCells.map(([p, i]) => padCell(p, i, true)).join('') + '</div>' : '') + duckRow) });
+  blocks.push({ id: 'dock', html: foot('<div class="shnowp" id="shnowp" hidden></div>' + (dockCells.length ? '<div class="shdock" style="--c:' + Math.max(1, Math.min(d.cols, dockCells.length)) + '">' + dockCells.map(([p, i]) => padCell(p, i, true)).join('') + '</div>' : '') + duckRow) });
   return blocks;
 }
 const layOf = (page) => { const L = (S.layout ||= {}); return (L[page] ||= { order: [], hidden: [], size: {} }); };
@@ -279,7 +294,7 @@ function knobHTML(k, lb) {
 }
 // Нижняя полоса «Эфира»: одна кнопка пауза/играть и общие крутилки рядом («ГО» и «Дальше» убраны — переход смахиванием по номеру)
 // Аварийный стоп: первое касание «заряжает» (кнопка меняется), второе в течение 1,5 с гасит всё — трек, звуки, фон. Одно касание ничего не делает
-let panicAt = 0, panicT = 0;
+let panicAt = 0, panicT = 0, stopHeld = false, locked = false, autoFor = '';
 function panic() {
   if (!panicAt) {
     panicAt = Date.now(); if (S.ui.buzz) buzz();
@@ -306,9 +321,21 @@ function barHTML() {
 // Шторка «Звук» (слово автора 26.11.2026): на экране только общая громкость, остальные уровни — здесь; нажал, подправил, закрыл
 function levelsSheet() {
   const row = ([k, lb]) => '<div class="sslider"><div class="ssl"><span>' + esc(t(lb)) + '</span><b class="num" data-vols="' + k + '">' + volOf(k) + '</b></div><input type="range" class="range" data-vol="' + k + '" min="0" max="100" value="' + volOf(k) + '" aria-label="' + esc(t(lb)) + '"></div>';
-  ctx.ui.sheet(() => '<div class="shprog"><div class="hdr">' + esc(t('desk.levels')) + '</div><div class="group sgroup" style="margin-top:6px">' + KNOBS.slice(1).map(row).join('') + '</div></div>', (el) => {
+  const chips = (attr, vals, cur, fmt) => '<div class="shchips">' + vals.map((v) => '<button class="shchip' + (v === cur ? ' on' : '') + '" ' + attr + '="' + v + '" aria-pressed="' + (v === cur) + '">' + esc(fmt(v)) + '</button>').join('') + '</div>';
+  ctx.ui.sheet(() => '<div class="shprog"><div class="hdr">' + esc(t('desk.levels')) + '</div><div class="group sgroup" style="margin-top:6px">' + KNOBS.slice(1).map(row).join('') + '</div>' +
+    '<div class="hdr">' + esc(t('lv.stop')) + '</div>' + chips('data-sf', [1, 2, 4, 8], S.stopFade, (v) => t('lv.sec', { n: v })) +
+    '<div class="hdr">' + esc(t('lv.lead')) + '</div>' + chips('data-ld', [6, 10, 15], S.leadDb, (v) => '−' + v + ' ' + t('db')) +
+    '<div class="hdr">' + esc(t('lv.next')) + '</div>' + chips('data-auto', [0, 1], S.auto ? 1 : 0, (v) => t(v ? 'lv.nextAuto' : 'lv.nextWait')) + '</div>', (el, sh) => {
     el.addEventListener('input', onInput);
     el.addEventListener('change', onChange);
+    el.addEventListener('click', (e) => {
+      const g = (s) => e.target.closest(s); let b;
+      if ((b = g('[data-sf]'))) S.stopFade = +b.dataset.sf;
+      else if ((b = g('[data-ld]'))) S.leadDb = +b.dataset.ld;
+      else if ((b = g('[data-auto]'))) S.auto = b.dataset.auto === '1';
+      else return;
+      save(); sh.update();
+    });
   });
 }
 function stripHTML() {
@@ -395,14 +422,16 @@ function meterPaint() {
   for (let i = 0; i < cells.length; i++) { const c = i < lvl ? (i < 16 ? 'g' : i < 21 ? 'a' : 'r') : ''; if (cells[i].className !== c) cells[i].className = c; }
 }
 // «Ведущий» (слово автора 26.11.2026): пока кнопку держат, всё приглушено на 10 дБ; отпустили — плавно вернулось
-function duckStart() { if (duckOn || !master) return; duckOn = true; master.gain.setTargetAtTime(M.faderGain(S.master) * 0.316, master.context.currentTime, 0.08); if (S.ui.buzz) buzz(); }
+function duckStart() { if (duckOn || !master) return; duckOn = true; master.gain.setTargetAtTime(M.faderGain(S.master) * Math.pow(10, -S.leadDb / 20), master.context.currentTime, 0.08); if (S.ui.buzz) buzz(); }
 function duckEnd() { if (!duckOn) return; duckOn = false; if (master) master.gain.setTargetAtTime(M.faderGain(S.master), master.context.currentTime, 0.2); }
 function deskPaint(force) {
   if (!host || S.page !== 'desk') return;
   const n = M.currentNumber(S), e = cur();
   if (deck) deck.tick();
   const st = deck ? deck.state : null;
-  if (force && st && n && n.kind === 'track' && st.ended && !st.playing) { /* дошёл до конца: ничего не делаем, номер остаётся перед глазами */ }
+  // дошёл до конца: по умолчанию номер остаётся перед глазами (ждёт ▶); «Сам» — следующий запускается сам, один раз на запись
+  if (force && S.auto && st && n && n.kind === 'track' && st.ended && !st.playing && autoFor !== n.id) { autoFor = n.id; if (M.nextNumber(S)) goNext().catch((er) => ctx.logErr(er)); }
+  if (n && n.id !== autoFor && st && st.playing) autoFor = '';
   const tm = host.querySelector('#shtime'), cn = host.querySelector('#shcueln'), pp = host.querySelector('#shpp');
   const crow = host.querySelector('.shpick.cur');
   if (crow) { const on = !!(deck && deck.state.playing && n && n.kind === 'track' && deck.state.file === n.file); if (crow.classList.contains('playing') !== on) { crow.classList.toggle('playing', on); crow.setAttribute('aria-pressed', String(on)); const i = crow.querySelector('i'); if (i) i.textContent = on ? '■' : String(e.numbers.indexOf(n) + 1); } }
@@ -449,7 +478,8 @@ function render() {
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
     (S.page === 'pads' ? '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
-    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + '</div></div>';
+    (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-lock', I.lock, t('lock.aria'), 'plain') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + '</div>' +
+    (locked ? '<div class="shlock" role="dialog" aria-label="' + esc(t('lock.aria')) + '"><button data-unlock><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>' + esc(t('lock.hold')) + '</span></button></div>' : '') + '</div>';
   const list = host.querySelector('.shlist');
   if (list) sortable(list, '.shnum', 'data-num', (ids) => { const e = cur(); if (!e) return; const by = new Map(e.numbers.map((n) => [n.id, n])); e.numbers = ids.map((i) => by.get(i)).filter(Boolean); e.updatedAt = Date.now(); save(); render(); });
   const pk = host.querySelector('.shpicks');
@@ -501,6 +531,9 @@ function onUp(e) {
 function onClick(e) {
   const g = (s) => e.target.closest(s);
   let b;
+  if (locked && !g('[data-unlock]')) return;
+  if ((b = g('[data-stop]'))) { if (eng) eng.stop(b.dataset.stop, 0.25); kick(); return; }
+  if (g('[data-lock]')) { locked = true; closeSheets(); render(); return; }
   if ((b = g('[data-page]'))) { go(b.dataset.page); return; }
   if ((b = g('[data-bank]'))) { if (S.bank === b.dataset.bank && edit) { bankSheet(M.bankOf(S)); return; } S.bank = b.dataset.bank; save(); render(); preload(); return; }
   if ((b = g('.shpad[data-pad]'))) { const p = M.padById(S, b.dataset.pad); if (p && (edit || !(p.file || p.synth))) padSheet(p); return; }
@@ -525,7 +558,7 @@ function onClick(e) {
     case 'bedtoggle': S.bed.pad.on = !S.bed.pad.on; save(); if (S.bed.pad.on) padStart(M.currentNumber(S)); else if (bed) bed.padOff(S.goFade); render(); break;
     case 'set': settingsSheet(); break;
     case 'bankadd': addBank(); break;
-    case 'stopall': stopAll(); break;
+    case 'stopall': if (stopHeld) { stopHeld = false; break; } stopAll(); break;
     case 'evpick': eventsSheet(); break;
     case 'evedit': eventSheet(cur()); break;
     case 'evnew': newEvent(); break;
@@ -541,8 +574,9 @@ function onClick(e) {
     default: break;
   }
 }
-function stopAll() {
-  const run = () => { if (eng) eng.stopAll(0.2); };
+// Касание — плавно (S.stopFade, по умолчанию 2 с), удержание — сразу (stopNow)
+function stopAll(now) {
+  const run = () => { if (eng) eng.stopAll(now ? 0.08 : Math.max(0.2, S.stopFade)); };
   if (S.ui.confirmStop) ctx.ui.confirm(t('stopAllAsk'), '', t('stopAll')).then((ok) => { if (ok) run(); }); else run();
 }
 function onChange(e) {
@@ -681,6 +715,28 @@ function applyNorm() {
 
 /* ---------- создание ---------- */
 
+// Готовые звуки (слово автора 26.11.2026: «добавь бесплатные без авторских прав»): девять CC0-файлов из public/sounds/ один раз
+// превращаются в обычные записи пульта (rec.show) и банк «Готовые»; дальше — как свои: можно заменить и удалить. Нет файла — попробуем при следующем входе
+const BUILTIN = [['applause', 'green', 'shot'], ['laugh', 'green', 'shot'], ['fanfare', 'amber', 'shot'], ['triumph', 'amber', 'shot'], ['win', 'amber', 'shot'], ['bell', 'blue', 'shot'], ['whoosh', 'blue', 'shot'], ['sting', 'violet', 'shot'], ['rain', 'teal', 'loop']];
+async function seedSounds() {
+  if (!S || S.soundsSeeded || !ctx.files || !ctx.files.add) return;
+  S.soundsSeeded = true; save();
+  const pads = [];
+  for (const [id, color, mode] of BUILTIN) {
+    try {
+      const r = await fetch(new URL('sounds/' + id + '.mp3', document.baseURI)); if (!r.ok) throw new Error('sound ' + r.status);
+      const blob = await r.blob(), name = t('snd.' + id), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const rec = { id: rid, name, size: blob.size, type: 'audio/mpeg', songs: [], created: Date.now(), blob, video: false, show: true };
+      const dur = await probeDur(blob); if (dur) rec.dur = dur;
+      if (await ctx.files.add(rec)) pads.push(M.newPad({ file: rid, name, color, mode, fadeOut: mode === 'loop' ? 1.5 : 0.3 }));
+    } catch (e) { ctx.logErr(e); }
+  }
+  if (!S || !pads.length) { if (S) { S.soundsSeeded = false; save(); } return; } // нет файлов (офлайн-кеш не готов) — в следующий раз
+  S.banks = S.banks.filter((b) => b.pinned || b.preset === 'drums' || b.pads.some(Boolean)); // пустой «Банк 1» не нужен
+  const b = M.newBank(t('snd.bank'), { cols: 3, rows: Math.ceil((pads.length + 1) / 3), pads });
+  S.banks.push(b); S.bank = b.id; save();
+  if (host) { render(); if (eng) preload(); }
+}
 function newPadAt(i, dock) {
   const b = dock ? M.dockOf(S) : M.bankOf(S);
   if (!b || b.pads[i]) return;
@@ -1064,6 +1120,9 @@ export default {
     offs.push(swipe(host, { min: 50, ok: (e) => { const r = e.target.closest && e.target.closest('[data-pick]'); pickRow = r ? r.dataset.pick : null; return !!r; },
       left: () => { const n = pickRow && pickById(pickRow); if (n) glideTo(n).catch((er) => ctx.logErr(er)); },
       right: () => { const n = pickRow && pickById(pickRow); if (n && n.done) { n.done = false; const e = cur(); if (e) e.updatedAt = Date.now(); save(); ctx.ui.toast(t('pick.restored')); render(); } } }));
+    offs.push(onHold(host, '[data-x="stopall"]', () => { stopHeld = true; stopAll(true); if (S.ui.buzz) buzz(); }) || (() => {}));
+    offs.push(onHold(host, '.shpad[data-pad]', (el) => { if (edit) return; const p = M.padById(S, el.dataset.pad); if (p && (p.file || p.synth)) { if (eng) eng.stop(p.id, 0.15); padSheet(p); } }) || (() => {}));
+    offs.push(onHold(host, '[data-unlock]', () => { locked = false; render(); }) || (() => {}));
     offs.push(onHold(host, '[data-bank]', (el) => { const b = S.banks.find((x) => x.id === el.dataset.bank); if (b) bankSheet(b); }) || (() => {}));
     // удержать обложку (значок слева) — вести номер по списку; удержать в другом месте строки — настройки номера
     offs.push(onHold(host, '[data-pick]', (el, e) => { if (e && e.target && e.target.closest && e.target.closest('.shpick > i')) return; const n = pickById(el.dataset.pick); if (n) numSheet(n); }) || (() => {}));
@@ -1077,6 +1136,7 @@ export default {
     tickT = setInterval(() => { if (!host) return; const o = host.querySelector('#shtm'), r = timerText(); if (!!o !== !!r.s) { render(); return; } if (o) { o.textContent = r.s; o.classList.toggle('over', r.over); } }, 1000);
     awake(); holdScreen('show', true);
     render();
+    setTimeout(() => seedSounds().catch((er) => ctx && ctx.logErr(er)), 600);
     setTimeout(queueLoud, 1500);
     setTimeout(queueAna, 2500);
     if ((S.page === 'pads' || S.ui.deskPads) && ctx.audio.ready()) { if (ensureEng()) preload(); }

@@ -308,3 +308,21 @@
 .shduck svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .shduck:active{background:var(--tint);color:var(--on-tint);border-color:var(--tint)}
 .shduckrow .shstop{min-height:44px;height:44px;padding:0 14px;font-size:12px;border-radius:12px}
+
+/* ---- «Звуки умнее» (слово автора 26.11.2026): заливка по длине, «Сейчас звучат», подходящие тональности точкой, блокировка ---- */
+.shpad.play::after{display:none}
+.shpad::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:color-mix(in srgb,var(--pc) 38%,transparent);pointer-events:none}
+.shpad.play::before{width:var(--p,0%)}
+.shpad>*{position:relative}
+.shnowp{display:flex;gap:6px;overflow-x:auto;padding:6px 10px 0;scrollbar-width:none}
+.shnowp[hidden]{display:none}
+.shnp{--pc:var(--gy);flex:none;display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-radius:10px;background:color-mix(in srgb,var(--pc) 22%,var(--fill));font:600 11px var(--font);color:var(--ink);max-width:70%}
+.shnp b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shnp i{font-style:normal;color:var(--l2);font-variant-numeric:tabular-nums}
+.shnp button{width:24px;height:24px;border-radius:8px;background:var(--cell);color:var(--ink);font-size:12px}
+.shdk.sg::after{content:"";position:absolute;bottom:6px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--tint)}
+.shdk.on.sg::after{background:var(--on-tint)}
+.shw{position:relative}
+.shlock{position:absolute;inset:0;z-index:30;display:grid;place-items:end center;padding:0 0 24px;background:rgba(0,0,0,.28);touch-action:none}
+.shlock button{display:flex;align-items:center;gap:8px;height:48px;padding:0 20px;border-radius:16px;background:var(--cell);color:var(--ink);border:1px solid var(--l3);font:700 13px var(--font)}
+.shlock svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

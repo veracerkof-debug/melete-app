@@ -205,6 +205,10 @@ export function normalizeShow(s = {}) {
   o.norm = { on: nm.on == null ? true : !!nm.on, target: [-14, -16, -19, -23].includes(+nm.target) ? +nm.target : -16, pads: nm.pads == null ? true : !!nm.pads }; // нормализация громкости записей и звуков, LUFS
   o.master = clamp(o.master, 0, 100, 100);              // общая громкость пульта: всё, что он играет
   o.deckLevel = clamp(o.deckLevel, 0, 100, 85);          // фейдер основного трека
+  o.stopFade = clamp(o.stopFade, 0, 10, 2);              // с: плавный «Стоп все» (касание); удержание — сразу
+  o.leadDb = [6, 10, 15].includes(+o.leadDb) ? +o.leadDb : 10; // «Ведущий»: на сколько дБ приглушать всё, пока кнопку держат
+  o.auto = !!o.auto;                                     // автопереход: следующий номер сам, когда трек закончился (по умолчанию ждать ▶)
+  o.soundsSeeded = !!o.soundsSeeded;                     // готовые звуки (CC0) разложены по банку один раз
   o.goFade = clamp(o.goFade, 0, 10, 2);                  // с: плавный переход по «ГО», если у номера свой уход не задан
   o.cur = typeof o.cur === 'string' ? o.cur : null;      // идущий номер
   o.level = clamp(o.level, 0, 100, 85);                  // общая громкость звуков

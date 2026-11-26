@@ -44,25 +44,28 @@ test('пульт: выступление, номер с меткой, пад с�
   await expect(page.locator(T + '.shdock .shpad')).toHaveCount(0); // пустые закреплённые не рисуются (только в правке)
   await expect(page.locator(T + '[data-duck]')).toBeVisible(); // «Ведущий» — пока держат, всё тише
   await expect(page.locator(T + '.shmeter i')).toHaveCount(24); // метр уровня над громкостью
-  await page.locator(T + '.shbanks [data-bank]').first().click(); // готовые «Ударные» — отдельной полосой сверху, во вкладках — свои банки; первый — пустой
-  await page.click(T + '.shpads .shpad[data-cell="0"]');
+  // готовые звуки CC0 (public/sounds) раскладываются сами один раз: банк «Готовые», девять падов и «+» следом
+  await expect(page.locator(T + '.shbanks [data-bank]').first()).toContainText('Готовые', { timeout: 15_000 });
+  await expect(page.locator(T + '.shpads .shpad[data-pad]')).toHaveCount(9);
+  await page.click(T + '.shpads .shpad[data-cell="9"]');
   await page.fill('.sheet [data-f="name"]', 'Дробь');
   await page.click('.sheet [data-x="pick"]');
   await page.setInputFiles('.sheet input[type="file"]', { name: 'drum.wav', mimeType: 'audio/wav', buffer: wav() });
   await expect(page.locator('.sheet [data-x="pick"]')).toContainText('drum', { timeout: 8000 });
   await page.click('.sheet [data-mode="hold"]');
   await page.keyboard.press('Escape'); await page.waitForTimeout(500);
-  await expect(page.locator(T + '.shpads:not(.drm) .shpad[data-pad]').first()).toContainText('Дробь');
+  await expect(page.locator(T + '.shpads:not(.drm) .shpad[data-pad]', { hasText: 'Дробь' })).toHaveCount(1);
   // звук идёт, пока держат; отпустили — стоит
   const pad = T + '.shpads:not(.drm) .shpad[data-pad]';
-  const box = await page.locator(pad).first().boundingBox();
+  await page.locator(pad, { hasText: 'Дробь' }).evaluate((el) => el.scrollIntoView({ block: 'center' })); // закреплённая полоса внизу не должна закрывать пад
+  const box = await page.locator(pad, { hasText: 'Дробь' }).boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(150);
-  await expect(page.locator(pad).first()).toHaveClass(/play/);
+  await expect(page.locator(pad, { hasText: 'Дробь' })).toHaveClass(/play/);
   await page.mouse.up();
   await page.waitForTimeout(500);
-  await expect(page.locator(pad).first()).not.toHaveClass(/play/);
+  await expect(page.locator(pad, { hasText: 'Дробь' })).not.toHaveClass(/play/);
   // файл звуков не виден в списке медиатеки
   const lib = await page.evaluate(async () => (await import('/src/modules/index.js')).modules.length);
   expect(lib).toBeGreaterThan(0);
@@ -231,5 +234,31 @@ test('пульт: «стоп всем» — только двойное каса
   await page.click(T + '[data-x="set"]'); await page.click('.sheet [data-tg="deskPads"]');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await expect(page.locator(T + '.shfavs .shpad')).not.toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('звуки умнее: «Сейчас звучат» с ✕, заливка падов, блокировка касаний, шторка «Звук» с плавным стопом', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.free('F', ['show']);
+  await page.waitForFunction(() => !document.querySelector('.session .modload'), null, { timeout: 15_000 });
+  const T = '.session .pane[data-tool="show"] ';
+  await page.click(T + '[data-page="pads"]');
+  await expect(page.locator(T + '.shpads .shpad[data-pad]')).toHaveCount(9, { timeout: 15_000 });
+  await page.waitForTimeout(800);
+  const pad = T + '.shpad[data-pad] >> nth=0';
+  await page.dispatchEvent(pad, 'pointerdown', { pointerId: 1 }); await page.dispatchEvent(pad, 'pointerup', { pointerId: 1 });
+  await expect(page.locator(T + '#shnowp')).toBeVisible();
+  await expect(page.locator(T + '#shnowp [data-stop]')).toHaveCount(1);
+  await page.click(T + '#shnowp [data-stop]');
+  await expect(page.locator(T + '#shnowp')).toBeHidden({ timeout: 5000 });
+  await page.click(T + '[data-x="levels"]');
+  await page.click('.sheet [data-sf="4"]'); await page.click('.sheet [data-ld="15"]'); await page.click('.sheet [data-auto="1"]');
+  await expect(page.locator('.sheet [data-sf="4"]')).toHaveClass(/on/);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await page.click(T + '[data-lock]');
+  await expect(page.locator(T + '.shlock')).toBeVisible();
+  const b = await page.locator(T + '[data-unlock]').boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up();
+  await expect(page.locator(T + '.shlock')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
