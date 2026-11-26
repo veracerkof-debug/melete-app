@@ -379,7 +379,6 @@ export function openStage(app, evId, i = 0) {
       clearInterval(S.fade);
       S.fade = setInterval(() => { k++; try { tr.volume = Math.max(0, v0 * (1 - k / 12)); } catch { /* */ } if (k >= 12) { clearInterval(S.fade); S.fade = 0; if (S.track === tr) stopTrack(); } }, 100);
     }
-    toast(t('stage.panicDone'));
     render();
   };
   // пэд в тональности песни: если уже звучит — плавный переход
@@ -796,7 +795,7 @@ export function openStage(app, evId, i = 0) {
     try {
       const [reg, mods, mod] = await Promise.all([import('../../modules/index.js'), import('../modules.js'), import('../../modules/drone/index.js')]);
       const c = mods.makeCtx(app, reg.moduleById('drone'));
-      if (what === 'wave') { const on = mod.toggleWave(c); toast(t(on ? 'stage.waveOn' : 'stage.waveOff')); render(); }
+      if (what === 'wave') { mod.toggleWave(c); render(); }
       else mod.openSettings(c, 'sound');
     } catch (err) { logErr(err); toast(t('stage.padErr')); }
   };
@@ -842,7 +841,6 @@ export function openStage(app, evId, i = 0) {
     }
     else if (e.target.closest('.sgtext') && S.playing && item() && item().it.scroll && !String(document.getSelection && document.getSelection()).length) {
       S.scrollPaused = !S.scrollPaused; S.userScrollAt = 0;
-      toast(t(S.scrollPaused ? 'stage.scrollPaused' : 'stage.scrollResumed'));
     }
     else if ((b = e.target.closest('[data-sgfs]'))) {
       S.fs = Math.max(14, Math.min(64, S.fs + +b.dataset.sgfs));
@@ -891,7 +889,7 @@ export function openStage(app, evId, i = 0) {
     try { localStorage.removeItem(RESUME); } catch { /* */ }
     document.documentElement.classList.remove('onstage');
     cur = null;
-    if (!silent) toast(t('stage.closed'));
+    // «Сцена закрыта» не показывается: человек вышел сам (слово автора 26.11.2026: только важные уведомления)
   };
 
   S.el = document.createElement('div');

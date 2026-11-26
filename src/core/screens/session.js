@@ -826,7 +826,6 @@ export function createSessionScreen(app) {
         app.pomodoro.reset();
         sh.close();
         end();
-        toast(t('fin.saved', { d: fmtDur(rec.dur) }));
       });
     });
   }
