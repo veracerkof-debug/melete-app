@@ -115,12 +115,20 @@ public class FolderPlugin extends Plugin {
 
     /* ---------- пути внутри папки ---------- */
 
+    // Имя совпадает с точностью до регистра и формы Юникода: провайдер папки мог сохранить «Файл.MP3» как «файл.mp3» или разложить «й» —
+    // иначе поиск не находит уже лежащий файл, мы создаём его заново, система делает «файл (1)» … «(32)» и падает «Failed to create unique file»
+    private static boolean sameName(String a, String b) {
+        if (a == null || b == null) return false;
+        if (a.equals(b)) return true;
+        return java.text.Normalizer.normalize(a, java.text.Normalizer.Form.NFC).equalsIgnoreCase(java.text.Normalizer.normalize(b, java.text.Normalizer.Form.NFC));
+    }
+
     // [docId, mime, size, mtime] дочернего элемента с именем name или null
     private String[] child(Uri t, String parentId, String name) {
         try (Cursor c = cr().query(DocumentsContract.buildChildDocumentsUriUsingTree(t, parentId), COLS, null, null, null)) {
             if (c == null) return null;
             while (c.moveToNext()) {
-                if (name.equals(c.getString(1))) return new String[] { c.getString(0), c.getString(2), String.valueOf(c.getLong(3)), String.valueOf(c.getLong(4)) };
+                if (sameName(name, c.getString(1))) return new String[] { c.getString(0), c.getString(2), String.valueOf(c.getLong(3)), String.valueOf(c.getLong(4)) };
             }
         }
         return null;
@@ -139,8 +147,10 @@ public class FolderPlugin extends Plugin {
             if (c == null) {
                 if (!create) return null;
                 String mime = last && fileMime != null ? fileMime : DocumentsContract.Document.MIME_TYPE_DIR;
-                Uri made = DocumentsContract.createDocument(cr(), DocumentsContract.buildDocumentUriUsingTree(t, id), mime, p);
-                if (made == null) throw new Exception("create");
+                Uri made;
+                try { made = DocumentsContract.createDocument(cr(), DocumentsContract.buildDocumentUriUsingTree(t, id), mime, p); }
+                catch (Exception e) { throw new Exception("create '" + p + "' в «" + path + "»: " + e.getMessage()); } // в журнале видно, какой файл
+                if (made == null) throw new Exception("create '" + p + "' в «" + path + "»");
                 id = DocumentsContract.getDocumentId(made);
             } else id = c[0];
         }
