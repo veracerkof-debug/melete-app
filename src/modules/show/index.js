@@ -243,10 +243,12 @@ function padsBlocks() {
   const foot = (h) => '<div class="shfoot">' + h + barHTML() + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
   // закреплённые пэды — только занятые (в правке — все); под ними «Ведущий» (пока держат, всё тише на 10 дБ) и «Стоп звуки»
   const dockCells = d ? (edit ? d.pads.map((p, i) => [p, i]) : d.pads.map((p, i) => [p, i]).filter(([p]) => filled(p))) : [];
-  const duckRow = '<div class="shduckrow"><button class="shduck" data-duck aria-label="' + esc(t('duck.aria')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>' + esc(t('duck.btn')) + '</span></button><button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>';
+  const duckRow = '<div class="shduckrow">' + duckBtn() + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>';
   blocks.push({ id: 'dock', html: foot('<div class="shnowp" id="shnowp" hidden></div>' + (dockCells.length ? '<div class="shdock" style="--c:' + Math.max(1, Math.min(d.cols, dockCells.length)) + '">' + dockCells.map(([p, i]) => padCell(p, i, true)).join('') + '</div>' : '') + duckRow) });
   return blocks;
 }
+// «Ведущий»: пока держат — всё тише (S.leadDb); есть и на «Эфире», и на «Звуках»
+const duckBtn = () => '<button class="shduck" data-duck aria-label="' + esc(t('duck.aria')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>' + esc(t('duck.btn')) + '</span></button>';
 const layOf = (page) => { const L = (S.layout ||= {}); return (L[page] ||= { order: [], hidden: [], size: {} }); };
 const padsHTML = () => arrange(padsBlocks(), layOf('pads'), { t, name: (id) => t('lay.b.' + id), grow: ['sounds'] });
 function numHTML(n, i) {
@@ -407,7 +409,7 @@ function deskHTML() {
     { id: 'wave', html: n && n.kind === 'track' ? '<canvas class="shwave" id="shwave" role="slider" tabindex="0" aria-label="' + esc(t('desk.wave')) + '"></canvas><div class="shtime" id="shtime"></div>' : '<div class="shnote" id="shnote">' + esc(n ? (n.note || t('desk.noTrack')) : t('desk.none')) + '</div>' },
     { id: 'cues', html: '<div class="shcueln" id="shcueln" aria-live="polite"></div>' + tcHTML(n) },
     { id: 'ctl', html: n && n.kind === 'track' ? '<div class="shctl"><button class="shbtn" data-x="fadeout">' + esc(t('desk.fade', { n: ctx.num(S.goFade, 1) })) + '</button><button class="shbtn" data-x="mark">+ ' + esc(t('desk.mark')) + '</button></div>' : '' },
-    { id: 'knobs', html: barHTML() },
+    { id: 'knobs', html: '<div class="shduckrow">' + duckBtn() + '</div>' + barHTML() },
   ];
   return '<div class="shdesk">' + arrange(blocks, layOf('desk'), { t, name: (id) => t('lay.b.' + id), grow: ['picks'] }) + '</div>';
 }
