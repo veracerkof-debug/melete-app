@@ -963,3 +963,7 @@ html.desk .qgrid2 .qbtn{width:64px;height:64px;max-height:none}
 .hstart .hfree{flex:none;width:76px;min-height:50px;padding:0 8px;border-radius:18px;background:var(--cell);color:var(--ink);font-size:13px;font-weight:700;line-height:1.15}
 html.desk .hstart .hfree{min-height:64px}
 .day.plan{overflow:visible;background:none;border-radius:0}
+.modsp .group .cell{min-height:46px;padding-top:4px;padding-bottom:4px}
+.modsp .group{margin-bottom:6px}
+.modsp .hdr{margin-top:10px;margin-bottom:2px}
+.modsp .cell .st{line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

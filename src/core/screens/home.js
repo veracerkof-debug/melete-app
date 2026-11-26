@@ -9,7 +9,7 @@ import { GEMS, gemOf } from '../mastery.js';
 import { gemSec, levelUpOffer } from '../profile.js';
 import { gemCanvas, mountGems } from '../../ui/gem3d.js';
 import { trackMode } from '../session.js';
-import { isOn, makeTab, TABS_MAX, editTabs, placeTab } from '../settings.js';
+import { isOn, makeTab, TABS_MAX, editTabs, placeTab, setFeature } from '../settings.js';
 import { weekday, dayKey } from '../time.js';
 import { modules, moduleById } from '../../modules/index.js';
 import { studyCard } from './study.js';
@@ -406,6 +406,8 @@ export function toolHoldMenu(app, btn, rerender, open) {
     if (r === 'max') toast(t('tabs.max', { max: TABS_MAX })); else { toast(t('hold.madeTab')); rerender(); }
   } });
   items.push({ icon: HI.help, label: t('hold.help'), run: () => showHelp(app, m) });
+  // выключить инструмент совсем (слово автора 26.11.2026: всё это — на главной, не в настройках); вернуть — «Модули и функции»
+  items.push({ icon: HI.minus, label: t('hold.off'), danger: true, run: () => { setFeature(app.store, id, false); rerender(); toast(t('hold.offToast')); } });
   holdMenu(btn, items, moduleName(m));
 }
 

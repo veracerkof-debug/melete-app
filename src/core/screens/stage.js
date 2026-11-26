@@ -6,6 +6,7 @@
 // останавливаются, пэд плавно меняет тональность и звучит дальше (связка между песнями). Устойчивость: каждый звук
 // включается отдельно и ошибка одного не останавливает остальные; место на сцене запоминается — после сбоя или
 // перезапуска приложение предлагает вернуться; экран не гаснет; выход — с подтверждением.
+import { holdScreen } from '../screenon.js';
 import '../../ui/stage.css';
 import { t } from '../../i18n/index.js';
 import { esc, sheet, snav, sw, toast, confirm, icons } from '../../ui/index.js';
@@ -137,6 +138,7 @@ export function openStage(app, evId, i = 0) {
   if (cur) cur.close(true);
   const ev0 = evOf(app, evId);
   if (!ev0 || (evId !== WORK && !setSongs(ev0, app.store.songById).length)) { toast(t('stage.empty')); return; }
+  holdScreen('stage', true);
   const audio = app.audio, drone0 = { pc: app.device.drone.pc, chord: app.device.drone.chord }, metro0 = audio.metro.cfg;
   const S = { i, playing: false, padOn: false, el: null, timers: [], track: null, url: '', offBeat: null, fs: +(sessionStorage.getItem('melete.stage.fs') || 0) || 26,
     night: sessionStorage.getItem('melete.stage.night') === '1', scrollRaf: 0, scrollPaused: false, userScrollAt: 0, startedAt: 0, lastTop: -1 };
@@ -755,6 +757,7 @@ export function openStage(app, evId, i = 0) {
   }, Math.max(0, ms)));
 
   const close = (silent = false) => {
+    holdScreen('stage', false);
     stop();
     clearInterval(S.plT);
     plStop();

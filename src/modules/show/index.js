@@ -13,6 +13,7 @@ import { sortable, dragSort, buzz, onHold } from '../../ui/hold.js';
 import { arrange, bindLayout } from '../../ui/layout.js';
 import * as M from '../../music/show.js';
 import { stemsOf } from '../../core/jobs.js';
+import { holdScreen } from '../../core/screenon.js';
 
 const I = {
   gear: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
@@ -753,7 +754,6 @@ const TILES = [
   ['deskPads', '<rect x="15" y="4" width="5" height="16" rx="1"/><path d="M4 8h8M4 12h8M4 16h8"/>'],
   ['dock', '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 15h18"/>'],
   ['buzz', '<path d="M8 6v12M16 6v12M4 9v6M20 9v6"/>'],
-  ['awake', '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17h2"/>'],
   ['confirmStop', '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'],
 ];
 const duckSvg = (amt, sec) => { const w = 220, h = 46, y = 6 + (h - 12) * (amt / 100), x1 = 70, x2 = Math.min(150, x1 + 14 + sec * 22); return '<svg class="shduck" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><path d="M4 6H' + x1 + 'L' + (x1 + 12) + ' ' + y + 'H' + x2 + 'L' + (x2 + 12) + ' 6H' + (w - 4) + '"/></svg>'; };
@@ -773,7 +773,7 @@ function settingsSheet() {
     });
     el.addEventListener('click', (e) => {
       const tg = e.target.closest('[data-tg]');
-      if (tg) { const k = tg.dataset.tg; S.ui[k] = !S.ui[k]; save(); if (k === 'awake') awake(); sh.update(); return; }
+      if (tg) { const k = tg.dataset.tg; S.ui[k] = !S.ui[k]; save(); sh.update(); return; }
       const sg = e.target.closest('[data-seg="ntarget"] [data-v]');
       if (sg) { S.norm.target = +sg.dataset.v; save(); applyNorm(); sh.update(); return; }
       if (e.target.closest('[data-x="dock"]')) bankSheet(M.dockOf(S));
@@ -992,7 +992,7 @@ function numSheet(n) {
 async function awake() {
   try {
     if (wake) { await wake.release(); wake = null; }
-    if (S.ui.awake && navigator.wakeLock && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen');
+    if (navigator.wakeLock && document.visibilityState === 'visible') wake = await navigator.wakeLock.request('screen');
   } catch { wake = null; /* нет разрешения — экран гаснет как обычно */ }
 }
 
@@ -1028,7 +1028,7 @@ export default {
     document.addEventListener('visibilitychange', vis);
     offs.push(() => document.removeEventListener('visibilitychange', vis));
     tickT = setInterval(() => { if (!host) return; const o = host.querySelector('#shtm'), r = timerText(); if (!!o !== !!r.s) { render(); return; } if (o) { o.textContent = r.s; o.classList.toggle('over', r.over); } }, 1000);
-    awake();
+    awake(); holdScreen('show', true);
     render();
     setTimeout(queueLoud, 1500);
     setTimeout(queueAna, 2500);
@@ -1036,6 +1036,7 @@ export default {
   },
   resize(sz) { size = sz; render(); },
   unmount() {
+    holdScreen('show', false);
     clearInterval(tickT); clearInterval(deskT); deskT = 0; cancelAnimationFrame(raf); raf = 0;
     offs.splice(0).forEach((f) => f());
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); host.removeEventListener('change', onChange); host.removeEventListener('keydown', onKey); }

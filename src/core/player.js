@@ -18,7 +18,8 @@ const P = Capacitor.isNativePlatform() ? registerPlugin('Player') : null;
 export const playerAvailable = () => !!P;
 export const BGCTL_DEF = { notify: true, float: true, pip: false };
 // pip — только явно включённое (pipOn): прежнее «pip: true» сохранялось само при правке других переключателей
-export const bgCtl = (st) => ({ ...BGCTL_DEF, ...(st.bgCtl || {}), pip: !!(st.bgCtl && st.bgCtl.pipOn) });
+// 26.11.2026: кнопки в уведомлении — всегда; всплывающее окно (миниатюра) убрано: на телефонах работало плохо и не нажималось
+export const bgCtl = (st) => ({ ...BGCTL_DEF, ...(st.bgCtl || {}), notify: true, pip: false });
 export const canOverlay = () => (P ? P.canOverlay().then((r) => !!(r && r.ok)).catch(() => false) : Promise.resolve(false));
 export const askOverlay = () => P && P.askOverlay().catch(() => {});
 

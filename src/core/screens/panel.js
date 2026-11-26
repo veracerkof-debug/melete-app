@@ -253,12 +253,6 @@ function soundHTML(app) {
     // нагрузка звука — живая полоса всегда сверху (слово автора 22.11.2026: показания не прячем, они нужны сразу); число и цвет обновляются раз в секунду
     '<div class="hdr">' + t('snd.load') + '</div><div class="group"><div class="cell sndld"><span class="sndbar" role="img" aria-label="' + esc(t('snd.load')) + '"><i data-sndbar data-lvl="' + (ld && ld.ready ? ld.level : '') + '" style="width:' + Math.round(lv * 100) + '%"></i></span><span class="val num" data-sndload style="color:var(--ink)">' + (ld && ld.ready ? Math.round(ld.value * 100) + ' %' : '–') + '</span></div></div>' +
     '<p class="ftr">' + t('snd.loadHint') + '</p>' +
-    // медиатека: дорожки и тональность с темпом — сами, в фоне (src/core/autostems.js)
-    (WEB ? '' : (
-    '<div class="hdr">' + t('auto.title') + '</div><div class="group">' + (app.jobs && app.jobs.supported() ? '<div class="cellcol">' + lseg('autostems', (fullStems() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : 'auto.stemsHintPhone') + '</div></div>' + (isDesktop() ? '' : '<div class="cellcol">' + lseg('pcstems', [['off', t('auto.off')], ['4', '4'], ['6', '6']], pcStems(st), t('auto.pcStems')) + '<div class="segcap">' + t('auto.pcStemsHint') + '</div></div>') + '<div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHintAsk') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
-      '<div class="cellcol">' + lseg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
-    '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
-    (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' )) +
     // звук: буфер (задержка против треска) и режим ресурсов (полный / экономный для слабых телефонов) — src/audio/perf.js
     '<div class="hdr">' + t('snd.title') + '</div><div class="group"><div class="cellcol">' + cardSeg('sndmode', [['fast', t('snd.fast'), 18, 35], ['bal', t('snd.bal'), 50, 65], ['smooth', t('snd.smooth'), 85, 95]], app.audio.mixer.state.mode, t('snd.mode'), [t('snd.g.lat'), t('snd.g.safe')]) + '</div>' +
     '<div class="cellcol">' + cardSeg('sndperf', [['full', t('snd.full'), 95, 90], ['eco', t('snd.eco'), 55, 40]], app.audio.mixer.state.perf, t('snd.perf'), [t('snd.g.qual'), t('snd.g.cpu')]) + '</div>' +
@@ -508,9 +502,18 @@ function outputHTML(app) {
   if (!O) return '';
   return '<div class="hdr">' + t('out.setTitle') + '</div><div class="group"><button class="cell act" data-act="outsheet">' + t('out.open') + '</button></div><p class="ftr">' + t('out.setHint') + '</p>';
 }
+// Работа компьютера (слово автора 26.11.2026): дорожки, разбор записи, текст — считает компьютер; телефон сам не делит (src/core/autostems.js). Раздел «Связь»
+function pcWorkHTML(app) {
+  const st = app.store.state.settings;
+  return (WEB ? '' : (
+    '<div class="hdr">' + t('auto.pcTitle') + '</div><div class="group">' + (isDesktop() && app.jobs && app.jobs.supported() ? '<div class="cellcol">' + lseg('autostems', (fullStems() ? [['off', t('auto.off')], ['2', '2'], ['4', '4'], ['6', '6']] : [['off', t('auto.off')], ['2', t('auto.vocInst')]]), autoMode(st), t('auto.stems')) + '<div class="segcap">' + t(isDesktop() ? 'auto.stemsHint' : 'auto.stemsHintPhone') + '</div></div>' + (isDesktop() ? '' : '<div class="cellcol">' + lseg('pcstems', [['off', t('auto.off')], ['4', '4'], ['6', '6']], pcStems(st), t('auto.pcStems')) + '<div class="segcap">' + t('auto.pcStemsHint') + '</div></div>') + '<div class="cell"><span class="grow">' + t('auto.hq') + '<span class="bksub">' + t(isDesktop() ? 'auto.hqHintPc' : 'auto.hqHintAsk') + '</span></span>' + psw('autoHq', autoHq(st), t('auto.hq')) + '</div>' +
+      '<div class="cellcol">' + lseg('autopower', [['charge', t('auto.powerCharge')], ['always', t('auto.powerAlways')]], autoPower(st), t('auto.power')) + '<div class="segcap">' + t('auto.powerHint') + '</div></div>' : '') +
+    '<div class="cell"><span class="grow">' + t('auto.ana') + '</span>' + psw('autoAna', autoAna(st), t('auto.ana')) + '</div>' +
+    (app.jobs && app.jobs.lyricsSupported() ? '<div class="cell"><span class="grow">' + t('auto.lyr') + '<span class="bksub">' + t('auto.lyrHint') + '</span></span>' + psw('autoLyr', autoLyr(st), t('auto.lyr')) + '</div>' : '') + '</div><p class="ftr">' + t('auto.anaHint') + '</p>' ));
+}
 function linkHTML(app) {
   return '<div class="large">' + t('page.link') + '</div><p class="ftr" style="margin-top:0">' + t(isDesktop() ? 'link.howPc' : 'link.howPh') + '</p>' +
-    outputHTML(app) + meshHTML(app) + syncHTML(app) + guestHTML(app) + localSendHTML(app);
+    outputHTML(app) + meshHTML(app) + syncHTML(app) + guestHTML(app) + localSendHTML(app) + pcWorkHTML(app);
 }
 
 // Связь с компьютером (src/core/sync.js): на компьютере — включить и показать адрес с кодом, на телефоне — ввести их
@@ -634,37 +637,45 @@ function helpHTML(app) {
 
 // Модули (встроенные и личные из src/modules-local) и функции ядра: включить и выключить
 const theoryFind = (st) => (st.theory || {}).find === true;
-function featHTML(app) {
+// Все модули и функции переключателями — отдельный экран «Модули и функции → Модули и инструменты» (плотные строки)
+function modsHTML(app) {
   const st = app.store.state.settings, lang = getLang();
-  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span' + (help ? ' class="hqt" data-help="' + id + '" role="button" tabindex="0" aria-label="' + esc(t('help.open') + ': ' + name) + '"' : '') + '>' + esc(name) + extra +
-    '</span>' + (about ? '<span class="st l2" style="display:block;font-size:13px">' + esc(about) + '</span>' : '') + '</span>' +
+  const row = (id, icon, color, name, about, extra = '', help = false) => '<div class="cell"><span class="ticon" style="--tc:' + color + ';--on:' + onColor(color) + '">' + icon + '</span><span class="grow"><span' + (help ? ' class="hqt" data-help="' + id + '"' : '') + '>' + esc(name) + extra +
+    '</span>' + (about ? '<span class="st l2" style="display:block;font-size:12px">' + esc(about) + '</span>' : '') + '</span>' +
     '<label class="sw"><input type="checkbox" data-feat="' + id + '"' + (isOn(st, id) ? ' checked' : '') + ' aria-label="' + esc(name) + '"><i></i></label></div>';
   const aboutOf = (m) => (m.i18n?.[lang]?.about ?? m.i18n?.ru?.about ?? (m.about && (m.about[lang] || m.about.ru)) ?? '');
-  return '<div class="large">' + t('feat.title') + '</div>' +
-    // церковный режим: Библия и чтения дня
-    '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
-'</div>' +
-    '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
-    // по категориям (слово автора 21.11.2026): время и ритм · звук и высота · игра · учёба · запись и медиа · тексты и ноты · служебное; цвет раздела — из системы цветов
+  return '<div class="large">' + t('feat.mods') + '</div><div class="modsp">' +
+    // по категориям: цвет раздела — из системы цветов
     CATEGORIES.map((cat) => {
       const list = modules.filter((m) => (!CHURCH_MODULES.includes(m.id) || st.church) && !m.partOf && (m.local ? 'util' : categoryOf(m.id)) === cat);
       if (!list.length) return '';
       return '<div class="hdr featcat"><i class="catdot" style="background:' + hueColor(st, CATEGORY_HUE[cat]) + '"></i>' + t('feat.cat.' + cat) + '</div><div class="group">' +
         list.map((m) => row(m.id, m.icon, m.color || '#8E8E93', moduleName(m), aboutOf(m), m.local ? ' <span class="lchip sm off">' + t('feat.local') + '</span>' : '', !!helpOf(m))).join('') + '</div>';
     }).join('') +
-    // пакеты моделей (полный рояль, вокал телефона): скачать один раз, удалить (src/core/packs.js)
     // определитель аккордов и гамм в «Теории»: выключен по умолчанию (слово автора 06.11.2026)
     (isOn(st, 'theory') ? '<div class="group" style="margin-top:12px"><div class="cell"><span class="grow"><span>' + t('feat.theoryFind') + '</span><span class="st l2" style="display:block;font-size:13px">' +
       t('feat.theoryFind.about') + '</span></span><label class="sw"><input type="checkbox" data-thfind' + (theoryFind(st) ? ' checked' : '') + ' aria-label="' + esc(t('feat.theoryFind')) + '"><i></i></label></div></div>' : '') +
+    '</div>';
+}
+function featHTML(app) {
+  const st = app.store.state.settings, lang = getLang();
+  return '<div class="large">' + t('feat.title') + '</div>' +
+    // церковный режим: Библия и чтения дня
+    '<div class="group"><div class="cell"><span class="grow">' + t('church.title') + '</span>' + psw('church', !!st.church, t('church.title')) + '</div>' +
+'</div>' +
+    '<p class="ftr">' + t(st.church ? 'church.hintOn' : 'church.hint') + (st.church && st.bible && st.bible.start ? ' ' + t('church.since', { d: st.bible.start.split('-').reverse().join('.') }) : '') + '</p>' +
+    // модули, функции и инструменты — одним экраном с переключателями (слово автора 26.11.2026); выключить инструмент можно и удержанием на главной
+    '<div class="group"><button class="cell act" data-pp="mods"><span class="grow">' + t('feat.mods') + '<span class="st l2" style="display:block;font-size:13px">' + t('feat.modsN', { n: modules.filter((m) => !m.partOf && (!CHURCH_MODULES.includes(m.id) || st.church) && isOn(st, m.id)).length }) + '</span></span><span class="val">›</span></button></div>' +
+    // пакеты моделей (полный рояль, вокал телефона): скачать один раз, удалить (src/core/packs.js)
     packsHTML() +
     // работа в фоне (Android): разрешения — батарея, уведомления, настройки приложения
     (bgAvailable() ? '<div class="hdr">' + t('bg.feat') + '</div><div data-bgbox><p class="ftr" style="margin-top:0">' + t('bg.featHint') + '</p>' + bgRows(null) + '</div>' : '') +
     // управление звуком вне приложения: шторка, плавающая кнопка, всплывающее окно (Android, src/core/player.js)
     (playerAvailable() ? (() => { const c = bgCtl(st), row = (k) => '<div class="cell"><span class="grow"><span>' + t('pl.' + k) + '</span><span class="st l2" style="display:block;font-size:13px">' + t('pl.' + k + '.about') + '</span></span>' +
       '<label class="sw"><input type="checkbox" data-bgctl="' + k + '"' + (c[k] ? ' checked' : '') + ' aria-label="' + esc(t('pl.' + k)) + '"><i></i></label></div>';
-      return '<div class="hdr">' + t('pl.hdr') + '</div><div class="group">' + ['notify', 'float', 'pip'].map(row).join('') + '</div><p class="ftr">' + t('pl.hint') + '</p>'; })() : '') +
+      return '<div class="hdr">' + t('pl.hdr') + '</div><div class="group">' + ['float'].map(row).join('') + '</div><p class="ftr">' + t('pl.hint') + '</p>'; })() : '') +
     // экран не гаснет, пока приложение открыто (src/core/screenon.js), — по умолчанию включено
-    '<div class="hdr">' + t('scr.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('scr.on') + '</span><label class="sw"><input type="checkbox" data-psw="screenOn"' + (st.screenOn !== false ? ' checked' : '') + ' aria-label="' + esc(t('scr.on')) + '"><i></i></label></div></div><p class="ftr">' + t('scr.hint') + '</p>' +
+    '<div class="hdr">' + t('scr.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('scr.on') + '</span><label class="sw"><input type="checkbox" data-psw="screenOn"' + (st.screenOn === true ? ' checked' : '') + ' aria-label="' + esc(t('scr.on')) + '"><i></i></label></div></div><p class="ftr">' + t('scr.hint') + '</p>' +
     // защита игры от снимка экрана тремя пальцами (Android)
     (guardAvailable() ? '<div class="hdr">' + t('guard.hdr') + '</div><div class="group"><div class="cell"><span class="grow">' + t('guard.on') + '</span><label class="sw"><input type="checkbox" data-psw="guardShots"' + (st.guardShots !== false ? ' checked' : '') + ' aria-label="' + esc(t('guard.on')) + '"><i></i></label></div></div><p class="ftr">' + t('guard.hint') + '</p>' : '') +
     '<p class="ftr">' + t('feat.own') + '</p>' +
@@ -776,14 +787,14 @@ export function createPanel(app, onChange) {
       bind();
     }
     const sub = page !== 'root', y = layer.scrollTop;
-    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, gdrive: gdriveHTML, feat: featHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
+    const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, gdrive: gdriveHTML, feat: featHTML, mods: modsHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
     // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
-    const TIGHT = { week: 1, feat: 1, tabs: 1, help: 1 };
+    const TIGHT = { week: 1, feat: 1, mods: 1, tabs: 1, help: 1 };
     for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
-    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="root" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
+    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="' + (page === 'mods' ? 'feat' : 'root') + '" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     if (desk) { const cur = layer.querySelector('.pdnav [data-pp="' + shown + '"]'); if (cur) cur.setAttribute('aria-current', 'page'); }
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
