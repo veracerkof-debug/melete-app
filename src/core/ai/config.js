@@ -3,9 +3,9 @@
 // Выключено по умолчанию. Только https. Без DOM (хранилище передаётся для тестов).
 export const KEY = 'melete.ai';
 export const FORMATS = ['openai', 'anthropic'];
-export const LEVELS = { songs: ['none', 'read', 'write'], media: ['none', 'read', 'write'], stats: ['none', 'read'], log: ['none', 'read'] };
+export const LEVELS = { songs: ['none', 'read', 'write'], media: ['none', 'read', 'write'], studio: ['none', 'read', 'write'], stats: ['none', 'read'], log: ['none', 'read'] };
 // attach — вложения в чат: files (файл с телефона уходит провайдеру целиком) и links (приложение само открывает ссылку по нажатию; по умолчанию выключено)
-export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', media: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
+export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
 
 export function clean(x) {
   const c = { ...DEFAULTS, ...(x && typeof x === 'object' ? x : {}) };

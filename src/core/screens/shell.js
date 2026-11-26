@@ -167,6 +167,7 @@ export function createShell(app, root) {
     tabs: () => tabs.innerHTML,
   };
   const panel = createPanel(app, () => render());
+  app.openPanel = (page) => panel.open(page); // настройки из инструментов (нейросеть из студии)
 
   // Действия, общие для экранов и панели. Возвращает true, если нажатие обработано
   function act(e) {

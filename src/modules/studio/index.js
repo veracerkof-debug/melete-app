@@ -38,6 +38,7 @@ import { I } from './icons.js';
 import { createRecording } from './record.js';
 import { loopsHTML, loopsBind } from './loops.js';
 import { loopById, placeLoop, spanFrom, FAMILIES as LP_FAMS } from '../../music/studioloops.js';
+import { applyStudioOps, undoStudioOps } from '../../music/studioai.js';
 const UNDO_MAX = 40;
 
 let host = null, ctx = null, size = 'full', seq = null, roll = null, pl = null, offs = [], raf = 0, offSteps = null, offLive = null, offMix = null, offPad = null, offLoops = null;
@@ -125,7 +126,7 @@ function listHTML() {
 function transportHTML(p) {
   const { t, ui } = ctx, playing = seq && seq.playing;
   return '<div class="sttop">' +
-    '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + (V.view === 'song' ? ui.icb('data-x="loops"', I.loops, t('lp.open'), 'sm plain' + (V.loops ? ' on' : '')) : '') + '</div>' +
+    '<div class="stgrp">' + ui.icb('data-x="back"', I.list, t('toList'), 'sm plain') + ui.icb('data-x="mixer"', I.mixer, t('mixer'), 'sm plain') + ui.icb('data-x="settings"', I.gear, t('settings'), 'sm plain') + (V.view === 'song' ? ui.icb('data-x="loops"', I.loops, t('lp.open'), 'sm plain' + (V.loops ? ' on' : '')) + ui.icb('data-x="ai"', I.ai, t('aiStudio'), 'sm plain') : '') + '</div>' +
     '<div class="stgrp mid">' + ui.icb('data-x="rewind"', I.rewind, t('rewind'), 'sm plain') +
     ui.icb('data-x="rec"', I.rec, t(rec.busy ? 'rec.stop' : 'rec.title'), 'sm plain strec' + (rec.busy ? ' on' : '')) +
     '<button class="stplay' + (playing ? ' on' : '') + '" data-x="play" aria-label="' + ui.esc(t(playing ? 'stop' : 'play')) + '">' + (playing ? I.stop : I.play) + '</button>' +
@@ -760,6 +761,26 @@ function loopsMount(open) {
     drop: (id, h) => placeLoopAt(id, h.beat, h.tr ? h.tr.id : null, false),
   });
 }
+// Правки от нейросети (core/ai: блок melete-studio): те же клипы, что и у «Рисунков» — стопка отмены студии, перерисовка, звук с этого места
+let aiHook = null;
+function aiApply(ops) {
+  const p = proj(); if (!p || rec.busy) return null;
+  const r = applyStudioOps(p, ops); if (!r.n) return null;
+  save();
+  const c = p.clips.find((x) => x.id === r.undo.clips[0]);
+  if (c) { V.cursor = c.at; if (pl) pl.cursor = c.at; V.sel = r.undo.clips.slice(); }
+  if (c && ctx.audio.unlock()) { if (seq.playing) seq.stop(); seq.start(c.at); } else if (seq.playing) seq.audioChanged();
+  render();
+  if (pl) { pl.selection = V.sel; selBar(pl.selection); pl.draw(); }
+  return { n: r.n, pid: p.id, undo: r.undo };
+}
+function aiUndo(pid, u) {
+  const p = proj(); if (!p || p.id !== pid) return false;
+  undoStudioOps(p, u); save();
+  if (seq.playing) seq.audioChanged();
+  V.sel = []; render();
+  return true;
+}
 // Положить рисунок: клип в проект (свободная подходящая дорожка или новая), звук — сразу с этого места; «Отменить» — в тосте
 function placeLoopAt(id, at, want, hear) {
   const p = proj(), lp = loopById(id);
@@ -779,6 +800,7 @@ function act(x, el) {
   const p = proj();
   switch (x) {
     case 'new': { const np = newProject({ songId: ctx.session && ctx.session.songId || null }); ctx.projects.save(np); V.pid = np.id; V.view = 'song'; V.cid = null; V.bar = 0; render(); break; }
+    case 'ai': if (ctx.ai) ctx.ai.open(); break;
     case 'loops': V.loops = !V.loops; loopsMount(V.loops); { const b = host && host.querySelector('.sttop [data-x="loops"]'); if (b) b.classList.toggle('on', V.loops); } break;
     case 'back': if (rec.busy) rec.stop(true); seq.stop(); V.view = 'list'; V.pid = null; V.cid = null; render(); break;
     case 'paste': { const p = proj(), made = pasteBuf(p, pl ? pl.cursor : 0); if (made.length) { save(); seq.audioChanged(); render(); if (pl) { pl.selection = made.map((c) => c.id); pl.draw(); } selBar(made.map((c) => c.id)); } break; }
@@ -900,6 +922,7 @@ export default {
     onHold(host, '.scch', (el2) => { const p = proj(), cl = clip(); if (cl) chordHold(ctx, p, cl.data, el2, () => { save(); render(); }); });
     onHold(host, '[data-x="looper"]', () => { const p = proj(); if (!p || rec.busy) return; seq.stop(); save(); c.openIn('looper', { inbox: { kind: 'proj', pid: p.id } }); }); // удержание «Лупера» — экран лупера с этим проектом
     onHold(host, '.stproj', (b) => { const id = b.dataset.open; holdMenu(b, [{ icon: I.del, label: c.t('delete'), danger: true, run: () => c.ui.confirm(c.t('delTitle'), c.t('delText'), c.t('delete')).then((ok) => { if (ok) { c.projects.remove(id); render(); } }) }], (c.projects.get(id) || {}).name || c.t('untitled')); });
+    if (c.ai && !V.embed) { aiHook = { project: () => (V.pid ? proj() : null), apply: aiApply, undo: aiUndo }; c.ai.hook(aiHook); }
     render();
   },
   resize(sz) { size = sz; render(); },
@@ -918,6 +941,7 @@ export default {
     if (offMix) { offMix(); offMix = null; }
     if (offPad) { offPad(); offPad = null; }
     if (offLoops) { offLoops(); offLoops = null; }
+    if (aiHook && ctx && ctx.ai) { ctx.ai.unhook(aiHook); aiHook = null; }
     toolDrop();
     offs.splice(0).forEach((f) => f());
     document.querySelectorAll('.stanchor').forEach((a) => a.remove());

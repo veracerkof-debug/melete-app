@@ -3,11 +3,12 @@
 import { canRead, canWrite } from './config.js';
 import { showContext } from './showops.js';
 import { labelText } from '../../music/chordedit.js';
+import { studioContext, STUDIO_PROMPT } from '../../music/studioai.js';
 
 export const LIMITS = { songs: 400, topSongs: 15, logLines: 80, logChars: 6000, notesPreview: 0, recs: 60, chords: 800, downs: 300 };
 
 export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = Date.now() } = {}) {
-  const w = canWrite(cfg, 'songs'), wm = canWrite(cfg, 'media');
+  const w = canWrite(cfg, 'songs'), wm = canWrite(cfg, 'media'), ws = canWrite(cfg, 'studio');
   return [
     'Ты — ' + mascot + ', помощник музыканта в приложении Melete (учёт занятий, песни с аккордами, инструменты: метроном, тюнер, пианино, табы и др.).',
     'Отвечай коротко, по-доброму и по делу, на языке человека (интерфейс: ' + lang + '). Ты не видишь ничего, кроме того, что дано ниже; не выдумывай данные, о которых тебе не сказали.',
@@ -19,12 +20,13 @@ export function buildSystem(cfg, { mascot = 'Мелета', lang = 'ru', now = D
       '1) Новые или обновлённые песни: блок ```melete-json с файлом {"format":"melete","v":1,"songs":[{"title","artist","genre","key" (C, Am, F♯m…),"targetBpm" (20–400),"notes" (текст с аккордами над словами),"ref" (необязательно)}]}. Подробности формата — в файле docs/ai-format.',
       '2) Правки существующих песен: блок ```melete-ops с массивом [{"op":"set","ref":"<id песни из списка ниже>","fields":{"genre":"…","key":"…","targetBpm":90,"artist":"…","title":"…","notes":"…"}}]. Допустимые поля: title, artist, genre, key, targetBpm, notes, capo. Другие операции (удаление, слияние) не поддерживаются — предложи их словами.',
       'Одно предложение — один блок; перед блоком коротко объясни, что он меняет. Не обещай, что изменение уже сделано.',
-    ].join('\n') : 'Изменять данные ты не можешь (доступ только на чтение): предлагай словами, что поправить.',
+    ].join('\n') : (wm || ws) ? '' : 'Изменять данные ты не можешь (доступ только на чтение): предлагай словами, что поправить.',
     wm ? [
       '3) Правки записи медиатеки (аккорды, части песни, тайм-коды): блок ```melete-rec с массивом [{"op":"chords","ref":"<id записи>","items":[{"t":секунды,"d":секунды (можно не указывать),"c":"Am7"}]},{"op":"marks","ref":"<id записи>","items":[{"t":секунды,"name":"Куплет 1"}]}]. "c":"N" — нет аккорда; без "d" аккорд держится до следующего элемента.',
       'Ты НЕ слышишь звук: опирайся только на аккорды, доли, тональность, название и исполнителя из данных. В аккордах правь лишь то, в чём уверен по гармонии (пропуски, явные промахи: аккорд вне тональности без причины); сомнительное объясни словами и попроси проверить на слух. Части ставь на сильные доли из данных; названия: Вступление, Куплет, Припев, Бридж, Проигрыш, Кода — с номером при повторах. Время — только внутри длины записи; текст песни не нужен и не выдавай.',
     ].join('\n') : '',
     wm ? '4) Программа выступления (Пульт): блок ```melete-show с массивом [{"op":"number","ref":"<id номера>","set":{"eq":"flat|warm|bright|vocal|bass|thin|cut|air","tempo":0.5–1.5,"shift":-12…12,"level":0–100,"fadeIn":с,"fadeOut":с,"mix":{"vocals":0–1.5,"drums":…,"bass":…,"inst":…} (только у разделённых записей; 0 — выключить дорожку, 1 — как есть)},"prog":[{"t":секунды записи,"key":полутоны,"tempo":0.5–1.5,"level":0–100,"mix":{"vocals":0},"ramp":секунд плавно}]},{"op":"pad","ref":"<id пада>","set":{"level","speed":0.5–2,"shift":-12…12,"eq","mode":"shot|loop|hold","from","to"}}]. prog заменяет программу номера целиком; поле, которого нет, не меняется. Ты не слышишь звук: для «фонового» номера понижай level, для плохого сведения предлагай пресет эквалайзера, для плавной смены тональности/темпа ставь ramp.' : '',
+    ws ? STUDIO_PROMPT : canRead(cfg, 'studio') ? 'Студия (проект ниже) открыта только для чтения: советуй партии словами и числами, не предлагай блоков.' : '',
     cfg.instruction ? 'Дополнительно от человека: ' + cfg.instruction : '',
     'Сегодня: ' + new Date(now).toISOString().slice(0, 10) + '.',
   ].filter(Boolean).join('\n\n');
@@ -77,6 +79,7 @@ export function buildContext(cfg, d) {
   const parts = [];
   if (canRead(cfg, 'songs')) parts.push({ cat: 'songs', text: songsContext(d.songs || []) });
   if (canRead(cfg, 'media')) parts.push({ cat: 'media', text: mediaContext(d.recs || [], d.used || {}, d.songs || []) + (d.show ? (showContext(d.show, d.recs || []) ? '\n\n' + showContext(d.show, d.recs || []) : '') : '') });
+  if (canRead(cfg, 'studio') && d.studio) parts.push({ cat: 'studio', text: studioContext(d.studio) });
   if (canRead(cfg, 'stats')) parts.push({ cat: 'stats', text: statsContext(d.sessions || [], d.songs || [], d.goalMin || 0, d.now) });
   if (canRead(cfg, 'log')) parts.push({ cat: 'log', text: logContext(d.logText) });
   return { text: parts.map((p) => p.text).join('\n\n'), parts: parts.map((p) => ({ cat: p.cat, chars: p.text.length })), chars: parts.reduce((n, p) => n + p.text.length, 0) };

@@ -25,10 +25,10 @@ describe('чат с нейросетью: настройки', () => {
     expect(endpoint({ format: 'openai', url: 'http://x' })).toBeNull();
   });
   it('по умолчанию выключено и без доступа; ключ лежит не в practice.v1', () => {
-    const c = clean(null); expect(c.on).toBe(false); expect(c.access).toEqual({ songs: 'none', media: 'none', stats: 'none', log: 'none' }); expect(ready(c)).toBe(false);
+    const c = clean(null); expect(c.on).toBe(false); expect(c.access).toEqual({ songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }); expect(ready(c)).toBe(false);
     const st = mem(); save(CFG(), st); expect(KEY.startsWith('practice.v1')).toBe(false); expect([...st._m.keys()]).toEqual(['melete.ai']);
     expect(load(st).key).toBe('sk-SECRET'); wipe(st); expect(load(st).key).toBe('');
-    expect(clean({ access: { songs: 'root', stats: 'write' } }).access).toEqual({ songs: 'none', media: 'none', stats: 'none', log: 'none' }); // чужие уровни отброшены
+    expect(clean({ access: { songs: 'root', stats: 'write' } }).access).toEqual({ songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }); // чужие уровни отброшены
   });
 });
 

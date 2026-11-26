@@ -197,6 +197,13 @@ export function makeCtx(app, mod) {
     // Текст песни (с аккордами) — записать; → true, если песня есть
     songNotes: (id) => String((app.store.songs().find((x) => x.id === id) || {}).notes || ''),
     songText(id, text) { const s = app.store.songs().find((x) => x.id === id); if (!s) return false; s.notes = String(text || ''); s.updatedAt = app.store.now(); app.store.save(); return true; },
+    // Нейросеть для инструмента (студия): готова ли, открыть чат с данными инструмента, подключить правки инструмента (hook: { project(), apply(ops), undo(pid, u) })
+    ai: {
+      ready: () => !!(app.ai && app.ai.ready()),
+      open: () => import('./screens/aichat.js').then((m) => m.openChat(app, { studio: true, onSettings: () => app.openPanel && app.openPanel('ai') })),
+      hook: (h) => { app.studioAI = h; },
+      unhook: (h) => { if (app.studioAI === h) app.studioAI = null; },
+    },
     // Проекты студии (state.projects, в резервной копии вместе с песнями): list(), get(id), save(p), remove(id)
     projects: {
       list: () => (app.store.state.projects || []).filter((x) => !x.deleted),

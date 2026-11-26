@@ -50,15 +50,27 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
       const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
       messages.push(msg);
       // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»
-      if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
+      if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
       return { ok: true };
     } catch (e) { error = { kind: (e && e.kind) || 'net', message: String((e && e.message) || '').slice(0, 200) }; return { ok: false, why: error.kind }; }
     finally { busy = false; persist(); emit(); }
   }
+  // Без своего API (любой чат нейросети): запрос целиком — для копирования; ответ нейросети — вставить, и он разбирается как обычный ответ
+  function buildPrompt(text) {
+    const c = cfg(), ctx = buildContext(c, data()), sys = buildSystem(c, { mascot: mascot(), lang: lang(), now: now() });
+    return sys + (ctx.text ? '\n\n=== ДАННЫЕ ===\n' + ctx.text : '') + '\n\n=== ЗАПРОС ЧЕЛОВЕКА ===\n' + String(text || '').trim() + '\n\nОтветь коротко и приложи блок(и) melete-… из инструкции выше.';
+  }
+  function addReply(text) {
+    const c = cfg(), t = String(text || '').trim(); if (!t) return { ok: false, why: 'empty' };
+    const ex = extract(t, c);
+    messages.push({ id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : t.slice(0, 4000)), at: now(), proposals: ex.proposals, pasted: true });
+    persist(); emit();
+    return { ok: true, n: ex.proposals.length };
+  }
   return {
     get messages() { return messages; }, get busy() { return busy; }, get error() { return error; },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
-    preview, sendText, apply: applyProposal, reject: rejectProposal, undo: undoProposal,
+    preview, sendText, buildPrompt, addReply, apply: applyProposal, reject: rejectProposal, undo: undoProposal,
     clear() { messages = []; error = null; persist(); emit(); },
     dismissError() { error = null; emit(); },
   };
