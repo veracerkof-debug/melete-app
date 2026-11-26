@@ -326,3 +326,13 @@
 .shlock{position:absolute;inset:0;z-index:30;display:grid;place-items:end center;padding:0 0 24px;background:rgba(0,0,0,.28);touch-action:none}
 .shlock button{display:flex;align-items:center;gap:8px;height:48px;padding:0 20px;border-radius:16px;background:var(--cell);color:var(--ink);border:1px solid var(--l3);font:700 13px var(--font)}
 .shlock svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Цвета падов идут от гаммы пользователя (слово автора 26.11.2026): первый — акцент выбранной палитры, остальные — тот же акцент, повёрнутый по кругу оттенков; серый — нейтральный.
+   Меняется палитра или тема — меняются и пады. Нет поддержки относительных цветов — прежние цвета выше */
+@supports (color: oklch(from red l c h)) {
+  .shw,.sheet{--pk:var(--tint);--am:oklch(from var(--tint) l max(c,.09) calc(h + 45));--te:oklch(from var(--tint) l max(c,.09) calc(h + 90));--gr:oklch(from var(--tint) l max(c,.09) calc(h + 135));--rd:oklch(from var(--tint) l max(c,.09) calc(h + 180));--vi:oklch(from var(--tint) l max(c,.09) calc(h + 225));--bl:oklch(from var(--tint) l max(c,.09) calc(h + 270));--gy:var(--l2)}
+}
+/* выбор цвета в настройках пада — просто кружки, без слов */
+.shswatches{display:flex;flex-wrap:wrap;gap:10px;padding:2px 2px 6px}
+.shsw{width:40px;height:40px;border-radius:50%;padding:0;background:var(--pc);border:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.shsw.on{box-shadow:0 0 0 3px var(--cell,#fff),0 0 0 5px var(--ink)}
