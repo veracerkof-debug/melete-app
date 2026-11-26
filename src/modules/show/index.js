@@ -25,7 +25,7 @@ const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B
 const keyName = (pc, minor) => (minor ? NOTE_m : NOTE_M)[((pc % 12) + 12) % 12] + (minor ? 'm' : '');
 
 let host = null, ctx = null, size = 'full', S = null, eng = null, unsubEng = null, edit = false;
-let master = null, bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
+let meterNode = null, meterT = 0, duckOn = false, master = null, bed = null, unsubBed = null, deck = null, unsubDeck = null, deskT = 0, offs = [], tickT = 0, raf = 0, wake = null;
 const PAGES = ['desk', 'pads']; // два экрана звукаря (слово автора 22.11.2026): «Эфир» и «Звуки»; программа и фон — шторками
 let vsheet = null; // открытая шторка «Программа» / «Фон»: { kind, api }
 const held = new Map(); // касание → пад «пока держат»
@@ -53,7 +53,8 @@ function destNode() {
   if (!master) { const bus = ctx.audio.bus('media'); if (!bus) return null; master = bus.context.createGain(); master.gain.value = M.faderGain(S.master);
     // страховка от перегруза: когда играют трек, пэд, шум и пады сразу, сумма не должна упираться в потолок (быстрый лимитер у потолка −2 дБ)
     const lim = bus.context.createDynamicsCompressor(); lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.12;
-    master.connect(lim); lim.connect(bus); }
+    master.connect(lim); lim.connect(bus);
+    try { meterNode = bus.context.createAnalyser(); meterNode.fftSize = 512; lim.connect(meterNode); } catch (e) { meterNode = null; } } // метр уровня — только слушает, на звук не влияет
   return master;
 }
 // Вывод на другое устройство (DEV, core/output.js): методы движков уходят туда, куда выбрано для категории; по умолчанию — у себя
@@ -221,12 +222,14 @@ function padsBlocks() {
   if (!b) b = sound[0] || drum || null;
   const blocks = [{ id: 'bed', html: bedBarHTML() }];
   if (drum && S.ui.drums) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
-  blocks.push({ id: 'sounds', html: '<div class="shbanks" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + '</button>').join('') +
+  blocks.push({ id: 'sounds', html: '<div class="shbanks" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + ' <small>' + x.pads.filter(filled).length + '</small></button>').join('') +
     '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
     (b && b !== drum ? (() => { const cs = shownCells(b.pads); return '<div class="shpads" style="--c:' + b.cols + ';--r:' + Math.max(1, Math.ceil(cs.length / b.cols)) + '">' + cs.map(([p, i]) => padCell(p, i)).join('') + '</div>'; })() : '') });
   const foot = (h) => '<div class="shfoot">' + h + barHTML() + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
-  blocks.push({ id: 'dock', html: foot(d ? '<div class="shdock" style="--c:' + d.cols + ';--r:' + d.rows + '">' + shownCells(d.pads).map(([p, i]) => padCell(p, i, true)).join('') + '<button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>'
-    : '<div class="shdock" style="--c:0"><button class="shstop" data-x="stopall" style="grid-column:1/-1">' + esc(t('stopAll')) + '</button></div>') });
+  // закреплённые пэды — только занятые (в правке — все); под ними «Ведущий» (пока держат, всё тише на 10 дБ) и «Стоп звуки»
+  const dockCells = d ? (edit ? d.pads.map((p, i) => [p, i]) : d.pads.map((p, i) => [p, i]).filter(([p]) => filled(p))) : [];
+  const duckRow = '<div class="shduckrow"><button class="shduck" data-duck aria-label="' + esc(t('duck.aria')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>' + esc(t('duck.btn')) + '</span></button><button class="shstop" data-x="stopall">' + esc(t('stopAll')) + '</button></div>';
+  blocks.push({ id: 'dock', html: foot((dockCells.length ? '<div class="shdock" style="--c:' + Math.max(1, Math.min(d.cols, dockCells.length)) + '">' + dockCells.map(([p, i]) => padCell(p, i, true)).join('') + '</div>' : '') + duckRow) });
   return blocks;
 }
 const layOf = (page) => { const L = (S.layout ||= {}); return (L[page] ||= { order: [], hidden: [], size: {} }); };
@@ -293,7 +296,12 @@ function panic() {
 }
 function barHTML() {
   const n = M.currentNumber(S), own = !!(deck && n && n.kind === 'track' && deck.state.file === n.file && deck.state.playing);
-  return '<div class="shstrip shbar" role="group" aria-label="' + esc(t('desk.levels')) + '"><button class="shplay' + (own ? ' on' : '') + '" id="shpp" data-x="pp" aria-label="' + esc(t(own ? 'desk.pause' : 'desk.play')) + '">' + esc(own ? '❚❚' : '▶') + '</button><button class="shpanic' + (panicAt ? ' armed' : '') + '" data-x="panic" aria-label="' + esc(t('desk.panic')) + '">' + esc(panicAt ? t('desk.panicAgain') : '■') + '</button>' + '<label class="shmv"><span>' + esc(t('desk.master')) + '</span><input type="range" class="range shmr" data-vol="master" min="0" max="100" value="' + S.master + '" aria-label="' + esc(t('desk.master')) + '"><b class="num" data-vols="master">' + S.master + '</b></label><button class="shsnd" data-x="levels" aria-label="' + esc(t('desk.levels')) + '">' + esc(t('desk.sound')) + '</button></div>';
+  const cells = Array.from({ length: METER_N }, () => '<i></i>').join('');
+  return '<div class="shstrip shbar" role="group" aria-label="' + esc(t('desk.levels')) + '"><div class="shmeter" aria-hidden="true">' + cells + '</div><div class="shbrow">' +
+    '<label class="shhf"><i data-vfill="master" style="width:' + S.master + '%"></i><span>' + esc(t('desk.master')) + '</span><em class="num" data-vols="master">' + S.master + '</em><input type="range" class="shmr" data-vol="master" min="0" max="100" value="' + S.master + '" aria-label="' + esc(t('desk.master')) + '"></label>' +
+    '<button class="shsnd" data-x="levels" aria-label="' + esc(t('desk.levels')) + '">' + esc(t('desk.sound')) + '</button>' +
+    '<button class="shpanic' + (panicAt ? ' armed' : '') + '" data-x="panic" aria-label="' + esc(t('desk.panic')) + '">' + esc(panicAt ? t('desk.panicAgain') : '■') + '</button>' +
+    '<button class="shplay' + (own ? ' on' : '') + '" id="shpp" data-x="pp" aria-label="' + esc(t(own ? 'desk.pause' : 'desk.play')) + '">' + esc(own ? '❚❚' : '▶') + '</button></div></div>';
 }
 // Шторка «Звук» (слово автора 26.11.2026): на экране только общая громкость, остальные уровни — здесь; нажал, подправил, закрыл
 function levelsSheet() {
@@ -377,6 +385,18 @@ function deskHTML() {
   return '<div class="shdesk">' + arrange(blocks, layOf('desk'), { t, name: (id) => t('lay.b.' + id), grow: ['picks'] }) + '</div>';
 }
 // Живое: время, метка, волна, кнопка паузы — без перерисовки страницы
+// Метр уровня над громкостью: 24 деления, зелёный — рабочий, янтарный — близко к потолку, красный — перегруз; тишина — пусто
+const METER_N = 24;
+function meterPaint() {
+  const m = host && host.querySelector('.shmeter'); if (!m) return;
+  let lvl = 0;
+  if (meterNode) { const buf = new Uint8Array(meterNode.fftSize); meterNode.getByteTimeDomainData(buf); let pk = 0; for (let i = 0; i < buf.length; i++) pk = Math.max(pk, Math.abs(buf[i] - 128) / 128); const db = pk > 0.0005 ? 20 * Math.log10(pk) : -90; lvl = Math.max(0, Math.min(METER_N, Math.round((db + 54) / 54 * METER_N))); }
+  const cells = m.children;
+  for (let i = 0; i < cells.length; i++) { const c = i < lvl ? (i < 16 ? 'g' : i < 21 ? 'a' : 'r') : ''; if (cells[i].className !== c) cells[i].className = c; }
+}
+// «Ведущий» (слово автора 26.11.2026): пока кнопку держат, всё приглушено на 10 дБ; отпустили — плавно вернулось
+function duckStart() { if (duckOn || !master) return; duckOn = true; master.gain.setTargetAtTime(M.faderGain(S.master) * 0.316, master.context.currentTime, 0.08); if (S.ui.buzz) buzz(); }
+function duckEnd() { if (!duckOn) return; duckOn = false; if (master) master.gain.setTargetAtTime(M.faderGain(S.master), master.context.currentTime, 0.2); }
 function deskPaint(force) {
   if (!host || S.page !== 'desk') return;
   const n = M.currentNumber(S), e = cur();
@@ -437,6 +457,7 @@ function render() {
   if (ctx.output) ctx.output.refresh(host);
   if (vsheet) vsheet.api.update(); // открытая шторка «Программа» / «Фон» — в ногу со страницей
   paint();
+  clearInterval(meterT); meterT = setInterval(meterPaint, 100);
   clearInterval(deskT); deskT = 0;
   if (S.page === 'desk') { deskPaint(); deskT = setInterval(() => deskPaint(), 100); }
 }
@@ -457,6 +478,7 @@ function go(page) { if (S.page === page) return; S.page = page; save(); render()
 /* ---------- разбор касаний ---------- */
 
 function onDown(e) {
+  if (e.target.closest && e.target.closest('[data-duck]')) { try { e.target.closest('[data-duck]').setPointerCapture(e.pointerId); } catch { /* */ } duckStart(); return; }
   if (e.target.closest && e.target.closest('[data-fader]')) { onFaderDown(e); return; }
   if (e.target.closest && e.target.closest('[data-knob]')) { onKnobDown(e); return; }
   if (e.target.closest && e.target.closest('#shwave')) { onWaveDown(e); return; }
@@ -472,6 +494,7 @@ function onDown(e) {
   kick();
 }
 function onUp(e) {
+  if (duckOn && e.target.closest && e.target.closest('[data-duck]')) duckEnd();
   const p = held.get(e.pointerId);
   if (p && eng) { held.delete(e.pointerId); eng.release(p); }
 }
@@ -604,6 +627,7 @@ function fdSet(k, v) {
   host.querySelectorAll('[data-fv="' + k + '"]').forEach((o) => { o.textContent = v; });
   document.querySelectorAll('input[data-vol="' + k + '"]').forEach((i) => { i.value = v; });
   document.querySelectorAll('[data-vols="' + k + '"]').forEach((o) => { o.textContent = v; });
+  document.querySelectorAll('[data-vfill="' + k + '"]').forEach((f) => { f.style.width = v + '%'; });
   host.querySelectorAll('[data-fo="' + k + '"]').forEach((o) => { o.textContent = M.dbText(v) + ' ' + t('db'); });
 }
 // Крутилка: тянуть вверх-вниз (140 px — весь ход); двойное касание — на 0 и обратно; стрелки на клавиатуре — по единице
@@ -1060,7 +1084,7 @@ export default {
   resize(sz) { size = sz; render(); },
   unmount() {
     holdScreen('show', false);
-    clearInterval(tickT); clearInterval(deskT); deskT = 0; cancelAnimationFrame(raf); raf = 0;
+    clearInterval(tickT); clearInterval(deskT); deskT = 0; clearInterval(meterT); meterT = 0; duckEnd(); cancelAnimationFrame(raf); raf = 0;
     offs.splice(0).forEach((f) => f());
     if (host) { host.removeEventListener('click', onClick); host.removeEventListener('pointerdown', onDown); host.removeEventListener('pointerup', onUp); host.removeEventListener('pointercancel', onUp); host.removeEventListener('input', onInput); host.removeEventListener('change', onChange); host.removeEventListener('keydown', onKey); }
     held.clear();

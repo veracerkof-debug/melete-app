@@ -41,7 +41,9 @@ test('пульт: выступление, номер с меткой, пад с�
   // звуки: пустой пад → редактор → свой файл
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await page.click(T + '[data-page="pads"]');
-  await expect(page.locator(T + '.shdock .shpad')).toHaveCount(1); // пустые ячейки не рисуются: одна «+»
+  await expect(page.locator(T + '.shdock .shpad')).toHaveCount(0); // пустые закреплённые не рисуются (только в правке)
+  await expect(page.locator(T + '[data-duck]')).toBeVisible(); // «Ведущий» — пока держат, всё тише
+  await expect(page.locator(T + '.shmeter i')).toHaveCount(24); // метр уровня над громкостью
   await page.locator(T + '.shbanks [data-bank]').first().click(); // готовые «Ударные» — отдельной полосой сверху, во вкладках — свои банки; первый — пустой
   await page.click(T + '.shpads .shpad[data-cell="0"]');
   await page.fill('.sheet [data-f="name"]', 'Дробь');

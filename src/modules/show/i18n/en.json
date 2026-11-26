@@ -191,6 +191,8 @@
   "desk.bed": "Bed",
   "desk.sound": "Sound",
   "desk.left": "{t} left",
+  "duck.btn": "Host · hold",
+  "duck.aria": "Host: while held, the sound is quieter",
   "desk.master": "Master",
   "desk.levels": "Levels",
   "view.strip": "Knobs",

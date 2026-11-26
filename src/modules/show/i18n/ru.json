@@ -191,6 +191,8 @@
   "desk.bed": "Фон",
   "desk.sound": "Звук",
   "desk.left": "осталось {t}",
+  "duck.btn": "Ведущий · держать",
+  "duck.aria": "Ведущий: пока держат, звук тише",
   "desk.master": "Общая",
   "desk.levels": "Громкость",
   "view.strip": "Крутилки",

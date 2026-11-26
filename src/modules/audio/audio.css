@@ -164,3 +164,9 @@
 /* Обложка из тегов файла вместо плитки-значка */
 .mlart.cov{background-size:cover;background-position:center;background-color:var(--fill)}
 .vlab.cov{background-size:cover;background-position:center}
+
+/* Медиатека не двигается вбок (слово автора 26.11.2026): строка поиска сжимается, лишнее не вылезает за окно */
+.medlib{overflow-x:hidden}
+.medlib .mlhead{min-width:0}
+.medlib .mlsearch{min-width:0;flex:1 1 0}
+.medlib .mlsearch input{width:100%;min-width:0}
