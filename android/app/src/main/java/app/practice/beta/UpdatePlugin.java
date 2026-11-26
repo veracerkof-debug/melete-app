@@ -7,6 +7,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.app.PendingIntent;
+import android.content.pm.PackageInstaller;
 import android.provider.Settings;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
@@ -21,7 +23,9 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
@@ -221,6 +225,59 @@ public class UpdatePlugin extends Plugin {
             getContext().startActivity(i);
             call.resolve();
         } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+    }
+
+    // Поставит ли Android обновление молча: Android 12+ и прошлую версию поставило само Melete через PackageInstaller
+    // (установщик записи — наш пакет). Первая установка этим способом спросит один раз, дальше — без вопросов
+    private boolean quietNow() {
+        if (Build.VERSION.SDK_INT < 31) return false;
+        try {
+            String who = getContext().getPackageManager().getInstallSourceInfo(getContext().getPackageName()).getInstallingPackageName();
+            return getContext().getPackageName().equals(who);
+        } catch (Exception e) { return false; }
+    }
+
+    // → { silent } — страница решает, можно ли ставить, пока приложение свёрнуто
+    @PluginMethod
+    public void quiet(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("silent", quietNow());
+        o.put("result", UpdateBg.prefs(getContext()).getString("instResult", ""));
+        call.resolve(o);
+    }
+
+    // Установка через PackageInstaller (USER_ACTION_NOT_REQUIRED на Android 12+): после неё установщиком записи становится Melete,
+    // и следующие обновления идут без вопросов. Итог приходит в InstallResultReceiver; успех — процесс заменяют и закрывают
+    @PluginMethod
+    public void installQuiet(PluginCall call) {
+        File f = apk();
+        if (!f.exists()) { call.reject("no file"); return; }
+        PackageInstaller.Session s = null;
+        try {
+            Context c = getContext();
+            UpdateBg.prefs(c).edit().remove("instResult").apply();
+            PackageInstaller pi = c.getPackageManager().getPackageInstaller();
+            PackageInstaller.SessionParams p = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            p.setAppPackageName(c.getPackageName());
+            if (Build.VERSION.SDK_INT >= 31) p.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+            int id = pi.createSession(p);
+            s = pi.openSession(id);
+            try (InputStream in = new FileInputStream(f); OutputStream out = s.openWrite("melete", 0, f.length())) {
+                byte[] buf = new byte[1 << 16];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                s.fsync(out);
+            }
+            Intent it = new Intent(c, InstallResultReceiver.class).setPackage(c.getPackageName());
+            int fl = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+            s.commit(PendingIntent.getBroadcast(c, id, it, fl).getIntentSender());
+            s.close();
+            s = null;
+            call.resolve();
+        } catch (Exception e) {
+            if (s != null) { try { s.abandon(); s.close(); } catch (Exception ignored) { } }
+            call.reject(String.valueOf(e.getMessage()));
+        }
     }
 
     // Системный установщик со скачанным APK

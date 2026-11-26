@@ -67,6 +67,9 @@
             </intent-filter>
         </receiver>
 
+        <!-- Итог установки обновления через PackageInstaller -->
+        <receiver android:name=".InstallResultReceiver" android:exported="false" />
+
         <!-- Мост с главным экраном: запрос состояния и ▶/❚❚ (адресные рассылки; данных наружу не отдаёт) -->
         <receiver android:name=".BridgeReceiver" android:exported="true">
             <intent-filter>
@@ -224,6 +227,8 @@
     </queries>
     <!-- Обновление из GitHub (UpdatePlugin.java): системный установщик со скачанным APK. В сборке для Google Play — убрать -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Обновление себя без вопроса (Android 12+, если прошлую версию поставило само Melete): UpdatePlugin.installQuiet -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <!-- Микрофон: тюнер, спектр и шумомер. Звук обрабатывается только на устройстве -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

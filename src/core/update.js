@@ -6,7 +6,8 @@
 // обновления «нет»; тот же номер — тоже нет. Настройка «Обновление» (settings.updMode): «автоматически» (по умолчанию)
 // — раз в сутки при запуске проверить, скачать (Android — только по Wi-Fi) и поставить: Windows — молча при закрытии
 // программы (звук, запись и занятие не обрываются; src-tauri/src/update.rs), Android — системный установщик, одна
-// кнопка «Установить» (молча ставить себя вне Play система не даёт); «только по кнопке» — ничего само, всё из
+// кнопка «Установить»; с 26.11.2026 установка идёт через PackageInstaller, и когда прошлую версию поставило само Melete (Android 12+),
+// обновление ставится без вопросов, пока приложение свёрнуто и ничего не звучит; «только по кнопке» — ничего само, всё из
 // Профиль → Обновления. Данные остаются: тот же пакет и ключ подписи (Android), тот же идентификатор (Windows).
 // После обновления — «Что нового» (whatsnew.js). Веб-версия обновляется сама (service worker); Mac — позже.
 // Linux — AppImage заменяет себя сам (update.rs); пакет .deb обновляется вручную новым пакетом (update_ok → false).
@@ -216,15 +217,16 @@ export function createUpdater(app) {
     if (app.folder && app.folder.state && app.folder.state.ok && app.folder.saveBackup) { try { await app.folder.saveBackup(); } catch (e) { log('upd', 'копия в папку Melete перед обновлением не сохранена (копия на устройстве есть): ' + ((e && e.message) || e), 'w'); } }
   }
   // Установка (данные остаются; копия — на всякий случай)
-  async function install() {
+  async function install(quiet = false) {
     if (s.st !== 'ready') return;
     await safeCopy();
     log('upd', 'установка сборки ' + (s.info ? s.info.build : '?'));
     markUpdateQuit(); // закрытие на установку — не вылет
     if (platform === 'android') {
       const { ok } = await Native.canInstall();
-      if (!ok) { await Native.allowInstall(); return 'allow'; } // разрешить установку из Melete — один раз, в настройках системы
-      await Native.install();
+      if (!ok) { if (quiet) return null; await Native.allowInstall(); return 'allow'; } // разрешить установку из Melete — один раз, в настройках системы
+      // через PackageInstaller: после первой такой установки Android 12+ обновляет без вопросов; не вышло — прежний системный установщик (с кнопкой)
+      try { await Native.installQuiet(); } catch (e) { logErr('upd', e); if (quiet) return null; await Native.install(); }
     } else {
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('update_install', { path }); // окно закрывается, установщик ставит молча и запускает заново
@@ -232,8 +234,22 @@ export function createUpdater(app) {
     return 'ok';
   }
 
+  // Тихая установка (слово автора 26.11.2026: «как в Deixis»): Android 12+, прошлую версию поставило само Melete; только когда приложение
+  // свёрнуто больше 45 с, ничего не звучит, нет занятия — установка заменяет процесс, посреди игры её не бывает
+  let hiddenAt = 0;
+  async function quietTry() {
+    if (platform !== 'android' || CHANNEL !== 'dev' || mode() !== 'auto' || s.st !== 'ready' || typeof document === 'undefined' || !document.hidden || Date.now() - hiddenAt < 45000) return;
+    try {
+      if (app.active || (app.sounding && app.sounding())) return;
+      const q = await Native.quiet(); if (!q.silent) return;
+      log('upd', 'тихая установка сборки ' + (s.info ? s.info.build : '?'));
+      await install(true);
+    } catch (e) { logErr('upd', e); }
+  }
+
   const api = {
     platform, channel: CHANNEL, build: BUILD,
+    quietTry,
     get state() { return s; },
     get mode() { return mode(); },
     // «Потом»: эту сборку больше не предлагать (следующую — предложит)
@@ -252,6 +268,8 @@ export function createUpdater(app) {
       const go = () => { if (!due(readMem(), Date.now()) || s.st === 'ready' || s.st === 'down') return; check().then(() => { if (s.st === 'avail' && mode() === 'auto') download(); }).catch(() => {}); };
       setTimeout(go, 30000);
       setInterval(go, 10 * 60000);
+      if (typeof document !== 'undefined') { hiddenAt = document.hidden ? Date.now() : 0; document.addEventListener('visibilitychange', () => { hiddenAt = document.hidden ? Date.now() : 0; if (document.hidden) setTimeout(quietTry, 46000); }); }
+      setInterval(quietTry, 60000);
       if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(go, 2000); });
     },
     // Проверка не удалась (нет сети, сеть переключилась) — повторить, когда сеть вернулась или приложение снова на экране;

@@ -129,3 +129,5 @@ npx cap sync android   собрать в Android-проект; npx cap run andro
 npm run win            установщик Windows (нужны Rust и Windows); npm run win:dev — окно с живой перезагрузкой
 npm run launcher:dev   Ἐλάχιστον
 ```
+
+**Тихая установка обновления на Android (26.11.2026, слово автора «как в Deixis»; только канал dev).** `UpdatePlugin.installQuiet` ставит скачанный APK через `PackageInstaller` (`USER_ACTION_NOT_REQUIRED`, разрешение `UPDATE_PACKAGES_WITHOUT_USER_ACTION`), итог приходит в `InstallResultReceiver`. Первая такая установка спросит один раз (кнопка «Установить»), после неё установщиком записи становится сам пакет, и на Android 12+ следующие обновления идут без вопросов (`UpdatePlugin.quiet` → `silent`). `update.js: quietTry`: режим «автоматически», канал dev, приложение свёрнуто больше 45 с, не звучит звук (`app.sounding`), нет занятия (`app.active`) — иначе не ставит; не вышло — прежний системный установщик по кнопке. Java на устройстве не проверена.
