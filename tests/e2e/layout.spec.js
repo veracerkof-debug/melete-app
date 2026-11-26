@@ -252,3 +252,27 @@ test('сцена: ряды драм-пэдов от размера блока; �
   await setLay({}); await expect(page.locator('.sgpfx-more')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+// метроном и «Пэд: управление» в одном ряду (вид по умолчанию) не выходят за свои блоки и за окно на ширинах реальных телефонов
+test('сцена: ряд «Пэд: управление» и метронома целиком в блоках на ширинах 360–435', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  for (const w of [360, 390, 413, 435]) {
+    await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(350);
+    const bad = await page.evaluate((vw) => {
+      const out = [], pair = (b) => [...document.querySelectorAll('.sgpfx, .sgtempo')].forEach((blk) => {
+        const br = blk.getBoundingClientRect();
+        blk.querySelectorAll('button').forEach((e) => { const r = e.getBoundingClientRect(); if (!r.width) return; if (r.left < br.left - 1.5 || r.right > br.right + 1.5 || r.right > vw + 1) out.push(vw + ' ' + (e.dataset.sgmetro !== undefined ? 'bpm' : e.dataset.sgap || e.dataset.sgbpm || e.className) + ' ' + Math.round(r.left) + '..' + Math.round(r.right) + ' блок ' + Math.round(br.left) + '..' + Math.round(br.right)); });
+      });
+      pair(); return out;
+    }, w);
+    expect(bad).toEqual([]);
+    await expect(page.locator('[data-sgmetro]')).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});

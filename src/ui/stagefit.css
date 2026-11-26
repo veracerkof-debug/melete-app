@@ -96,3 +96,9 @@
 /* пэды звуков: много плиток в ряд — подписи мельче; плитки не сжимаются по высоте, ряды добавляются и убираются границей блока */
 .sgpad{min-height:46px}
 .sgpgrid[data-cols="6"] .sgpad b,.sgpgrid[data-cols="7"] .sgpad b,.sgpgrid[data-cols="8"] .sgpad b{font-size:9px;letter-spacing:0;line-height:1.05;white-space:normal;overflow-wrap:anywhere;text-overflow:clip;text-align:center;padding-bottom:3px}
+
+/* метроном в узком блоке (рядом с «Пэд: управление»): цифры темпа и TAP сжимаются, ряд не выходит за блок */
+.sgtempo{min-width:0;gap:4px;padding-left:6px;padding-right:6px}
+.sgtempo .sgbpm{flex:0 1 96px;min-width:52px}
+.sgtempo .sgic{flex:0 0 auto}
+.sgtempo .sgic.tapb{width:44px;min-width:44px;padding:0}
