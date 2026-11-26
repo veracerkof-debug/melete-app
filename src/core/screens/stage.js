@@ -258,8 +258,14 @@ export function openStage(app, evId, i = 0) {
   const fileKey = (id) => { const r = id && app.files ? app.files.get(id) : null; return r && r.ana && r.ana.pc != null ? recKey(r.ana.pc, !!r.ana.minor) : r && r.ukey ? r.ukey : ''; };
   // арпеджиатор и глайдер пэдов фона (слово автора 26.11.2026): рядом с метрономом, касание — вкл/выкл; настройки — в инструменте «Дрон»
   const arpState = () => { const d = app.device.drone; d.arp = normalizeArp(d.arp); return d.arp; };
-  const arpBtns = () => { const a = arpState(); return '<span class="sgap" role="group" aria-label="' + esc(t('stage.arpGroup')) + '"><button class="sgic txt sgab' + (a.on ? ' on' : '') + '" data-sgap="arp" aria-pressed="' + a.on + '">' + esc(t('stage.arp')) + '</button>' +
-    '<button class="sgic txt sgab' + (a.glide.on ? ' on' : '') + '" data-sgap="glide" aria-pressed="' + a.glide.on + '">' + esc(t('stage.glide')) + '</button></span>'; };
+  // у метронома слева мелкие кнопки пэдов (слово автора 26.11.2026): арпеджиатор, глайдер, волна громкости и настройки пэдов — быстрый вход, без долгого нажатия
+  const GEAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
+  const WAVE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c2.5-8 5.5-8 8 0s5.5 8 8 0 3-5 4-5"/></svg>';
+  const waveState = () => { const fx = audio.mixer.fx && audio.mixer.fx('drone'); return !!(fx && fx.trem > 0); };
+  const arpBtns = () => { const a = arpState(), w = waveState(); return '<span class="sgap" role="group" aria-label="' + esc(t('stage.arpGroup')) + '"><button class="sgic txt sgab' + (a.on ? ' on' : '') + '" data-sgap="arp" aria-pressed="' + a.on + '">' + esc(t('stage.arp')) + '</button>' +
+    '<button class="sgic txt sgab' + (a.glide.on ? ' on' : '') + '" data-sgap="glide" aria-pressed="' + a.glide.on + '">' + esc(t('stage.glide')) + '</button>' +
+    '<button class="sgic sgab ic' + (w ? ' on' : '') + '" data-sgap="wave" aria-pressed="' + w + '" aria-label="' + esc(t('stage.wave')) + '">' + WAVE + '</button>' +
+    '<button class="sgic sgab ic" data-sgap="set" aria-label="' + esc(t('stage.padSet')) + '">' + GEAR + '</button></span>'; };
   const plHTML = () => {
     const el = S.pl && S.pl.el, playing = !!(el && !el.paused && !S.pl.ended), d = el && el.duration > 0 ? el.duration : 0;
     return '<div class="sgplayer" role="group" aria-label="' + esc(t('stage.player')) + '">' +
@@ -757,12 +763,22 @@ export function openStage(app, evId, i = 0) {
     render();
     if (act === 'play') play();
   };
+  // Настройки и волна пэдов — из модуля «Пэды / дрон» (шторка та же, что в инструменте)
+  const padModule = async (what) => {
+    try {
+      const [reg, mods, mod] = await Promise.all([import('../../modules/index.js'), import('../modules.js'), import('../../modules/drone/index.js')]);
+      const c = mods.makeCtx(app, reg.moduleById('drone'));
+      if (what === 'wave') { const on = mod.toggleWave(c); toast(t(on ? 'stage.waveOn' : 'stage.waveOff')); render(); }
+      else mod.openSettings(c, 'sound');
+    } catch (err) { logErr(err); toast(t('stage.padErr')); }
+  };
   const onClick = (e) => {
     let b;
     // правка раскладки: содержимое блоков не нажимается (играть, пэды, метроном молчат); работают только выход и сама правка
     if (isEditing(layOf()) && !e.target.closest('[data-sg="exit"], [data-ly], [data-lybar], .lybar')) return;
     if (S.locked) return; // блокировка: касания игнорируются, снимается удержанием замка
     if ((b = e.target.closest('[data-sgap]'))) {
+      if (b.dataset.sgap === 'set' || b.dataset.sgap === 'wave') { padModule(b.dataset.sgap); return; }
       const a = arpState();
       if (b.dataset.sgap === 'arp') a.on = !a.on; else a.glide.on = !a.glide.on;
       if (app.saveDevice) app.saveDevice();

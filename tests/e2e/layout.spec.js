@@ -30,9 +30,15 @@ test('сцена: правка вида — размер, порядок, скр
   await expect(page.locator('.sgplayer')).toBeVisible();
   await expect(page.locator('.lybar')).toHaveCount(0); // обычный вид: никаких рамок и кнопок правки
   // удержание в тишине — правка; содержимое блоков не нажимается
+  const geo = () => page.evaluate(() => [...document.querySelectorAll('.sgtempo, .sgplayer, .sgbar, .sgmain')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]; }));
+  const g0 = await geo();
   await hold(page, page.locator('.sgplayer'));
-  await expect(page.locator('.lybar')).toBeVisible();
+  await expect(page.locator('.lybi').first()).toBeVisible();
   await expect(page.locator('.lyb.ed')).not.toHaveCount(0);
+  // вид правки совпадает с обычным: те же места и высоты (слово автора 26.11.2026)
+  const g1 = await geo();
+  expect(g1.length).toBe(g0.length);
+  g1.forEach((b, i) => { expect(Math.abs(b[0] - g0[i][0])).toBeLessThanOrEqual(3); expect(Math.abs(b[1] - g0[i][1])).toBeLessThanOrEqual(3); });
   // размер: тянуть планку вниз → число в данных, больше единицы
   const g = await page.locator('.lyb[data-lb="tempo"] .lyh').boundingBox();
   await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2); await page.mouse.down();
@@ -75,7 +81,7 @@ test('сцена: блоки рядом — пара, ширина планко�
   await page.waitForTimeout(800);
   await expect(page.locator('.lyrow')).toHaveCount(0); // без пар разметка прежняя: рядов нет
   await hold(page, page.locator('.sgplayer'));
-  await expect(page.locator('.lybar')).toBeVisible();
+  await expect(page.locator('.lybi').first()).toBeVisible();
   // рядом: перетащить клавиши к правому краю темпа
   await dragTo(page, 'keys', 'tempo', 0.92, 0.5); await page.waitForTimeout(250);
   await expect(page.locator('.lyrow.ed > .lyb[data-lb="tempo"]')).toHaveCount(1);
@@ -112,7 +118,7 @@ test('сцена: в правке «играть» и пэды молчат; г�
   if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
   await page.waitForTimeout(800);
   await hold(page, page.locator('.sgplayer'));
-  await expect(page.locator('.lybar')).toBeVisible();
+  await expect(page.locator('.lybi').first()).toBeVisible();
   const pl = await page.locator('.sgbpm').boundingBox();
   await page.mouse.click(pl.x + pl.width / 2, pl.y + pl.height / 2); await page.waitForTimeout(300);
   await expect(page.locator('.sgbpm.on')).toHaveCount(0); // метроном в правке не включается
@@ -129,5 +135,30 @@ test('сцена: в правке «играть» и пэды молчат; г�
   expect(L.size.tempo).toBeGreaterThan(1.03);
   const nextId = await page.evaluate(() => { const a = [...document.querySelectorAll('.lyb.ed')].map((e) => e.dataset.lb); return a[a.indexOf('tempo') + 1]; });
   expect(L.size[nextId]).toBeLessThan(0.97);
+  expect(errors).toEqual([]);
+});
+
+test('сцена: мелкие кнопки пэдов — настройки и волна открываются кнопкой, а не долгим нажатием', async ({ page, melete, errors }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await melete.open({ songs: [] });
+  await page.locator('.hstage').scrollIntoViewIfNeeded();
+  await page.locator('.hstage').click(); await page.waitForTimeout(600);
+  if (await page.locator('[data-sgwgo]').count()) await page.click('[data-sgwgo]');
+  await page.waitForTimeout(800);
+  await expect(page.locator('[data-sgap="set"]')).toBeVisible();
+  const b = await page.locator('[data-sgap="arp"]').boundingBox();
+  expect(b.height).toBeLessThanOrEqual(40);
+  // весь ряд метронома — в окне, и на узком экране тоже
+  for (const w of [390, 360]) {
+    await page.setViewportSize({ width: w, height: 800 }); await page.waitForTimeout(300);
+    const xs = await page.evaluate(() => [...document.querySelectorAll('.sgtempo button')].map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }));
+    xs.forEach(([l, r]) => { expect(l).toBeGreaterThanOrEqual(0); expect(r).toBeLessThanOrEqual(w + 1); });
+  }
+  await page.click('[data-sgap="set"]'); await page.waitForTimeout(800);
+  await expect(page.locator('#sheetLayer .sheet')).toBeVisible();
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  await page.click('[data-sgap="wave"]'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-sgap="wave"]')).toHaveAttribute('aria-pressed', 'true');
   expect(errors).toEqual([]);
 });

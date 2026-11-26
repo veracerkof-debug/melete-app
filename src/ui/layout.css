@@ -2,23 +2,24 @@
 .lyb{display:contents}
 /* Правка: блоки — рамки с планкой размера внизу; содержимое не нажимается, всё остальное экрана остаётся как есть */
 .lyedit{overflow-y:auto;-webkit-overflow-scrolling:touch}
-.lybar{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 10%,transparent)}
-.lybar span{flex:1;min-width:0;font-size:13px;line-height:1.3;color:color-mix(in srgb,var(--ink) 65%,transparent)}
-.lybar button,.lytray button{flex:none;min-height:40px;padding:0 14px;border-radius:12px;font-weight:700;font-size:14px;background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
-.lybar .done{background:var(--tint);color:var(--on-tint)}
-.lytray{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 10px 18px}
-.lytray span{width:100%;font-size:12px;color:color-mix(in srgb,var(--ink) 55%,transparent)}
-.lytray button{border-radius:20px;font-weight:600}
-/* Блоки стоят вплотную, как окна свободной практики: между ними только граница. Инструмент затемнён и размыт, поверх — название */
-.lyb.ed{display:flex;flex-direction:column;position:relative;flex:none;margin:0;min-height:70px;border-bottom:1px solid color-mix(in srgb,var(--ink) 28%,transparent);background:color-mix(in srgb,var(--tint) 6%,var(--bg));touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .18s ease,opacity .18s ease}
+.lybar,.lytray{position:sticky;z-index:9;height:0;overflow:visible;flex:none;pointer-events:none}
+.lybar{top:0}.lytray{bottom:0}
+.lybi{position:absolute;left:8px;right:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:6px 6px 6px 12px;border-radius:16px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 4px 18px rgba(0,0,0,.16);border:.5px solid color-mix(in srgb,var(--ink) 14%,transparent);pointer-events:auto}
+.lybar .lybi{top:6px}.lytray .lybi{bottom:8px}
+.lybi span{flex:1 1 150px;min-width:0;font-size:13px;line-height:1.3;color:color-mix(in srgb,var(--ink) 65%,transparent)}
+.lytray .lybi span{flex:none;width:100%}
+.lybi button{flex:none;min-height:40px;padding:0 14px;border-radius:12px;font-weight:700;font-size:14px;background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
+.lybi .done{background:var(--tint);color:var(--on-tint)}
+.lytray .lybi button{border-radius:20px;font-weight:600}
+.lyb.ed{display:flex;flex-direction:column;position:relative;flex:none;margin:0;min-height:0;box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--ink) 28%,transparent);background:color-mix(in srgb,var(--tint) 6%,var(--bg));touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .18s ease,opacity .18s ease}
 .lyb.ed.lysw,.lyb.ed.lydrag{transition:none}
+.lyb.ed.lyg{flex:1 1 auto;min-height:0}
 .lyb.ed>.lyi{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;pointer-events:none;opacity:.32;filter:blur(2px) saturate(.5);overflow:hidden}
 .lyn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 16px;font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:var(--ink);pointer-events:none;z-index:2}
 .lyb.ed.lydrag{z-index:8;opacity:.92;box-shadow:0 10px 30px rgba(0,0,0,.35);border-radius:10px;background:color-mix(in srgb,var(--tint) 14%,var(--bg))}
 /* граница под блоком — ручка размера: линия во всю ширину и «ушко» посередине */
 .lyh{position:absolute;left:0;right:0;bottom:-13px;height:26px;display:grid;place-items:center;touch-action:none;cursor:ns-resize;z-index:3}
 .lyh i{width:54px;height:6px;border-radius:3px;background:var(--tint);box-shadow:0 1px 5px rgba(0,0,0,.3)}
-.lyend{height:26px;flex:none}
 /* куда встанет переносимый блок */
 .lyb.ed.lyt::after{content:"";position:absolute;z-index:7;pointer-events:none;background:var(--tint);border-radius:2px}
 .lyt-before::after{left:0;right:0;top:-2px;height:4px}
@@ -30,11 +31,11 @@
 .lyrow.lyg{flex:1 1 auto;min-height:0}
 .lyrow>.lyb{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 .lyrow>.lyb:first-child{flex:0 0 calc(var(--lw,.5) * 100%)}
-.lyrow>.lyb:last-child{flex:1 1 0}
+.lyrow>.lyb:nth-child(2){flex:1 1 0}
 @media (orientation:landscape) and (max-height:520px){.lyrow:not(.ed),.lyrow:not(.ed)>.lyb{display:contents}} /* сетка сцены на боку — блоки по одному, как были */
 .lyrow.ed{position:relative;gap:0;margin:0}
 .lyrow.ed>.lyb.ed{margin:0;overflow:visible}
-.lyrow.ed>.lyb.ed:first-child{flex-basis:calc(var(--lw,.5) * 100%);border-right:1px solid color-mix(in srgb,var(--ink) 28%,transparent)}
+.lyrow.ed>.lyb.ed:first-child{flex-basis:calc(var(--lw,.5) * 100%);box-shadow:inset -1px 0 0 color-mix(in srgb,var(--ink) 28%,transparent),inset 0 -1px 0 color-mix(in srgb,var(--ink) 28%,transparent)}
 .lyv{position:absolute;top:0;bottom:0;left:calc(var(--lw,.5) * 100%);width:30px;margin-left:-15px;display:grid;place-items:center;z-index:4;touch-action:none;cursor:ew-resize}
 .lyv i{width:6px;height:54px;border-radius:3px;background:var(--tint);box-shadow:0 1px 5px rgba(0,0,0,.3)}
 /* подсказка общей громкости при жесте двумя пальцами */

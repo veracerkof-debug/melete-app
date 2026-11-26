@@ -54,7 +54,7 @@ export function arrange(blocks, lay, opts = {}) {
   const one = (b) => {
     const z = scaleOf(lay, b.id);
     if (!editing) return '<div class="lyb" data-lb="' + b.id + '" style="--lz:' + z + '">' + b.html + '</div>';
-    return '<div class="lyb ed" data-lb="' + b.id + '" style="--lz:' + z + '"><div class="lyi">' + b.html + '</div>' +
+    return '<div class="lyb ed' + (grow.includes(b.id) ? ' lyg' : '') + '" data-lb="' + b.id + '" style="--lz:' + z + '"><div class="lyi">' + b.html + '</div>' +
       '<span class="lyn">' + esc(name(b.id)) + '</span>' +
       '<div class="lyh" data-ly="grip" role="slider" aria-label="' + esc(t('lay.grip')) + '" aria-valuemin="' + SCALE_MIN + '" aria-valuemax="' + SCALE_MAX + '" aria-valuenow="' + z + '"><i></i></div></div>';
   };
@@ -66,8 +66,9 @@ export function arrange(blocks, lay, opts = {}) {
   }).join('');
   if (!editing) return body;
   const hid = lay.hidden.filter((i) => ids.includes(i) && blocks.find((b) => b.id === i && b.html));
-  return '<div class="lybar" role="toolbar" data-lybar><span>' + esc(t('lay.editHint')) + '</span><button data-ly="reset">' + esc(t('lay.reset')) + '</button><button class="done" data-ly="done">' + esc(t('lay.done')) + '</button></div>' + body + '<div class="lyend"></div>' +
-    (hid.length ? '<div class="lytray" data-lybar><span>' + esc(t('lay.hiddenList')) + '</span>' + hid.map((i) => '<button data-ly="show" data-id="' + i + '">＋ ' + esc(name(i)) + '</button>').join('') + '</div>' : '');
+  // Полоса «Готово» и скрытые блоки висят поверх экрана и места не занимают: вид правки — тот же, что обычный (слово автора 26.11.2026)
+  return '<div class="lybar" role="toolbar" data-lybar><div class="lybi"><span>' + esc(t('lay.editHint')) + '</span><button data-ly="reset">' + esc(t('lay.reset')) + '</button><button class="done" data-ly="done">' + esc(t('lay.done')) + '</button></div></div>' + body +
+    (hid.length ? '<div class="lytray" data-lybar><div class="lybi"><span>' + esc(t('lay.hiddenList')) + '</span>' + hid.map((i) => '<button data-ly="show" data-id="' + i + '">＋ ' + esc(name(i)) + '</button>').join('') + '</div></div>' : '');
 }
 
 // Ряды видимых блоков: [[id], [id, id2], …]; блок с записью в pair встаёт в ряд с предыдущим, если тот один в ряду

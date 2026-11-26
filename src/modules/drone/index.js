@@ -479,6 +479,19 @@ function bind() {
 let arpHeld = 0;
 const ARP_ICON = '<svg viewBox="0 0 24 24"><path d="M4 18l4-4 4 4 4-8 4 4"/><circle cx="4" cy="18" r="1.3"/><circle cx="8" cy="14" r="1.3"/><circle cx="12" cy="18" r="1.3"/><circle cx="16" cy="10" r="1.3"/><circle cx="20" cy="14" r="1.3"/></svg>';
 
+// Настройки пэдов из другого экрана (сцена): те же шторка и вкладки, что у инструмента; свой контекст ставим, если инструмент не открыт
+export function openSettings(c, tab) {
+  if (!ctx) ctx = c;
+  droneSheet(tab);
+}
+// Волна громкости пэдов (тремоло): вкл/выкл — как кнопка «Волна» инструмента → включена ли теперь
+export function toggleWave(c) {
+  if (!ctx) ctx = c;
+  setFx({ trem: FX().trem > 0 ? 0 : D().wave });
+  return FX().trem > 0;
+}
+export const waveOn = (c) => { if (!ctx) ctx = c; return FX().trem > 0; };
+
 export default {
   ...meta,
   status: (c) => { const d = c.store.all(); return c.t('status', { note: SH[d.pc], sound: c.t('snd.' + (SOUNDS[d.sound] != null ? d.sound : 'soft') + '.s') }); },
