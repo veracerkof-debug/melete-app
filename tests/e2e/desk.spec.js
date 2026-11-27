@@ -1,4 +1,4 @@
-// Компьютер (окно 1536×790, мышь): навигация слева, настройки в две колонки, песни сеткой, игра на пианино с клавиатуры
+// Компьютер (окно 1536×790, мышь): навигация сверху, настройки в две колонки, песни сеткой, игра на пианино с клавиатуры
 import { test, expect } from './melete.js';
 
 test.use({ viewport: { width: 1536, height: 790 }, hasTouch: false });
@@ -28,9 +28,9 @@ test('настольная раскладка', async ({ page, melete, errors })
   await melete.open();
   expect(await page.evaluate(() => document.documentElement.classList.contains('desk'))).toBe(true);
   const rail = await page.evaluate(() => { const r = document.querySelector('.tabbar').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width), Math.round(r.height)]; });
-  expect(rail[0]).toBe(0);
-  expect(rail[1]).toBeLessThan(120);
-  expect(rail[2]).toBeGreaterThan(700);
+  expect(rail[0]).toBe(0); // навигация — полоса сверху на всю ширину (27.11.2026), боковой нет
+  expect(rail[1]).toBeGreaterThan(1400);
+  expect(rail[2]).toBeLessThan(90);
   expect(await melete.overflow()).toEqual([]);
   await melete.click('[data-act="panel"]'); await page.waitForTimeout(500);
   expect(await melete.count('.pdesk .pdnav')).toBe(1);

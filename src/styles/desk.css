@@ -4,30 +4,32 @@
    окна сессии — рядом друг с другом, шторки — диалогом по центру. Телефон и планшет пальцем этого не видят.
    Подключается последним из стилей экранов (main.js) — уточняет их, не меняя порядка правил внутри них. */
 
-html.desk { --rail: 92px; }
+html.desk { --rail: 0px; --top: 60px; --srail: 92px; } /* --rail: боковой полосы нет (навигация сверху, 27.11.2026); --srail — полоса инструментов в сессии */
 .tab .tl, .tb .tl { display: none; } /* подписи вкладок — только на компьютере */
 
-/* ---------- навигация: полоса слева ---------- */
+/* ---------- навигация: полоса сверху (слово автора 27.11.2026: привычная верхняя навигация, без боковой панели) ---------- */
 html.desk .tabbar {
-  top: 0; bottom: 0; left: 0; right: auto; width: var(--rail);
-  border-top: 0; border-right: .5px solid var(--sep);
-  padding: 18px 0 18px; display: flex; flex-direction: column;
+  top: 0; bottom: auto; left: 0; right: 0; height: var(--top); padding: 0 32px;
+  border-top: 0; border-bottom: .5px solid var(--sep);
+  display: flex; align-items: center; gap: 36px;
 }
-html.desk .tabbar .in {
-  max-width: none; margin: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;
-}
-html.desk .tab { min-height: 64px; padding: 8px 4px; gap: 4px; }
-html.desk .tab .tl { display: block; font-size: 12px; font-weight: 600; line-height: 1.15; max-width: 84px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html.desk .tab svg { width: 26px; height: 26px; }
-html.desk .tab::before { top: 8px; margin-top: 0; width: 56px; height: 32px; margin-left: -28px; }
+html.desk .tabbar::before { content: "Μελέτη"; font: 600 25px/1 'Noto Serif', Georgia, serif; letter-spacing: .02em; color: var(--ink); flex: none; }
+html.desk .tabbar .in { max-width: none; margin: 0; display: flex; flex-direction: row; gap: 4px; overflow: visible; padding-inline: 0; }
+html.desk .tab { min-height: var(--top); height: var(--top); padding: 0 16px; gap: 8px; flex-direction: row; border-bottom: 3px solid transparent; border-top: 3px solid transparent; }
+html.desk .tab .tl { display: block; font-size: 15px; font-weight: 600; line-height: 1.15; max-width: none; text-align: left; white-space: nowrap; }
+html.desk .tab svg { width: 22px; height: 22px; }
+html.desk .tab::before { display: none; }
+html.desk .tab[aria-current="page"] { border-bottom-color: var(--tint); color: var(--ink); }
 html.desk .tab:hover { color: var(--ink); }
 
-/* содержимое — справа от полосы, на всю ширину */
+/* содержимое — под полосой навигации, на всю ширину */
 html.desk #app > .wrap, html.desk main.wrap {
-  margin-left: var(--rail); max-width: none; padding: 20px 40px 48px;
+  margin-left: 0; max-width: none; padding: calc(var(--top) + 24px) 56px 48px;
 }
 html.desk main.wrap > * { max-width: 1680px; margin-left: auto; margin-right: auto; }
 html.desk .topbar { min-height: 48px; }
+html.desk .topbar .logo { display: none; } /* название — в полосе навигации */
+html.desk .tvhd { max-width: none; padding: 6px 24px 0; }
 
 /* ---------- главная: три колонки, «Начать практику» — во всю ширину ---------- */
 html.desk .hcta { min-height: 72px; font-size: 20px; margin: 10px 0 18px; }
@@ -55,7 +57,7 @@ html.desk .tcard2.wide { grid-column: span 1; }
 html.desk .tcard2:hover { box-shadow: 0 4px 18px rgba(0, 0, 0, .08); }
 
 /* ---------- настройки: разделы слева, раздел справа ---------- */
-html.desk #panelLayer { left: var(--rail); }
+html.desk #panelLayer { left: 0; top: var(--top); }
 html.desk #panelLayer .wrap { max-width: none; padding: 12px 40px 40px; }
 html.desk .pdesk { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 36px; align-items: start; max-width: 1500px; margin: 0 auto; }
 html.desk .pdnav { position: sticky; top: 12px; max-height: calc(100vh - 80px); overflow-y: auto; padding-right: 4px; }
@@ -69,12 +71,12 @@ html.desk .sheet { max-width: 720px; max-height: 86vh; border-radius: 18px; }
 html.desk .scrim { left: var(--rail); }
 
 /* ---------- инструмент вне сессии ---------- */
-html.desk .tview { left: var(--rail); }
+html.desk .tview { left: 0; top: var(--top); }
 html.desk .tvbody { max-width: none; padding: 12px 24px 16px; }
-html.desk .btab { height: calc(100dvh - 44px); }
+html.desk .btab { height: calc(100dvh - var(--top) - 44px); }
 
 /* ---------- сессия: окна на всю ширину, панель инструментов — полосой слева ---------- */
-html.desk .session { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+html.desk .session { display: grid; grid-template-columns: var(--srail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 html.desk .session .sin { grid-column: 2; grid-row: 1; max-width: none; padding: 10px 20px 16px; }
 html.desk .session .sdock {
   grid-column: 1; grid-row: 1; border-top: 0; border-right: .5px solid var(--sep); padding: 14px 0; overflow-y: auto; overflow-x: hidden;
@@ -93,28 +95,28 @@ html.desk .session.toolmode .sin { grid-column: 1; }
 /* ---------- инструменты в широком окне ---------- */
 /* пианино: ручки звука — одной невысокой полосой, остальное — клавишам */
 html.desk .pwrap.wsyn .psyn { flex: 0 0 200px; height: 200px; }
-/* главная — сеткой: неделя, лига, слово; «Начать» во всю ширину; быстрый доступ, события, песни */
-html.desk .hlist { columns: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; align-items: start; }
-html.desk .hlist .hblk { min-width: 0; }
-html.desk .hlist .hblk[data-hb="week"] { grid-column: 1; grid-row: 1; }
-html.desk .hlist .hblk[data-hb="league"] { grid-column: 2; grid-row: 1; }
-html.desk .hlist .hblk[data-hb="voice"] { grid-column: 3; grid-row: 1; }
-html.desk .hlist:not(:has(.hblk[data-hb="voice"])) .hblk[data-hb="league"] { grid-column: 2 / span 2; }
-html.desk .hlist .hblk[data-hb="start"] { grid-column: 1 / -1; grid-row: 2; }
-html.desk .hlist .hblk[data-hb="quick"] { grid-column: 1; grid-row: 3; }
-html.desk .hlist .hblk[data-hb="events"] { grid-column: 2; grid-row: 3; }
-html.desk .hlist .hblk[data-hb="songs"] { grid-column: 3; grid-row: 3; }
-html.desk .hlist:not(:has(.hblk[data-hb="events"])) .hblk[data-hb="songs"] { grid-column: 2 / span 2; }
-html.desk .hlist:not(:has(.hblk[data-hb="events"])) .hblk[data-hb="songs"] .slist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-html.desk .hlist .hblk[data-hb="reading"] { grid-column: 1; }
-html.desk .hlist .hblk[data-hb="week"] > .hcard, html.desk .hlist .hblk[data-hb="league"] > * { height: 100%; }
-html.desk .hlist .hblk[data-hb="league"] .gemrow { margin-top: 0; min-height: 100%; padding: 18px 22px; }
+/* главная — две колонки (слово автора 27.11.2026, макет «Главный экран»): слева — начать занятие, быстрый доступ, неделя, учёба;
+   справа — песни, события, лига. Блоки на месте при любой настройке: нет блока — остальные подтягиваются */
+html.desk .hlist { columns: auto; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); column-gap: 56px; row-gap: 0; align-items: start; }
+html.desk .hlist .hblk { min-width: 0; grid-column: 1; }
+html.desk .hlist .hblk[data-hb="first"] { grid-row: 1; }
+html.desk .hlist .hblk[data-hb="voice"] { grid-row: 2; }
+html.desk .hlist .hblk[data-hb="start"] { grid-row: 3; }
+html.desk .hlist .hblk[data-hb="quick"] { grid-row: 4; }
+html.desk .hlist .hblk[data-hb="week"] { grid-row: 5; }
+html.desk .hlist .hblk[data-hb="study"] { grid-row: 6; }
+html.desk .hlist .hblk[data-hb="reading"] { grid-row: 7; }
+html.desk .hlist .hblk[data-hb="review"] { grid-row: 8; }
+html.desk .hlist .hblk[data-hb="songs"] { grid-column: 2; grid-row: 1 / span 4; }
+html.desk .hlist .hblk[data-hb="events"] { grid-column: 2; grid-row: 5; }
+html.desk .hlist .hblk[data-hb="league"] { grid-column: 2; grid-row: 6 / span 2; }
+html.desk .hlist .hblk[data-hb="songs"] .slist { grid-template-columns: 1fr; }
 html.desk .hlist .hblk[data-hb="quick"] .hhdr, html.desk .hlist .hblk[data-hb="events"] .hhdr, html.desk .hlist .hblk[data-hb="songs"] .hhdr { margin-top: 0; }
-@media (max-width: 1380px) {
-  html.desk .hlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  html.desk .hlist .hblk[data-hb="voice"], html.desk .hlist .hblk[data-hb="songs"] { grid-column: 1 / -1; grid-row: auto; }
-  html.desk .hlist .hblk[data-hb="songs"] .slist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  html.desk .hlist .hblk[data-hb="league"] { grid-column: 2; }
+html.desk .hlist .hblk[data-hb="league"] .gemrow { margin-top: 0; }
+html.desk .hlist:has(.hbedit) { display: block; } /* правка главной — прежним столбцом */
+@media (max-width: 1180px) {
+  html.desk .hlist { grid-template-columns: minmax(0, 1fr); }
+  html.desk .hlist .hblk { grid-column: 1 !important; grid-row: auto !important; }
 }
 /* календарь: месяц помещается в окно */
 html.desk .cday { min-height: 92px; }
