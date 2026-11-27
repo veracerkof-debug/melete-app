@@ -22,7 +22,7 @@ test('правка главной: камень — в плитке недели
 
 // Ручка размера блока (слово автора 25.11.2026): тянуть вниз — блок растёт под пальцем, значение — числом в данных
 test('правка главной: ручка размера — блок растёт и уменьшается, число в данных', async ({ page, melete, errors }) => {
-  await melete.open();
+  await melete.open({ settings: { firstHide: true } }); // блок «Первое занятие» сдвигает неделю вниз — для проверки ручки он скрыт
   await page.waitForSelector('.hblk[data-hb="week"]');
   await melete.hold('.hblk[data-hb="week"]', 800);
   await expect(page.locator('.hbedit')).toHaveCount(1);
