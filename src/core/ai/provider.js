@@ -17,11 +17,12 @@ export function buildRequest(cfg, { system, messages }) {
   }
   return { url, headers: { Authorization: 'Bearer ' + cfg.key, 'Content-Type': 'application/json' }, body: { model: cfg.model, messages: [{ role: 'system', content: system }, ...msgs] } };
 }
-// Текст ответа или причина: { ok, text } | { ok:false, kind: 'auth'|'rate'|'server'|'bad'|'empty', message }
+// Текст ответа или причина: { ok, text } | { ok:false, kind: 'auth'|'notfound'|'rate'|'server'|'bad'|'empty', message }
 export function parseResponse(cfg, status, data) {
   let j = data; if (typeof data === 'string') { try { j = JSON.parse(data); } catch { j = null; } }
   const msg = (j && ((j.error && (j.error.message || j.error)) || j.message)) || '';
   if (status === 401 || status === 403) return { ok: false, kind: 'auth', message: String(msg).slice(0, 200) };
+  if (status === 404) return { ok: false, kind: 'notfound', message: String(msg).slice(0, 200) };
   if (status === 429) return { ok: false, kind: 'rate', message: String(msg).slice(0, 200) };
   if (status >= 500) return { ok: false, kind: 'server', message: String(msg).slice(0, 200) };
   if (status < 200 || status >= 300 || !j) return { ok: false, kind: 'bad', message: String(msg || status).slice(0, 200) };

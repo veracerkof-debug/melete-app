@@ -56,6 +56,8 @@ export async function reportText(app, what = '', withLog = true, span = 'all') {
   let crash = '';
   if (Report) { try { crash = ((await Report.lastCrash()) || {}).text || ''; } catch { /* старая сборка без метода */ } }
   if (crash) body.push('— Последнее падение приложения —', crash.trim(), '');
+  // нейросеть: замеры запросов и итог проверки связи (без ключа и текстов), только если она включена
+  try { const ai = app.ai && app.ai.avail ? app.ai.reportSection() : ''; if (ai) body.push(ai, ''); } catch { /* без раздела */ }
   // диагностика (diag.js, diagnose.js): находки, неделя и сводка для разработчика — чтобы не расспрашивать
   try {
     flushDiag();

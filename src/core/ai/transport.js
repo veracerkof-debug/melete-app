@@ -2,6 +2,7 @@
 // запрос уходит только по нажатию «Отправить» в чате). В обычной веб-версии функции нет. Windows/Linux — Rust-команда, позже.
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { WEB } from '../platform.js';
+import { kindOfError } from './netdiag.js';
 
 export const aiAvail = () => Capacitor.getPlatform() === 'android' && !WEB;
 // Страница по ссылке из чата (только по нажатию «Добавить ссылку», только https): нативный GET без cookies → { status, data (текст), headers }
@@ -11,7 +12,7 @@ export async function get(url, { timeout = 20000 } = {}) {
     return { status: r.status, data: r.data, headers: r.headers || {} };
   } catch (e) {
     const m = String((e && e.message) || e);
-    throw Object.assign(new Error(m), { kind: /time/i.test(m) ? 'timeout' : 'net' });
+    throw Object.assign(new Error(m), { kind: kindOfError(m) });
   }
 }
 // req: { url, headers, body } → { status, data }; ошибки сети — исключение { kind: 'net'|'timeout' }
@@ -21,6 +22,6 @@ export async function post(req, { timeout = 120000 } = {}) {
     return { status: r.status, data: r.data };
   } catch (e) {
     const m = String((e && e.message) || e);
-    throw Object.assign(new Error(m), { kind: /time/i.test(m) ? 'timeout' : 'net' });
+    throw Object.assign(new Error(m), { kind: kindOfError(m) });
   }
 }

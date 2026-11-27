@@ -36,6 +36,12 @@ export function diagnose(state, env = {}, now = Date.now()) {
   // Интерфейс подвисал (длинные задачи главного потока — звук и касания запаздывают)
   const fr = c['ev.freeze'] || 0, lt = t['ui.longtask'];
   if (fr >= 3 || (lt && p95(lt) > 400 && lt.n >= 20)) add('freeze', fr >= 10 ? 'bad' : 'warn', { n: fr, max: Math.round(lt ? lt.max : 0) });
+  // Нейросеть (ai/index.js: замер каждого запроса): долгие ответы и отказы — с причиной
+  const air = t['ai.req'];
+  if (air && air.n >= 3 && avg(air) > 25000) add('aislow', 'warn', { s: r1(avg(air) / 1000), max: r1(air.max / 1000) });
+  const aie = {}; Object.entries(c).forEach(([k, v]) => { if (k.startsWith('ai.err.')) aie[k.slice(7)] = v; });
+  const nae = Object.values(aie).reduce((q, v) => q + v, 0);
+  if (nae >= 3) add('aierr', nae >= 10 ? 'bad' : 'warn', { n: nae, why: top(aie).map(([k, v]) => k + ' ' + v).join(', ') });
   // Вылеты и ошибки
   if ((c['app.crash'] || 0) > 0) add('crash', 'bad', { n: c['app.crash'] });
   // система закрыла приложение на экране (нехватка памяти, ресурсы) — не падение кода, но работа обрывается

@@ -29,7 +29,8 @@ export function aiHTML(app) {
     (!u.ok ? '<p class="aierrl">' + t('ai.url.' + u.why) + '</p>' : '') +
     field('model', t('ai.model'), c.model, { ph: c.format === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-4o-mini' }) +
     field('key', t('ai.key'), '', { type: 'password', ph: c.key ? '••••••••••••  (' + t('ai.key.saved') + ')' : 'sk-…' }) +
-    '<button class="cell act" data-ai-act="ping">' + t('ai.ping') + '</button></div><p class="ftr keep">' + t('ai.keyHint') + '</p>' +
+    '<button class="cell act" data-ai-act="ping">' + t('ai.ping') + '</button>' +
+    '<button class="cell act" data-ai-act="diag"><span class="grow">' + t('ai.diag') + '<span class="psub">' + t('ai.diag.sub') + '</span></span></button></div><p class="ftr keep">' + t('ai.keyHint') + '</p>' +
     '<div class="hdr">' + t('ai.access') + '</div><div class="group aicard">' +
     Object.entries(LEVELS).map(([cat, vals]) => '<div class="aifield"><span class="aicat"><b>' + t('ai.cat.' + cat) + '</b><i class="l2">' + t('ai.cat.' + cat + '.sub') + '</i></span><div class="seg aiseg2" role="group" aria-label="' + esc(t('ai.cat.' + cat)) + '">' +
       vals.map((v) => '<button type="button" data-ai-acc="' + cat + '" data-v="' + v + '" aria-pressed="' + (c.access[cat] === v) + '"' + (c.access[cat] === v ? ' class="on"' : '') + '>' + t('ai.lvl.' + v) + '</button>').join('') + '</div></div>').join('') + '</div>' +
@@ -53,7 +54,8 @@ export function aiClick(app, target, rerender, openChat) {
   }
   if ((e = target.closest('[data-ai-act]'))) {
     const a = e.dataset.aiAct;
-    if (a === 'ping') { toast(t('ai.pinging')); ai.ping().then((r) => toast(r.ok ? t('ai.pingOk') : t('ai.err.' + r.kind) + (r.message ? ': ' + r.message : ''))); return true; }
+    if (a === 'ping') { toast(t('ai.pinging')); ai.ping().then((r) => toast(r.ok ? t('ai.pingOk') : t('ai.err.' + r.kind) + (r.message ? ': ' + r.message : '') + ' — ' + t('ai.why.' + r.kind))); return true; }
+    if (a === 'diag') { import('./aidiag.js').then((m) => m.openDiag(app)); return true; }
     if (a === 'open') { openChat(); return true; }
     if (a === 'wipe') { confirm(t('ai.wipe'), t('ai.wipeAsk'), t('ai.wipeYes')).then((ok) => { if (ok) { ai.wipe(); toast(t('ai.wiped')); rerender(); } }); return true; }
   }

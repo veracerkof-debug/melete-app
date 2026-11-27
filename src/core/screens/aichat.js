@@ -81,7 +81,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       const keepTop = list.scrollTop, atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 80 || !list.dataset.drawn, seen = +list.dataset.n || 0;
       list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(rec ? 'ai.rec.hello' : studio ? 'ai.studio.hello' : 'ai.hello', { name, file: recRec ? recRec.name : '' }) + '</p>' + (rec ? '<div class="aichips2">' + TASKS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t('ai.task.' + k.id + '.tz')) + '">' + esc(t('ai.task.' + k.id)) + '</button>').join('') + '</div>' : studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + (m.pasted ? esc(t('ai.studio.pastedWho')) : badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name)) + '</span>') + nl(m.text) + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
-        (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
+        (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><span class="l2">' + esc(t('ai.why.' + chat.error.kind)) + '</span><button class="link b" data-ai="why">' + t('ai.why.btn') + '</button><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
       // лента прыгает вниз только если читали конец или пришло новое сообщение; листание вверх не сбрасывается перерисовкой
       list.scrollTop = atEnd || msgs.length !== seen || chat.busy ? list.scrollHeight : keepTop;
       list.dataset.drawn = '1'; list.dataset.n = String(msgs.length);
@@ -124,6 +124,7 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       else if (a === 'undo') { if (chat.undo(b.dataset.m, b.dataset.p)) toast(t('ai.undone')); }
       else if (a === 'retry') { chat.dismissError(); ta.value = draft; grow(); send(); }
       else if (a === 'dismiss') chat.dismissError();
+      else if (a === 'why') import('./aidiag.js').then((m) => m.openDiag(app));
       else if (a === 'settings') onSettings();
       else if (a === 'chip') { ta.value = b.dataset.t || ''; grow(); ta.focus(); }
       else if (a === 'copyprompt') {

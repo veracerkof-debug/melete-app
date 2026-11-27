@@ -1001,3 +1001,9 @@ html.desk .hstart .hfree{min-height:64px}
 .hfb.main{background:var(--tint);color:var(--on-tint)}.hfb.main small{color:inherit}
 .hfskip{align-self:center;min-height:40px}
 .hgoal.sug .hgt{padding-left:44px}
+/* Диагностика связи с нейросетью (screens/aidiag.js) */
+.aidgl{padding:4px 0}
+.aidg{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;font-size:14px}
+.aidg>b{flex:none;width:18px;text-align:center}
+.aidg.ok>b{color:var(--ok)}.aidg.warn>b{color:var(--tint-text)}.aidg.fail>b{color:var(--red)}
+.aidg i{display:block;font-style:normal;font-size:13px;margin-top:2px}

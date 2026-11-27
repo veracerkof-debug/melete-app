@@ -9,7 +9,7 @@ import { INSTRUMENTS, DRUMS } from '../../music/project.js';
 
 export const QUERY_MAX = 6, RESULT_MAX = 14000, ROUNDS_MAX = 4;
 // запрос → категория доступа (null — всегда можно)
-export const QUERY_CAT = { projects: 'studio', project: 'studio', songs: 'songs', song: 'songs', recordings: 'media', recording: 'media', instruments: null };
+export const QUERY_CAT = { projects: 'studio', project: 'studio', songs: 'songs', song: 'songs', recordings: 'media', recording: 'media', instruments: null, diag: 'log' };
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const one = (v) => String(v == null ? '' : v).replace(/[\r\n|]+/g, ' ').trim();
 
@@ -37,6 +37,7 @@ export function answerQueries(qs, data, cfg) {
 }
 function one1(x, d) {
   const songs = d.songs || [], recs = d.recs || [];
+  if (x.q === 'diag') return d.diag ? d.diag() : 'Данных самодиагностики нет.';
   if (x.q === 'instruments') return 'Звуки для дорожек и партий (inst): ' + INSTRUMENTS.join(', ') + '.\nДорожки ударных: ' + DRUMS.join(', ') + '.';
   if (x.q === 'songs') return songsContext(songs);
   if (x.q === 'song') {

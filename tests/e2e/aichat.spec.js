@@ -179,3 +179,19 @@ test('нейросеть: поле ввода — одна строка, рас�
   expect(await h()).toBeLessThanOrEqual(60); // после отправки — снова одна строка
   void errors;
 });
+
+test('нейросеть: отказ сети — причина словами, «Почему?» открывает диагностику с шагами и замерами', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, CFG);
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => { window.__melete.ai.__test({ avail: true, post: async () => { throw Object.assign(new Error('UnknownHostException: Unable to resolve host'), { kind: 'dns' }); } }); window.__melete.render(); });
+  await page.waitForTimeout(400);
+  await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(600);
+  await page.fill('.aichat textarea', 'привет'); await page.click('.aichat [data-ai="send"]'); await page.waitForTimeout(600);
+  await expect(page.locator('.aierr')).toContainText('Адрес сервера не находится'); await expect(page.locator('.aierr')).toContainText('Проверьте интернет');
+  await page.click('.aierr [data-ai="why"]'); await page.waitForTimeout(700);
+  await expect(page.locator('.aidgl').first()).toContainText('Адрес указан верно'); await expect(page.locator('.aidgl').first()).toContainText('Запрос не прошёл');
+  await expect(page.locator('.sheet [data-dg="send"]')).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.ai.stats') || '[]').some((s) => s.kind === 'dns'))).toBe(true);
+  void errors;
+});
