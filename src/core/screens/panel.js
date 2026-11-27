@@ -773,7 +773,7 @@ export function createPanel(app, onChange) {
     el.textContent = Math.round(m.value * 100) + ' %';
     const bar = document.querySelector('[data-sndbar]'); if (bar) { bar.style.width = Math.round(Math.min(1, m.value) * 100) + '%'; bar.dataset.lvl = m.level; }
   }, 1000);
-  let page = null, layer = null, input = null, lastPage = null;
+  let page = null, layer = null, input = null, lastPage = null, lastHtml = '';
   // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
   const relang = () => { const st = app.store.state.settings; loadLang(st.lang).then(() => { app.relang(); render(); onChange(); }); };
   const render = () => {
@@ -788,7 +788,7 @@ export function createPanel(app, onChange) {
       document.body.appendChild(layer);
       bind();
     }
-    const sub = page !== 'root', y = layer.scrollTop;
+    const sub = page !== 'root', y = layer.scrollTop, navY = (layer.querySelector('.pdnav') || {}).scrollTop || 0;
     const PAGE_HTML = { root: rootHTML, me: meHTML, stats: statsHTML, week: weekHTML, sound: soundHTML, bible: bibleHTML, look: lookHTML, notif: notifHTML, mascot: mascotHTML, data: dataHTML, link: linkHTML, gdrive: gdriveHTML, feat: featHTML, mods: modsHTML, tabs: tabsHTML, help: helpHTML, student: studentHTML, class: classHTML, ai: aiHTML };
     // длинные списки (неделя, модули, вкладки, помощь) — плотные строки: страница короче, цели касания ≥ 44 px (слово автора 21.11.2026; ui/screens.css `.group.tight`)
     const TIGHT = { week: 1, feat: 1, mods: 1, tabs: 1, help: 1 };
@@ -796,12 +796,17 @@ export function createPanel(app, onChange) {
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
-    layer.innerHTML = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="' + (page === 'mods' ? 'feat' : 'root') + '" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
+    const html = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="' + (page === 'mods' ? 'feat' : 'root') + '" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
+    // Статус связи, папки и синхронизации приходит каждую секунду: если экран не изменился, его не трогаем — иначе прокрутка и ввод сбрасываются («бросает наверх»)
+    if (lastPage === page && html === lastHtml && layer.firstChild) return;
+    lastHtml = html; layer.innerHTML = html;
     if (desk) { const cur = layer.querySelector('.pdnav [data-pp="' + shown + '"]'); if (cur) cur.setAttribute('aria-current', 'page'); }
     // переход между страницами: вперёд — справа, назад в корень — слева; перерисовка той же страницы — без движения
     if (lastPage && lastPage !== page && !desk) layer.firstChild.classList.add(page === 'root' ? 'pback' : 'pfwd');
-    layer.scrollTop = lastPage && lastPage !== page ? 0 : y;
+    const keep = !(lastPage && lastPage !== page);
+    layer.scrollTop = keep ? y : 0;
+    if (keep) { const nv = layer.querySelector('.pdnav'); if (nv) nv.scrollTop = navY; requestAnimationFrame(() => { if (layer && layer.isConnected && Math.abs(layer.scrollTop - y) > 2) { layer.scrollTop = y; if (nv) nv.scrollTop = navY; } }); } // после пояснений (foldHints) страница короче — прокрутку возвращаем ещё раз
     lastPage = page;
     closeHint(); foldHints(layer, true); // настройки приложения — без поясняющих текстов вовсе (слово автора 21.11.2026): объяснения — в инструкциях инструментов
     if (page === 'look') mountSizePreview(app, layer);
