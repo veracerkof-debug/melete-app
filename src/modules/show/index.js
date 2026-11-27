@@ -21,6 +21,7 @@ const I = {
   pen: '<svg viewBox="0 0 24 24"><path d="M5 19l1-4 9.5-9.5a2 2 0 0 1 3 3L9 18z"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12"/></svg>',
 };
 const NOTE_M = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'], NOTE_m = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
@@ -222,7 +223,7 @@ function bedBarHTML() {
   // подпись у группы — маленькая: «Фон F♯» (вкл/выкл), «Авто», «⋯»; сами клавиши — крупные
   return '<div class="shbedbar"><div class="shbedrow"><button class="shcap' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
     '<button class="shcap' + (man == null ? ' on' : '') + '" data-tonic="" aria-pressed="' + (man == null) + '">' + esc(t('bed.tonicAuto')) + '</button>' +
-    '<span class="grow"></span><button class="shcap" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '">⋯</button></div>' +
+    '<span class="grow"></span><button class="shcap ico" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '" title="' + esc(t('bed.more')) + '">' + I.gear + '</button></div>' +
     '<div class="shbedkeys" role="group" aria-label="' + esc(t('bed.tonic')) + '">' + tn.map((x, i) => key(String(i), x, man === i, b.pad.on && ton === i)).join('') + '</div>' +
     (S.noises.length ? '<div class="shnoises hscroll">' + S.noises.map((r) => '<button class="shnoise' + (b.noise.cur === r.id ? ' on' : '') + '" data-noise="' + r.id + '" aria-pressed="' + (b.noise.cur === r.id) + '">' + esc(r.name || (fileOf(r.file) || {}).name || '') + '</button>').join('') + '</div>' : '') + '</div>';
 }
@@ -230,16 +231,18 @@ function bedBarHTML() {
 const padCell = (p, i, dock) => (p ? padHTML(p, dock) : '<button class="shpad empty" data-cell="' + i + '"' + (dock ? ' data-dock="1"' : '') + ' aria-label="' + esc(t('emptyPad')) + '"><b>+</b></button>');
 // Пустые ячейки не рисуются (слово автора 26.11.2026): только занятые и одна «+» следом; в правке видны все
 const filled = (p) => !!(p && (p.file || p.synth));
-const shownCells = (pads) => { if (edit) return pads.map((p, i) => [p, i]); let L = -1; pads.forEach((p, i) => { if (filled(p)) L = i; }); return pads.slice(0, Math.min(pads.length, L + 2)).map((p, i) => [p, i]); };
+// «+» следом — только если он ложится в неполный ряд; иначе сетка заполняет всё место, а «+» уходит в полосу банков (слово автора 27.11.2026)
+const shownCells = (pads, cols) => { if (edit) return { cells: pads.map((p, i) => [p, i]), addAt: -1 }; let L = -1; pads.forEach((p, i) => { if (filled(p)) L = i; }); const nx = L + 1, lone = nx < pads.length && nx % cols === 0 && L >= 0; return { cells: pads.slice(0, lone ? nx : Math.min(pads.length, L + 2)).map((p, i) => [p, i]), addAt: lone ? nx : -1 }; };
 function padsBlocks() {
   const banks = S.banks.filter((x) => !x.pinned), drum = banks.find((x) => x.preset === 'drums'), sound = banks.filter((x) => x !== drum), d = S.ui.dock ? M.dockOf(S) : null;
   let b = M.bankOf(S); if (drum && b && b.id === drum.id) b = sound[0] || null;
   if (!b) b = sound[0] || drum || null;
   const blocks = [{ id: 'bed', html: bedBarHTML() }];
   if (drum && S.ui.drums) blocks.push({ id: 'drums', html: '<div class="shlbl">' + esc(t('pads.drums')) + '</div><div class="shpads drm" style="--c:' + drum.cols + ';--r:' + drum.rows + '">' + drum.pads.map((p, i) => padCell(p, i)).join('') + '</div>' });
+  const addAt = b && b !== drum ? shownCells(b.pads, b.cols).addAt : -1;
   blocks.push({ id: 'sounds', html: '<div class="shbanks" role="tablist" aria-label="' + esc(t('bank.title')) + '">' + sound.map((x, i) => '<button role="tab" class="' + (b && x.id === b.id ? 'on' : '') + '" data-bank="' + x.id + '" aria-selected="' + (!!b && x.id === b.id) + '">' + esc(x.name || t('bank.untitled', { n: banks.indexOf(x) + 1 })) + ' <small>' + x.pads.filter(filled).length + '</small></button>').join('') +
-    '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
-    (b && b !== drum ? (() => { const cs = shownCells(b.pads); return '<div class="shpads" style="--c:' + b.cols + ';--r:' + Math.max(1, Math.ceil(cs.length / b.cols)) + '">' + cs.map(([p, i]) => padCell(p, i)).join('') + '</div>'; })() : '') });
+    (addAt >= 0 ? '<button class="addsnd" data-x="soundadd" data-cell="' + addAt + '" aria-label="' + esc(t('emptyPad')) + '">' + esc(t('addSnd')) + '</button>' : '') + '<button class="add" data-x="bankadd" aria-label="' + esc(t('bank.new')) + '">' + I.plus + '</button></div>' +
+    (b && b !== drum ? (() => { const cs = shownCells(b.pads, b.cols).cells; return '<div class="shpads" style="--c:' + b.cols + ';--r:' + Math.max(1, Math.ceil(cs.length / b.cols)) + '">' + cs.map(([p, i]) => padCell(p, i)).join('') + '</div>'; })() : '') });
   const foot = (h) => '<div class="shfoot">' + h + barHTML() + '</div>'; // закреплённые пэды и громкости всегда внизу, даже когда страница прокручивается
   // закреплённые пэды — только занятые (в правке — все); под ними «Ведущий» (пока держат, всё тише на 10 дБ) и «Стоп звуки»
   const dockCells = d ? (edit ? d.pads.map((p, i) => [p, i]) : d.pads.map((p, i) => [p, i]).filter(([p]) => filled(p))) : [];
@@ -479,7 +482,7 @@ function render() {
   const oldPk = host.querySelector('.shpicks'), pkTop = oldPk ? oldPk.scrollTop : 0, pkCur = S.pickCur; S.pickCur = S.cur;
   host.innerHTML = '<div class="shw' + (edit ? ' editing' : '') + '"><div class="shtop"><div class="shtabs" role="tablist">' +
     PAGES.map((k) => '<button role="tab" data-page="' + k + '" class="' + (S.page === k ? 'on' : '') + '" aria-selected="' + (S.page === k) + '">' + esc(t('page.' + k)) + '</button>').join('') + '</div>' +
-    (S.page === 'pads' ? '' : '<button class="shchip" data-x="progsheet">' + esc(t('page.prog')) + '</button>') +
+    (S.page === 'pads' ? '' : '<button class="shchip shprogb" data-x="progsheet" aria-label="' + esc(t('page.prog')) + '">' + I.list + '<span>' + esc(t('page.prog')) + '</span></button>') +
     (ctx.output ? ctx.output.btn('shout') : '') + ctx.ui.icb('data-lock', I.lock, t('lock.aria'), 'plain') + ctx.ui.icb('data-x="set"', I.gear, t('settings'), 'plain') + '</div>' + (tm.s ? '<div class="shtmrow"><span class="shtimer' + (tm.over ? ' over' : '') + '" id="shtm">' + esc(tm.s) + '</span></div>' : '') + '<div class="shbody">' + (S.page === 'pads' ? padsHTML() : deskHTML()) + '</div>' +
     (locked ? '<div class="shlock" role="dialog" aria-label="' + esc(t('lock.aria')) + '"><button data-unlock><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>' + esc(t('lock.hold')) + '</span></button></div>' : '') + '</div>';
   const list = host.querySelector('.shlist');
@@ -560,6 +563,7 @@ function onClick(e) {
     case 'bedtoggle': S.bed.pad.on = !S.bed.pad.on; save(); if (S.bed.pad.on) padStart(M.currentNumber(S)); else if (bed) bed.padOff(S.goFade); render(); break;
     case 'set': settingsSheet(); break;
     case 'bankadd': addBank(); break;
+    case 'soundadd': newPadAt(+x.dataset.cell); break;
     case 'stopall': if (stopHeld) { stopHeld = false; break; } stopAll(); break;
     case 'evpick': eventsSheet(); break;
     case 'evedit': eventSheet(cur()); break;
@@ -1115,9 +1119,10 @@ export default {
     host.addEventListener('input', onInput);
     host.addEventListener('change', onChange);
     host.addEventListener('keydown', onKey);
+    host.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('[data-duck]')) e.preventDefault(); }); // «Ведущий» держат — системное меню не нужно
     if (ctx.output) offs.push(ctx.output.bind(host, { cat: 'media' })); // вывод на другое устройство — та же шторка, что в сессии
     // раскладка: удержать блок — выше / ниже, мельче / крупнее, скрыть (src/ui/layout.js)
-    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'wave', 'cues', 'ctl', 'knobs'], name: (id) => t('lay.b.' + id), save, render, t, busy: () => !!(ctx.sounding && ctx.sounding()) }), '.shpad, [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
+    bindLayout(host, () => ({ lay: layOf(S.page), ids: S.page === 'pads' ? ['bed', 'drums', 'sounds', 'dock'] : ['event', 'picks', 'wave', 'cues', 'ctl', 'knobs'], name: (id) => t('lay.b.' + id), save, render, t, busy: () => !!(ctx.sounding && ctx.sounding()) }), '.shpad, [data-duck], [data-knob], [data-fader], #shwave, [data-pick], [data-tc], input, textarea, [role="slider"]');
     // список выступления: влево — плавно перейти к номеру, вправо по проигранному — вернуть; удержать — настройки номера
     offs.push(swipe(host, { min: 50, ok: (e) => { const r = e.target.closest && e.target.closest('[data-pick]'); pickRow = r ? r.dataset.pick : null; return !!r; },
       left: () => { const n = pickRow && pickById(pickRow); if (n) glideTo(n).catch((er) => ctx.logErr(er)); },

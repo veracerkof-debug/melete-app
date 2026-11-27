@@ -47,7 +47,7 @@ test('пульт: выступление, номер с меткой, пад с�
   // готовые звуки CC0 (public/sounds) раскладываются сами один раз: банк «Готовые», девять падов и «+» следом
   await expect(page.locator(T + '.shbanks [data-bank]').first()).toContainText('Готовые', { timeout: 15_000 });
   await expect(page.locator(T + '.shpads .shpad[data-pad]')).toHaveCount(9);
-  await page.click(T + '.shpads .shpad[data-cell="9"]');
+  await page.click(T + '.shbanks [data-x="soundadd"]'); // сетка 3×3 полная — «+ Звук» в полосе банков, а не сироткой в новом ряду
   await page.fill('.sheet [data-f="name"]', 'Дробь');
   await page.click('.sheet [data-x="pick"]');
   await page.setInputFiles('.sheet input[type="file"]', { name: 'drum.wav', mimeType: 'audio/wav', buffer: wav() });

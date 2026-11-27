@@ -9,6 +9,7 @@
   "stopAllAsk": "Barcha tovushlar to‘xtatilsinmi?",
   "level": "Tovushlar balandligi",
   "emptyPad": "Tovush qo‘shish",
+  "addSnd": "+ Tovush",
   "padLoop": "takror",
   "padHold": "ushlab turish",
   "padErr": "fayl yo‘q",

@@ -9,6 +9,7 @@
   "stopAllAsk": "Stop all sounds?",
   "level": "Sounds level",
   "emptyPad": "Add sound",
+  "addSnd": "+ Sound",
   "padLoop": "loop",
   "padHold": "hold",
   "padErr": "no file",

@@ -336,3 +336,27 @@
 .shswatches{display:flex;flex-wrap:wrap;gap:10px;padding:2px 2px 6px}
 .shsw{width:40px;height:40px;border-radius:50%;padding:0;background:var(--pc);border:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 .shsw.on{box-shadow:0 0 0 3px var(--cell),0 0 0 5px var(--ink)}
+
+/* ---- Пульт на весь экран (слово автора 27.11.2026): шапки «Пульт» нет; «назад» и запись — в одной полосе с вкладками, всё остальное выше;
+   «Готовые» — по ширине названия, сетка звуков занимает всё оставшееся место ---- */
+.tview[data-mod="show"] .tvback{top:calc(2px + env(safe-area-inset-top,0px));left:calc(4px + env(safe-area-inset-left,0px));background:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+.tview[data-mod="show"] .tvrecf{top:calc(2px + env(safe-area-inset-top,0px));left:auto;right:calc(4px + env(safe-area-inset-right,0px));background:none!important}
+.tview[data-mod="show"] .tvrecf.on{background:var(--red)!important}
+.tview[data-mod="show"] .tvrecf.play{background:var(--tint)!important}
+.tview[data-mod="show"] .shtop{padding:2px 48px 0 48px;gap:2px;min-height:44px}
+.tview[data-mod="show"]:has(.tvrec.on) .shtop{padding-right:96px}
+.shtop .ic,.shtop .ic.plain{width:40px;min-width:40px;height:40px;padding:0;flex:none}
+.shtabs{flex:none}
+.shtabs button{padding:0 12px}
+.shtop .shprogb{flex:0 1 auto;min-width:0;min-height:36px;padding:0 10px;border-radius:10px;font-size:13px;white-space:nowrap;overflow:hidden}
+.shtop .shprogb svg{display:none;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.shtop .shprogb span{overflow:hidden;text-overflow:ellipsis}
+@container (max-width:430px){.shtop .shprogb svg{display:block}.shtop .shprogb span{display:none}.shtop .shprogb{padding:0 8px}}
+.shtop{justify-content:flex-start}
+.shtop .shprogb{margin-left:4px}
+.shbanks button{flex:0 0 auto;min-width:0}
+.shbanks{align-items:center}
+.shcap.ico{display:inline-flex;align-items:center;justify-content:center;width:36px;min-height:32px;padding:0}
+.shcap.ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shpads:not(.drm){flex:1 0 auto;grid-template-rows:repeat(var(--r),minmax(calc(88px * var(--lz, 1)),1fr));grid-auto-rows:auto}
+.shbanks .addsnd{font-weight:700;padding:0 12px}

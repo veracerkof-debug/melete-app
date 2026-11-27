@@ -17,6 +17,7 @@ export default {
   minSize: 'half',
   multitouch: true, // несколько падов сразу
   inner: true,
+  immersive: true, // в отдельном окне — на весь экран, без шапки «Пульт»: «назад» и запись — в верхней полосе (show.css)
   partOf: 'audio',
   stats: false, // выступление — не практика
 };

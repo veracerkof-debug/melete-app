@@ -105,7 +105,7 @@ function openToolViewNow(app, id, onClose) {
   const rec = canRecord() && mod.record !== false;
   // immersive — модуль на весь экран без шапки: кнопка «назад» плавает поверх (глайдер)
   layer.innerHTML = mod.immersive
-    ? '<div class="tview imm" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
+    ? '<div class="tview imm" data-mod="' + esc(mod.id) + '" role="dialog" aria-modal="true" aria-label="' + esc(name) + '">' + ui.icb('data-tv="close"', icons.back, t('ui.back'), 'sm tvback') +
       pureBtn + (rec ? recButtonHTML('tvrecf') : '') +
       grp + '<div class="tvbody"><div class="toolhost tvhost"></div></div></div>'
     : '<div class="tview" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="tvhd">' +
