@@ -175,7 +175,9 @@ function view() {
     return '<div class="stwrap' + (V.embed ? ' embed' : '') + '">' + clipHeadHTML(p, c, tr) + body + strip + pad + (V.embed ? '' : transportHTML(p)) + '</div>';
   }
   if (V.view === 'mix') return '<div class="stwrap side">' + mixerHTML(ctx, p, trName) + transportHTML(p) + '</div>';
-  return '<div class="stwrap side"><div class="stpl" id="stpl"><div class="stselbar" id="stsel" hidden></div></div>' + transportHTML(p) + '</div>';
+  // пустой проект: три шага вместо пустой ленты (разбор 27.11.2026); исчезает с первым клипом
+  const coach = p.clips.length || V.embed ? '' : '<div class="stcoach" role="note"><b>' + ctx.ui.esc(ctx.t('coach.title')) + '</b><ol><li>' + ctx.ui.esc(ctx.t('coach.1')) + '</li><li>' + ctx.ui.esc(ctx.t('coach.2')) + '</li><li>' + ctx.ui.esc(ctx.t('coach.3')) + '</li></ol></div>';
+  return '<div class="stwrap side"><div class="stpl" id="stpl"><div class="stselbar" id="stsel" hidden></div></div>' + coach + transportHTML(p) + '</div>';
 }
 
 function render() {

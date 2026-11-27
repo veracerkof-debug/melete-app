@@ -140,3 +140,12 @@
 .pane[data-fit="1"] .lpwrap:not(.tracks):not(.parts):not(.reels),.pane[data-fit="2"] .lpwrap:not(.tracks):not(.parts):not(.reels){justify-content:center}
 .pane[data-fit="2"] .lpwrap .lpbtn{width:min(70cqw,70cqh,160px)!important}
 .pane[data-fit="1"] .lpstrip{justify-content:center}
+
+/* шаги «запись → петля → слой» (разбор 27.11.2026) */
+.lpsteps{display:flex;gap:6px;justify-content:center;flex:none;padding:0 12px}
+.lpsteps span{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;background:var(--fill);color:var(--l2);font:600 13px var(--font)}
+.lpsteps i{font-style:normal;width:18px;height:18px;border-radius:50%;background:var(--fill2);color:var(--ink);display:grid;place-items:center;font-size:11px}
+.lpsteps .done{color:var(--ink)}
+.lpsteps .on{background:var(--tint);color:var(--on-tint)}
+.lpsteps .on i{background:rgba(255,255,255,.25);color:inherit}
+.pane[data-fit="1"] .lpsteps,.pane[data-fit="2"] .lpsteps{display:none}

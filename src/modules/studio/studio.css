@@ -223,3 +223,8 @@
 @media (orientation: landscape) and (max-height: 520px){.stwrap.side .stmore{right:calc(100% + 6px);bottom:0}}
 .stselbar{max-width:calc(100% - 12px);overflow:visible}
 .stselbar .stmore{right:0;bottom:calc(100% + 8px)}
+
+/* пустой проект: «С чего начать» (разбор 27.11.2026) */
+.stcoach{flex:none;margin:8px 10px 0;padding:12px 14px;border-radius:16px;background:var(--cell);border:1.5px solid var(--tint);display:flex;flex-direction:column;gap:4px}
+.stcoach b{font-size:14px}
+.stcoach ol{margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:var(--ink)}

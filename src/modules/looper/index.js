@@ -98,7 +98,10 @@ function view() {
       (S.layers.length ? '' : '<div class="lphint l2">' + ui.esc(t(s === 'idle' ? 'hint' : 'hintMore')) + '</div>') + '</div>';
     return '<div class="lpwrap tracks ' + size + '">' + lanes + '<div class="lpmain row">' + main + time + slots + '</div>' + bar + '</div>';
   }
-  return '<div class="lpwrap ' + size + '"><div class="lpmain">' + main + time + '</div>' + layers + slots + bar + '</div>';
+  // шаги «запись → петля → слой» (разбор 27.11.2026): видно, где человек сейчас и что дальше
+  const cur = s === 'rec' ? 0 : s === 'play' ? 1 : s === 'dub' ? 2 : S.len ? 1 : -1;
+  const steps = small ? '' : '<div class="lpsteps" role="list" aria-label="' + ui.esc(t('steps')) + '">' + ['rec', 'loop', 'layer'].map((k, i) => '<span role="listitem" class="' + (i === cur ? 'on' : i < cur ? 'done' : '') + '"' + (i === cur ? ' aria-current="step"' : '') + '><i class="num">' + (i + 1) + '</i>' + ui.esc(t('step.' + k)) + '</span>').join('') + '</div>';
+  return '<div class="lpwrap ' + size + '">' + steps + '<div class="lpmain">' + main + time + '</div>' + layers + slots + bar + '</div>';
 }
 
 /* ---------- вид «Партии»: партии студии и слои одной петли ---------- */

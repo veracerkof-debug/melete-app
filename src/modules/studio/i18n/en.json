@@ -330,5 +330,9 @@
   "lp.rhodes": "Rhodes comp",
   "lp.arp": "Arpeggio",
   "lp.warm": "Warm pad",
-  "lp.swell": "String swell"
+  "lp.swell": "String swell",
+  "coach.title": "Where to start",
+  "coach.1": "Press ● to record a phrase",
+  "coach.2": "Press ▶ to listen",
+  "coach.3": "Press + to add a track"
 }

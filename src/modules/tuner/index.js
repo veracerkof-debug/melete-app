@@ -26,10 +26,15 @@ const D = { c: 0, m: null, a: 0, ph1: 0, ph2: 0, t: 0 };
 const tuned = new Set(); // настроенные струны (номера) в режиме новичка
 let okSince = 0, okSi = -1, colors = null;
 
+// Новичок или любитель со струнным инструментом в профиле: сразу «по строю» (слово автора 27.11.2026); выбор человека сильнее
+const STR = ['guitar', 'bass', 'ukulele', 'violin', 'cello', 'banjo', 'mandolin'];
+function defaultByTuning() {
+  try { const p = ctx.profile || {}; return ['beginner', 'amateur'].includes(p.level) && (p.instruments || []).some((x) => STR.includes(x)); } catch { return false; }
+}
 const st = () => {
   const s = normalizeTuner(ctx.store.all());
   // строи — только в режиме новичка (раньше был отдельный переключатель «настраивать по строю»)
-  s.beginner ??= !!s.useTuning;
+  s.beginner ??= !!s.useTuning || defaultByTuning();
   return s;
 };
 const tol = () => TOL[st().tol] ?? 5;
@@ -100,7 +105,8 @@ function view() {
   const vis = style === 'strobe' ? strobeHTML() : '<div class="tgw">' + gaugeSVG() + '</div>';
   // в половине окна — короткое напоминание, чтобы шкале хватило места
   const warn = tn ? '<div class="twarn" role="note">' + WARN + '<span>' + t(size === 'half' ? 'warnShort' : 'warn') + '</span></div>' : '';
-  const mode = '<div class="tmode">' + ui.esc(tn ? t('beginner') + ' · ' + tuningName(tn) : t('chromatic')) + ' · ' + t('hz', { f: s.a4 }) + '</div>';
+  // переключатель режима прямо на экране (разбор 27.11.2026): «По строю» (струны выбранного инструмента) или «Хроматический»
+  const mode = '<div class="tmode"><div class="tmodesw" role="group" aria-label="' + ui.esc(t('modeSw')) + '"><button type="button" data-x="tmode" data-v="beg" aria-pressed="' + !!tn + '">' + ui.esc(tn ? tuningName(tn) : t('byTuning')) + '</button><button type="button" data-x="tmode" data-v="chrom" aria-pressed="' + !tn + '">' + ui.esc(t('chromatic')) + '</button></div><span class="tmhz num">' + ui.esc(t('hz', { f: s.a4 })) + '</span></div>';
   return '<div class="tclean ' + size + ' st-' + style + (tn ? ' beg' : '') + (s.hzTop ? ' hzt' : '') + '">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') + mode + warn +
     '<div class="tvis">' + vis + '</div>' + noteHTML() + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + '</div>';
 }
@@ -135,7 +141,7 @@ function centsText(c, ok, tn) {
     const x = r >= 100 ? t('tones', { n: num(r / 100, 1) }) : tnum('cents', r);
     return t(c < 0 ? 'lower' : 'higher', { x });
   }
-  return (c > 0 ? '+' : '−') + tnum('cents', r);
+  return (c > 0 ? '+' : '−') + tnum('cents', r) + ' · ' + t(c < 0 ? 'dirLow' : 'dirHigh'); // число и слово вместе (не только знак)
 }
 
 // Текст — по показаниям (14 раз в секунду), движение — в кадрах
@@ -428,6 +434,13 @@ function bind() {
     if (!x) return;
     const a = x.dataset.x;
     if (a === 'tset') settingsSheet();
+    else if (a === 'tmode') {
+      const s = st(), on = x.dataset.v === 'beg';
+      if (s.beginner === on) return;
+      s.beginner = on;
+      if (on && (!s.tuning || s.tuning === 'chrom')) s.tuning = 'g_std';
+      lock = null; tuned.clear(); ctx.store.save(); render();
+    }
     else if (a === 'tretry') micStart();
     else if (a === 'tstr') {
       // нажатие на струну: опорный звук и настройка только этой струны; повторное — снова автоопределение

@@ -108,5 +108,9 @@
   "help.2": "Left of centre — flat, right — sharp; centred — in tune.",
   "help.3": "Tuning, scale, precision, A and beginner mode in settings.",
   "help.tip": "Tune up to the note.",
-  "set.hzTop": "Hertz on top"
+  "set.hzTop": "Hertz on top",
+  "modeSw": "Tuner mode",
+  "byTuning": "By tuning",
+  "dirLow": "flat",
+  "dirHigh": "sharp"
 }

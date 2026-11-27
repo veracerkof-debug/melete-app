@@ -134,5 +134,9 @@
   "cap.metro": "Metronome",
   "cap.mon": "Monitor",
   "cap.undo": "Undo",
-  "cap.save": "To library"
+  "cap.save": "To library",
+  "steps": "Looper steps",
+  "step.rec": "Record",
+  "step.loop": "Loop",
+  "step.layer": "Layer"
 }

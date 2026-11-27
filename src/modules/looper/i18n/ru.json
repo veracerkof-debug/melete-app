@@ -137,5 +137,9 @@
   "cap.metro": "Метроном",
   "cap.mon": "Слух",
   "cap.undo": "Отмена",
-  "cap.save": "В медиатеку"
+  "cap.save": "В медиатеку",
+  "steps": "Шаги лупера",
+  "step.rec": "Запись",
+  "step.loop": "Петля",
+  "step.layer": "Слой"
 }

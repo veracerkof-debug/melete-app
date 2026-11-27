@@ -105,5 +105,9 @@
   "help.2": "Markazdan chapda — past, oʻngda — baland; markazda — sozlangan.",
   "help.3": "Sozlash, shkala, aniqlik, lya va yangi boshlovchi rejimi — sozlamalarda.",
   "help.tip": "Pastdan yuqoriga, notaga qarab sozlash.",
-  "set.hzTop": "Gerts tepada"
+  "set.hzTop": "Gerts tepada",
+  "modeSw": "Tyuner rejimi",
+  "byTuning": "Qurilma bo‘yicha",
+  "dirLow": "past",
+  "dirHigh": "baland"
 }

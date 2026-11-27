@@ -3149,5 +3149,8 @@
   "home.goalClear": "Remove the goal",
   "home.goalEmpty": "No songs yet: add one and it can become the goal of the day",
   "home.moreEv": "{n} more",
-  "ai.studio.pastedWho": "AI answer"
+  "ai.studio.pastedWho": "AI answer",
+  "home.goalSug": "Goal for today: “{title}”?",
+  "home.goalTake": "Take it",
+  "home.goalCap": "weekly goal"
 }

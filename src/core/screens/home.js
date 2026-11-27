@@ -43,7 +43,7 @@ import { topbar, weekdays, relDay, PLAY, IC, STAGE_IC, tabIds, TAB_MODULES, isPa
 import { logoHTML } from '../../ui/logo.js';
 import { stoneView, wear, stoneKm, stoneSeed, roundness } from '../../ui/stone.js';
 import { nextEventsHTML, todayEvents } from './calendar.js';
-import { goalOf, setGoal, clearGoal, goalDone } from '../todaygoal.js';
+import { goalOf, setGoal, clearGoal, goalDone, suggestGoal } from '../todaygoal.js';
 import { refText } from '../bible.js';
 import { nextOf } from '../reading.js';
 import { quoteAt, dayIndex, setsOf } from '../quotes.js';
@@ -290,7 +290,7 @@ export function homeHTML(app) {
   // Виджет недели — одна кликабельная карточка (слово автора 25.11.2026): кольцо — дни и цель, числа и дни — статистика,
   // камень — свой экран. Подписи «Настроить…» нет; строка остаётся только при перерыве и пока неделя не настроена
   const ringLabel = t('home.ringAria', { p: Math.round(p * 100) });
-  if (!plain) P.week = '<div class="hcard hweek' + (gemIn ? ' hwgem' : '') + '"><div class="hrow"><button class="hrb" data-pp="week" aria-label="' + esc(t('home.ringOpen')) + '">' + goalRing(p, true, ringLabel, { cap: t('home.left'), v: shortDur(goal - w.total) }) + '</button><div class="htxt"><button class="htb" data-pp="stats" aria-label="' + esc(t('home.stats')) + '"><span class="l2 hwl">' + t('home.week') +
+  if (!plain) P.week = '<div class="hcard hweek' + (gemIn ? ' hwgem' : '') + '"><div class="hrow"><button class="hrb" data-pp="week" aria-label="' + esc(t('home.ringOpen')) + '">' + goalRing(p, true, ringLabel, { cap: t('home.goalCap'), v: p >= 1 ? '✓' : Math.round(p * 100) + ' %' }) + '</button><div class="htxt"><button class="htb" data-pp="stats" aria-label="' + esc(t('home.stats')) + '"><span class="l2 hwl">' + t('home.week') +
     '</span><span class="big num' + (trackMode(st) === 'strict' ? ' goldshine' : '') + '">' + fmtDur(w.total) + '</span><span class="l2 hwl">' + t('home.of', { goal: fmtDur(goal) }) + (p > 1 ? t('home.over') : p >= 1 ? t('home.met') : '') + '</span></button>' +
     streakPill(app) + '</div>' + (gemIn ? gemRing(app) : '') + '</div>' +
     '<button class="days hdays" data-pp="stats" aria-label="' + esc(t('home.stats')) + '">' + WD.map((d, i) => { const tn3 = w.per[i] > 0 ? dayTone(w.per[i], daily) : 0;
@@ -333,10 +333,11 @@ export function homeHTML(app) {
 // Панель «Сегодня» (слово автора 25.11.2026): события дня из календаря и цель на день — внутри карточки недели.
 // Касание заголовка и события — календарь; строка цели — выбор произведения
 function todayHTML(app, goal, gdone) {
+  const sug = goal ? null : suggestGoal(app.store.state.songs, app.store.state.sessions);
   const ev = todayEvents(app), lang = getLang() === 'uz' ? 'uz-Latn' : getLang(), day = new Date().toLocaleDateString(lang, { weekday: 'long' });
   const goalLine = goal
     ? '<button class="hgoal' + (gdone ? ' done' : '') + '" data-act="goal"><span class="hgi" aria-hidden="true">' + (gdone ? CHK : '★') + '</span><span class="hgt">' + esc(t(gdone ? 'home.goalDone' : 'home.goalIs', { title: goal.title })) + '</span><i aria-hidden="true">›</i></button>'
-    : '<button class="hgoal none" data-act="goal"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalNone')) + '</span><u>' + esc(t('home.goalPick')) + ' ›</u></button>';
+    : (sug ? '<button class="hgoal none" data-act="goalsug" data-song="' + esc(sug.id) + '"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalSug', { title: sug.title })) + '</span><u>' + esc(t('home.goalTake')) + ' ›</u></button>' : '<button class="hgoal none" data-act="goal"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalNone')) + '</span><u>' + esc(t('home.goalPick')) + ' ›</u></button>');
   return '<div class="htoday"><button class="htdh" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><b>' + esc(t('home.today')) + '</b><span>' + esc(day) + '</span><i aria-hidden="true">›</i></button>' +
     ev.slice(0, 3).map((e) => '<button class="htev" data-tab="calendar"><em class="num">' + esc(e.time) + '</em><span>' + esc(e.title) + '</span></button>').join('') +
     (ev.length > 3 ? '<span class="htmore">' + esc(t('home.moreEv', { n: ev.length - 3 })) + '</span>' : '') + goalLine + '</div>';

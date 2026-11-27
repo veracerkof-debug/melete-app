@@ -3174,5 +3174,8 @@
   "home.goalClear": "Убрать цель",
   "home.goalEmpty": "Песен пока нет. После добавления песню можно будет назначить целью дня",
   "home.moreEv": "ещё {n}",
-  "ai.studio.pastedWho": "Ответ нейросети"
+  "ai.studio.pastedWho": "Ответ нейросети",
+  "home.goalSug": "Цель на сегодня: «{title}»?",
+  "home.goalTake": "Взять",
+  "home.goalCap": "цель недели"
 }

@@ -327,5 +327,9 @@
   "lp.rhodes": "Rodes",
   "lp.arp": "Arpedjio",
   "lp.warm": "Iliq pad",
-  "lp.swell": "Torli pad"
+  "lp.swell": "Torli pad",
+  "coach.title": "Nimadan boshlash",
+  "coach.1": "Ibora yozish uchun ● bosing",
+  "coach.2": "Tinglash uchun ▶ bosing",
+  "coach.3": "Trek qo‘shish uchun + bosing"
 }

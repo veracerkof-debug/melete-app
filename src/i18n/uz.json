@@ -3110,5 +3110,8 @@
   "home.goalClear": "Maqsadni olib tashlash",
   "home.goalEmpty": "Hozircha qoʻshiq yoʻq: qoʻshiq qoʻshing, uni kun maqsadi qilish mumkin",
   "home.moreEv": "yana {n}",
-  "ai.studio.pastedWho": "Neyrotarmoq javobi"
+  "ai.studio.pastedWho": "Neyrotarmoq javobi",
+  "home.goalSug": "Bugungi maqsad: «{title}»?",
+  "home.goalTake": "Olish",
+  "home.goalCap": "haftalik maqsad"
 }

@@ -25,6 +25,7 @@ import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
 import { createPanel, legalSheet, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
+import { setGoal } from '../todaygoal.js';
 import { onboarding, langGate } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
@@ -209,6 +210,7 @@ export function createShell(app, root) {
     else if (d.act === 'compare') import('./compare.js').then((m) => m.compareSheet(app, d.sid));
     else if (d.act === 'quickedit') quickEdit(app, render);
     else if (d.act === 'goal') goalSheet(app, render);
+    else if (d.act === 'goalsug') { setGoal(app.store.state.settings, d.song); app.store.settingsChanged(); render(); }
     // чтение дня: Библия — на нужной главе
     else if (d.act === 'bible') {
       if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
