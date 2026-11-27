@@ -346,7 +346,8 @@ function todayHTML(app, goal, gdone) {
   const ev = todayEvents(app), lang = getLang() === 'uz' ? 'uz-Latn' : getLang(), day = new Date().toLocaleDateString(lang, { weekday: 'long' });
   const goalLine = goal
     ? '<button class="hgoal' + (gdone ? ' done' : '') + '" data-act="goal"><span class="hgi" aria-hidden="true">' + (gdone ? CHK : '★') + '</span><span class="hgt">' + esc(t(gdone ? 'home.goalDone' : 'home.goalIs', { title: goal.title })) + '</span><i aria-hidden="true">›</i></button>'
-    : (sug ? '<button class="hgoal none" data-act="goalsug" data-song="' + esc(sug.id) + '"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalSug', { title: sug.title })) + '</span><u>' + esc(t('home.goalTake')) + ' ›</u></button>' : '<button class="hgoal none" data-act="goal"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalNone')) + '</span><u>' + esc(t('home.goalPick')) + ' ›</u></button>');
+    : '<button class="hgoal none" data-act="goal"><span class="hgi" aria-hidden="true">★</span><span class="hgt">' + esc(t('home.goalNone')) + '</span><u>' + esc(t('home.goalPick')) + ' ›</u></button>' +
+      (sug ? '<button class="hgoal sug" data-act="goalsug" data-song="' + esc(sug.id) + '"><span class="hgt">' + esc(t('home.goalSug', { title: sug.title })) + '</span><u>' + esc(t('home.goalTake')) + ' ›</u></button>' : '');
   return '<div class="htoday"><button class="htdh" data-tab="calendar" aria-label="' + esc(t('cal.title')) + '"><b>' + esc(t('home.today')) + '</b><span>' + esc(day) + '</span><i aria-hidden="true">›</i></button>' +
     ev.slice(0, 3).map((e) => '<button class="htev" data-tab="calendar"><em class="num">' + esc(e.time) + '</em><span>' + esc(e.title) + '</span></button>').join('') +
     (ev.length > 3 ? '<span class="htmore">' + esc(t('home.moreEv', { n: ev.length - 3 })) + '</span>' : '') + goalLine + '</div>';
