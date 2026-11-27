@@ -2962,7 +2962,7 @@
   "bn.persistSub": "Repeat every 30 minutes (up to 4 times) until the day's norm is read",
   "bn.again": "Still not read",
   "read.normMin": "{done} of {n} min",
-  "read.free": "Read what you like",
+  "read.free": "Free reading",
   "page.ai": "AI chat",
   "page.ai.sub": "Chat via your own API: address, key, data access",
   "ai.noPlatform": "AI chat is available in the Android app.",

@@ -38,7 +38,7 @@ describe('самодиагностика нейросети: причины', ()
     const t = (k, v) => (ru[k] || k).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? v[n] : ''));
     const steps = [...configSteps(CFG(), true), { id: 'req', st: 'fail', info: 'req.fail', kind: 'dns', vars: { msg: '' } }];
     const txt = reportOf({ format: 'openai', model: 'm', host: 'api.example.com', steps, stats: [statOf({ t: 1, ms: 1000, tok: 5, kind: 'dns', host: 'api.example.com' })] }, t);
-    expect(txt).toContain('Телефон не нашёл сервер'); expect(txt).not.toContain('sk-SECRET');
+    expect(txt).toContain('Устройство не нашло сервер'); expect(txt).not.toContain('sk-SECRET');
     const sec = aiSection([statOf({ t: 1, ms: 40000, tok: 20000, status: 200, host: 'h' })], { t: 2, ok: false, kind: 'req', steps }); expect(sec).toContain('Запросов в памяти: 1'); expect(sec).not.toContain('sk-');
   });
 });
