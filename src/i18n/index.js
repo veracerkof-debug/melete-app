@@ -21,18 +21,18 @@ export function guessLang(storage = globalThis.localStorage) {
   try { s = JSON.parse(storage.getItem('practice.v1') || 'null'); } catch { s = null; }
   const st = (s && s.settings) || {};
   if (st.uiStyle === 'mono' && st.monoLang !== false) return MONO_LANG;
-  const sys = (globalThis.navigator && navigator.language || 'ru').slice(0, 2);
-  return [st.lang, sys].find((l) => LANGS.includes(l)) || 'ru';
+  // по умолчанию всегда английский (слово автора 27.11.2026), язык системы не берём; русский и узбекский — выбором
+  return [st.lang].find((l) => LANGS.includes(l)) || DEFAULT_LANG;
 }
 export const LANGS = ['ru', 'uz', 'en'];
+export const DEFAULT_LANG = 'en';
 export const MONO_LANG = 'el';
 // Название языка на нём самом
 export const LANG_NAMES = { ru: 'Русский', uz: 'Oʻzbekcha', en: 'English' };
-let lang = 'ru';
+let lang = DEFAULT_LANG;
 
 export function initI18n(preferred) {
-  const sys = (navigator.language || 'ru').slice(0, 2);
-  lang = [preferred, sys].find((l) => LANGS.includes(l) || l === MONO_LANG) || 'ru';
+  lang = [preferred].find((l) => LANGS.includes(l) || l === MONO_LANG) || DEFAULT_LANG;
   document.documentElement.lang = lang;
   return lang;
 }
