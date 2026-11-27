@@ -3179,5 +3179,22 @@
   "diag.f.aislow": "Neyroset sekin javob beradi: o‘rtacha {s} s, eng uzog‘i {max} s",
   "diag.h.aislow": "Yengilroq model tanlang, ortiqcha toifalarni yoping yoki qisqaroq so‘rang. Tekshirish: «Neyroset → Aloqani tekshirish».",
   "diag.f.aierr": "Neyroset: rad etishlar {n} ({why})",
-  "diag.h.aierr": "«Neyroset → Aloqani tekshirish»ni oching: sabab va nima qilish kerakligi o‘sha yerda."
+  "diag.h.aierr": "«Neyroset → Aloqani tekshirish»ni oching: sabab va nima qilish kerakligi o‘sha yerda.",
+  "ai.agents": "Agentlar",
+  "ai.agent.add": "+ Agent qo‘shish",
+  "ai.agent.hint": "Agent — o‘z manzili va kaliti bor neyroset (ChatGPT, Gemini, Claude…). Bir nechtasini ulang va chatda kim javob berishini tanlang: yaxshiroq, tezroq yoki arzonroq.",
+  "ai.agent.name": "Nomi",
+  "ai.agent.namePh": "masalan, Gemini tez",
+  "ai.agent.blank": "to‘ldirilmagan",
+  "ai.agent.untitled": "Agent {n}",
+  "ai.agent.del": "Agentni o‘chirish",
+  "ai.agent.delAsk": "Bu agentning manzili va kaliti o‘chiriladi. Chatlar qoladi.",
+  "ai.agent.delYes": "O‘chirish",
+  "ai.agent.pick": "Kim javob beradi",
+  "ai.chats": "Chatlar",
+  "ai.chat.new": "+ Yangi chat",
+  "ai.chat.untitled": "Yangi chat",
+  "ai.chat.del": "Chatni o‘chirish",
+  "ai.chat.delAsk": "Bu chatning tarixi o‘chiriladi.",
+  "ai.chat.delYes": "O‘chirish"
 }

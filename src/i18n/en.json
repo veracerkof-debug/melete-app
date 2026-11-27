@@ -3218,5 +3218,22 @@
   "diag.f.aislow": "The AI replies slowly: {s} s on average, up to {max} s",
   "diag.h.aislow": "Pick a lighter model, close extra data categories in “AI → Data access”, or ask shorter. Check: “AI → Connection check”.",
   "diag.f.aierr": "AI: {n} failures ({why})",
-  "diag.h.aierr": "Open “AI → Connection check”: it shows the cause and what to do (key, address, limit or network)."
+  "diag.h.aierr": "Open “AI → Connection check”: it shows the cause and what to do (key, address, limit or network).",
+  "ai.agents": "Agents",
+  "ai.agent.add": "+ Add agent",
+  "ai.agent.hint": "An agent is an AI with its own address and key (ChatGPT, Gemini, Claude…). Connect several and pick who answers in a chat: better, faster or cheaper.",
+  "ai.agent.name": "Name",
+  "ai.agent.namePh": "e.g. Gemini fast",
+  "ai.agent.blank": "not filled in",
+  "ai.agent.untitled": "Agent {n}",
+  "ai.agent.del": "Delete agent",
+  "ai.agent.delAsk": "This agent’s address and key will be erased. Chats stay.",
+  "ai.agent.delYes": "Delete",
+  "ai.agent.pick": "Who answers",
+  "ai.chats": "Chats",
+  "ai.chat.new": "+ New chat",
+  "ai.chat.untitled": "New chat",
+  "ai.chat.del": "Delete chat",
+  "ai.chat.delAsk": "This chat’s history will be erased.",
+  "ai.chat.delYes": "Delete"
 }

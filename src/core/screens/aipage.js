@@ -5,7 +5,7 @@ import { t } from '../../i18n/index.js';
 import { esc, toast, confirm } from '../../ui/index.js';
 import { checkUrl, FORMATS, LEVELS } from '../ai/config.js';
 import { brandOf } from '../ai/brand.js';
-import { badge } from './aichat.js';
+import { badge, agentLabel } from './aichat.js';
 
 const sw = (k, on, l) => '<label class="sw"><input type="checkbox" data-ai-sw="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(l) + '"><i></i></label>';
 const field = (k, label, val, o = {}) => '<label class="aifield"><span>' + esc(label) + '</span>' + (o.area
@@ -23,14 +23,17 @@ export function aiHTML(app) {
     '<label class="sw"><input type="checkbox" data-ai-sw="on"' + (c.on ? ' checked' : '') + ' aria-label="' + esc(t('ai.on')) + '"><i></i></label></div>';
   if (!c.on) return h + '<p class="ftr keep">' + t('ai.intro') + '</p>';
   h += '<div class="group aicard"><button class="cell act aiopen" data-ai-act="open"' + (ok ? '' : ' disabled') + '>' + t('ai.open') + '</button></div>' +
-    '<div class="hdr">' + t('ai.conn') + '</div><div class="group aicard">' +
+    '<div class="hdr">' + t('ai.agents') + '</div><div class="group aicard">' +
+    c.agents.map((a, i) => '<button class="cell aiagent' + (a.id === c.agent ? ' cur' : '') + '" data-ai-agent="' + a.id + '" aria-pressed="' + (a.id === c.agent) + '">' + badge(brandOf(a), 30) + '<span class="grow"><b>' + esc(agentLabel(a, i)) + '</b>' + (a.id === c.agent ? ' ✓' : '') + '<span class="psub">' + esc(brandOf(a).host || t('ai.agent.blank')) + '</span></span></button>').join('') +
+    '<button class="cell act" data-ai-act="agentadd">' + t('ai.agent.add') + '</button></div><p class="ftr keep">' + t('ai.agent.hint') + '</p>' +
+    '<div class="hdr">' + t('ai.conn') + '</div><div class="group aicard">' + field('name', t('ai.agent.name'), c.agents.find((a) => a.id === c.agent).name, { ph: t('ai.agent.namePh') }) +
     '<div class="aifield"><span>' + t('ai.format') + '</span><div class="seg aiseg2" role="group">' + FORMATS.map((f) => '<button type="button" data-ai-fmt="' + f + '" aria-pressed="' + (c.format === f) + '"' + (c.format === f ? ' class="on"' : '') + '>' + t('ai.fmt.' + f) + '</button>').join('') + '</div></div>' +
     field('url', t('ai.url'), c.url, { mode: 'url', ph: c.format === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1' }) +
     (!u.ok ? '<p class="aierrl">' + t('ai.url.' + u.why) + '</p>' : '') +
     field('model', t('ai.model'), c.model, { ph: c.format === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-4o-mini' }) +
     field('key', t('ai.key'), '', { type: 'password', ph: c.key ? '••••••••••••  (' + t('ai.key.saved') + ')' : 'sk-…' }) +
     '<button class="cell act" data-ai-act="ping">' + t('ai.ping') + '</button>' +
-    '<button class="cell act" data-ai-act="diag"><span class="grow">' + t('ai.diag') + '<span class="psub">' + t('ai.diag.sub') + '</span></span></button></div><p class="ftr keep">' + t('ai.keyHint') + '</p>' +
+    (c.agents.length > 1 ? '<button class="cell act danger" data-ai-act="agentdel">' + t('ai.agent.del') + '</button>' : '') + '<button class="cell act" data-ai-act="diag"><span class="grow">' + t('ai.diag') + '<span class="psub">' + t('ai.diag.sub') + '</span></span></button></div><p class="ftr keep">' + t('ai.keyHint') + '</p>' +
     '<div class="hdr">' + t('ai.access') + '</div><div class="group aicard">' +
     Object.entries(LEVELS).map(([cat, vals]) => '<div class="aifield"><span class="aicat"><b>' + t('ai.cat.' + cat) + '</b><i class="l2">' + t('ai.cat.' + cat + '.sub') + '</i></span><div class="seg aiseg2" role="group" aria-label="' + esc(t('ai.cat.' + cat)) + '">' +
       vals.map((v) => '<button type="button" data-ai-acc="' + cat + '" data-v="' + v + '" aria-pressed="' + (c.access[cat] === v) + '"' + (c.access[cat] === v ? ' class="on"' : '') + '>' + t('ai.lvl.' + v) + '</button>').join('') + '</div></div>').join('') + '</div>' +
@@ -48,6 +51,7 @@ export function aiHTML(app) {
 // Касания; true — обработано. openChat — функция открытия чата (импортируется лениво)
 export function aiClick(app, target, rerender, openChat) {
   const ai = app.ai; let e;
+  if ((e = target.closest('[data-ai-agent]'))) { ai.selectAgent(e.dataset.aiAgent); rerender(); return true; }
   if ((e = target.closest('[data-ai-fmt]'))) { ai.save({ format: e.dataset.aiFmt }); rerender(); return true; }
   if ((e = target.closest('button[data-ai-acc]'))) {
     ai.save({ access: { [e.dataset.aiAcc]: e.dataset.v } }); if (ai.cfg().access.songs !== 'write' && ai.cfg().access.media !== 'write') ai.save({ auto: false }); rerender(); return true;
@@ -56,6 +60,8 @@ export function aiClick(app, target, rerender, openChat) {
     const a = e.dataset.aiAct;
     if (a === 'ping') { toast(t('ai.pinging')); ai.ping().then((r) => toast(r.ok ? t('ai.pingOk') : t('ai.err.' + r.kind) + (r.message ? ': ' + r.message : '') + ' — ' + t('ai.why.' + r.kind))); return true; }
     if (a === 'diag') { import('./aidiag.js').then((m) => m.openDiag(app)); return true; }
+    if (a === 'agentadd') { ai.addAgent(); rerender(); return true; }
+    if (a === 'agentdel') { confirm(t('ai.agent.del'), t('ai.agent.delAsk'), t('ai.agent.delYes')).then((ok) => { if (ok) { ai.removeAgent(ai.cfg().agent); rerender(); } }); return true; }
     if (a === 'open') { openChat(); return true; }
     if (a === 'wipe') { confirm(t('ai.wipe'), t('ai.wipeAsk'), t('ai.wipeYes')).then((ok) => { if (ok) { ai.wipe(); toast(t('ai.wiped')); rerender(); } }); return true; }
   }

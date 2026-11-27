@@ -150,6 +150,9 @@ export const NEWS = [
   { n: 50, d: '2026-11-26', ru: ['Медиатека: «Улучшить разбор» нейросетью — аккорды по тактам, названия частей песни, проверка темпа и тональности; все правки с пометкой «от ИИ» и отменой'],
     en: ['Media library: “Improve the analysis” with AI — chords by bar, song section names, tempo and key check; every edit is marked “by AI” and can be undone'],
     uz: ['Mediateka: tahlilni neyrotarmoq bilan yaxshilash — taktlar bo‘yicha akkordlar, qo‘shiq qismlari nomlari, temp va tonallik tekshiruvi; barcha tuzatishlar «AI» belgisi bilan va bekor qilish mumkin'] },
+  { n: 51, d: '2026-11-27', ru: ['Нейросеть: несколько агентов (ChatGPT, Gemini, Claude…) — подключайте сколько нужно и выбирайте, кто отвечает; несколько чатов, у каждого своя история', 'Нейросеть: «Диагностика связи» и «Почему?» — причина отказа или медленных ответов простыми словами', 'Пульт: на весь экран, жест по клавише фона — мажор / минор / sus, записи в пульте нет', 'Библия: переводы называются сокращением (RST, NRT…)'],
+    en: ['AI: several agents (ChatGPT, Gemini, Claude…) — connect as many as you like and pick who answers; several chats, each with its own history', 'AI: “Connection check” and “Why?” — the cause of a failure or slow replies in plain words', 'Show desk: full screen, swipe a pad key for major / minor / sus, no recording in the desk', 'Bible: translations are named by abbreviation (RST, NRT…)'],
+    uz: ['Neyroset: bir nechta agent (ChatGPT, Gemini, Claude…) — xohlaganingizcha ulang va kim javob berishini tanlang; bir nechta chat, har birining tarixi alohida', 'Neyroset: «Aloqani tekshirish» va «Nega?» — xato yoki sekin javob sababi oddiy so‘zlarda', 'Pult: butun ekranda, fon tugmasini surish — major / minor / sus, pultda yozuv yo‘q', 'Injil: tarjimalar qisqartma bilan (RST, NRT…)'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

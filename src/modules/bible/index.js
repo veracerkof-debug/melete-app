@@ -17,7 +17,7 @@ let S = null;
 const study = async () => (S ||= await import('./study.js'));
 
 // Переводы: встроенный Синодальный и модули MyBible (*.SQLite3), сохранённые на устройстве (ctx.files, вид 'bible')
-const SYN = { id: 'synodal', short: 'СП', has: () => true, chapters: (c) => bookOf(c).chapters, book: loadBook, name: (c) => bookOf(c).name, abbr: (c) => bookOf(c).abbr };
+const SYN = { id: 'synodal', short: 'RST', has: () => true, chapters: (c) => bookOf(c).chapters, book: loadBook, name: (c) => bookOf(c).name, abbr: (c) => bookOf(c).abbr };
 const opened = new Map(); // id → модуль MyBible (держится открытым, пока выбран)
 async function providerOf(id) {
   if (id === 'synodal' || !ctx.files.get(id)) return SYN;
@@ -214,7 +214,7 @@ function trSheet() {
         '<div class="cell"><span class="grow">' + t(l) + '</span>' + ui.sw('stp-' + k, pf[k], t(l)) + '</div>').join('') + '</div>';
   };
   const api = ui.sheet(() => ui.snav(t('tr')) + '<div class="group">' + row('synodal', t('trSyn'), t('trSynSub'), false) +
-    ctx.files.list('bible').filter(isBible).map((r) => row(r.id, r.name, t('trSub', { n: r.meta ? r.meta.count : '?', mb: mb(r) }) + (r.meta && r.meta.lang ? ' · ' + r.meta.lang : ''), true)).join('') + '</div>' +
+    ctx.files.list('bible').filter(isBible).map((r) => row(r.id, trShort(r) || r.name, t('trSub', { n: r.meta ? r.meta.count : '?', mb: mb(r) }) + (r.meta && r.meta.lang ? ' · ' + r.meta.lang : ''), true)).join('') + '</div>' +
     studyHTML() +
     '<div class="hdr">' + t('view') + '</div><div class="group"><div class="cell"><span class="grow">' + t('barTop') + '</span>' + ui.sw('bartop', ctx.store.get('barTop', false), t('barTop')) + '</div></div>' +
     '<button class="btn" data-tradd style="width:100%;margin-top:14px">' + t('trAdd') + '</button><p class="ftr">' + t('trHintStudy') + '</p>', (el) => {
@@ -340,7 +340,9 @@ function selToggle(v) {
   paintSel();
 }
 const paintSel = () => host && host.querySelectorAll('.bv').forEach((b) => b.classList.toggle('sel', !!sel && sel.has(+b.dataset.v)));
-const trName = () => (P === SYN ? ctx.t('trSyn') : (ctx.files.get(P.id) || {}).name || P.short);
+// Перевод называется сокращением (RST, NRT 23…), без «Синодальный» и «Новый русский» (слово автора 27.11.2026): сокращение из модуля MyBible, иначе имя файла
+const trShort = (r) => (r && ((r.meta && r.meta.abbr) || r.name)) || '';
+const trName = () => (P === SYN ? ctx.t('trSyn') : trShort(ctx.files.get(P.id)) || P.short);
 const quote = (vs) => quoteText(vs, verseText, P.name(cur.code) + ' ' + cur.ch, trName());
 async function copyVerses(vs) {
   if (!vs.length) return;

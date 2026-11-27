@@ -1007,3 +1007,12 @@ html.desk .hstart .hfree{min-height:64px}
 .aidg>b{flex:none;width:18px;text-align:center}
 .aidg.ok>b{color:var(--ok)}.aidg.warn>b{color:var(--tint-text)}.aidg.fail>b{color:var(--red)}
 .aidg i{display:block;font-style:normal;font-size:13px;margin-top:2px}
+/* Агенты и чаты нейросети (слово автора 27.11.2026) */
+.aiagent{display:flex;align-items:center;gap:12px;text-align:left}
+.aiagent.cur{background:color-mix(in srgb,var(--tint) 10%,var(--cell))}
+.aibrand[role="button"]{cursor:pointer}
+.aisnr{display:flex;align-items:center;gap:6px;justify-self:end}
+.aicrow{display:flex;align-items:center;gap:8px}
+.aicrow.cur{background:color-mix(in srgb,var(--tint) 10%,var(--cell))}
+.aicpick{text-align:left;min-width:0}
+.aicpick b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}

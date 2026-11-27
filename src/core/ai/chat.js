@@ -11,8 +11,9 @@ import { answerQueries, describeQueries, ROUNDS_MAX } from './queries.js';
 export const HISTORY_MAX = 40, TURNS = 16, SAVE_MAX = 250_000;
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
-export function createChat({ app, cfg, data, post, storage = globalThis.localStorage, mascot = () => 'Мелета', lang = () => 'ru', now = () => Date.now() }) {
-  const SK = KEY + '.chat', subs = new Set();
+// sk — ключ хранилища истории этого чата (у каждого чата свой; первый — прежний melete.ai.chat)
+export function createChat({ app, cfg, data, post, storage = globalThis.localStorage, mascot = () => 'Мелета', lang = () => 'ru', now = () => Date.now(), sk = null }) {
+  const SK = sk || KEY + '.chat', subs = new Set();
   let messages = [], busy = false, error = null;
   try { const j = JSON.parse(storage.getItem(SK)); if (Array.isArray(j)) messages = j.slice(-HISTORY_MAX); } catch { /* пусто */ }
   const emit = () => subs.forEach((f) => { try { f(); } catch (e) { (globalThis.reportError || console.error)(e); } });

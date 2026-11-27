@@ -198,7 +198,7 @@ export function normalizeShow(s = {}) {
   o.noises = (Array.isArray(o.noises) ? o.noises : []).filter((x) => x && typeof x.file === 'string').map((x) => ({ id: x.id || uid('s'), name: String(x.name || '').slice(0, 40), file: x.file, level: clamp(x.level, 0, 100, 100) })).slice(0, 40);
   const bd = o.bed && typeof o.bed === 'object' ? o.bed : {}, bp = bd.pad || {}, bn = bd.noise || {};
   o.bed = {
-    pad: { on: !!bp.on, sound: pick(bp.sound, PAD_SOUNDS, 'warm'), level: clamp(bp.level, 0, 100, 60), tonic: Number.isFinite(+bp.tonic) && bp.tonic !== null && bp.tonic !== '' ? ((Math.round(+bp.tonic) % 12) + 12) % 12 : null }, // tonic null — от номера
+    pad: { on: !!bp.on, sound: pick(bp.sound, PAD_SOUNDS, 'warm'), chord: pick(bp.chord, Object.keys(PAD_CHORDS), 'fifth'), level: clamp(bp.level, 0, 100, 60), tonic: Number.isFinite(+bp.tonic) && bp.tonic !== null && bp.tonic !== '' ? ((Math.round(+bp.tonic) % 12) + 12) % 12 : null }, // tonic null — от номера
     noise: { cur: o.noises.some((x) => x.id === bn.cur) ? bn.cur : null, level: clamp(bn.level, 0, 100, 70), xfade: clamp(bn.xfade, 0.2, 20, 6) },
   };
   const nm = o.norm && typeof o.norm === 'object' ? o.norm : {};
@@ -262,3 +262,9 @@ export function tonicFor(s, n, ana, last = 0) {
 }
 // Ноты квинтового пэда (MIDI): тоника и квинта в двух октавах — два звука, без терции, поэтому ни мажор, ни минор
 export function fifthNotes(pc) { const b = 36 + (((pc % 12) + 12) % 12); return [b, b + 7, b + 12, b + 19]; }
+// Созвучия фона (слово автора 27.11.2026: «мажор/минор — критичная штука»): жест по клавише — как на «Сцене» (влево мажор, вправо минор,
+// вверх sus, вниз ♭6). Голосов всегда четыре (узлы не меняются, высоты плывут): тоника, квинта и две верхние ноты созвучия
+export const PAD_CHORDS = { fifth: [0, 7, 12, 19], maj: [0, 7, 12, 16], min: [0, 7, 12, 15], sus: [0, 7, 14, 17], hmin: [0, 8, 12, 20] };
+export const PAD_CHORD_SUF = { fifth: '', maj: '', min: 'm', sus: 'sus', hmin: '♭6' };
+export const PAD_DIRS = { left: 'maj', right: 'min', up: 'sus', down: 'hmin' };
+export function chordNotes(pc, chord = 'fifth') { const b = 36 + (((pc % 12) + 12) % 12); return (PAD_CHORDS[chord] || PAD_CHORDS.fifth).map((o) => b + o); }

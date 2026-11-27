@@ -159,7 +159,7 @@ const noiseRec = (id) => S.noises.find((x) => x.id === id) || null;
 const nPadLevel = (n) => (n && n.bed && n.bed.padLevel != null ? n.bed.padLevel : S.bed.pad.level);
 const nNoiseLevel = (n) => (n && n.bed && n.bed.noiseLevel != null ? n.bed.noiseLevel : S.bed.noise.level);
 const noiseVol = (r, n = M.currentNumber(S)) => Math.round((r ? r.level : 100) * nNoiseLevel(n) / 100);
-function padStart(n) { const b = ensureBed(); if (b) b.padOn({ pc: bedTonic(n), level: nPadLevel(n), sound: S.bed.pad.sound }); }
+function padStart(n) { const b = ensureBed(); if (b) b.padOn({ pc: bedTonic(n), level: nPadLevel(n), sound: S.bed.pad.sound, chord: S.bed.pad.chord }); }
 async function noiseTo(id, n = M.currentNumber(S)) {
   const b = ensureBed(); if (!b) return;
   const r = noiseRec(id);
@@ -219,9 +219,9 @@ function padHTML(p, dock) {
 function bedBarHTML() {
   const b = S.bed, n = M.currentNumber(S), ton = bedTonic(n), tn = M.TONIC_NAMES, man = b.pad.tonic;
   const nb = [(ton + 7) % 12, (ton + 5) % 12, (ton + 9) % 12, (ton + 3) % 12]; // квинта вверх и вниз, параллельные — подходящие соседи
-  const key = (v, l, on, cur) => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + (nb.includes(+v) ? ' sg' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l) + '</button>';
+  const key = (v, l, on, cur) => '<button class="shdk' + (on ? ' on' : '') + (cur ? ' cur' : '') + (nb.includes(+v) ? ' sg' : '') + '" data-tonic="' + v + '" aria-pressed="' + on + '">' + esc(l + (on || cur ? M.PAD_CHORD_SUF[b.pad.chord] || '' : '')) + '</button>';
   // подпись у группы — маленькая: «Фон F♯» (вкл/выкл), «Авто», «⋯»; сами клавиши — крупные
-  return '<div class="shbedbar"><div class="shbedrow"><button class="shcap' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton]) + '</button>' +
+  return '<div class="shbedbar"><div class="shbedrow"><button class="shcap' + (b.pad.on ? ' on' : '') + '" data-x="bedtoggle" aria-pressed="' + b.pad.on + '">' + esc(t('page.bed') + ' ' + tn[ton] + (M.PAD_CHORD_SUF[b.pad.chord] || '')) + '</button>' +
     '<button class="shcap' + (man == null ? ' on' : '') + '" data-tonic="" aria-pressed="' + (man == null) + '">' + esc(t('bed.tonicAuto')) + '</button>' +
     '<span class="grow"></span><button class="shcap ico" data-x="bedsheet" aria-label="' + esc(t('bed.more')) + '" title="' + esc(t('bed.more')) + '">' + I.gear + '</button></div>' +
     '<div class="shbedkeys" role="group" aria-label="' + esc(t('bed.tonic')) + '">' + tn.map((x, i) => key(String(i), x, man === i, b.pad.on && ton === i)).join('') + '</div>' +
@@ -512,7 +512,28 @@ function go(page) { if (S.page === page) return; S.page = page; save(); render()
 
 /* ---------- разбор касаний ---------- */
 
+// Жест по клавише фона: влево — мажор, вправо — минор, вверх — sus, вниз — ♭6 (как на «Сцене»; слово автора 27.11.2026)
+let keyG = null, keyEat = false;
+const KEY_MIN = 22;
+function keyMove(e) {
+  const g = keyG; if (!g || e.pointerId !== g.id) return;
+  const dx = e.clientX - g.x, dy = e.clientY - g.y; if (Math.hypot(dx, dy) < KEY_MIN) return;
+  const ch = M.PAD_DIRS[Math.abs(dy) >= Math.abs(dx) ? (dy < 0 ? 'up' : 'down') : dx < 0 ? 'left' : 'right'];
+  g.moved = true;
+  if (ch === g.ch) return;
+  g.ch = ch; S.bed.pad.tonic = g.pc; S.bed.pad.chord = ch;
+  if (S.ui.buzz) buzz();
+  if (bed && bed.state.pad) bed.padTonic(g.pc, 0.5, ch);
+  host.querySelectorAll('.shdk[data-tonic]').forEach((k) => { const on = +k.dataset.tonic === g.pc; k.classList.toggle('on', on && S.bed.pad.on); k.textContent = M.TONIC_NAMES[+k.dataset.tonic] + (on ? M.PAD_CHORD_SUF[ch] || '' : ''); });
+}
+function keyUp(e) {
+  const g = keyG; if (!g || e.pointerId !== g.id) return;
+  keyG = null;
+  if (g.moved) { keyEat = true; setTimeout(() => { keyEat = false; }, 400); save(); render(); }
+}
 function onDown(e) {
+  const kk = e.target.closest && e.target.closest('.shdk[data-tonic]');
+  if (kk && kk.dataset.tonic !== '' && !locked) { keyG = { id: e.pointerId, pc: +kk.dataset.tonic, x: e.clientX, y: e.clientY, moved: false, ch: null }; try { kk.setPointerCapture(e.pointerId); } catch { /* */ } }
   if (e.target.closest && e.target.closest('[data-duck]')) { try { e.target.closest('[data-duck]').setPointerCapture(e.pointerId); } catch { /* */ } duckStart(); return; }
   if (e.target.closest && e.target.closest('[data-fader]')) { onFaderDown(e); return; }
   if (e.target.closest && e.target.closest('[data-knob]')) { onKnobDown(e); return; }
@@ -529,6 +550,7 @@ function onDown(e) {
   kick();
 }
 function onUp(e) {
+  keyUp(e);
   if (duckOn && e.target.closest && e.target.closest('[data-duck]')) duckEnd();
   const p = held.get(e.pointerId);
   if (p && eng) { held.delete(e.pointerId); eng.release(p); }
@@ -542,7 +564,8 @@ function onClick(e) {
   if ((b = g('[data-page]'))) { go(b.dataset.page); return; }
   if ((b = g('[data-bank]'))) { if (S.bank === b.dataset.bank && edit) { bankSheet(M.bankOf(S)); return; } S.bank = b.dataset.bank; save(); render(); preload(); return; }
   if ((b = g('.shpad[data-pad]'))) { const p = M.padById(S, b.dataset.pad); if (p && (edit || !(p.file || p.synth))) padSheet(p); return; }
-  if ((b = g('[data-tonic]'))) { S.bed.pad.tonic = b.dataset.tonic === '' ? null : +b.dataset.tonic; save(); if (bed && bed.state.pad) bed.padTonic(bedTonic(M.currentNumber(S))); render(); return; }
+  if (keyEat && g('.shdk[data-tonic]')) { keyEat = false; return; } // жест уже выбрал созвучие — касание не повторяем
+  if ((b = g('[data-tonic]'))) { S.bed.pad.tonic = b.dataset.tonic === '' ? null : +b.dataset.tonic; if (b.dataset.tonic === '') S.bed.pad.chord = 'fifth'; save(); if (bed && bed.state.pad) bed.padTonic(bedTonic(M.currentNumber(S)), 0.7, S.bed.pad.chord); render(); return; }
   if ((b = g('[data-bsnd]'))) { S.bed.pad.sound = b.dataset.bsnd; save(); if (bed) bed.padSound(S.bed.pad.sound); render(); return; }
   if ((b = g('[data-noise]'))) { const r = noiseRec(b.dataset.noise); if (!r) return; if (edit) noiseSheet(r); else noiseTo(S.bed.noise.cur === r.id ? null : r.id); return; }
   if ((b = g('.shpad[data-cell]'))) { newPadAt(+b.dataset.cell, !!b.dataset.dock); return; }
@@ -1115,6 +1138,7 @@ export default {
     host.addEventListener('click', onClick);
     host.addEventListener('pointerdown', onDown);
     host.addEventListener('pointerup', onUp);
+    host.addEventListener('pointermove', keyMove);
     host.addEventListener('pointercancel', onUp);
     host.addEventListener('input', onInput);
     host.addEventListener('change', onChange);

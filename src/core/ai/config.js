@@ -7,10 +7,24 @@ export const LEVELS = { songs: ['none', 'read', 'write'], media: ['none', 'read'
 // attach — вложения в чат: files (файл с телефона уходит провайдеру целиком) и links (приложение само открывает ссылку по нажатию; по умолчанию выключено)
 export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
 
+// Агенты — несколько подключений (слово автора 27.11.2026: «ChatGPT, Gemini, Claude — выбирать, кто лучше, дешевле, быстрее»).
+// Это не аккаунты, а разные нейросети и их ключи. Верхние поля format/url/model/key — всегда у выбранного агента (весь прочий код читает их как раньше).
+export const AGENTS_MAX = 12;
+const aid = () => 'g' + Math.random().toString(36).slice(2, 8);
+export function cleanAgent(a, i = 0) {
+  if (!a || typeof a !== 'object') return null;
+  return { id: String(a.id || 'g' + (i + 1)).slice(0, 20), name: String(a.name || '').trim().slice(0, 40), format: FORMATS.includes(a.format) ? a.format : 'openai', url: String(a.url || '').trim().slice(0, 300), model: String(a.model || '').trim().slice(0, 120), key: String(a.key || '').trim().slice(0, 400) };
+}
+export const newAgent = (o = {}) => cleanAgent({ id: aid(), ...o });
 export function clean(x) {
   const c = { ...DEFAULTS, ...(x && typeof x === 'object' ? x : {}) };
-  c.format = FORMATS.includes(c.format) ? c.format : 'openai';
-  c.url = String(c.url || '').trim().slice(0, 300); c.model = String(c.model || '').trim().slice(0, 120); c.key = String(c.key || '').trim().slice(0, 400);
+  // агенты: старое единственное подключение становится первым агентом; верхние поля — у выбранного
+  let agents = Array.isArray(c.agents) ? c.agents.map(cleanAgent).filter(Boolean).slice(0, AGENTS_MAX) : [];
+  const seen = new Set(); agents = agents.filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)));
+  if (!agents.length) agents = [cleanAgent({ id: 'g1', format: c.format, url: c.url, model: c.model, key: c.key })];
+  c.agents = agents; c.agent = agents.some((a) => a.id === c.agent) ? c.agent : agents[0].id;
+  const act = agents.find((a) => a.id === c.agent);
+  c.format = act.format; c.url = act.url; c.model = act.model; c.key = act.key;
   c.instruction = String(c.instruction || '').slice(0, 2000);
   const a = (x && x.access) || {};
   c.access = Object.fromEntries(Object.entries(LEVELS).map(([k, v]) => [k, v.includes(a[k]) ? a[k] : 'none']));

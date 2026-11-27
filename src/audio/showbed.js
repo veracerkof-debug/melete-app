@@ -4,7 +4,7 @@
 // наплывом: новый нарастает, прежний уходит за одно и то же время. Всё идёт через общий фейдер фона в шину медиатеки.
 // Узлы голосов создаются при включении и убираются после затухания; живые правки — только параметрами и плавно.
 import { holdAt } from './param.js';
-import { faderGain, fifthNotes } from '../music/show.js';
+import { faderGain, chordNotes } from '../music/show.js';
 import { midiFreq } from './context.js';
 
 const CLICK = 0.012, TIMBRE = { warm: { type: 'triangle', cut: 1400, det: 4 }, soft: { type: 'sine', cut: 900, det: 3 }, air: { type: 'sawtooth', cut: 700, det: 7 } };
@@ -15,16 +15,16 @@ export function createShowBed({ dest, getBlob, getA4 = () => 440, now = () => de
   const out = c.createGain(); out.gain.value = 1; out.connect(dest);
   const padG = c.createGain(); padG.gain.value = 0; padG.connect(out); // пэд: уровень пэда
   const subs = new Set(), cache = new Map();
-  let pad = null, tonic = 0, noise = null, noiseLvl = 1; // pad — звучащий голос, noise — звучащий шум { id, src, g }
+  let pad = null, tonic = 0, chord = 'fifth', noise = null, noiseLvl = 1; // pad — звучащий голос, noise — звучащий шум { id, src, g }
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
 
   /* ---- пэд ---- */
-  function padOn({ pc = tonic, level = 60, sound = 'warm', fade = 3 } = {}) {
-    tonic = pc;
-    if (pad) { api.padSound(sound); api.padLevel(level); api.padTonic(pc); return; }
+  function padOn({ pc = tonic, level = 60, sound = 'warm', fade = 3, chord: ch = chord } = {}) {
+    tonic = pc; chord = ch;
+    if (pad) { api.padSound(sound); api.padLevel(level); api.padTonic(pc, 0.7, ch); return; }
     const tm = TIMBRE[sound] || TIMBRE.warm, lp = c.createBiquadFilter(), oscs = [];
     lp.type = 'lowpass'; lp.frequency.value = tm.cut; lp.Q.value = 0.4; lp.connect(padG);
-    const notes = fifthNotes(pc), t = now();
+    const notes = chordNotes(pc, chord), t = now();
     notes.forEach((m, i) => [-1, 1].forEach((sgn) => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = tm.type; o.frequency.value = midiFreq(m, getA4()); o.detune.value = sgn * tm.det;
@@ -67,10 +67,10 @@ export function createShowBed({ dest, getBlob, getA4 = () => 440, now = () => de
     padOn, padOff,
     get padOn_() { return !!pad; },
     // плавный переход к новой тональности: высоты плывут за glide с
-    padTonic(pc, glide = 0.7) {
-      tonic = ((Math.round(pc) % 12) + 12) % 12;
+    padTonic(pc, glide = 0.7, ch = chord) {
+      tonic = ((Math.round(pc) % 12) + 12) % 12; chord = ch;
       if (!pad) return;
-      const notes = fifthNotes(tonic), t = now();
+      const notes = chordNotes(tonic, chord), t = now();
       pad.oscs.forEach(({ o, i }) => o.frequency.setTargetAtTime(midiFreq(notes[i], getA4()), t, glide / 3));
       emit();
     },
@@ -95,7 +95,7 @@ export function createShowBed({ dest, getBlob, getA4 = () => 440, now = () => de
     stopNoise(fade = 3) { if (!noise) return; const n = noise; noise = null; endNoise(n, fade); emit(); },
     noiseTrim(v) { if (noise) { noise.lvl = faderGain(v); noise.g.gain.setTargetAtTime(noise.lvl, now(), 0.05); } },
     setLevel(v) { out.gain.setTargetAtTime(faderGain(v), now(), 0.04); },
-    get state() { return { pad: !!pad, tonic, noise: noise ? noise.fileId : null }; },
+    get state() { return { pad: !!pad, tonic, chord, noise: noise ? noise.fileId : null }; },
     forget(id) { cache.delete(id); },
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
     dispose() { padOff(0.3); api.stopNoise(0.3); setTimeout(() => { try { out.disconnect(); padG.disconnect(); } catch { /* */ } cache.clear(); subs.clear(); }, 600); },

@@ -1,6 +1,6 @@
 // Точка входа чата с нейросетью (app.ai): настройки, готовность, сессия чата. Только Android (нативный HTTP), в веб-версии
 // функции нет (правило 13: скрыта). Всё подгружается по требованию; в звуковой тракт не входит.
-import { load, save, wipe, ready, checkUrl } from './config.js';
+import { load, save, wipe, ready, checkUrl, KEY, newAgent, AGENTS_MAX } from './config.js';
 import { aiAvail, post as netPost, get as netGet } from './transport.js';
 import { fromFile, fromUrl, shrinkImage } from './attach.js';
 import { buildRequest, parseResponse } from './provider.js';
@@ -14,12 +14,18 @@ import { getLang, mascotGender } from '../../i18n/index.js';
 const NAMES = { m: { ru: 'Мелетий', en: 'Meletius', uz: 'Meletiy' }, f: { ru: 'Мелета', en: 'Meleta', uz: 'Meleta' } };
 export const mascotName = (lang = getLang()) => (NAMES[mascotGender()] || NAMES.f)[lang] || 'Melete';
 
+// Чаты (слово автора 27.11.2026: «разные задачи — разные чаты»): список {cur, list:[{id,title,agent,at}]} в melete.ai.chats, история каждого — в
+// melete.ai.chat.<id> (первый чат 'main' — прежний ключ melete.ai.chat). Вне копий и синхронизации, как и настройки
+const CHATS_KEY = KEY + '.chats', CHATS_MAX = 40;
+const chatKey = (id) => (id === 'main' ? KEY + '.chat' : KEY + '.chat.' + id);
+const readChats = () => { try { const j = JSON.parse(localStorage.getItem(CHATS_KEY)); if (j && Array.isArray(j.list) && j.list.length) return { cur: j.list.some((x) => x.id === j.cur) ? j.cur : j.list[0].id, list: j.list.slice(0, CHATS_MAX) }; } catch { /* */ } return { cur: 'main', list: [{ id: 'main', title: '', agent: '', at: Date.now() }] }; };
 const STATS_KEY = 'melete.ai.stats'; // замеры запросов — рядом с настройками, вне копий и синхронизации
 const readStats = () => { try { const j = JSON.parse(localStorage.getItem(STATS_KEY)); return Array.isArray(j) ? j.slice(-STATS_MAX) : []; } catch { return []; } };
 const hostOf = (u) => { try { return new URL(u).host; } catch { return ''; } };
 
 export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
-  let chat = null, over = { avail: null, post: null, get: null }, stats = readStats(), lastDiag = null;
+  const sessions = new Map(); let over = { avail: null, post: null, get: null }, stats = readStats(), lastDiag = null, chats = readChats();
+  const saveChats = () => { try { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); } catch { /* */ } };
   // Каждый запрос к модели меряется: время, размер (токены), причина отказа → память чата, журнал [ai], счётчики самоанализа
   const record = (s) => {
     stats = [...stats, s].slice(-STATS_MAX);
@@ -34,7 +40,33 @@ export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
   const api = {
     get avail() { return over.avail != null ? over.avail : avail(); },
     cfg: () => load(),
-    save(patch) { const c = { ...load(), ...patch, access: { ...load().access, ...(patch && patch.access) } }; save(c); return load(); },
+    // правка подключения (format/url/model/key) идёт в выбранного агента; остальное — общие настройки
+    save(patch) {
+      const cur = load(), p = { ...patch }, conn = ['format', 'url', 'model', 'key', 'name'].filter((k) => k in p);
+      const agents = conn.length ? cur.agents.map((a) => (a.id === cur.agent ? { ...a, ...Object.fromEntries(conn.map((k) => [k, p[k]])) } : a)) : cur.agents;
+      save({ ...cur, ...p, agents, access: { ...cur.access, ...(patch && patch.access) } }); return load();
+    },
+    // ----- агенты -----
+    agents: () => load().agents,
+    addAgent(o = {}) { const c = load(); if (c.agents.length >= AGENTS_MAX) return null; const a = newAgent({ format: c.format, ...o }); save({ ...c, agents: [...c.agents, a], agent: a.id }); return a.id; },
+    selectAgent(id) { const c = load(); if (!c.agents.some((a) => a.id === id)) return false; save({ ...c, agent: id }); const m = chats.list.find((x) => x.id === chats.cur); if (m) { m.agent = id; saveChats(); } return true; },
+    removeAgent(id) { const c = load(); if (c.agents.length < 2) return false; const agents = c.agents.filter((a) => a.id !== id); save({ ...c, agents, agent: c.agent === id ? agents[0].id : c.agent }); chats.list.forEach((x) => { if (x.agent === id) x.agent = ''; }); saveChats(); return true; },
+    // ----- чаты -----
+    chats: () => chats.list.slice().sort((a, b) => b.at - a.at), get chatId() { return chats.cur; },
+    newChat() {
+      const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+      chats.list.unshift({ id, title: '', agent: load().agent, at: Date.now() }); chats.list = chats.list.slice(0, CHATS_MAX); chats.cur = id; saveChats(); return id;
+    },
+    useChat(id) { const m = chats.list.find((x) => x.id === id); if (!m) return false; chats.cur = id; saveChats(); if (m.agent && load().agents.some((a) => a.id === m.agent)) save({ ...load(), agent: m.agent }); return true; },
+    renameChat(id, title) { const m = chats.list.find((x) => x.id === id); if (!m) return false; m.title = String(title || '').trim().slice(0, 60); saveChats(); return true; },
+    deleteChat(id) {
+      if (!chats.list.some((x) => x.id === id)) return false;
+      try { localStorage.removeItem(chatKey(id)); } catch { /* */ } sessions.delete(id);
+      chats.list = chats.list.filter((x) => x.id !== id);
+      if (!chats.list.length) chats.list = [{ id: 'c' + Date.now().toString(36), title: '', agent: load().agent, at: Date.now() }];
+      if (chats.cur === id) api.useChat(chats.list[0].id);
+      saveChats(); return true;
+    },
     ready: () => api.avail && ready(load()),
     // быстрая проверка связи: одно короткое сообщение без данных человека
     async ping() {
@@ -63,10 +95,12 @@ export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
     // сводка для отчёта о проблеме: без ключа и текстов
     reportSection: () => (load().on ? aiSection(stats, lastDiag) : ''),
     chat() {
-      return (chat ??= createChat({
+      const id = chats.cur;
+      if (!sessions.has(id)) { const s = createChat({ sk: chatKey(id),
         app, cfg: () => load(), post: (req) => timed(req), mascot: () => mascotName(), lang: () => getLang(),
         data: () => ({ focusRec: (app.aiFocus && app.aiFocus.rec && app.files && app.files.get(app.aiFocus.rec)) || null, focusParts: (app.aiFocus && app.aiFocus.rec && app.files ? app.files.list('audio').filter((r) => r.stem && r.stem.src === app.aiFocus.rec).map((r) => r.stem.part) : []), studio: (app.studioAI && app.studioAI.project()) || null, projects: (app.store.state.projects || []), songs: app.store.state.songs || [], recs: app.files ? app.files.list('audio').filter((r) => !r.stem && !r.dn && !r.show && !r.dict) : [], used: ((app.device && app.device.audio) || {}).used || {}, show: (app.device && app.device.show) || null, sessions: app.store.sessions(), goalMin: app.store.state.settings.goalMin || 0, logText: logText(entries().filter((e) => e[1] !== 'i')), now: Date.now(), diag: () => selfDiagText(app, stats, lastDiag) }),
-      }));
+      }); s.subscribe(() => { const m = chats.list.find((x) => x.id === id); if (!m) return; const msgs = s.messages, u = msgs.find((x) => x.role === 'user'); if (!m.title && u) m.title = String(u.text).replace(/\s+/g, ' ').slice(0, 40); if (msgs.length) m.at = msgs[msgs.length - 1].at || Date.now(); saveChats(); }); sessions.set(id, s); }
+      return sessions.get(id);
     },
     // Вложения: файл с телефона (текст, PDF, DOCX, HTML, картинка) и ссылка; ссылку приложение открывает само — только по нажатию и если это включено
     async attachFile(file) {
@@ -77,9 +111,9 @@ export function createAi(app, { avail = aiAvail, post = netPost } = {}) {
       if (!load().attach.links) throw Object.assign(new Error('off'), { kind: 'off' });
       return fromUrl(url, over.get || netGet);
     },
-    wipe() { wipe(); chat = null; },
+    wipe() { chats.list.forEach((x) => { try { localStorage.removeItem(chatKey(x.id)); } catch { /* */ } }); try { localStorage.removeItem(CHATS_KEY); } catch { /* */ } wipe(); sessions.clear(); chats = readChats(); },
   };
   // только для проверок в браузере (vite dev, как window.__melete): подменить доступность и сеть
-  if (import.meta.env && import.meta.env.DEV) api.__test = (o) => { over = { avail: null, post: null, get: null, ...o }; chat = null; };
+  if (import.meta.env && import.meta.env.DEV) api.__test = (o) => { over = { avail: null, post: null, get: null, ...o }; sessions.clear(); };
   return api;
 }

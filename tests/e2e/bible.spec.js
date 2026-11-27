@@ -31,7 +31,7 @@ test('Библия: полоса внизу, поиск, полный экран
   await expect(page.locator('.bwrap .bv.sel')).toHaveCount(2);
   await page.click('[data-x="bselcopy"]');
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toMatch(/^16 .+ 17 .+\n— .+ 3:16–17 \(Синодальный перевод\)$/s);
+  expect(clip).toMatch(/^16 .+ 17 .+\n— .+ 3:16–17 \(RST\)$/s);
   await expect(page.locator('.bwrap.bselm')).toHaveCount(0);
   // полный экран: вкладки спрятаны, выход — кнопкой
   await page.click('.bbar [data-x="bpure"]');

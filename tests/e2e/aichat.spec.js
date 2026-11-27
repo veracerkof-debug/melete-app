@@ -195,3 +195,32 @@ test('нейросеть: отказ сети — причина словами,
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('melete.ai.stats') || '[]').some((s) => s.kind === 'dns'))).toBe(true);
   void errors;
 });
+
+test('нейросеть: несколько агентов и чатов — добавить агента, выбрать, новый чат со своей историей', async ({ page, melete, errors }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((c) => { try { if (!localStorage.getItem('melete.ai')) localStorage.setItem('melete.ai', JSON.stringify(c)); } catch { /* */ } }, CFG);
+  await melete.open({ settings: { home: { off: [] } } });
+  await page.evaluate(() => {
+    const ai = window.__melete.ai;
+    ai.__test({ avail: true, post: async () => ({ status: 200, data: JSON.stringify({ choices: [{ message: { content: 'Ответ' } }] }) }) });
+    ai.addAgent({}); ai.save({ url: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-2.5-flash', key: 'k2' }); ai.selectAgent(ai.cfg().agents[0].id);
+    window.__melete.render();
+  });
+  await page.waitForTimeout(400);
+  await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(600);
+  await page.fill('.aichat textarea', 'первая задача'); await page.click('.aichat [data-ai="send"]'); await page.waitForTimeout(500);
+  // сменить агента в этом чате — по значку «кто отвечает»
+  await page.click('[data-aibrand]'); await page.waitForTimeout(400);
+  await expect(page.locator('[data-ag]')).toHaveCount(2);
+  await page.locator('[data-ag]').nth(1).click(); await page.waitForTimeout(300);
+  await expect(page.locator('.aibrand')).toContainText('Gemini');
+  // новый чат — пустая лента, у первого своя история
+  await page.click('[data-ai="chats"]'); await page.waitForTimeout(300);
+  await page.click('[data-cnew]'); await page.waitForTimeout(700);
+  await expect(page.locator('.aimsgs .aim')).toHaveCount(0);
+  await page.click('[data-ai="chats"]'); await page.waitForTimeout(300);
+  await expect(page.locator('[data-cid]')).toHaveCount(2); await expect(page.locator('.aicrow').first()).toContainText('Новый чат');
+  await page.locator('[data-cid]').nth(1).click(); await page.waitForTimeout(700);
+  await expect(page.locator('.aimsgs')).toContainText('первая задача');
+  void errors;
+});

@@ -11,6 +11,9 @@ import { TASKS } from '../../music/anaai.js';
 // Значок нейросети: свой кружок с буквой, цвет по фирме (официальных логотипов нет — товарные знаки)
 export const badge = (b, size = 28) => '<i class="aibadge" style="--bh:' + b.hue + ';--bs:' + size + 'px" aria-hidden="true">' + esc(b.mark) + '</i>';
 
+// Подпись агента: своё название, иначе «фирма · модель»; пустой (ещё не заполнен) — «Агент N»
+export const agentLabel = (a, i = 0) => a.name || (a.model || a.url ? brandOf(a).name + (a.model ? ' · ' + a.model : '') : t('ai.agent.untitled', { n: i + 1 }));
+const LIST = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h9"/></svg>';
 const CLIP = '<svg viewBox="0 0 24 24"><path d="M8.5 12.5l6-6a3.2 3.2 0 0 1 4.5 4.5l-8.2 8.2a5 5 0 0 1-7-7l7.6-7.6"/></svg>';
 const COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
 const PASTE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1M9.5 12h5M9.5 16h3"/></svg>';
@@ -53,11 +56,11 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
   const manual = studio || !!rec, chat = app.ai.chat(), name = mascotName();
   let off = null, draft = '', atts = [], reading = 0, linkOpen = false;
   const GEAR = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-  const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>' }) + '<div class="aibrand" data-aibrand></div><div class="aichat' + (manual ? ' studio' : '') + '"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
+  const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>', right: '<span class="aisnr"><button class="ic sm" data-ai="chats" aria-label="' + esc(t('ai.chats')) + '" title="' + esc(t('ai.chats')) + '">' + LIST + '</button><button class="link b r" data-close>' + esc(t('ui.done')) + '</button></span>' }) + '<div class="aibrand" data-aibrand data-ai="agents" role="button" tabindex="0" aria-label="' + esc(t('ai.agent.pick')) + '"></div><div class="aichat' + (manual ? ' studio' : '') + '"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
     '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="1" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
-  sheet(html, (el) => {
+  const main = sheet(html, (el) => {
     const brandEl = el.querySelector('[data-aibrand]');
-    const drawBrand = () => { if (manual && !app.ai.ready()) { brandEl.innerHTML = '<span class="aibn"><b>' + esc(t('ai.studio.manual')) + '</b><i>' + esc(t('ai.studio.manualSub')) + '</i></span>'; return; } const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + '</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
+    const drawBrand = () => { if (manual && !app.ai.ready()) { brandEl.innerHTML = '<span class="aibn"><b>' + esc(t('ai.studio.manual')) + '</b><i>' + esc(t('ai.studio.manualSub')) + '</i></span>'; return; } const b = brandOf(app.ai.cfg()); brandEl.innerHTML = badge(b, 28) + '<span class="aibn"><b>' + t('ai.by', { name: esc(b.name) }) + ' ▾</b><i>' + esc(b.model || b.host || '—') + '</i></span>'; };
     const list = el.querySelector('[data-aimsgs]'), ctx = el.querySelector('[data-aictx]'), ta = el.querySelector('[data-aiin]'), chips = el.querySelector('[data-aiatt]'), tools = el.querySelector('[data-aitools]'), fin = el.querySelector('[data-aifile]');
     const drawAtt = () => {
       const c = app.ai.cfg();
@@ -126,6 +129,8 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       else if (a === 'dismiss') chat.dismissError();
       else if (a === 'why') import('./aidiag.js').then((m) => m.openDiag(app));
       else if (a === 'settings') onSettings();
+      else if (a === 'agents') agentsSheet();
+      else if (a === 'chats') chatsSheet();
       else if (a === 'chip') { ta.value = b.dataset.t || ''; grow(); ta.focus(); }
       else if (a === 'copyprompt') {
         const v = ta.value.trim() || (rec ? t('ai.task.chords.tz') : t('ai.studio.chip1'));
@@ -134,6 +139,32 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       else if (a === 'paste') pasteSheet();
       else if (a === 'qcopy') { const txt = chat.answerQuery(b.dataset.m, b.dataset.p); if (txt) copyText(txt).then((ok) => toast(t(ok ? 'ai.studio.qcopied' : 'ai.studio.copyFail'))); }
     });
+    // Кто отвечает в этом чате: выбор агента (слово автора 27.11.2026); подключить нового — в настройках
+    const agentsSheet = () => {
+      const rows = () => app.ai.agents().map((a, i) => '<button class="cell" data-ag="' + a.id + '">' + badge(brandOf(a), 30) + '<span class="grow"><b>' + esc(agentLabel(a, i)) + '</b>' + (a.id === app.ai.cfg().agent ? ' ✓' : '') + '<span class="psub">' + esc(brandOf(a).host || '—') + '</span></span></button>').join('');
+      const ash = sheet(() => snav(t('ai.agent.pick')) + '<div class="group">' + rows() + '</div><div class="group"><button class="cell act" data-ag-add>' + esc(t('ai.agent.add')) + '</button></div>', (pe) => {
+        pe.addEventListener('click', (e) => {
+          const g = e.target.closest('[data-ag]');
+          if (g) { app.ai.selectAgent(g.dataset.ag); drawBrand(); draw(); ash.close(); }
+          else if (e.target.closest('[data-ag-add]')) { ash.close(); onSettings(); }
+        });
+      });
+    };
+    // Чаты: каждый — своя история и свой агент; новый чат — чистая лента (слово автора 27.11.2026)
+    const reopen = () => { main.close(); setTimeout(() => openChat(app, { onSettings, studio, rec }), 260); };
+    const chatsSheet = () => {
+      const agentOf = (m) => { const l = app.ai.agents(), i = l.findIndex((a) => a.id === m.agent); return i < 0 ? '' : agentLabel(l[i], i); };
+      const rows = () => app.ai.chats().map((m) => '<div class="cell aicrow' + (m.id === app.ai.chatId ? ' cur' : '') + '"><button class="grow aicpick" data-cid="' + m.id + '"><b>' + esc(m.title || t('ai.chat.untitled')) + '</b>' + (m.id === app.ai.chatId ? ' ✓' : '') + '<span class="psub">' + esc([agentOf(m), new Date(m.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')) + '</span></button>' +
+        '<button class="ic sm" data-cdel="' + m.id + '" aria-label="' + esc(t('ai.chat.del')) + '">✕</button></div>').join('');
+      const csh = sheet(() => snav(t('ai.chats')) + '<div class="group">' + rows() + '</div><div class="group"><button class="cell act" data-cnew>' + esc(t('ai.chat.new')) + '</button></div>', (pe, sh) => {
+        pe.addEventListener('click', async (e) => {
+          const pk = e.target.closest('[data-cid]'), dl = e.target.closest('[data-cdel]');
+          if (pk) { if (pk.dataset.cid !== app.ai.chatId) { app.ai.useChat(pk.dataset.cid); csh.close(); reopen(); } else csh.close(); }
+          else if (e.target.closest('[data-cnew]')) { app.ai.newChat(); csh.close(); reopen(); }
+          else if (dl) { if (await confirm(t('ai.chat.del'), t('ai.chat.delAsk'), t('ai.chat.delYes'))) { const wasCur = dl.dataset.cdel === app.ai.chatId; app.ai.deleteChat(dl.dataset.cdel); if (wasCur) { csh.close(); reopen(); } else sh.update(); } }
+        });
+      });
+    };
     // вставка ответа любой нейросети: текстовое поле (системное меню «Вставить» работает всегда), разбор — как у обычного ответа
     const pasteSheet = () => {
       sheet(() => snav(t('ai.studio.paste'), { right: '<button class="link b r" data-pgo>' + esc(t('ai.studio.parse')) + '</button>' }) + '<p class="ftr" style="margin-top:0">' + esc(t('ai.studio.pasteHint')) + '</p><div class="group"><textarea class="inp left" data-pta rows="9" style="width:100%;min-height:180px" aria-label="' + esc(t('ai.studio.paste')) + '"></textarea></div>', (pe, psh) => {
