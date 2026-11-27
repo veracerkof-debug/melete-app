@@ -38,7 +38,7 @@ async function providerOf(id) {
   return opened.get(id);
 }
 const isBible = (r) => !r.meta || !r.meta.type || r.meta.type === 'bible'; // старые записи — без типа
-const shortOf = (rec) => String(rec.name || '').replace(/\.[^.]+$/, '').slice(0, 10);
+const shortOf = (rec) => shortName(rec); // RST, NRT 14… (trname.js); кнопка перевода внизу и подпись в цитате
 
 import meta, { ICON } from './meta.js';
 const I = {
