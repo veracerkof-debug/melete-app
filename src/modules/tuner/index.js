@@ -38,7 +38,9 @@ const st = () => {
   return s;
 };
 const tol = () => TOL[st().tol] ?? 5;
-const tuning = () => { const s = st(); return s.beginner ? curTuning({ ...s, useTuning: true }) : null; };
+// «Профи» (слово автора 27.11.2026): настройки по строю нет совсем — только хроматический тюнер и подпись «Хроматический · 440 Гц»
+const isPro = () => ((ctx && ctx.profile) || {}).level === 'pro';
+const tuning = () => { const s = st(); return s.beginner && !isPro() ? curTuning({ ...s, useTuning: true }) : null; };
 const tuningName = (tn) => (tn.custom ? tn.name : ctx.t(tn.nameKey));
 
 function arcD(cx, cy, r, a0, a1) {
@@ -106,7 +108,7 @@ function view() {
   // в половине окна — короткое напоминание, чтобы шкале хватило места
   const warn = tn ? '<div class="twarn" role="note">' + WARN + '<span>' + t(size === 'half' ? 'warnShort' : 'warn') + '</span></div>' : '';
   // переключатель режима прямо на экране (разбор 27.11.2026): «По строю» (струны выбранного инструмента) или «Хроматический»
-  const mode = '<div class="tmode"><div class="tmodesw" role="group" aria-label="' + ui.esc(t('modeSw')) + '"><button type="button" data-x="tmode" data-v="beg" aria-pressed="' + !!tn + '">' + ui.esc(tn ? tuningName(tn) : t('byTuning')) + '</button><button type="button" data-x="tmode" data-v="chrom" aria-pressed="' + !tn + '">' + ui.esc(t('chromatic')) + '</button></div><span class="tmhz num">' + ui.esc(t('hz', { f: s.a4 })) + '</span></div>';
+  const mode = isPro() ? '<div class="tmode tmpro"><span class="tmhz num">' + ui.esc(t('chromatic') + ' · ' + t('hz', { f: s.a4 })) + '</span></div>' : '<div class="tmode"><div class="tmodesw" role="group" aria-label="' + ui.esc(t('modeSw')) + '"><button type="button" data-x="tmode" data-v="beg" aria-pressed="' + !!tn + '">' + ui.esc(tn ? tuningName(tn) : t('byTuning')) + '</button><button type="button" data-x="tmode" data-v="chrom" aria-pressed="' + !tn + '">' + ui.esc(t('chromatic')) + '</button></div><span class="tmhz num">' + ui.esc(t('hz', { f: s.a4 })) + '</span></div>';
   return '<div class="tclean ' + size + ' st-' + style + (tn ? ' beg' : '') + (s.hzTop ? ' hzt' : '') + '">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') + mode + warn +
     '<div class="tvis">' + vis + '</div>' + noteHTML() + cents + hz + (tn ? stringsHTML(tn) : '') + micNote() + '</div>';
 }
