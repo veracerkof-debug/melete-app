@@ -3,7 +3,7 @@
 // Жесты как в MyBible: двойное касание слова или номера Стронга — статья лексикона (у слова без номера — словари);
 // касание метки — комментарий, перекрёстные ссылки, сноска; ссылки в статьях (B:, S:, C:@) — переходы.
 // Плюс: смахивание влево-вправо — соседняя глава, щипок — размер шрифта, долгое касание стиха — меню стиха.
-import { renderVerse, sanitizeHTML, parseBRef, parseCRef, subheadingHTML, strongPrefix } from '../../core/mybible-study.js';
+import { renderVerse, leadBreak, sanitizeHTML, parseBRef, parseCRef, subheadingHTML, strongPrefix } from '../../core/mybible-study.js';
 
 const PREF = { strong: true, comm: true, xref: true, subs: true };
 export const prefs = (ctx) => ({ ...PREF, ...(ctx.store.get('study') || {}) });
@@ -42,7 +42,7 @@ export function chapterHTML(ctx, P, cur, rows, x) {
   };
   return rows.map((r, i) => {
     const v = r.v ?? i + 1, body = r.t != null ? renderVerse(r.t, { prefix, strong: pf.strong && P.strong }) : ui.esc(r);
-    return head(v) + '<span class="bv" data-v="' + v + '">' + marks(v, true) + '<sup>' + v + '</sup>' + body + marks(v, false) + ' </span>';
+    return (r.t != null && leadBreak(r.t) ? '<span class="bpbrk"></span>' : '') + head(v) + '<span class="bv" data-v="' + v + '">' + marks(v, true) + '<sup>' + v + '</sup>' + body + marks(v, false) + ' </span>';
   }).join('');
 }
 

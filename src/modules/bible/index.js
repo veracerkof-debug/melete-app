@@ -3,6 +3,7 @@
 // (отметка идёт в план чтения, ядро: ctx.bible) и переход к следующей главе.
 // Текст и список книг — src/core/bible.js, планы и отметки — src/core/reading.js (в ядре: их видят главная и календарь).
 // В «Минимале» — изучение по логике MyBible (study.js): номера Стронга, комментарии, сноски, ссылки, подзаголовки и жесты.
+import { shortName } from './trname.js';
 import { Capacitor } from '@capacitor/core';
 import './bible.css';
 import ru from './i18n/ru.json';
@@ -341,7 +342,7 @@ function selToggle(v) {
 }
 const paintSel = () => host && host.querySelectorAll('.bv').forEach((b) => b.classList.toggle('sel', !!sel && sel.has(+b.dataset.v)));
 // Перевод называется сокращением (RST, NRT 23…), без «Синодальный» и «Новый русский» (слово автора 27.11.2026): сокращение из модуля MyBible, иначе имя файла
-const trShort = (r) => (r && ((r.meta && r.meta.abbr) || r.name)) || '';
+const trShort = shortName; // trname.js: RST, NRT 23…
 const trName = () => (P === SYN ? ctx.t('trSyn') : trShort(ctx.files.get(P.id)) || P.short);
 const quote = (vs) => quoteText(vs, verseText, P.name(cur.code) + ' ' + cur.ch, trName());
 async function copyVerses(vs) {

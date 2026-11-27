@@ -17,6 +17,8 @@ export const strongPrefix = (code, fixed = '') => fixed || (bookOf(code) && book
 // <S>n</S> — номер Стронга после слова; <m> — морфология; <f>[1]</f> — метка сноски; <n> — примечание; <h> — подзаголовок
 // внутри стиха; <J> — слова Христа (и Бога в Ветхом Завете); <i> — добавленные слова; <e> — выделение; <t> — цитата
 // с отступом; <br/>, <pb/> — переносы. Всё прочее — текст (экранируется).
+// Стих начинается с абзаца (<pb/> до первого текста): разрыв нужен перед номером стиха
+export const leadBreak = (raw) => /^(?:\s|<\/?(?:J|i|e|t)>|<(?:S|m|f|n)>[\s\S]*?<\/(?:S|m|f|n)>)*<pb\s*\/?>/i.test(String(raw || ''));
 export function renderVerse(raw, { prefix = 'H', strong = true } = {}) {
   let out = '';
   const re = /<(S|m|f|n|h)>([\s\S]*?)<\/\1>|<(\/?)(J|i|e|t)>|<(br|pb)\s*\/?>|<[^>]*>|([^<]+)/gi;
@@ -34,7 +36,11 @@ export function renderVerse(raw, { prefix = 'H', strong = true } = {}) {
     } else if (m[4]) {
       const t = m[4].toLowerCase(), cls = { j: 'bj', i: 'bins', e: 'bem', t: 'bq' }[t];
       out += m[3] ? '</span>' : '<span class="' + cls + '">';
-    } else if (m[5]) out += m[5].toLowerCase() === 'pb' ? '<span class="bpbrk"></span>' : '<br>';
+    } else if (m[5]) {
+      // абзац в самом начале стиха уходит ДО номера стиха (leadBreak): иначе номер «1» остаётся один на строке, а текст — ниже, с пустым промежутком
+      const bare = !out.replace(/<[^>]*>/g, '').trim();
+      if (m[5].toLowerCase() === 'pb') { if (!bare) out += '<span class="bpbrk"></span>'; } else out += '<br>';
+    }
     else if (m[6] != null) out += esc(unesc(m[6]));
   }
   // незакрытые <J>/<i>/<e>/<t> закрываются
