@@ -33,6 +33,7 @@ import { spread, swipe, NOSPREAD, addPageSwipe, wideSwipe } from '../../ui/gestu
 import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRoutine } from '../routine.js';
 import { pickRoutine } from './routine.js';
 import { outBtnHTML, bindOutput, badgeHTML } from './outputsheet.js';
+import { askName } from './onboard.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -826,6 +827,7 @@ export function createSessionScreen(app) {
         app.pomodoro.reset();
         sh.close();
         end();
+        setTimeout(() => askName(app), 900); // «Как обращаться?» — после первого занятия, один раз (onboard.js: askName сам проверяет)
       });
     });
   }

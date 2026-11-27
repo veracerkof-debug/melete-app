@@ -194,7 +194,7 @@ body:has(.tview.pure,.session.pure) #mixd:not(.open){transform:translateX(100%);
 .sdock .tb.used .tl,.sdock .tb[aria-selected="true"] .tl{color:var(--tint-text)}
 .sstage{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px 0 10px;border-radius:999px;background:var(--fill);color:var(--ink);font:600 14px var(--font);white-space:nowrap}
 .sstage svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-@container (max-width: 360px){.sstage span{display:none}.sstage{padding:0 10px}}
+@container (max-width: 460px){.sstage span{display:none}.sstage{padding:0 10px}}
 
 /* «В прошлый раз: …» — у верхнего края окна занятия, не мешает играть (касание — прячется) */
 .slast{position:absolute;z-index:6;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));

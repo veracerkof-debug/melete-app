@@ -34,8 +34,9 @@ export const stepper = (name, label) =>
   '<button type="button" data-step="' + name + '" data-d="1" aria-label="' + esc(t('ui.more')) + '">+</button></span>';
 
 // Круглая кнопка-иконка с подписью для чтения с экрана
-export const icb = (attrs, icon, label, cls) =>
-  '<button type="button" class="ic' + (cls ? ' ' + cls : '') + '" ' + attrs + ' aria-label="' + esc(label) + '" title="' + esc(label) + '">' + icon + '</button>';
+// cap — короткая подпись под значком (слово автора 27.11.2026): видна в полном окне, пока в Оформлении не выключены «Подписи под значками»
+export const icb = (attrs, icon, label, cls, cap) =>
+  '<button type="button" class="ic' + (cls ? ' ' + cls : '') + '" ' + attrs + ' aria-label="' + esc(label) + '" title="' + esc(label) + '"' + (cap ? ' data-cap="' + esc(cap) + '"' : '') + '>' + icon + '</button>';
 
 // Заголовок шторки: слева, по центру, справа
 export const snav = (title, { left = '<span></span>', right = '<button class="link b r" data-close>' + esc(t('ui.done')) + '</button>' } = {}) =>

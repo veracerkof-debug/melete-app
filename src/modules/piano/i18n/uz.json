@@ -106,5 +106,12 @@
   "perf.full": "Studiya",
   "perf.eco": "Yengil",
   "perf.hint": "Studiya (standart): barcha ovozlar, pedlar unisoni, toʻrt reverberatsiya makoni. Yengil — kuchsiz qurilmalar uchun: kamroq ovoz, soddaroq pedlar, bitta reverberatsiya, doim katta bufer.",
-  "lines": "Ovoz chiziqlari"
+  "lines": "Ovoz chiziqlari",
+  "pedal.bt0": "Hold",
+  "pedal.bt1": "Sus",
+  "pedal.bt2": "Hold",
+  "cap.sound": "Tovush",
+  "cap.dual": "Qatorlar",
+  "cap.rot": "Burish",
+  "cap.lines": "Chiziqlar"
 }

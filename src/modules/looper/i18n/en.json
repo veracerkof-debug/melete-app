@@ -125,9 +125,14 @@
   "play.hint": "The loop is playing. “Record a cycle” — from the next cycle the instrument sound becomes a layer, the notes a part next to it (off).",
   "cap.go": "Record a cycle",
   "cap.wait": "Waiting for the cycle…",
-  "cap.stop": "Recording — stop",
+  "cap.stop": "Stop",
   "capLayer": "{tool}",
   "capNotes": "Notes: {tool}",
   "capBoth": "Layer and notes: {n} notes",
-  "capTool": "Instrument"
+  "capTool": "Instrument",
+  "cap.view": "View",
+  "cap.metro": "Metronome",
+  "cap.mon": "Monitor",
+  "cap.undo": "Undo",
+  "cap.save": "To library"
 }

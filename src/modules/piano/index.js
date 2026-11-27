@@ -54,7 +54,7 @@ let vl = null;
 function view() {
   const { t, ui } = ctx, p = P(), m0 = 12 * (p.oct + 1), full = size === 'full', rot = rotated(), dual = full && p.dual;
   const hl = ctx.shared.get('highlight');
-  const pk = (attrs, icon, lab, on) => '<button class="pk' + (on ? ' on' : '') + '" ' + attrs + ' aria-label="' + lab + '" title="' + lab + '"' +
+  const pk = (attrs, icon, lab, on, cap) => '<button class="pk' + (on ? ' on' : '') + '" ' + attrs + ' aria-label="' + lab + '" title="' + lab + '"' + (cap ? ' data-cap="' + cap + '"' : '') +
     (on != null ? ' aria-pressed="' + !!on + '"' : '') + '>' + icon + '</button>';
   // компьютер, широкое окно: клавиш столько, сколько помещается (≈ 58 px на белую), но не меньше выбранного —
   // на клавиатуре компьютера две с половиной октавы, их видно целиком
@@ -69,7 +69,7 @@ function view() {
     mName(lastWhite(m0, nw)) + '</span>' + pk('data-step="poct" data-d="1"', '›', t('octUp')) + '</div><div class="pgrp">' +
     pk('data-step="pkeys" data-d="-1"', I.minus, t('keysLess')) + pk('data-step="pkeys" data-d="1"', I.plus, t('keysMore')) +
     (panelOn() ? '' : pk('data-x="psound"', I.wave, t('sound'))) +
-    (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20h12M9 20l2-12h2l2 12" style="fill:none;stroke:currentColor;stroke-width:2"/>' + (hold.mode === 2 ? '<circle cx="12" cy="5" r="2" style="fill:currentColor"/>' : '') + '</svg></i><span class="bt">' + (hold.mode === 1 ? 'Sus' : 'Hold') + '</span></button>' +
+    (full ? '<button class="pk txt2' + (hold.mode ? ' on' : '') + '" data-x="phold" aria-pressed="' + !!hold.mode + '" aria-label="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '" title="' + ui.esc(t('pedal.' + PEDAL[hold.mode])) + '">' + '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20h12M9 20l2-12h2l2 12" style="fill:none;stroke:currentColor;stroke-width:2"/>' + (hold.mode === 2 ? '<circle cx="12" cy="5" r="2" style="fill:currentColor"/>' : '') + '</svg></i><span class="bt">' + t('pedal.bt' + hold.mode) + '</span></button>' +
       pk('data-x="pdual"', I.dual, t('dual'), !!p.dual) + pk('data-x="prot"', I.rot, t('rotate'), !!p.rot) : '') + (size !== 'strip' ? pk('data-x="plines"', I.lines, t('lines'), linesOn()) : '') + '</div></div>';
   const hlBtn = hl ? '<button class="pk txt on hlp" data-x="hloff" aria-label="' + t('hlOff') + '">' + ui.esc(hl.label) + ' ×</button>' : '';
   const kb = (m) => kbHTML(m, nw, hl ? hl.pcs : null, hl ? hl.root : null, ctx.keyLabel);

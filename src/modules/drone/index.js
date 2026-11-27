@@ -133,19 +133,19 @@ function playRing(ring, i) {
 
 function view() {
   const { t, ui } = ctx, d = D(), on = DR().sounding, kv = keysView(), v = viewOf();
-  const stop = '<button class="dstop' + (on ? ' live' : '') + '" data-x="dstop" aria-label="' + t('stop') + '"' + (on ? '' : ' disabled') + '><span></span></button>';
+  const stop = '<button class="dstop' + (on ? ' live' : '') + '" data-x="dstop" data-cap="' + t('stop') + '" aria-label="' + t('stop') + '"' + (on ? '' : ' disabled') + '><span></span></button>';
   const layers = '<div class="layers" role="group" aria-label="' + t('layers') + '">' + LAYERS.map((o) => '<button class="lay' + (d.layers[o] ? ' on' : '') +
     '" data-x="dlayer" data-v="' + o + '" aria-pressed="' + !!d.layers[o] + '" aria-label="' + t('layer.' + o + '.full') + '">' + t('layer.' + o) + '</button>').join('') + '</div>';
-  const mode = ui.icb('data-x="dmode"', VIEW_ICON[NEXT_VIEW[v]], t('mode.' + NEXT_VIEW[v]), 'plain');
+  const mode = ui.icb('data-x="dmode"', VIEW_ICON[NEXT_VIEW[v]], t('mode.' + NEXT_VIEW[v]), 'plain', t('cap.mode'));
   const wv = FX().trem > 0;
-  const wave = '<button class="dwv' + (wv ? ' on' : '') + '" data-x="dwave" aria-pressed="' + wv + '" aria-label="' + t('wave') + '">' + WAVE_ICON + '</button>';
+  const wave = '<button class="dwv' + (wv ? ' on' : '') + '" data-x="dwave" data-cap="' + t('cap.wave') + '" aria-pressed="' + wv + '" aria-label="' + t('wave') + '">' + WAVE_ICON + '</button>';
   // арпеджиатор (вместо тампуры): касание — вкл/выкл, удержание — настройки
-  const ao = !!(d.arp && d.arp.on), arp = '<button class="darp' + (ao ? ' on' : '') + '" data-x="darp" aria-pressed="' + ao + '" aria-label="' + t('arp.title') + '" title="' + t('arp.title') + '">' + ARP_ICON + '</button>';
+  const ao = !!(d.arp && d.arp.on), arp = '<button class="darp' + (ao ? ' on' : '') + '" data-x="darp" data-cap="' + t('cap.arp') + '" aria-pressed="' + ao + '" aria-label="' + t('arp.title') + '" title="' + t('arp.title') + '">' + ARP_ICON + '</button>';
   const latch = kv ? '<button class="dlatch' + (d.latch ? ' on' : '') + '" data-x="dlatch" aria-pressed="' + !!d.latch + '">' + t(d.latch ? 'latch.on' : 'latch.off') + '</button>' : '';
   const surf = (g) => (kv ? keysHTML() : v === 'circle' && size !== 'strip' ? circleSVG() : gridHTML(g));
   if (size === 'quarter') return '<div class="dwrap">' + surf('g3') + '<div class="dbar q">' + stop + '</div></div>';
   if (size === 'strip') return '<div class="srow2 dstrip">' + surf('g6') + stop + '</div>';
-  return '<div class="dwrap' + (kv ? ' kv' : '') + (isHeld() ? ' held' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain') + layers + latch + arp + wave + stop + mode + '</div></div>';
+  return '<div class="dwrap' + (kv ? ' kv' : '') + (isHeld() ? ' held' : '') + '">' + surf(size === 'half' ? 'g4' : 'g3') + '<div class="dbar">' + ui.icb('data-x="dset"', ui.icons.gear, t('settings'), 'plain', t('cap.set')) + layers + latch + arp + wave + stop + mode + '</div></div>';
 }
 
 function render() {

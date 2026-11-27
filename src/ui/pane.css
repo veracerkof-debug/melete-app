@@ -12,7 +12,7 @@
 .pane.full .ic{width:clamp(44px,14cqmin,84px);height:clamp(44px,14cqmin,84px)}
 .pane .ic svg{width:46%;height:46%}
 .pane .ic.txt{width:auto;min-width:clamp(40px,11cqmin,64px);font-size:clamp(14px,4cqmin,22px)}
-.pane .ic.sm{width:36px;height:36px;min-width:36px}
+.pane .ic.sm{width:40px;height:40px;min-width:40px}
 .pane .ic.sm.txt{width:auto;font-size:14px}
 .pane .ic.sm svg{width:18px;height:18px}
 .pane .ic.corner{width:34px;height:34px;min-width:34px}
@@ -66,7 +66,7 @@
 .comp{flex:1;display:flex;flex-direction:column;min-height:0;gap:6px}
 .cbody{flex:1;display:flex;flex-direction:column;min-height:0}
 .csw{display:flex;gap:4px;justify-content:center;flex:none}
-.cswb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:600;color:var(--l2)}
+.cswb{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--l2)}
 .cswb svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .cswb.on{background:var(--fill);color:var(--ink)}
 .cswb.txt{font-size:12px}
@@ -74,7 +74,7 @@
 .comp.quarter .cswb,.comp.strip .cswb{height:24px;padding:0 6px}
 .comp.strip .csw{flex-direction:row}
 .tsw{display:flex;gap:2px;background:var(--fill);border-radius:10px;padding:2px;flex:none;overflow-x:auto;scrollbar-width:none}
-.tswb{flex:1;min-height:30px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2);white-space:nowrap;padding:0 8px}
+.tswb{flex:1;min-height:40px;border-radius:8px;font-size:13px;font-weight:600;color:var(--l2);white-space:nowrap;padding:0 8px}
 .tswb.on{background:var(--cell);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .pane.quarter .vq .ic.round{width:clamp(44px,30cqw,64px);height:clamp(44px,30cqw,64px)}
 .pane.quarter .vq .bigplay{width:clamp(56px,40cqw,88px);height:clamp(56px,40cqw,88px)}
@@ -121,12 +121,23 @@
   .pane.strip .bpmlbl, .pane.strip .beats.mini{display:none}
 }
 /* затухание у края прокручиваемого ряда (src/ui/edgefade.js) */
-.tsw.fr,.hscroll.fr{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
-.tsw.fl,.hscroll.fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
-.tsw.fl.fr,.hscroll.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}
+:is(.tsw,.hscroll,.vc-pre,.mpre,.tbar).fr{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+:is(.tsw,.hscroll,.vc-pre,.mpre,.tbar).fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
+:is(.tsw,.hscroll,.vc-pre,.mpre,.tbar).fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
 /* Название в строке с кнопками (табы, плеер, лупер…) не наезжает на кнопки: одна строка с многоточием, кнопки не сжимаются
    (слово автора 06.11.2026 — и в других местах) */
 .aname,.pane .ttl,.pane .stitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pane .ntools>.ic,.pane .ntools>button:not(.sgrow),.pane .srow2>.ic,.pane .shead2>.ic,.pane .vrow>.ic{flex:none}
 .tswrow{display:flex;align-items:center;gap:4px}.tswrow .tsw{flex:1;min-width:0}
 .tsets{flex:none;min-width:40px;min-height:40px;border-radius:10px;font-size:17px;font-weight:700;color:var(--l2)}
+
+/* цель касания не меньше 40 px (слово автора 27.11.2026); в окнах-четвертях и полосах — как было, там места мало */
+.pane.quarter .tswb,.pane.strip .tswb{min-height:32px}
+.pane.quarter .cswb,.pane.strip .cswb{height:32px}
+
+/* Подписи под значками (слово автора 27.11.2026): data-cap; размер кнопки не меняется, подпись лежит под ней; только в полном окне.
+   «Оформление → Подписи под значками» выключает (у «Профи» по умолчанию выключены) */
+.pane.full :is(.ic,.dwv,.darp,.dstop)[data-cap]{position:relative;margin-bottom:16px}
+.pane.full :is(.ic,.dwv,.darp,.dstop)[data-cap]::after{content:attr(data-cap);position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;font:600 10px/1 var(--font);color:var(--l2);white-space:nowrap;pointer-events:none}
+:root[data-caps="off"] .pane :is(.ic,.dwv,.darp,.dstop)[data-cap]{margin-bottom:0}
+:root[data-caps="off"] .pane :is(.ic,.dwv,.darp,.dstop)[data-cap]::after{display:none}

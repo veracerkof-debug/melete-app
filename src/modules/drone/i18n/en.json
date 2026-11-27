@@ -167,5 +167,9 @@
   "tab.glide": "Glider",
   "scope.label": "Signal: arpeggiator and glider notes",
   "scope.idle": "Touch a pad — the signal shows here",
-  "arp.glideFtr": "Level and echo change instantly; activity — higher means shorter, more frequent notes."
+  "arp.glideFtr": "Level and echo change instantly; activity — higher means shorter, more frequent notes.",
+  "cap.mode": "View",
+  "cap.wave": "Wave",
+  "cap.arp": "Arp",
+  "cap.set": "Sound"
 }

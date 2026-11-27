@@ -76,12 +76,12 @@ function view() {
     : '<div class="lphint l2">' + ui.esc(t(small ? 'hintShort' : s === 'idle' ? 'hint' : 'hintMore')) + '</div>';
   const slots = '<div class="lpslots" role="group" aria-label="' + ui.esc(t('loops')) + '">' + Array.from({ length: SLOTS }, (_, i) => '<button class="lpslot' + (i === S.slot ? ' on' : '') + (S.slots[i] ? ' has' : '') + '" data-x="slot" data-i="' + i + '" aria-pressed="' + (i === S.slot) + '" aria-label="' + ui.esc(t('loopN', { n: i + 1 })) + '">' + (i + 1) + '</button>').join('') + '</div>';
   const bar = '<div class="lpbar">' +
-    ui.icb('data-x="view"', reelsView() ? I.parts : partsView() ? I.ring : I.reels, t(reelsView() ? 'viewParts' : partsView() ? 'viewRing' : 'viewReels')) +
-    ui.icb('data-x="metro"', I.metro, t('metro'), ''+ (withMetro() ? ' on' : '')) +
-    ui.icb('data-x="mon"', I.ear, t('mon'), ''+ (S.mon ? ' on' : '')) +
-    ui.icb('data-x="undo"', I.undo, t('undo')) +
-    ui.icb('data-x="stop"', I.stop, t('stop')) +
-    ui.icb('data-x="save"', I.save, t('save')) + '</div>';
+    ui.icb('data-x="view"', reelsView() ? I.parts : partsView() ? I.ring : I.reels, t(reelsView() ? 'viewParts' : partsView() ? 'viewRing' : 'viewReels'), '', t('cap.view')) +
+    ui.icb('data-x="metro"', I.metro, t('metro'), ''+ (withMetro() ? ' on' : ''), t('cap.metro')) +
+    ui.icb('data-x="mon"', I.ear, t('mon'), ''+ (S.mon ? ' on' : ''), t('cap.mon')) +
+    ui.icb('data-x="undo"', I.undo, t('undo'), '', t('cap.undo')) +
+    ui.icb('data-x="stop"', I.stop, t('stop'), '', t('cap.stop')) +
+    ui.icb('data-x="save"', I.save, t('save'), '', t('cap.save')) + '</div>';
   // точная донастройка: ‹ ±1 мс › с автоповтором при удержании; число — сдвиг, касание — в ноль
   const nudge = (L, i, cls = '') => '<span class="lpnudge' + cls + '">' + ui.icb('data-nd="-' + NUDGE + '" data-i="' + i + '"', I.left, t('earlier1'), 'sm plain') +
     '<button class="lpshv num" data-nd="0" data-i="' + i + '" aria-label="' + ui.esc(t('shiftReset')) + '">' + (L.shift > 0 ? '+' : '') + L.shift + '</button>' + ui.icb('data-nd="' + NUDGE + '" data-i="' + i + '"', I.right, t('later1'), 'sm plain') + '</span>';

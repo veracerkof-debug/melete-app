@@ -106,5 +106,12 @@
   "perf.full": "Studio",
   "perf.eco": "Lite",
   "perf.hint": "Studio (default): all voices, pad unison, four reverb spaces. Lite is for weak devices: fewer voices, simpler pads, one reverb, always a large buffer.",
-  "lines": "Voice lines"
+  "lines": "Voice lines",
+  "pedal.bt0": "Hold",
+  "pedal.bt1": "Sus",
+  "pedal.bt2": "Hold",
+  "cap.sound": "Sound",
+  "cap.dual": "Rows",
+  "cap.rot": "Rotate",
+  "cap.lines": "Lines"
 }

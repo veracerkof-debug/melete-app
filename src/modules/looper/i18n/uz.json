@@ -122,9 +122,14 @@
   "play.hint": "Halqa chalmoqda. «Doirani yozish» — keyingi doira boshidan asbob ovozi qatlam boʻlib, notalar — yonida partiya boʻlib (oʻchiq) yoziladi.",
   "cap.go": "Doirani yozish",
   "cap.wait": "Doirani kutmoqda…",
-  "cap.stop": "Yozmoqda — toʻxtatish",
+  "cap.stop": "To‘xtat",
   "capLayer": "{tool}",
   "capNotes": "Notalar: {tool}",
   "capBoth": "Qatlam va notalar: {n} ta nota",
-  "capTool": "Asbob"
+  "capTool": "Asbob",
+  "cap.view": "Ko‘rinish",
+  "cap.metro": "Metronom",
+  "cap.mon": "Eshitish",
+  "cap.undo": "Bekor",
+  "cap.save": "Saqlash"
 }

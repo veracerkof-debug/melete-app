@@ -1,6 +1,6 @@
 // Затухание у края прокручиваемых рядов (вкладки разделов, ряды пресетов): видно, что дальше есть ещё —
 // только когда ряд не помещается. Класс fr — есть что справа, fl — слева; рисует CSS (ui.css: .fr/.fl).
-const SEL = '.tsw, .hscroll';
+const SEL = '.tsw, .hscroll, .vc-pre, .mpre, .tbar'; // ряды, что листаются вбок (слово автора 27.11.2026: видно, что дальше есть ещё)
 const seen = new WeakSet();
 const mark = (el) => {
   const over = el.scrollWidth - el.clientWidth > 2;

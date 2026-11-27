@@ -25,7 +25,7 @@ import { songImportMenu } from './songimport.js';
 import { shareSheet, shareMenu } from './share.js';
 import { createPanel, legalSheet, unverifiedSheet } from './panel.js';
 import { calendarHTML, bindCalendar, calAct } from './calendar.js';
-import { onboarding, langGate, askName } from './onboard.js';
+import { onboarding, langGate } from './onboard.js';
 import { logoHTML } from '../../ui/logo.js';
 import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
@@ -385,7 +385,7 @@ export function createShell(app, root) {
   enter(); // первый экран тоже появляется плавно
   // перезапуск из настроек (язык, вид) — обратно на ту же страницу настроек
   const reopened = panel.reopen();
-  // соглашение — только в настройках («О Melete»); имя — если его ещё не спрашивали
-  if (!reopened) setTimeout(() => askName(app), 600);
+  // соглашение — только в настройках («О Melete»); имя спрашивает session.js после первого занятия
+  void reopened;
   return { render, go, panel };
 }

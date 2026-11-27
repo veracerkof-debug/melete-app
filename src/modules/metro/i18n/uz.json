@@ -144,5 +144,11 @@
   "tour.play": "Boshlash va toʻxtatish. Teginish — metronom yuradi, yana teginish — jimlik.",
   "tour.bpm": "Temp. Teginish — raqam kiritish; barmoqni yuqoriga-pastga surish — tezroq yoki sekinroq.",
   "tour.tap": "Tempni barmoq bilan urib bering — metronom ilib oladi.",
-  "tour.sl": "Set-list: konsert qoʻshiqlari — qoʻshiqqa teginish uning tempi va oʻlchovini qoʻyadi."
+  "tour.sl": "Set-list: konsert qoʻshiqlari — qoʻshiqqa teginish uning tempi va oʻlchovini qoʻyadi.",
+  "cap.meter": "O‘lchov",
+  "cap.sl": "Ro‘yxat",
+  "cap.tap": "Tap",
+  "cap.sub": "Bo‘linma",
+  "cap.more": "Yana",
+  "wheelHint": "Halqani buring yoki ± bosing"
 }

@@ -26,7 +26,7 @@ button.cell:active{background:var(--fill)}
 .round svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
 .seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px;width:100%}
 .cell>.seg{width:auto;flex:1 1 55%;min-width:0} /* рядом с подписью — делит строку, не ложится поверх */
-.seg button{flex:1;min-width:0;min-height:32px;border-radius:7px;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* min-width:0 — длинная подпись не раздвигает ряд шире экрана */
+.seg button{flex:1;min-width:0;min-height:40px;border-radius:7px;font-size:14px;font-weight:500;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* min-width:0 — длинная подпись не раздвигает ряд шире экрана */
 .seg button[aria-pressed="true"]{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .sw{position:relative;width:51px;height:31px;flex:none}
 .sw input{position:absolute;inset:-8px -6px;opacity:0;margin:0;cursor:pointer;z-index:1}
@@ -82,7 +82,7 @@ button.cell:active{background:var(--fill)}
 .ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .ic svg.f{fill:currentColor;stroke:none}
 .ic.txt{width:auto;min-width:44px;padding:0 12px;border-radius:999px}
-.ic.sm{height:36px;min-width:36px;width:36px;font-size:14px}
+.ic.sm{height:40px;min-width:40px;width:40px;font-size:14px}
 .ic.sm.txt{width:auto;padding:0 12px}
 .ic.sm svg{width:18px;height:18px}
 .ic.act{background:var(--tint);color:var(--on-tint)}
@@ -169,5 +169,5 @@ button.cell:active{background:var(--fill)}
 .ftr[hidden],.segcap[hidden],.bksub[hidden]{display:none!important}
 .lphint[hidden],.hintx[hidden]{display:none!important}
 .hqt{cursor:pointer;-webkit-tap-highlight-color:transparent} /* вид названия не меняется — оно просто кликабельное (слово автора 22.11.2026) */
-.hqline{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hqline{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent} /* две строки вместо одной (слово автора 27.11.2026): подсказка читается, длинная — по касанию целиком */
 .hintpop{position:fixed;z-index:300;background:var(--cell);color:var(--ink);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.22),0 0 0 .5px var(--sep);animation:m-pop var(--t-mid) var(--e-out)}

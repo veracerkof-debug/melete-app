@@ -184,3 +184,7 @@
 .stycard .sprev.wave i{display:block;width:5px;border-radius:3px;background:var(--tint)}
 .stycard .sprev.wave i:nth-child(1){height:14px}.stycard .sprev.wave i:nth-child(2){height:32px}.stycard .sprev.wave i:nth-child(3){height:22px}.stycard .sprev.wave i:nth-child(4){height:38px}
 .stycard .sprev.vinyl i{display:none}
+/* цель касания не меньше 40 px (слово автора 27.11.2026) */
+.chip.mlcat,.mlcats .chip{min-height:40px;align-items:center}
+.mlback{min-height:40px}
+.mlwrap .chip:not(.mlcat){min-width:40px;justify-content:center}

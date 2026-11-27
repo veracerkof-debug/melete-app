@@ -147,5 +147,11 @@
   "tour.play": "Start and stop. Tap — the metronome runs, tap again — silence.",
   "tour.bpm": "Tempo. Tap to type a number; drag up or down — faster or slower.",
   "tour.tap": "Tap the tempo with a finger — the metronome follows.",
-  "tour.sl": "Set list: the concert's songs — tapping a song sets its tempo and meter."
+  "tour.sl": "Set list: the concert's songs — tapping a song sets its tempo and meter.",
+  "cap.meter": "Meter",
+  "cap.sl": "Setlist",
+  "cap.tap": "Tap",
+  "cap.sub": "Subdiv.",
+  "cap.more": "More",
+  "wheelHint": "Turn the ring or tap ±"
 }

@@ -29,7 +29,7 @@
 .glov .ic{background:transparent!important}
 .glrange{display:flex;align-items:center;font-size:13px;font-weight:600}
 .glrange span{min-width:4.4em;text-align:center}
-.glsnap{min-height:36px;padding:0 10px;border-radius:999px;color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap;border:1px solid var(--line,var(--sep))}
+.glsnap{min-height:40px;padding:0 10px;border-radius:999px;color:var(--ink);font-size:13px;font-weight:600;white-space:nowrap;border:1px solid var(--line,var(--sep))}
 /* нота — крупно, прозрачно, по центру сверху; пока играют — ярче */
 .glnote{position:absolute;z-index:1;left:0;right:0;top:18%;display:flex;align-items:baseline;justify-content:center;gap:8px;pointer-events:none;opacity:.16;transition:opacity .3s;container-type:normal}
 .glnote.on{opacity:.5}
@@ -49,7 +49,7 @@
 /* настройки */
 .glchips,.glroots,.glpre{display:flex;flex-wrap:wrap;gap:6px}
 .glpre{margin:0 0 12px}
-.glck{min-height:36px!important;padding:0 12px!important;font-size:14px!important}
+.glck{min-height:40px!important;padding:0 12px!important;font-size:14px!important}
 .glroots .glck{min-width:44px;justify-content:center}
 .glsel{width:100%;min-height:40px;font-size:16px}
 .glv{min-width:3em;text-align:center}

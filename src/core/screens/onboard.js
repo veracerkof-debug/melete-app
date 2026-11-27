@@ -63,8 +63,7 @@ export function onboarding(app, done = () => {}) {
     app.saveDevice();
     layer.remove();
     // демо-набор сам не добавляется (решение автора 27.10.2026): включить — «Данные и копии» или кнопка в пустых песнях
-    done();
-    setTimeout(() => askName(app), 700);
+    done(); // имя спросим после первого занятия (session.js), а не поверх подсказок главной
   };
 
   layer.addEventListener('click', (e) => {

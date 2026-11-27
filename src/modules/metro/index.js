@@ -114,10 +114,10 @@ function wheelHTML() {
 
 function view() {
   const c = cfg(), { t, ui } = ctx, meterTxt = c.num + '/' + c.den;
-  const tile = (attrs, inner, lab) => '<button class="mtile" ' + attrs + ' aria-label="' + ui.esc(lab) + '" title="' + ui.esc(lab) + '">' + inner + '</button>';
+  const tile = (attrs, inner, lab, cap) => '<button class="mtile" ' + attrs + ' aria-label="' + ui.esc(lab) + '" title="' + ui.esc(lab) + '">' + inner + (cap && size === 'full' ? '<span class="mcap">' + ui.esc(t(cap)) + '</span>' : '') + '</button>'; // подпись — только в полном окне (слово автора 27.11.2026)
   const gl = groupsLabel(c.accents); // 7/8 · 3+2+2
-  const meter = tile('data-s="meter"', '<b class="num">' + meterTxt + (gl ? '<small class="mgrp"> ' + gl + '</small>' : '') + '</b>', t('meterBtn', { meter: meterTxt + (gl ? ' ' + gl : '') }));
-  const sub = tile('data-x="msub"', SUBICON[c.sub], t('subBtn', { sub: t('sub.' + c.sub) }));
+  const meter = tile('data-s="meter"', '<b class="num">' + meterTxt + (gl ? '<small class="mgrp"> ' + gl + '</small>' : '') + '</b>', t('meterBtn', { meter: meterTxt + (gl ? ' ' + gl : '') }), 'cap.meter');
+  const sub = tile('data-x="msub"', SUBICON[c.sub], t('subBtn', { sub: t('sub.' + c.sub) }), 'cap.sub');
   if (size === 'strip') {
     return '<div class="vs"><div class="beats mini" id="beats"></div>' + sigHTML() + '<div class="srow2">' + meter + ui.icb('data-hold="-1"', ui.icons.left, t('slower'), 'round') +
       '<div class="bpmbox">' + bpmButton(c) + '<div class="bpmlbl" id="tname">' + tempoName(c.bpm) + '</div></div>' +
@@ -126,10 +126,11 @@ function view() {
   const tags = [c.sub === 2 && c.swing ? t('tag.swing') : '', c.trainer.on ? t('tag.trainer', { step: c.trainer.step, every: c.trainer.every }) : '',
     c.gap.on ? t('tag.gap', { play: c.gap.play, mute: c.gap.mute }) : ''].filter(Boolean);
   const ctl = size === 'quarter' ? [meter, sub]
-    : [meter, tile('data-s="sl" aria-pressed="' + !!(SL && SL.open) + '"', SL_ICON, t('sl.title')), tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap')), sub, tile('data-s="more"', ui.icons.gear, t('settings'))];
+    : [meter, tile('data-s="sl" aria-pressed="' + !!(SL && SL.open) + '"', SL_ICON, t('sl.title'), 'cap.sl'), tile('data-s="tap"', '<i class="bareic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" style="fill:currentColor"/><circle cx="12" cy="12" r="7.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/></svg></i><b class="tapt bt">TAP</b>', t('tap'), 'cap.tap'), sub, tile('data-s="more"', ui.icons.gear, t('settings'), 'cap.more')];
   // полное окно: ряд точной подстройки −5 −1 +1 +5 у большого пальца (колесо — жестом, кнопки — для точности; слово автора 22.11.2026)
   const steps = size === 'full' ? '<div class="mstep" role="group" aria-label="' + ui.esc(t('tempo')) + '">' + [-5, -1, 1, 5].map((d) => '<button class="mstb" data-hold="' + d + '" aria-label="' + ui.esc(t(d < 0 ? 'slower' : 'faster') + ' ' + (d > 0 ? '+' : '−') + Math.abs(d)) + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + '</button>').join('') + '</div>' : '';
-  const mv = '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside">' + steps + '<div class="mctl n' + ctl.length + '">' + ctl.join('') +
+  const pre = size === 'full' ? '<div class="mpre" role="group" aria-label="' + ui.esc(t('tempo')) + '">' + PRESETS.map(([n, b]) => '<button class="mpb' + (tempoName(c.bpm) === n ? ' on' : '') + '" data-bpmpre="' + b + '" data-nm="' + n + '">' + n + ' <small class="num">' + b + '</small></button>').join('') + '</div>' + (hintN() <= 3 ? '<div class="mhint">' + ui.esc(t('wheelHint')) + '</div>' : '') : '';
+  const mv = '<div class="mv ' + size + '">' + wheelHTML() + '<div class="mside">' + pre + steps + '<div class="mctl n' + ctl.length + '">' + ctl.join('') +
     '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
   const bar = size !== 'quarter' && SL ? SL.html() : '';
   return bar ? '<div class="mwrap sl">' + mv + bar + '</div>' : mv;
@@ -176,8 +177,12 @@ function render() {
 }
 
 // Обновить только число темпа (без перерисовки — не сбивать жест)
+const PRESETS = [['Largo', 50], ['Adagio', 70], ['Andante', 92], ['Moderato', 112], ['Allegro', 140], ['Presto', 184]];
+let shown = 0;
+const hintN = () => shown; // подсказка «крутите кольцо» — первые три открытия метронома
 function updBpm() {
   const c = cfg(), q = (s) => host && host.querySelector(s);
+  host && host.querySelectorAll('[data-bpmpre]').forEach((b) => b.classList.toggle('on', b.dataset.nm === tempoName(c.bpm)));
   const e = q('#bpm');
   if (e) { e.textContent = c.bpm; e.setAttribute('aria-label', ctx.t('tempoBtn', { bpm: c.bpm })); }
   const tn = q('#tname');
@@ -414,6 +419,8 @@ function bind() {
       if (x.dataset.x === 'msub') { const c = cfg(); c.sub = (c.sub % 4) + 1; M().restartBeat(); M().save(); render(); }
       return;
     }
+    const pb = e.target.closest('[data-bpmpre]');
+    if (pb) { setBpm(+pb.dataset.bpmpre); M().save(); return; }
     const s = e.target.closest('[data-s]');
     if (!s) return;
     const a = s.dataset.s;
@@ -481,6 +488,7 @@ export default {
   status: (c) => c.t('status', { bpm: c.audio.metro.cfg.bpm, meter: c.audio.metro.cfg.num + '/' + c.audio.metro.cfg.den }) + (c.audio.metro.cfg.poly >= 2 ? ' · ' + c.audio.metro.cfg.poly + ':' + c.audio.metro.cfg.num : ''),
   mount(el, c, sz = 'full') {
     host = el; ctx = c; size = sz;
+    { const n = (ctx.store.get('hintN', 0) || 0) + 1; shown = n; if (n <= 99) ctx.store.set('hintN', n); }
     SL = createSetlistBar(c, { M, cfg, apply: applySong, rerender: () => render() });
     // пульт и часы: «вперёд/назад» — соседняя песня сет-листа (если полоса открыта), название — песня
     if (c.remote) c.remote({ title: () => (SL && SL.open ? SL.now() : ''), next: () => SL && SL.open && SL.step(1), prev: () => SL && SL.open && SL.step(-1) });

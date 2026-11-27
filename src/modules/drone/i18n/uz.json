@@ -167,5 +167,9 @@
   "tab.glide": "Glayder",
   "scope.label": "Signal: arpedjiator va glayder notalari",
   "scope.idle": "Padga tegining — signal shu yerda ko‘rinadi",
-  "arp.glideFtr": "Balandlik va aks-sado darhol eshitiladi; harakatchanlik qancha yuqori bo‘lsa, notalar shuncha qisqa va tez."
+  "arp.glideFtr": "Balandlik va aks-sado darhol eshitiladi; harakatchanlik qancha yuqori bo‘lsa, notalar shuncha qisqa va tez.",
+  "cap.mode": "Ko‘rinish",
+  "cap.wave": "To‘lqin",
+  "cap.arp": "Arpedjio",
+  "cap.set": "Tovush"
 }
