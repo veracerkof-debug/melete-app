@@ -3113,5 +3113,21 @@
   "ai.studio.pastedWho": "Neyrotarmoq javobi",
   "home.goalSug": "Bugungi maqsad: «{title}»?",
   "home.goalTake": "Olish",
-  "home.goalCap": "haftalik maqsad"
+  "home.goalCap": "haftalik maqsad",
+  "panel.search": "Sozlamalardan qidirish",
+  "caps.title": "Belgilar ostidagi yozuvlar",
+  "caps.hint": "Metronom, looper va dronda belgi ostida qisqa so‘z. Professionallar uchun odatda o‘chiq.",
+  "hb.first": "Birinchi mashg‘ulot",
+  "first.eyebrow": "Birinchi mashg‘ulot",
+  "first.title": "Nimadan boshlaymiz?",
+  "first.text": "Tanlang: kerakli asbob ochiladi. Qolganlari keyin, «Asboblar» bo‘limida.",
+  "first.tuner": "Asbobni sozlash",
+  "first.tunerSub": "Tyuner",
+  "first.metro": "Metronom bilan chalish",
+  "first.metroSub": "Metronom",
+  "first.song": "Qo‘shiq o‘rganish",
+  "first.songSub": "Qo‘shiq qo‘shish",
+  "first.ear": "Eshitishni mashq qilish",
+  "first.earSub": "Eshitish va ritm",
+  "first.hide": "Yashirish"
 }

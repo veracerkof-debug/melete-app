@@ -210,6 +210,7 @@ export function createShell(app, root) {
     else if (d.act === 'compare') import('./compare.js').then((m) => m.compareSheet(app, d.sid));
     else if (d.act === 'quickedit') quickEdit(app, render);
     else if (d.act === 'goal') goalSheet(app, render);
+    else if (d.act === 'firsthide') { app.store.state.settings.firstHide = true; app.store.settingsChanged(); render(); }
     else if (d.act === 'goalsug') { setGoal(app.store.state.settings, d.song); app.store.settingsChanged(); render(); }
     // чтение дня: Библия — на нужной главе
     else if (d.act === 'bible') {

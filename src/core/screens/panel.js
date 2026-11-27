@@ -22,7 +22,7 @@ import { dayKey, weekday, weekStart } from '../time.js';
 import {
   weekData, weekPlan, streakInfo, heatmap, weeklyTotals, monthSplit, totalTime, byTool, bySong, bySongField, byFreeTag, strictTime,
 } from '../stats.js';
-import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, ACCENTS, accentColor, applyTheme, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX, FIXED_TABS } from '../settings.js';
+import { CORE_FEATURES, CHURCH_MODULES, isOn, setFeature, ACCENTS, accentColor, applyTheme, capsOn, applyScale, uiScale, autoScale, screenShort, layoutWidth, SCALE_MIN, SCALE_MAX, SCALE_STEP, visibleTabs, hiddenTabs, editTabs, orderTabs, makeTab, unmakeTab, TABS_MAX, FIXED_TABS } from '../settings.js';
 import { scaleOf } from '../library.js';
 import { demoLeft, addDemo, removeDemo } from '../demo.js';
 import { isBackup } from '../store.js';
@@ -396,6 +396,7 @@ function lookHTML(app) {
     '<div class="hdr">' + t('look.lang') + '</div><div class="group"><div class="cellcol"><div class="seg uc" role="group" aria-label="' + t('look.lang') + '">' +
     LANGS.map((k) => '<button data-lang="' + k + '" lang="' + k + '" aria-pressed="' + (getLang() === k) + '">' + LANG_NAMES[k] + '</button>').join('') + '</div></div></div>') +
     sizeHTML(app) +
+    '<div class="group"><div class="cell"><span class="grow">' + t('caps.title') + '</span>' + psw('iconCaps', capsOn(st), t('caps.title')) + '</div></div><p class="ftr">' + t('caps.hint') + '</p>' +
     themeCards(st) +
         ('<div class="hdr">' + t('mono.title') + '</div><div class="group"><div class="cellcol">' + seg('uistyle', [['default', t('mono.default')], ['mono', t('mono.name')]], st.uiStyle === 'mono' ? 'mono' : 'default', t('mono.title')) +
     '<div class="segcap">' + t('mono.hint') + '</div></div></div>') +
@@ -743,6 +744,7 @@ function rootHTML(app) {
     // всего — только практика в приложении: часы «до приложения» воображаемые и в итоги не идут
     (plain ? '' : '<div class="tiles num"><div class="tile"><b>' + fmtDur(gemSec(all)) + '</b><span>' + t('panel.total') + '</span></div><div class="tile"><b>' + n + '</b><span>' + tn('panel.songsWord', n) + '</span></div>' +
     '<button class="tile stile" data-act="streak"><b>' + FLAME + weeks + '</b><span>' + esc(t('streak.inRowShort', { w: tn('streak.weeksWord', weeks) })) + '</span></button></div>') +
+    (plain ? '' : '<div class="psearchw"><input class="inp psearch" type="search" enterkeyhint="search" placeholder="' + esc(t('panel.search')) + '" aria-label="' + esc(t('panel.search')) + '"></div>') +
     // демонстрация: быстрый переход между сценариями (профессионал, ученик, учитель) — у каждого свои данные (слово автора 25.11.2026)
     (SHOWCASE && globalThis.__SCEN__ ? '<div class="hdr">' + t('show.scen') + '</div><div class="group"><div class="cell"><div class="seg" role="group" aria-label="' + t('show.scen') + '">' + globalThis.__SCEN__.list.map((k) => '<button data-act="scen" data-v="' + k + '" aria-pressed="' + (k === globalThis.__SCEN__.cur) + '">' + t('show.scen.' + k) + '</button>').join('') + '</div></div></div>' : '') +
     PAGE_GROUPS.map(([g, ks]) => {
@@ -835,6 +837,18 @@ export function createPanel(app, onChange) {
     // свои цвета: при выборе — сразу на экране, сохраняется по закрытию палитры (change)
     const ownSet = (el) => { const st = app.store.state.settings, v = el.value.toUpperCase(); if (el.dataset.owncolor === 'main') { st.ownMain = v; st.palette = 'own'; } else st.ownBg = v; applyTheme(st); };
     layer.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.owncolor) ownSet(e.target); });
+    // поиск по настройкам (разбор 27.11.2026): прячет строки, где нет запроса, и заголовки групп без строк; ничего не перерисовывает
+    layer.addEventListener('input', (e) => {
+      if (!e.target.matches || !e.target.matches('.psearch')) return;
+      const q = e.target.value.trim().toLowerCase();
+      layer.querySelectorAll('.group').forEach((g) => {
+        if (g.closest('.psearchw')) return;
+        let any = false;
+        g.querySelectorAll(':scope > .cell').forEach((c) => { const hit = !q || c.textContent.toLowerCase().includes(q); c.hidden = !hit; if (hit) any = true; });
+        g.hidden = !any;
+        const h = g.previousElementSibling; if (h && h.classList.contains('hdr')) h.hidden = !any;
+      });
+    });
     layer.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.owncolor) { ownSet(e.target); changed(); } });
     // «Вкладки»: удержать вкладку и вести вверх-вниз — новый порядок
     sortable(layer, '[data-tab-row]', 'data-tab-row', (ids) => { if (orderTabs(app.store, tabIds(app.store.state.settings), ids)) { render(); onChange(); } });
@@ -1084,7 +1098,7 @@ export function createPanel(app, onChange) {
       if (d.psw === 'helpOn') { app.store.state.settings.helpOff = !e.target.checked; app.store.settingsChanged(); return; }
       if (d.psw === 'meshOn') { (e.target.checked ? app.mesh.start() : app.mesh.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
       if (d.psw === 'syncSrv') { (e.target.checked ? app.syncSrv.start() : app.syncSrv.stop()).then(() => render()).catch((er) => { logErr('sync', er); toast(t('sy.err.port')); render(); }); return; }
-      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
+      if (d.psw) { app.store.state.settings[d.psw] = e.target.checked; app.store.settingsChanged(); if ((d.psw === 'autoAna' || d.psw === 'autoHq' || d.psw === 'autoLyr' || d.psw === 'pcWork') && app.auto) app.auto.kick(); if (d.psw === 'toolsOnly' || d.psw === 'church') { render(); onChange(); } if (d.psw === 'monoLang') relang(); if (d.psw === 'iconCaps') applyTheme(app.store.state.settings); if (d.psw === 'monoBare') { applyTheme(app.store.state.settings); relang(); } }
       if (d.me) {
         const r = saveProfile(app.store, { ...newProfile(), ...(app.store.state.settings.profile || {}), [d.me]: e.target.value });
         onChange();

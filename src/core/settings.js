@@ -120,6 +120,8 @@ export function applyScale(settings) {
 }
 
 const BG_KEYS = ['--bg', '--cell', '--ink', '--l2', '--l3', '--sep', '--fill', '--fill2', '--bar'];
+// Подписи под значками (разбор 27.11.2026): по умолчанию есть, а у «Профи» выключены; свой выбор сильнее
+export const capsOn = (settings) => (settings.iconCaps == null ? !(settings.profile && settings.profile.level === 'pro') : !!settings.iconCaps);
 export function applyTheme(settings, de = document.documentElement) {
   applyTheme.last = [settings, de];
   if (!applyTheme.bound && typeof matchMedia === 'function') { applyTheme.bound = true; try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(...applyTheme.last)); } catch { /* старый WebView */ } }
@@ -128,6 +130,7 @@ export function applyTheme(settings, de = document.documentElement) {
   else de.setAttribute('data-theme', t);
   if (isMono(settings)) de.setAttribute('data-style', 'mono');
   else de.removeAttribute('data-style');
+  if (capsOn(settings)) de.removeAttribute('data-caps'); else de.setAttribute('data-caps', 'off');
   // Маскот: Мелета или Мелетий — строки (i18n) и лицо (ui/mascot.js)
   setMascotGender(mascotOf(settings)); setMascotLook(mascotOf(settings));
   // «Минимал» без текста: значки, графика и цифры (i18n: setBare)

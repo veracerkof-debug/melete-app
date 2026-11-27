@@ -984,3 +984,19 @@ html.desk .hstart .hfree{min-height:64px}
 @media (max-height:520px){.aichat .aihint{display:none}.aichips2{padding-bottom:4px}.aichat .aiin .aitools{gap:4px}}
 /* альбомная ориентация: кнопки копирования, вставки и вложения — в одну строку с полем ввода (ширины хватает, высота дорога) */
 @media (orientation:landscape) and (max-height:520px){.aichat.studio .aiin{flex-wrap:nowrap}.aichat.studio .aiin .aitools{flex:none;order:0;flex-direction:row}}
+
+/* поиск по настройкам профиля */
+.psearchw{margin:4px 0 8px}
+.psearch{width:100%;min-height:44px}
+.panel .cell[hidden],.panel .group[hidden],.panel .hdr[hidden]{display:none!important}
+
+/* «Первое занятие за минуту» на главной (разбор 27.11.2026) */
+.hfirst{background:var(--cell);border:1px solid var(--sep);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.hfey{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--l2);font-weight:600}
+.hfh{margin:0;font-size:22px;letter-spacing:-.01em}
+.hfp{margin:0;font-size:14px;color:var(--l2)}
+.hfgo{display:grid;gap:8px;margin-top:4px}
+.hfb{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;min-height:56px;padding:10px 14px;border-radius:14px;background:var(--fill);color:var(--ink)}
+.hfb b{font-size:15px}.hfb small{font-size:12px;color:var(--l2)}
+.hfb.main{background:var(--tint);color:var(--on-tint)}.hfb.main small{color:inherit;opacity:.85}
+.hfskip{align-self:center;min-height:40px}

@@ -96,7 +96,7 @@ export function streakPill(app, extra = '') {
 
 /* ---------- блоки главной: порядок, размер, что показывать (settings.home) ---------- */
 // Долгое нажатие на блок — меню у блока (меньше, больше, выше, ниже, убрать); всё вместе — «Профиль → Главный экран»
-export const HOME_BLOCKS = ['voice', 'week', 'study', 'start', 'quick', 'league', 'reading', 'review', 'events', 'songs'];
+export const HOME_BLOCKS = ['first', 'voice', 'week', 'study', 'start', 'quick', 'league', 'reading', 'review', 'events', 'songs'];
 export const HOME_SIZES = ['s', 'm', 'l']; // прежние три ступени читаются как масштаб; ручка в правке пишет число
 const ZMIN = 0.7, ZMAX = 1.4, ZSTEP = { s: 0.86, m: 1, l: 1.16 };
 export const clampZoom = (v) => Math.min(ZMAX, Math.max(ZMIN, Math.round(v * 100) / 100));
@@ -273,6 +273,12 @@ function shortDur(sec) {
   return h && r ? h + ':' + String(r).padStart(2, '0') : h ? t('time.h', { n: h }) : t('time.m', { n: r });
 }
 
+function firstHTML() {
+  const go = (open, name, sub, cls = '') => '<button class="hfb' + cls + '" ' + open + '><b>' + esc(t(name)) + '</b><small>' + esc(t(sub)) + '</small></button>';
+  return '<div class="hfirst"><div class="hfey">' + esc(t('first.eyebrow')) + '</div><h2 class="hfh">' + esc(t('first.title')) + '</h2><p class="hfp">' + esc(t('first.text')) + '</p>' +
+    '<div class="hfgo">' + go('data-open-tool="tuner"', 'first.tuner', 'first.tunerSub', ' main') + go('data-open-tool="metro"', 'first.metro', 'first.metroSub') + go('data-act="addSong"', 'first.song', 'first.songSub') + go('data-open-tool="ear"', 'first.ear', 'first.earSub') + '</div>' +
+    '<button class="link hfskip" data-act="firsthide">' + esc(t('first.hide')) + '</button></div>';
+}
 export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), wp = weekPlan(st), goal = wp.goal, p = w.total / Math.max(1, goal);
@@ -327,6 +333,9 @@ export function homeHTML(app) {
       return '<div class="hsr"><button class="hsrp" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + PLAY + '</button><button class="hsrb" data-song="' + s.id + '"><span class="g"><b>' + esc(s.title) +
         '</b><small>' + esc(sub) + '</small></span>' + (meta ? '<span class="m num">' + esc(meta) + '</span>' : '') + '</button></div>';
     }).join('') + '</div>');
+  // «Первое занятие за минуту» (разбор 27.11.2026): пока занятий не было — один вопрос о цели вместо россыпи кнопок;
+  // выбор открывает нужный инструмент. После первого занятия и по «Скрыть» блока нет
+  P.first = !plain && !st.firstHide && !app.store.sessions().length ? firstHTML() : '';
   return topbar(logoHTML() + headRight(app), '') + '<div class="hlist">' + updSlot(app) + levelUpHTML(app) + blocks(st, P) + '</div>';
 }
 

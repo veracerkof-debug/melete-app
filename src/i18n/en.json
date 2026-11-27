@@ -3152,5 +3152,21 @@
   "ai.studio.pastedWho": "AI answer",
   "home.goalSug": "Goal for today: “{title}”?",
   "home.goalTake": "Take it",
-  "home.goalCap": "weekly goal"
+  "home.goalCap": "weekly goal",
+  "panel.search": "Search settings",
+  "caps.title": "Labels under icons",
+  "caps.hint": "A short word under each icon in the metronome, looper and drone. Off by default for pros.",
+  "hb.first": "First session",
+  "first.eyebrow": "First session",
+  "first.title": "Where shall we start?",
+  "first.text": "Pick one and the right tool opens. The rest is later, in the Tools tab.",
+  "first.tuner": "Tune my instrument",
+  "first.tunerSub": "Tuner",
+  "first.metro": "Play with a metronome",
+  "first.metroSub": "Metronome",
+  "first.song": "Learn a song",
+  "first.songSub": "Add a song",
+  "first.ear": "Train my ear",
+  "first.earSub": "Ear and rhythm",
+  "first.hide": "Hide"
 }
