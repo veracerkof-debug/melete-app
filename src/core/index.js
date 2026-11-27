@@ -403,6 +403,8 @@ export function boot(root) {
   app.folder = initFolder(app);
   // компьютер (Tauri): файлы, открытые двойным щелчком, F11
   initDesktop(app);
+  // Компьютер: поиск Ctrl K и клавиши (screens/palette.js)
+  import('./screens/palette.js').then((m) => m.initPalette(app)).catch(() => {});
   // Клавиатура: элемент-«кнопка» (role="button" с tabindex) нажимается Enter и пробелом, как настоящая кнопка
   document.addEventListener('keydown', (e) => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.repeat || e.defaultPrevented) return;

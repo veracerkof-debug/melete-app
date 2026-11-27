@@ -3235,5 +3235,15 @@
   "ai.chat.untitled": "New chat",
   "ai.chat.del": "Delete chat",
   "ai.chat.delAsk": "This chat’s history will be erased.",
-  "ai.chat.delYes": "Delete"
+  "ai.chat.delYes": "Delete",
+  "palette.ph": "Song, tool, section",
+  "palette.find": "Search…",
+  "palette.none": "Nothing found",
+  "palette.act": "Actions",
+  "palette.go": "Sections",
+  "palette.tools": "Tools",
+  "palette.songs": "Songs",
+  "palette.free": "Free practice",
+  "palette.space": "Space",
+  "palette.settings": "Settings"
 }

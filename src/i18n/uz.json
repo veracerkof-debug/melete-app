@@ -3196,5 +3196,15 @@
   "ai.chat.untitled": "Yangi chat",
   "ai.chat.del": "Chatni o‘chirish",
   "ai.chat.delAsk": "Bu chatning tarixi o‘chiriladi.",
-  "ai.chat.delYes": "O‘chirish"
+  "ai.chat.delYes": "O‘chirish",
+  "palette.ph": "Qo‘shiq, asbob, bo‘lim",
+  "palette.find": "Qidirish…",
+  "palette.none": "Hech narsa topilmadi",
+  "palette.act": "Amallar",
+  "palette.go": "Bo‘limlar",
+  "palette.tools": "Asboblar",
+  "palette.songs": "Qo‘shiqlar",
+  "palette.free": "Erkin mashq",
+  "palette.space": "Probel",
+  "palette.settings": "Sozlamalar"
 }

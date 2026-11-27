@@ -3260,5 +3260,15 @@
   "ai.chat.untitled": "Новый чат",
   "ai.chat.del": "Удалить чат",
   "ai.chat.delAsk": "История этого чата будет стёрта.",
-  "ai.chat.delYes": "Удалить"
+  "ai.chat.delYes": "Удалить",
+  "palette.ph": "Песня, инструмент, раздел",
+  "palette.find": "Найти…",
+  "palette.none": "Ничего не найдено",
+  "palette.act": "Действия",
+  "palette.go": "Разделы",
+  "palette.tools": "Инструменты",
+  "palette.songs": "Песни",
+  "palette.free": "Свободная практика",
+  "palette.space": "Пробел",
+  "palette.settings": "Настройки"
 }

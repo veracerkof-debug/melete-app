@@ -123,6 +123,8 @@ const ctl = (k, z) => '<div class="hbctl">' +
   '<button class="x" data-hbe="hide:' + k + '" aria-label="' + esc(t('hb.hide') + ': ' + t('hb.' + k)) + '">×</button></div>' +
   // ручка размера: тянуть вниз/вверх — блок растёт и уменьшается прямо под пальцем, соседние блоки перестраиваются сразу (слово автора 25.11.2026)
   '<div class="hbgrip" role="slider" aria-label="' + esc(t('hb.size') + ': ' + t('hb.' + k)) + '" aria-valuemin="' + Math.round(ZMIN * 100) + '" aria-valuemax="' + Math.round(ZMAX * 100) + '" aria-valuenow="' + Math.round(z * 100) + '"><i></i></div>';
+// Темп к цели (компьютер, слово автора 27.11.2026): полоса «сейчас → цель» у песни на главной; на телефоне скрыта (CSS desk.css)
+const tempoPb = (s) => (s.targetBpm > 0 && s.currentBpm > 0 ? '<span class="hpg" aria-hidden="true"><span class="hpb"><i style="width:' + Math.max(4, Math.min(100, Math.round((s.currentBpm / s.targetBpm) * 100))) + '%"></i></span><small class="num">' + s.currentBpm + ' → ' + s.targetBpm + '</small></span>' : '');
 const blocks = (st, parts) => {
   const L = homeLayout(st), zm = (k) => zoomOf(L.size[k]), sz = (k) => (HOME_SIZES.includes(L.size[k]) ? L.size[k] : 'm');
   // размер блока: ступень — классом hb-s/hb-l (как было), число — прямо в zoom; --hz нужна ручкам, чтобы не масштабироваться вместе с блоком
@@ -331,7 +333,7 @@ export function homeHTML(app) {
       const sub = plain ? s.artist || '' : ss.last ? relDay(ss.last) + ', ' + fmtDur(ss.total) : t('home.notPlayed');
       const meta = [s.key || '', s.targetBpm || s.currentBpm || ''].filter(Boolean).join(' · ');
       return '<div class="hsr"><button class="hsrp" data-play="' + s.id + '" aria-label="' + esc(t('home.playSong', { title: s.title })) + '">' + PLAY + '</button><button class="hsrb" data-song="' + s.id + '"><span class="g"><b>' + esc(s.title) +
-        '</b><small>' + esc(sub) + '</small></span>' + (meta ? '<span class="m num">' + esc(meta) + '</span>' : '') + '</button></div>';
+        '</b><small>' + esc(sub) + '</small></span>' + tempoPb(s) + (meta ? '<span class="m num">' + esc(meta) + '</span>' : '') + '</button></div>';
     }).join('') + '</div>');
   // «Первое занятие за минуту» (разбор 27.11.2026): пока занятий не было — один вопрос о цели вместо россыпи кнопок;
   // выбор открывает нужный инструмент. После первого занятия и по «Скрыть» блока нет
