@@ -144,6 +144,13 @@ public class FolderPlugin extends Plugin {
             if (p.isEmpty()) continue;
             boolean last = k == parts.length - 1;
             String[] c = child(t, id, p);
+            if (c == null && last && fileMime != null) {
+                // файл прошлых сборок с дописанным «.txt» — вернуть ему имя и дальше работать с ним (а не плодить копии)
+                String[] old = child(t, id, p + ".txt");
+                if (old != null) {
+                    try { Uri ren = DocumentsContract.renameDocument(cr(), DocumentsContract.buildDocumentUriUsingTree(t, old[0]), p); if (ren != null) { old[0] = DocumentsContract.getDocumentId(ren); } c = old; } catch (Exception ignore) { c = old; }
+                }
+            }
             if (c == null) {
                 if (!create) return null;
                 String mime = last && fileMime != null ? fileMime : DocumentsContract.Document.MIME_TYPE_DIR;
@@ -152,6 +159,11 @@ public class FolderPlugin extends Plugin {
                 catch (Exception e) { throw new Exception("create '" + p + "' в «" + path + "»: " + e.getMessage()); } // в журнале видно, какой файл
                 if (made == null) throw new Exception("create '" + p + "' в «" + path + "»");
                 id = DocumentsContract.getDocumentId(made);
+                // Провайдер папки сам дописывает расширение по типу («Test.cho» + text/plain → «Test.cho.txt»): наш поиск по имени такого файла
+                // не находит и создаёт заново при каждой синхронизации — до «Failed to create unique file». Возвращаем имя, как просили
+                if (last && fileMime != null) {
+                    try { Uri ren = DocumentsContract.renameDocument(cr(), made, p); if (ren != null) id = DocumentsContract.getDocumentId(ren); } catch (Exception ignore) { /* провайдер не умеет — останется как есть */ }
+                }
             } else id = c[0];
         }
         return id;

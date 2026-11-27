@@ -132,6 +132,17 @@ export function startDiag() {
       })).observe({ type: 'longtask', buffered: false });
     }
   } catch { /* нет наблюдателя */ }
+  // Кто подвесил: «длинные кадры» (Chrome/WebView 123+) называют скрипт и функцию — в событие «подвисание» кладём главного виновника,
+  // чтобы по отчёту было видно, где именно тормозит (слово автора 27.11.2026: причины, а не просто «подвисало»)
+  try {
+    if (typeof PerformanceObserver !== 'undefined' && (PerformanceObserver.supportedEntryTypes || []).includes('long-animation-frame')) {
+      new PerformanceObserver((list) => list.getEntries().forEach((e) => {
+        if (document.visibilityState !== 'visible' || e.duration < 700) return;
+        const sc = (e.scripts || []).slice().sort((x, y) => y.duration - x.duration)[0];
+        event('slowframe', { ms: Math.round(e.duration), block: Math.round(e.blockingDuration || 0), js: sc ? Math.round(sc.duration) : 0, by: sc ? String(sc.sourceFunctionName || sc.invoker || sc.invokerType || '').slice(0, 60) : '', src: sc ? String(sc.sourceURL || '').split('/').pop().split('?')[0].slice(0, 50) : '', style: Math.round(e.styleAndLayoutStart ? e.startTime + e.duration - e.styleAndLayoutStart : 0) });
+      })).observe({ type: 'long-animation-frame', buffered: false });
+    }
+  } catch { /* нет наблюдателя */ }
   const sample = async () => {
     const m = performance.memory;
     if (m && m.jsHeapSizeLimit) gauge('mem.heap', m.usedJSHeapSize / m.jsHeapSizeLimit);

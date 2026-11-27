@@ -9,6 +9,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isDesktop, desktopDriver } from './desktop.js';
 
+export const FAIL_MS = 30 * 60e3;
 export const DIRS = { data: 'Data', media: 'Media', tabs: 'Tabs', pdf: 'PDF', lyrics: 'Lyrics' };
 export const DATA_FILE = 'Data/melete-data.json';
 // Резервные копии с подписью: «Melete 2026-10-15 14-30 — Имя.json»; при синхронизации — автокопия раз в неделю, хранятся свежая и архив по месяцам (backupKeep)
@@ -197,8 +198,13 @@ export async function syncFolder(drv, mem, api, now = Date.now()) {
       continue;
     }
     if (m && f && m.hash === h) continue; // без изменений
+    // сбой записи одной песни не должен валить всю синхронизацию и повторяться каждые 10 секунд: пропускаем её на 30 минут, остальное идёт
+    mem.fail ??= {};
+    if (mem.fail[s.id] && now - mem.fail[s.id] < FAIL_MS) continue;
     const path = m ? m.path : DIRS.lyrics + '/' + freeName(safeName(s.title + (s.artist ? ' — ' + s.artist : '')) + '.cho', taken(DIRS.lyrics));
-    await writeAll(drv, path, new TextEncoder().encode(text), 'text/plain');
+    try { await writeAll(drv, path, new TextEncoder().encode(text), 'text/plain'); }
+    catch (e) { mem.fail[s.id] = now; (out.failed ||= []).push(String((e && e.message) || e).slice(0, 160)); continue; }
+    delete mem.fail[s.id];
     const name = path.slice(path.lastIndexOf('/') + 1), cur = (ls[DIRS.lyrics] ||= []).find((x) => x.name === name);
     if (cur) cur.mtime = now; else ls[DIRS.lyrics].push({ name, size: text.length, mtime: now });
     mem.texts[s.id] = { path, hash: h, mtime: now };

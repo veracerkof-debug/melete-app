@@ -53,6 +53,17 @@ describe('папка Melete', () => {
     expect((await syncFolder(drv, mem, app.api)).wrote).toBe(0);
   });
 
+  it('сбой записи текста одной песни не валит синхронизацию и не повторяется 30 минут (Test.cho каждые 10 с)', async () => {
+    const drv = memDrive(), app = memApp(), mem = {}, t0 = 1_000_000;
+    app.songs.push({ id: 'a', title: 'Test', notes: '[Am]la' }, { id: 'b', title: 'Other', notes: '[C]la' });
+    const w = drv.write; let bad = 0;
+    drv.write = async (path, ...r) => { if (path === 'Lyrics/Test.cho') { bad++; throw new Error("create 'Test.cho': Failed to create unique file"); } return w(path, ...r); };
+    let r = await syncFolder(drv, mem, app.api, t0);
+    expect(r.failed.length).toBe(1); expect(drv.fs['Lyrics/Other.cho']).toBeTruthy(); expect(bad).toBe(1);
+    await syncFolder(drv, mem, app.api, t0 + 10_000); expect(bad).toBe(1); // 10 секунд спустя — не пробуем
+    await syncFolder(drv, mem, app.api, t0 + 31 * 60e3); expect(bad).toBe(2); // через 30 минут — снова
+  });
+
   it('файлы, положенные в папку и в корень, подхватываются и раскладываются', async () => {
     const drv = memDrive(), app = memApp(), mem = {};
     await syncFolder(drv, mem, app.api);
