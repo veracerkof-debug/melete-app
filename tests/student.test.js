@@ -18,7 +18,7 @@ describe('режим «Ученик»', () => {
     expect(lockStudent(st, '12')).toBe(false);
     expect(lockStudent(st, '4821')).toBe(true);
     expect(studentOn(st)).toBe(true);
-    expect(JSON.stringify(st)).not.toContain('4821');
+    expect(JSON.stringify({ ...st.student, salt: '', hash: '' })).not.toContain('4821'); // соль и хэш — случайные символы, код мог встретиться в них случайно
     STUDENT_BASE.forEach((id) => expect(isOn(st, id)).toBe(true));
     expect(isOn(st, 'studio')).toBe(false);
     expect(isOn(st, 'ear')).toBe(false);
