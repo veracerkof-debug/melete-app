@@ -280,14 +280,14 @@ describe('два телефона: правки на обоих, обмен в �
     expect([A.store.state.settings.theme, B.store.state.settings.theme]).toEqual(['oled', 'oled']);
   });
 
-  it('роль не «своё»: настройки не уходят и не принимаются, песни ходят', async () => {
+  it('роль не «своё»: синхронизации нет совсем (роли), ни настройки, ни песни не ходят', async () => {
     const dev = 'https://192.168.1.20:53329';
     const m = JSON.parse(localStorage.getItem('melete.sync')); m.devs[dev].role = 'receive'; localStorage.setItem('melete.sync', JSON.stringify(m));
     clock = 2000; A.store.state.settings.theme = 'dark'; A.store.settingsChanged();
     B.store.state.settings.goalMin = 777; B.store.settingsChanged();
     A.store.replaceState({ ...A.store.state, songs: [song('s1', 'Песня', 100)] });
-    await syncNow(A, () => {}, H, { dev, now: () => clock });
-    expect(B.store.songs().length).toBe(1);
+    await expect(syncNow(A, () => {}, H, { dev, now: () => clock })).rejects.toThrow('mode'); // роль receive: синхронизация базы запрещена
+    expect(B.store.songs().length).toBe(0);
     expect(B.store.state.settings.theme).not.toBe('dark');
     expect(A.store.state.settings.goalMin).not.toBe(777);
   });
