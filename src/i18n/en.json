@@ -627,6 +627,7 @@
   "sy.done": "Done: songs +{songs}, sessions +{sessions}, files to computer {up}, from computer {down}",
   "sy.err.addr": "That does not look like the computer’s address",
   "sy.err.unreachable": "The computer does not answer: same Wi-Fi? Is “Accept the phone” on?",
+  "sy.err.nowifi": "No Wi-Fi: connect this phone to the same network as the other device",
   "sy.err.code": "Wrong code — check the computer screen",
   "sy.err.wait": "Too many wrong codes — wait a minute",
   "sy.err.off": "“Accept the phone” is off on the computer",

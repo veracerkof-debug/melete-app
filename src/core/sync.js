@@ -19,6 +19,7 @@ import { pickParts, applyParts } from './backupparts.js';
 import { stripDemo, isDemoFile } from './demo.js';
 import { CORE_DICTS, loadAllLangs, t as i18nT } from '../i18n/index.js';
 import { log } from './log.js';
+import { netInfo, noWifiFor, netLabel } from './netinfo.js';
 import { isDesktop } from './desktop.js';
 import { modeOf, applyMode, allows, activeCount } from './linkmode.js'; // режимы связи: «Пульт» и «Синхронизация базы»
 
@@ -304,6 +305,11 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
 
 /* ---------- телефон: клиент ---------- */
 
+// «не дошли» до адреса: если адрес в локальной сети, а Wi-Fi нет — причина 'nowifi' (а не «устройство не найдено»)
+async function unreachReason(addr, base = 'unreachable', netNow = netInfo) {
+  try { const ni = await netNow(); return noWifiFor(addr, ni) ? 'nowifi' : base; } catch { return base; }
+}
+
 // HTTP: на телефоне — нативный TLS с закреплённым отпечатком компьютера (SyncHttpPlugin.java), в браузере — fetch.
 // pin: отпечаток, которому верить; '' — любой (только при сопряжении); не задан — отпечаток подключённого компьютера.
 // withFp — вернуть { data, fp }: отпечаток, который предъявил компьютер
@@ -376,7 +382,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   const base = baseOf(addr);
   if (!base) throw Object.assign(new Error('addr'), { reason: 'addr' });
   let hello;
-  try { hello = await H('GET', base + '/melete/v1/hello', { timeout: 6000, pin: '' }); } catch (e) { throw Object.assign(new Error('unreachable'), { reason: e && e.reason === 'tls' ? 'tls' : 'unreachable' }); }
+  try { hello = await H('GET', base + '/melete/v1/hello', { timeout: 6000, pin: '' }); } catch (e) { const why = e && e.reason === 'tls' ? 'tls' : await unreachReason(base); throw Object.assign(new Error(why), { reason: why }); }
   if (!hello || hello.app !== 'melete') throw Object.assign(new Error('not melete'), { reason: 'unreachable' });
   // отпечаток — того сертификата, через который выдан ключ: дальше телефон верит только ему
   let r, fp = '';
@@ -449,9 +455,16 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   const key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
   const halt = () => { if (opts.stop && opts.stop()) throw Object.assign(new Error('stopped'), { reason: 'stopped' }); };
   const fail = (e) => Object.assign(new Error('sync'), { reason: e.status === 401 ? 'key' : e.status === 403 ? 'mode' : e.status === 503 ? 'busy' : e.status ? 'off' : 'unreachable' });
-  const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch((e) => {
-    const x = e.reason ? e : fail(e);
-    if (x.reason !== 'stopped' && x.reason !== 'busy') log('sync', 'синхронизация: отказ ' + path + ' — ' + x.reason + (e.status ? ' (' + e.status + ')' : '') + (e.message && !e.status ? ': ' + String(e.message).slice(0, 120) : '') + ', ключ ' + String(key || '').slice(0, 6), 'w');
+  const netNow = opts.netInfo || netInfo;
+  const call = (method, path, o = {}) => H(method, base + path, { key, ...o }).catch(async (e) => {
+    let x = e.reason ? e : fail(e);
+    let via = '';
+    if (x.reason === 'unreachable') {
+      // не дошли до адреса в локальной сети: нет Wi-Fi — так и сказать (а не «компьютер не найден»); в журнал — по какой сети шла попытка
+      const ni = await Promise.resolve().then(() => netNow()).catch(() => null);
+      if (ni) { via = ', ' + netLabel(ni); if (noWifiFor(base, ni)) x = Object.assign(new Error('nowifi'), { reason: 'nowifi' }); }
+    }
+    if (x.reason !== 'stopped' && x.reason !== 'busy') log('sync', 'синхронизация: отказ ' + path + ' — ' + x.reason + (e.status ? ' (' + e.status + ')' : '') + (e.message && !e.status ? ': ' + String(e.message).slice(0, 120) : '') + via + ', ключ ' + String(key || '').slice(0, 6), 'w');
     throw x;
   });
   // Кусок файла: короткий обрыв Wi-Fi не должен ронять передачу гигабайта — три повтора с паузой (put безопасен: компьютер
@@ -553,7 +566,7 @@ export async function sendFile(app, rec, onStep = () => {}, H = http, opts = {})
   let off = 0;
   do {
     const u8 = new Uint8Array(await rec.blob.slice(off, off + CHUNK).arrayBuffer());
-    const res = await H('POST', d.addr + '/melete/v1/put', { key: d.key, json: { meta, off, b64: b64.from(u8) }, timeout: 120000 }).catch((e) => { throw e.reason ? e : Object.assign(new Error('send'), { reason: e.status === 401 ? 'key' : e.status ? 'off' : 'unreachable' }); });
+    const res = await H('POST', d.addr + '/melete/v1/put', { key: d.key, json: { meta, off, b64: b64.from(u8) }, timeout: 120000 }).catch(async (e) => { if (e.reason) throw e; const why = e.status === 401 ? 'key' : e.status ? 'off' : await unreachReason(d.addr); throw Object.assign(new Error('send'), { reason: why }); });
     if (res.done) { onStep(1); log('sync', 'файл отправлен на устройство'); return { have: !!res.have }; }
     off = res.got != null ? res.got : off + u8.length;
     onStep(Math.min(1, off / meta.size));
