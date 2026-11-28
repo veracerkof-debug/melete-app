@@ -432,7 +432,7 @@ export function boot(root) {
   if (app.mesh.avail && app.mesh.wasOn()) app.mesh.start().catch(() => {});
   // телефон: фоновая синхронизация и «Считать на компьютере» (sync.js); компьютер сам — сервер
   app.syncCli = createSyncClient(app);
-  if (!app.syncSrv.avail) app.syncCli.start();
+  app.syncCli.start(); // и на компьютере: у него могут быть «Мои устройства» (фон идёт по всем, кому разрешена синхронизация)
   // синхронизация своих устройств через Google Диск (gdrive.js): автоматически, без блокировки; без входа и без сети ничего не делает
   app.gdrive = createDriveClient(app);
   if (!SHOWCASE) app.gdrive.start();
