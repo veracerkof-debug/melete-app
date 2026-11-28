@@ -401,6 +401,8 @@ export function boot(root) {
   initShareIn(app);
   // папка Melete на устройстве: данные, медиа, табы, PDF, тексты — синхронизация в обе стороны
   app.folder = initFolder(app);
+  // источники песен (папки Holyrics и др., только чтение): тихое обновление после запуска
+  import('./screens/songsource.js').then((m) => m.initSongSources(app)).catch(() => {});
   // компьютер (Tauri): файлы, открытые двойным щелчком, F11
   initDesktop(app);
   // Компьютер: поиск Ctrl K и клавиши (screens/palette.js)

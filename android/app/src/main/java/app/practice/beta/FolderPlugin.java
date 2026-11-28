@@ -44,8 +44,15 @@ public class FolderPlugin extends Plugin {
     private SharedPreferences prefs() { return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
     private ContentResolver cr() { return getContext().getContentResolver(); }
 
-    private Uri tree() {
-        String s = prefs().getString(KEY, null);
+    // Вторая и следующие папки (только чтение, «источник песен»): параметр slot в вызове; без него — папка Melete
+    private static String keyOf(PluginCall call) {
+        String sl = call == null ? null : call.getString("slot");
+        return sl == null || sl.isEmpty() ? KEY : KEY + "." + sl.replaceAll("[^A-Za-z0-9_-]", "");
+    }
+    private String pickKey = KEY;
+
+    private Uri tree(String key) {
+        String s = prefs().getString(key, null);
         if (s == null) return null;
         Uri u = Uri.parse(s);
         for (UriPermission p : cr().getPersistedUriPermissions()) {
@@ -63,7 +70,7 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void status(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         JSObject r = new JSObject();
         r.put("ok", t != null);
         if (t != null) r.put("name", nameOf(t));
@@ -72,6 +79,7 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void pick(PluginCall call) {
+        pickKey = keyOf(call);
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
@@ -92,11 +100,11 @@ public class FolderPlugin extends Plugin {
             cr().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         } catch (Exception e) { call.reject("permission"); return; }
         // прежняя папка больше не нужна
-        String old = prefs().getString(KEY, null);
+        String old = prefs().getString(pickKey, null);
         if (old != null && !old.equals(u.toString())) {
             try { cr().releasePersistableUriPermission(Uri.parse(old), Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION); } catch (Exception e) { /* уже нет */ }
         }
-        prefs().edit().putString(KEY, u.toString()).apply();
+        prefs().edit().putString(pickKey, u.toString()).apply();
         JSObject r = new JSObject();
         r.put("ok", true);
         r.put("name", nameOf(u));
@@ -105,11 +113,11 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void forget(PluginCall call) {
-        String old = prefs().getString(KEY, null);
+        String old = prefs().getString(keyOf(call), null);
         if (old != null) {
             try { cr().releasePersistableUriPermission(Uri.parse(old), Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION); } catch (Exception e) { /* уже нет */ }
         }
-        prefs().edit().remove(KEY).apply();
+        prefs().edit().remove(keyOf(call)).apply();
         call.resolve();
     }
 
@@ -173,7 +181,7 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void list(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         if (t == null) { call.reject("nofolder"); return; }
         try {
             String id = resolve(t, call.getString("dir", ""), false, null);
@@ -199,7 +207,7 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void mkdirs(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         if (t == null) { call.reject("nofolder"); return; }
         try { resolve(t, call.getString("dir", ""), true, null); call.resolve(); }
         catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
@@ -208,7 +216,7 @@ public class FolderPlugin extends Plugin {
     // Часть файла: { path, offset, length } → { data (base64), size }
     @PluginMethod
     public void read(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         if (t == null) { call.reject("nofolder"); return; }
         try {
             String id = resolve(t, call.getString("path", ""), false, null);
@@ -234,7 +242,7 @@ public class FolderPlugin extends Plugin {
     // Записать часть файла: { path, data (base64), append, mime }; append=false — файл с начала
     @PluginMethod
     public void write(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         if (t == null) { call.reject("nofolder"); return; }
         try {
             String path = call.getString("path", "");
@@ -251,7 +259,7 @@ public class FolderPlugin extends Plugin {
 
     @PluginMethod
     public void remove(PluginCall call) {
-        Uri t = tree();
+        Uri t = tree(keyOf(call));
         if (t == null) { call.reject("nofolder"); return; }
         try {
             String id = resolve(t, call.getString("path", ""), false, null);

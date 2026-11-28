@@ -7,6 +7,7 @@ import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { ensureLib, emptySong, saveSong, addSongs, PALETTE } from '../library.js';
 import { parseKey, keyName } from '../songinfo.js';
 import { log, logErr } from '../log.js';
+import { folderAvailable } from '../folder.js';
 
 // «C#» → «C♯», «Bb» → «B♭», «A#m» → написание приложения по высоте
 export function normKey(k) {
@@ -84,12 +85,13 @@ export function songImport(app, onDone) {
 // Откуда импортировать: файлы или Holyrics по Wi-Fi
 export function songImportMenu(app, onDone) {
   const api = sheet(() => snav(t('imp.title')) + '<div class="group"><button class="cell act" data-src="files">' + t('imp.files') + '</button>' +
-    '<button class="cell act" data-src="holyrics">' + t('imp.holyrics') + '</button></div><p class="ftr">' + t('imp.formats') + '</p>', (el) => {
+    '<button class="cell act" data-src="holyrics">' + t('imp.holyrics') + '</button>' + (folderAvailable() ? '<button class="cell act" data-src="folder">' + t('imp.folder') + '</button>' : '') + '</div><p class="ftr">' + t('imp.formats') + '</p>', (el) => {
     el.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-src]');
       if (!b) return;
       api.close();
-      if (b.dataset.src === 'files') songImport(app, onDone);
+      if (b.dataset.src === 'folder') { const { sourceSheet } = await import('./songsource.js'); sourceSheet(app, onDone); }
+      else if (b.dataset.src === 'files') songImport(app, onDone);
       else { const { holyricsSheet } = await import('./holyrics.js'); holyricsSheet(app, onDone); }
     });
   });

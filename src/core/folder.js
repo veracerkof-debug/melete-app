@@ -7,7 +7,7 @@
 // Правка текста песни в файле — переносится в песню, правка в приложении — в файл. Удаление файла из папки ничего
 // в приложении не удаляет. Логика без DOM; ввод-вывод — через драйвер (нативный или тестовый).
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { isDesktop, desktopDriver } from './desktop.js';
+import { isDesktop, desktopDriver, desktopSourceDriver } from './desktop.js';
 
 export const FAIL_MS = 30 * 60e3;
 export const DIRS = { data: 'Data', media: 'Media', tabs: 'Tabs', pdf: 'PDF', lyrics: 'Lyrics' };
@@ -75,6 +75,15 @@ export const nativeDriver = Folder ? {
   write: (path, u8, append, mime) => Folder.write({ path, data: b64(u8), append, mime }),
   remove: (path) => Folder.remove({ path }),
 } : isDesktop() ? desktopDriver : null;
+
+// Драйвер папки-источника песен (только чтение, slot — имя; см. songsource.js): тот же контракт, своя папка
+export const sourceDriver = (slot) => (Folder ? {
+  status: () => Folder.status({ slot }),
+  pick: () => Folder.pick({ slot }),
+  forget: () => Folder.forget({ slot }),
+  list: async (dir) => (await Folder.list({ dir, slot })).items || [],
+  read: async (path, offset, length) => { const r = await Folder.read({ path, offset, length, slot }); return { data: unb64(r.data || ''), size: r.size }; },
+} : isDesktop() ? desktopSourceDriver(slot) : null);
 
 // Прочитать файл целиком (частями) → Uint8Array
 export async function readAll(drv, path, size) {

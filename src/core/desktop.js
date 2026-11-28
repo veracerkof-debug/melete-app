@@ -27,12 +27,14 @@ export async function saveFile(u8, name, type = 'application/octet-stream') {
 
 /* ---------- папка Melete на диске: драйвер для folder.js (тот же контракт, что у FolderPlugin на Android) ---------- */
 
-const root = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
+const rootOf = (key) => () => { try { return localStorage.getItem(key) || ''; } catch { return ''; } };
+const root = rootOf(KEY);
 export const folderPath = root; // путь к папке Melete (для приёма файлов, src/core/localsend.js)
 // Выбранная папка разрешается файловому модулю на этот запуск (права Tauri — только на то, что выбрал человек)
 async function allow(path) { const { invoke } = await import('@tauri-apps/api/core'); await invoke('allow_dir', { path }); }
 
-export const desktopDriver = {
+// Драйвер папки; key — где запомнен путь (папка Melete или папка-источник песен: только чтение, src/core/songsource.js)
+const makeDriver = (key) => { const root = rootOf(key); return {
   async status() {
     const r = root();
     if (!r) return { ok: false };
@@ -43,10 +45,10 @@ export const desktopDriver = {
     const path = await open({ directory: true, multiple: false, defaultPath: root() || undefined });
     if (!path) return { ok: false };
     await allow(path);
-    try { localStorage.setItem(KEY, path); } catch { /* без памяти — выберут снова */ }
+    try { localStorage.setItem(key, path); } catch { /* без памяти — выберут снова */ }
     return { ok: true, name: base(path) };
   },
-  async forget() { try { localStorage.removeItem(KEY); } catch { /* */ } },
+  async forget() { try { localStorage.removeItem(key); } catch { /* */ } },
   async list(dir) {
     const { readDir, stat } = await import('@tauri-apps/plugin-fs'), d = join(root(), dir), out = [];
     for (const e of await readDir(d)) {
@@ -70,7 +72,9 @@ export const desktopDriver = {
     try { await f.write(u8); } finally { await f.close(); }
   },
   async remove(path) { const { remove } = await import('@tauri-apps/plugin-fs'); await remove(join(root(), path)); },
-};
+}; };
+export const desktopDriver = makeDriver(KEY);
+export const desktopSourceDriver = (slot) => makeDriver(KEY + '.' + slot);
 
 /* ---------- запуск: файлы двойным щелчком, F11 ---------- */
 

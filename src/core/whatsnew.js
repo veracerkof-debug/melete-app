@@ -159,6 +159,9 @@ export const NEWS = [
   { n: 53, d: '2026-11-28', ru: ['Нейросеть: готовые подключения — выбрать ChatGPT, Claude, Gemini и другие касанием, вводить только ключ', 'Нейросеть видит расписание и может предложить занятия; «Полный доступ» одной кнопкой; повтор запроса при пустом ответе'],
     en: ['AI: ready-made connections — pick ChatGPT, Claude, Gemini and others with a tap, only the key is typed', 'AI sees the schedule and can suggest practice blocks; “Full access” in one button; request retries on an empty reply'],
     uz: ['Neyrotarmoq: tayyor ulanishlar — ChatGPT, Claude, Gemini va boshqalarni bosib tanlash, faqat kalit kiritiladi', 'Neyrotarmoq jadvalni koʻradi va mashgʻulot taklif qila oladi; «Toʻliq kirish» bitta tugmada; boʻsh javobda soʻrov takrorlanadi'] },
+  { n: 54, d: '2026-11-28', ru: ['Песни: «Папка-источник» — подключить папку Holyrics или другой программы; песни читаются только в одну сторону, обновляются при изменениях, без дублей, ваши аккорды не затираются', 'Нейросеть читает тексты песен (по отдельному разрешению) и может проставлять аккорды сразу во многих песнях; импорт сотен файлов — быстро'],
+    en: ['Songs: “Source folder” — connect a Holyrics (or other) folder; read-only, updates on changes, no duplicates, your chords are kept', 'The AI can read song text (with separate permission) and add chords to many songs at once; importing hundreds of files is fast'],
+    uz: ['Qoʻshiqlar: «Manba papka» — Holyrics (yoki boshqa) papkasini ulang; faqat oʻqiladi, oʻzgarganda yangilanadi, takrorlarsiz, akkordlaringiz saqlanadi', 'Neyrotarmoq qoʻshiq matnini oʻqiy oladi (alohida ruxsat bilan) va koʻp qoʻshiqqa birdan akkord qoʻya oladi; yuzlab faylni import qilish tez'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);
