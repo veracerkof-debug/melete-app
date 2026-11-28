@@ -164,6 +164,10 @@ function statsHTML(app) {
   if (d.length) h += card(t('stats.difficulty'), '', hbars(d));
   const tags = byFreeTag(all).map((x) => ({ n: x.n ? freeTagName(x.n) : t('stats.noTag'), v: x.v }));
   if (tags.length) h += card(t('stats.freeTitle'), t('stats.byTag'), hbars(tags));
+  // Прогресс темпа песен (компьютер, макет DStats): сейчас → цель, без серий и сравнения с другими
+  const tp = songs.filter((s) => +s.targetBpm > 0 && +s.currentBpm > 0).slice(0, 6);
+  if (tp.length) h += '<div class="card cdtempo"><div class="ch"><span>' + t('stats.tempo') + '</span><span></span></div>' + tp.map((s) => { const p = Math.min(100, Math.round((s.currentBpm / s.targetBpm) * 100));
+    return '<div class="tprow"><span class="tpk">' + esc((s.title || '?').trim().charAt(0).toUpperCase()) + '</span><span class="tpt"><b>' + esc(s.title) + '</b><small class="num">' + s.currentBpm + ' → ' + s.targetBpm + ' bpm</small></span><span class="tpc' + (p >= 100 ? ' ok' : '') + ' num">' + (p >= 100 ? t('stats.tempoGoal') : p + '%') + '</span></div>'; }).join('') + '<p class="ftr">' + t('stats.tempoNote') + '</p></div>';
   return h + '</div>' + unverCard(app);
 }
 
@@ -808,7 +812,7 @@ export function createPanel(app, onChange) {
     document.body.dataset.bgp = begP ? page : '';
     layer.style.bottom = begP ? ((document.querySelector('.tabbar') || {}).offsetHeight || 0) + 'px' : '';
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
-    const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
+    const body = desk ? '<div class="pdesk" data-shown="' + shown + '"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
     const html = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="' + (page === 'mods' ? 'feat' : 'root') + '" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
       '<button class="link b" data-act="pclose">' + t('ui.done') + '</button></div>' + body + '</div>';
     // Статус связи, папки и синхронизации приходит каждую секунду: если экран не изменился, его не трогаем — иначе прокрутка и ввод сбрасываются («бросает наверх»)
