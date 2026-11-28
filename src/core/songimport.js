@@ -240,26 +240,34 @@ export async function fromEasyWorship(dbs) {
 
 /* ---------- Holyrics: файлы песен (.muf, .mufl) и JSON ---------- */
 
-// Песня Holyrics: слайды API (slides: [{ text, slide_description }]), абзацы файла (lyrics.paragraphs или
-// paragraphs: [{ text, description }]) или просто текст (lyrics: '...'). Описание абзаца («Verse 1») — заголовком части
+// Песня Holyrics из JSON. Форматов несколько (слово автора 28.11.2026: файл .mufl у его Holyrics зашифрован, выгрузка — в JSON или TXT):
+// слайды API (slides: [{ text, slide_description }]), абзацы (paragraphs / sections / verses / parts / blocks: [{ text | lines, название }]),
+// просто текст (lyrics / text / letra как строка). Названия полей берутся терпимо: title|name|titulo, artist|author|autor, key|tonalidad, bpm|tempo.
+const pickF = (o, names) => { for (const k of names) if (o[k] != null && o[k] !== '') return o[k]; return null; };
+const TEXT_KEYS = ['lyrics', 'text', 'letra', 'content', 'body', 'lyrics_text'], SECT_KEYS = ['slides', 'paragraphs', 'sections', 'verses', 'parts', 'blocks', 'stanzas'];
+const hText = (v) => (Array.isArray(v) ? v.map(hText).join('\n') : v && typeof v === 'object' ? String(pickF(v, ['text_with_comment', 'text', 'lyrics', 'content', 'lines']) ?? '') : String(v == null ? '' : v));
 function holySong(h) {
-  const list = Array.isArray(h.slides) ? h.slides : Array.isArray(h.paragraphs) ? h.paragraphs : h.lyrics && Array.isArray(h.lyrics.paragraphs) ? h.lyrics.paragraphs : null;
+  let list = null;
+  for (const k of SECT_KEYS) if (Array.isArray(h[k]) && h[k].length) { list = h[k]; break; }
+  if (!list && h.lyrics && typeof h.lyrics === 'object' && Array.isArray(h.lyrics.paragraphs)) list = h.lyrics.paragraphs;
   const parts = [];
   if (list) list.forEach((p) => {
-    const text = clean(p.text_with_comment || p.text || '');
+    const text = clean(p && typeof p === 'object' ? hText(pickF(p, ['text_with_comment', 'text', 'lyrics', 'content', 'lines']) ?? '') : String(p));
     if (!text) return;
-    const name = String(p.slide_description || p.description || '').trim(), last = parts.at(-1);
+    const name = p && typeof p === 'object' ? String(pickF(p, ['slide_description', 'description', 'name', 'label', 'type', 'title']) || '').trim() : '', last = parts.at(-1);
     if (last && (!name || name === last.name)) last.text += '\n\n' + text; else parts.push({ name, text });
   });
-  else if (typeof h.lyrics === 'string') parts.push({ name: '', text: clean(h.lyrics) });
-  return song({ title: h.title || h.name || '', artist: h.artist || h.author || '', key: h.key || null, bpm: h.bpm ? Math.round(+h.bpm) || null : null,
+  else { const t = pickF(h, TEXT_KEYS); if (t != null) parts.push({ name: '', text: clean(hText(t)) }); }
+  const bpm = pickF(h, ['bpm', 'tempo']);
+  return song({ title: pickF(h, ['title', 'name', 'titulo', 'título', 'nome']) || '', artist: pickF(h, ['artist', 'author', 'autor', 'artista', 'composer']) || '', key: pickF(h, ['key', 'tonalidad', 'tone', 'tom']) || null, bpm: bpm ? Math.round(+bpm) || null : null,
     notes: parts.map((x) => (x.name ? x.name + '\n' : '') + x.text).join('\n\n') });
 }
-// JSON Holyrics → песни; null — это не Holyrics
+const looksSong = (h) => h && typeof h === 'object' && !Array.isArray(h) && pickF(h, ['title', 'name', 'titulo', 'título', 'nome']) != null && (SECT_KEYS.some((k) => Array.isArray(h[k]) && h[k].length) || TEXT_KEYS.some((k) => h[k] != null && h[k] !== ''));
+// JSON Holyrics → песни; null — это не Holyrics. Песни ищутся где угодно (корень, songs / data / musics / items, вложенные списки)
 export function fromHolyricsJSON(obj) {
-  const list = Array.isArray(obj) ? obj : obj && Array.isArray(obj.songs) ? obj.songs : obj && Array.isArray(obj.data) ? obj.data : obj ? [obj] : [];
-  const ok = list.filter((h) => h && typeof h === 'object' && (h.title || h.name) && (h.lyrics || h.paragraphs || h.slides));
-  return ok.length ? ok.map(holySong) : null;
+  const found = [], walk = (v, d = 0) => { if (d > 6 || !v || typeof v !== 'object') return; if (looksSong(v)) { found.push(v); return; } (Array.isArray(v) ? v : Object.values(v)).forEach((x) => walk(x, d + 1)); };
+  walk(obj);
+  return found.length ? found.map(holySong) : null;
 }
 
 // Файл Holyrics, выгруженный командой «Экспорт» (.muf — одна песня, .mufl — список): поток сериализации Java, внутри объекты Music

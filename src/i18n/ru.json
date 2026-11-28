@@ -221,7 +221,7 @@
   "src.taken": "Текст обновлён",
   "src.staleHint": "В этих песнях текст правили и здесь, и в источнике. «Обновить» берёт текст источника (перед этим делается копия), «Оставить своё» сохраняет текст с аккордами.",
   "src.hint": "Только чтение: Melete ничего не пишет в эту папку и не удаляет. Читаются новые и изменённые файлы; песни без повторов. Обновление — при запуске и по кнопке.",
-  "imp.encrypted": "Файлы .muf и .mufl у Holyrics зашифрованы его программой, Melete их прочитать не может. Выгрузите песни из Holyrics в обычном виде (текст, ProPresenter, PowerPoint, OpenLyrics) или загрузите по Wi-Fi через «Holyrics по Wi-Fi».",
+  "imp.encrypted": "Файлы .muf и .mufl у новых версий Holyrics зашифрованы его программой, Melete их прочитать не может. В Holyrics выгрузите песни без шифрования — в JSON или TXT — и загрузите эти файлы.",
   "imp.files": "Из файлов",
   "imp.holyrics": "Из Holyrics по Wi-Fi",
   "imp.formats": "ProPresenter 6 и 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db и SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro и OnSong, текст (.txt). Можно выбрать сразу много файлов или zip-архив.",

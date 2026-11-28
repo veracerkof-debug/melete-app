@@ -213,7 +213,7 @@
   "src.taken": "Matn yangilandi",
   "src.staleHint": "Bu qoʻshiqlar matni ham bu yerda, ham manbada tahrirlangan. «Yangilash» manba matnini oladi (avval nusxa olinadi), «Meniki qolsin» akkordli matnni saqlaydi.",
   "src.hint": "Faqat oʻqish: Melete bu papkaga hech narsa yozmaydi va oʻchirmaydi. Yangi va oʻzgargan fayllar oʻqiladi; takrorlarsiz. Ishga tushganda va tugma bilan yangilanadi.",
-  "imp.encrypted": "Holyrics .muf va .mufl fayllari Holyricsning oʻzi tomonidan shifrlangan, Melete ularni oʻqiy olmaydi. Qoʻshiqlarni Holyricsdan oddiy koʻrinishda (matn, ProPresenter, PowerPoint, OpenLyrics) eksport qiling yoki «Holyrics Wi-Fi orqali» bilan yuklang.",
+  "imp.encrypted": "Holyricsning yangi versiyalaridagi .muf va .mufl fayllari Holyricsning oʻzi tomonidan shifrlangan, Melete ularni oʻqiy olmaydi. Holyricsda qoʻshiqlarni shifrsiz — JSON yoki TXT koʻrinishida — eksport qiling va shu fayllarni yuklang.",
   "imp.files": "Fayllardan",
   "imp.holyrics": "Holyrics’dan Wi-Fi orqali",
   "imp.formats": "ProPresenter 6 va 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db va SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro va OnSong, matn (.txt). Bir vaqtda koʻp fayl yoki zip arxiv.",

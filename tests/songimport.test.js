@@ -131,3 +131,13 @@ describe('модули MyBible', () => {
     m.close();
   });
 });
+
+describe('Holyrics JSON: разные варианты полей (28.11.2026)', () => {
+  it('разделы и текст разными именами; тональность и темп; вложенные списки', async () => {
+    const { fromHolyricsJSON } = await import('../src/core/songimport.js');
+    const a = fromHolyricsJSON({ musics: [{ title: 'Песня А', author: 'Автор', tonalidad: 'G', tempo: 80, sections: [{ type: 'Куплет', lines: ['Строка 1', 'Строка 2'] }, { type: 'Припев', text: 'Слава' }] }] });
+    expect(a.length).toBe(1); expect(a[0].artist).toBe('Автор'); expect(a[0].bpm).toBe(80); expect(a[0].notes).toContain('Куплет'); expect(a[0].notes).toContain('Строка 2'); expect(a[0].notes).toContain('Слава');
+    const b = fromHolyricsJSON([{ name: 'Песня Б', letra: 'Один\nДва' }]); expect(b[0].title).toBe('Песня Б'); expect(b[0].notes).toContain('Два');
+    expect(fromHolyricsJSON({ нет: 1 })).toBe(null);
+  });
+});
