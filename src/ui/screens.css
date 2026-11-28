@@ -760,7 +760,7 @@ html.arrange .tabbar .tab[data-tab="home"],html.arrange .tabbar .tab[data-tab="t
 .hdrr{display:inline-flex;gap:16px;align-items:center}
 .lktabs{margin:6px 0 4px}.lktabs button{min-height:40px}
 /* длинный список «добавить» — в две колонки (страница «Вкладки»): вдвое короче, строки по-прежнему крупные */
-.group.dense2{display:grid;grid-template-columns:1fr 1fr}
+.group.dense2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.group.dense2 .cell{min-width:0}
 .group.dense2 .cell{min-height:52px;padding-left:10px;padding-right:6px;border-top:0!important;gap:8px}
 .group.dense2 .cell .grow{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Тема и стиль — мини-экраны с выбором рамкой (core/screens/panel.js: themeCards) */

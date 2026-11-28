@@ -160,7 +160,8 @@
   .pane:not(.strip) .pbar{flex-wrap:nowrap}
   .pane:not(.strip) .pbar [data-step="pkeys"]{display:none}
   .pane:not(.strip) .pbar .pk{min-width:38px}
-  .pane:not(.strip) .pbar .pk.txt2{min-width:46px}
+  .pane:not(.strip) .pbar .pk.txt2{min-width:40px}
+  .pane:not(.strip) .pbar .pk.txt2 .bt{display:none} /* подпись «Пед.» — только значок: на узком окне и с широким шрифтом строка не должна вылезать */
   .pane:not(.strip) .pbar .pval{min-width:4.6ch}
 }
 /* Полоса: клавиши на всю высоту, октава ‹ › — сбоку; остальные кнопки — в окне побольше */
