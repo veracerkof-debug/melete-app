@@ -65,6 +65,18 @@ describe('режимы связи: чистая логика', () => {
   });
 });
 
+describe('режимы — производные от роли (roles.js)', () => {
+  it('старое сопряжение без роли ведёт себя как раньше, роль сужает режимы', () => {
+    expect(modeOf({ mode: { rc: false } })).toEqual({ rc: false, sync: true });
+    expect(modeOf({ role: 'control' })).toEqual({ rc: true, sync: false });
+    expect(modeOf({ role: 'receive' })).toEqual({ rc: false, sync: false });
+    expect(modeName({ role: 'receive' })).toBe('none');
+    expect(allows({ role: 'receive' }, '/melete/v1/put', { meta: { id: 'a', sent: true } })).toBe(true); // отправленный файл — по-прежнему
+    expect(allows({ role: 'receive' }, '/melete/v1/sync', {})).toBe(false);
+    expect(allows({ role: 'control' }, '/melete/v1/rc/cmd')).toBe(true);
+  });
+});
+
 describe('режимы связи: телефон и компьютер', () => {
   let phone, pc, pcCtx, H;
   beforeEach(() => {

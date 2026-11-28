@@ -10,8 +10,9 @@ import { sheet, snav, esc, toast, confirm, icons } from '../../ui/index.js';
 import { isDesktop } from '../desktop.js';
 import { DEV } from '../variants.js';
 import { WEB } from '../platform.js';
-import { pcOf, oldPc, pair, syncNow, forgetPc, forgetDev, devsOf, setLinkMode, fpCheck, meshClient, http, PORT } from '../sync.js';
+import { pcOf, oldPc, pair, syncNow, forgetPc, forgetDev, devsOf, setLinkMode, fpCheck, meshClient, http, refreshMyRole, PORT } from '../sync.js';
 import { modeOf } from '../linkmode.js';
+import { ROLES, roleOf, roleToMode } from '../roles.js';
 import { scanQR, parsePair, pairPayload, qrHTML } from './qrscan.js';
 import { CHEV } from './common.js';
 
@@ -76,6 +77,7 @@ export function devicesOf(app, now = Date.now()) {
     const best = e && (!cli || e.at >= cli.at) ? e : cli ? { at: cli.at, reason: cli.reason } : { at: 0, reason: '' }; // свежее из: своя ошибка, ошибка фоновой синхронизации
     c.status = statusOf({ last: Math.max(c.last || 0, okAt.get(c.id) || 0), errAt: best.at, errReason: best.reason, now });
     c.mode = modeOf(c.entry);
+    c.role = roleOf(c.entry); // у входящего — роль, выданная ему здесь; у исходящего — моя роль там
     list.push(c);
   };
   const pc = pcOf();
@@ -122,6 +124,8 @@ const IC = {
 };
 const psw = (key, on, label) => '<label class="sw"><input type="checkbox" data-psw="' + key + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(label) + '"><i></i></label>';
 const netBar = () => (net && net.wifi === false ? '<div class="dvnet" role="status">' + IC.wifi + '<span>' + esc(t('dv.nowifi')) + '</span></div>' : '');
+// Подпись под устройством: роль (если не «моё») или что включено
+const lineOf = (d) => (d.role !== 'own' ? t('role.' + d.role) : onLine(d.mode));
 const onLine = (m) => [m.sync ? t('dv.on.sync') : '', m.rc ? t('dv.on.rc') : ''].filter(Boolean).join(' · ');
 const stLabel = (d) => t('dv.st.' + d.status.id);
 const hintOf = (d) => {
@@ -140,7 +144,7 @@ function cardHTML(d) {
   return '<div class="dvcard" data-st="' + d.status.id + '" data-id="' + id + '">' +
     '<button class="dvhead" data-dv="open" data-id="' + id + '" aria-label="' + esc(d.name + ', ' + stLabel(d)) + '">' +
       '<span class="dvic">' + (d.phone ? IC.phone : IC.pc) + '</span>' +
-      '<span class="dvtx"><b class="dvname">' + esc(d.name) + '</b><span class="dvst"><i class="dvdot" aria-hidden="true"></i>' + esc(stLabel(d)) + '</span><span class="dvsub">' + esc(onLine(d.mode)) + '</span>' + (when ? '<span class="dvsub">' + esc(when) + '</span>' : '') + '</span>' + CHEV + '</button>' +
+      '<span class="dvtx"><b class="dvname">' + esc(d.name) + '</b><span class="dvst"><i class="dvdot" aria-hidden="true"></i>' + esc(stLabel(d)) + '</span><span class="dvsub">' + esc(lineOf(d)) + '</span>' + (when ? '<span class="dvsub">' + esc(when) + '</span>' : '') + '</span>' + CHEV + '</button>' +
     (h ? '<div class="dvhint" role="status"><span>' + esc(h) + '</span>' + re + '</div>' : '') +
     (d.canSync || d.canRc ? '<div class="dvact">' +
       (d.canSync ? '<button class="dvbtn main" data-dv="sync" data-id="' + id + '"' + (isBusy ? ' disabled' : '') + '>' + esc(t(isBusy ? 'sy.busy' : 'sy.now')) + '</button>' : '') +
@@ -247,9 +251,14 @@ export function deviceSheet(app, ctx, id) {
     const d = find(app, id);
     if (!d) { setTimeout(() => api && api.close(), 0); return snav(''); }
     const h = hintOf(d);
-    let s = snav(d.name) + '<div class="dvsh"><span class="dvic big">' + (d.phone ? IC.phone : IC.pc) + '</span><div class="dvtx"><span class="dvst" data-st="' + d.status.id + '"><i class="dvdot" aria-hidden="true"></i>' + esc(stLabel(d)) + '</span><span class="dvsub">' + esc(d.last ? (d.out ? t('dv.syncd', { when: ago(d.last) }) : t('dv.seen', { when: ago(d.last) })) : onLine(d.mode)) + '</span></div></div>';
+    let s = snav(d.name) + '<div class="dvsh"><span class="dvic big">' + (d.phone ? IC.phone : IC.pc) + '</span><div class="dvtx"><span class="dvst" data-st="' + d.status.id + '"><i class="dvdot" aria-hidden="true"></i>' + esc(stLabel(d)) + '</span><span class="dvsub">' + esc(d.last ? (d.out ? t('dv.syncd', { when: ago(d.last) }) : t('dv.seen', { when: ago(d.last) })) : lineOf(d)) + '</span></div></div>';
     if (h) s += '<p class="dvhint solo" role="status">' + esc(h) + '</p>';
-    s += '<div class="group">' + modeRow('sync', d.mode.sync) + modeRow('rc', d.mode.rc) + '</div>';
+    // роль: у входящего меняется здесь и действует сразу; у исходящего показывается (её выдаёт то устройство)
+    s += '<div class="group"><div class="cell"><span class="grow">' + esc(t(d.kind === 'in' ? 'role.title' : 'role.mine')) + '<span class="bksub">' + esc(t('role.' + d.role + '.sub')) + '</span></span><span class="val l2" data-dvrole-now="' + d.role + '">' + esc(t('role.' + d.role)) + '</span></div>' +
+      (d.kind === 'in' ? ROLES.filter((r) => r !== d.role).map((r) => '<button class="cell act" data-dvrole="' + r + '">' + esc(t('role.make.' + r)) + '</button>').join('') : '') + '</div>';
+    if (d.kind !== 'in' && d.role !== 'own') s += '<p class="dvhint solo" role="status">' + esc(t('role.mineHint')) + '</p>';
+    const rm = roleToMode(d.role), rows = (rm.sync ? modeRow('sync', d.mode.sync) : '') + (rm.rc ? modeRow('rc', d.mode.rc) : '');
+    if (rows) s += '<div class="group">' + rows + '</div>';
     if (d.out) {
       s += '<div class="group"><button class="cell act" data-dvs="check"' + (probing ? ' disabled' : '') + '>' + esc(t(probing ? 'dv.checking' : 'dv.check')) + '</button>' +
         (res ? '<div class="cell"><span class="grow">' + esc(t(res.ok ? 'dv.check.ok' : 'dv.check.fail', { ms: res.ms || 0 })) + '</span>' + (res.ok ? '' : '') + '</div>' : '') +
@@ -272,6 +281,8 @@ export function deviceSheet(app, ctx, id) {
       ctx.render(); api.update();
     });
     el.addEventListener('click', async (e) => {
+      const rb = e.target.closest('[data-dvrole]');
+      if (rb) { const d = find(app, id); if (d && d.kind === 'in' && ROLES.includes(rb.dataset.dvrole)) { d.S.setRole(d.key, rb.dataset.dvrole); ctx.render(); api.update(); } return; }
       const b = e.target.closest('[data-dvs]');
       if (!b) return;
       const d = find(app, id), a = b.dataset.dvs;
@@ -279,6 +290,7 @@ export function deviceSheet(app, ctx, id) {
       if (a === 'check' && !probing) {
         probing = true; res = null; api.update();
         res = await probe(d);
+        if (res.ok && d.out) await refreshMyRole(d.kind === 'dev' ? d.addr : undefined); // роль могли сменить на том устройстве
         probing = false;
         if (res.ok) noteOk(d.id); else noteErr(d.id, res.reason);
         ctx.render(); api.update();
@@ -299,14 +311,14 @@ export function wizard(app, ctx, { show = false } = {}) {
   if (!types.length) return null;
   const S = app.syncSrv && app.syncSrv.avail ? app.syncSrv : app.mesh && app.mesh.avail ? app.mesh : null;
   const trail = []; // пройденные шаги — для «Назад»
-  const s = { step: 'type', type: '', role: '', addr: '', code: '', fp: '', busy: false, msg: '', res: null, known: [], syncing: '', syncMsg: '' };
+  const s = { step: 'type', type: '', role: '', grant: 'own', addr: '', code: '', fp: '', busy: false, msg: '', res: null, known: [], syncing: '', syncMsg: '' };
   let unsub = [];
   const go = (step) => { trail.push(s.step); s.step = step; s.msg = ''; if (step === 'show') startShow(); if (step === 'join') s.fp = ''; api.update(); };
   const back = () => { if (!trail.length) { api.close(); return; } s.step = trail.pop(); s.msg = ''; api.update(); };
   const pickType = (id) => {
     s.type = id;
     const ty = types.find((x) => x.id === id);
-    if (ty.roles.length === 1) { s.role = ty.roles[0]; go(s.role); } else go('role');
+    if (ty.roles.length === 1) { s.role = ty.roles[0]; go(s.role === 'show' ? 'grant' : s.role); } else go('role');
   };
   async function startShow() {
     if (!S) return;
@@ -371,7 +383,11 @@ export function wizard(app, ctx, { show = false } = {}) {
       return head(t('dv.w.title')) + dots(1) + '<div class="dvq">' + esc(t('dv.w.how')) + '</div><div class="dvtiles">' +
         types.find((x) => x.id === s.type).roles.map((r) => tile('role', r, r === 'show' ? IC.wifi : IC.plus, t('dv.w.' + r), t('dv.w.' + r + '.sub'))).join('') + '</div>';
     }
-    if (s.step === 'show') return head(t('dv.w.show')) + dots(2) + netBar() + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' + showHTML();
+    if (s.step === 'grant') {
+      return head(t('dv.w.show')) + dots(2) + '<div class="dvq">' + esc(t('role.choose')) + '</div><div class="dvtiles">' +
+        ROLES.map((r) => tile('grant', r, r === 'own' ? IC.ok : r === 'view' ? IC.wifi : IC.plus, t('role.' + r), t('role.' + r + '.sub'))).join('') + '</div>';
+    }
+    if (s.step === 'show') return head(t('dv.w.show')) + dots(2) + netBar() + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' + (s.grant !== 'own' ? '<p class="dvnote">' + esc(t('role.once', { role: t('role.' + s.grant) })) + '</p>' : '') + showHTML();
     if (s.step === 'join') {
       const wt = warnText();
       return head(t('dv.w.join')) + dots(2) + netBar() + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' +
@@ -403,7 +419,8 @@ export function wizard(app, ctx, { show = false } = {}) {
       const a = b.dataset.dvw;
       if (a === 'back') back();
       else if (a === 'type') pickType(b.dataset.v);
-      else if (a === 'role') { s.role = b.dataset.v; go(s.role); }
+      else if (a === 'role') { s.role = b.dataset.v; go(s.role === 'show' ? 'grant' : s.role); }
+      else if (a === 'grant' && ROLES.includes(b.dataset.v)) { s.grant = b.dataset.v; if (S) S.setPairRole(s.grant); go('show'); } // роль новому устройству назначает эта сторона
       else if (a === 'scan' && !s.busy) scan();
       else if (a === 'join' && !s.busy) doJoin({ addr: s.addr, code: s.code, fp: '' });
       else if (a === 'sync' && s.res) syncCard(app, ctx, s.res.id, () => { try { api.update(); } catch { /* закрыта */ } });
@@ -414,9 +431,9 @@ export function wizard(app, ctx, { show = false } = {}) {
       if (s.step === 'show') { const p = newPeer(); if (p) { s.res = { id: '', name: p.name, phone: true, incoming: true }; s.step = 'done'; trail.length = 0; ctx.render(); } }
       try { api.update(); } catch { /* закрыта */ }
     }));
-  }, { onClose: () => { unsub.forEach((f) => f()); unsub = []; } });
+  }, { onClose: () => { unsub.forEach((f) => f()); unsub = []; if (S) S.setPairRole('own'); } });
   // один вариант — без лишних вопросов
-  if (show && S && types.some((x) => x.id === 'phone' && x.roles.includes('show'))) { s.type = 'phone'; s.role = 'show'; go('show'); trail.length = 0; }
+  if (show && S && types.some((x) => x.id === 'phone' && x.roles.includes('show'))) { s.type = 'phone'; s.role = 'show'; go('grant'); trail.length = 0; }
   else if (types.length === 1) { pickType(types[0].id); trail.length = 0; }
   refreshNet().then(() => { try { api.update(); } catch { /* закрыта */ } });
   return api;

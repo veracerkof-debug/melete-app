@@ -3,8 +3,10 @@
 import { t } from '../../i18n/index.js';
 import { sheet, snav, esc, toast } from '../../ui/index.js';
 import { devsOf, pcOf, sendFile } from '../sync.js';
+import { roleOf, canSend } from '../roles.js';
 
-export const sendTargets = () => [...devsOf().map((d) => ({ addr: d.addr, name: d.name, dev: d.addr })), ...(pcOf() ? [{ addr: pcOf().addr, name: pcOf().name, dev: null }] : [])];
+// Роль устройства (roles.js) может не допускать отправку («Пульт», «Зритель») — такие в список не попадают
+export const sendTargets = () => [...devsOf().map((d) => ({ addr: d.addr, name: d.name, dev: d.addr, e: d })), ...(pcOf() ? [{ addr: pcOf().addr, name: pcOf().name, dev: null, e: pcOf() }] : [])].filter((x) => canSend(roleOf(x.e)));
 
 export function sendSheet(app, rec) {
   let busy = null, pct = 0;

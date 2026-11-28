@@ -49,11 +49,15 @@ test('устройства: пустой список и вход в масте�
   await pg.locator('.dvadd').click(); await page.waitForTimeout(500);
   const sh = page.locator('#sheetLayer .sheet');
   await expect(sh.locator('.dvtile')).toHaveCount(2);
-  await sh.locator('[data-dvw="role"][data-v="show"]').click(); await page.waitForTimeout(600);
+  await sh.locator('[data-dvw="role"][data-v="show"]').click(); await page.waitForTimeout(400);
+  // роль новому устройству выбирает тот, кто показывает код: четыре карточки, потом код
+  await expect(sh.locator('[data-dvw="grant"]')).toHaveCount(4);
+  await sh.locator('[data-dvw="grant"][data-v="receive"]').click(); await page.waitForTimeout(600);
   await expect(sh.locator('.sypair')).toContainText('192.168.1.23');
   await expect(sh.locator('.dvwait')).toBeVisible();
   await page.screenshot({ path: 'test-results/devices-wizard-show.png' });
   // назад к роли и к шагу «подключиться»: поля адреса и кода
+  await sh.locator('[data-dvw="back"]').click(); await page.waitForTimeout(300);
   await sh.locator('[data-dvw="back"]').click(); await page.waitForTimeout(300);
   await sh.locator('[data-dvw="role"][data-v="join"]').click(); await page.waitForTimeout(300);
   await expect(sh.locator('[data-dvin="addr"]')).toBeVisible();
@@ -87,6 +91,8 @@ test('устройства: карточки, шторка устройства,
   await cards.nth(1).locator('[data-dv="open"]').click(); await page.waitForTimeout(500);
   const sh = page.locator('#sheetLayer .sheet');
   await expect(sh.locator('[data-dvlm]')).toHaveCount(2);
+  await expect(sh.locator('[data-dvrole-now]')).toHaveAttribute('data-dvrole-now', 'own'); // старое сопряжение без роли — «Моё устройство»
+  await expect(sh.locator('[data-dvrole]')).toHaveCount(0); // роль у исходящего меняет то устройство, не здесь
   await expect(sh.locator('[data-dvs="check"]')).toBeVisible();
   await expect(sh).toContainText('192.168.1.126');
   await page.screenshot({ path: 'test-results/devices-sheet.png' });

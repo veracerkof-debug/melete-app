@@ -35,6 +35,17 @@ export function sharedSongs(state, cfg) {
 }
 const songCard = (s, files, cfg) => { const k = songKey(s); return { id: s.id, title: s.title || '', artist: s.artist || '', key: k ? keyLabel(k) : '', bpm: +s.targetBpm || +s.currentBpm || 0, audio: cfg.audio ? audioOf(files, s.id).length : 0, text: !!s.notes }; };
 
+// Роль «Зритель» у сопряжённого устройства Melete (roles.js, путь /melete/v1/view): та же раздача «только чтение», что у гостей,
+// но по ключу сопряжения, без записей и без личного. Без id — список песен и сет-листы; с id — одна песня (текст, тональность, темп)
+export function viewOf(state, query = {}) {
+  const songs = (state.songs || []).filter((s) => !s.deleted);
+  if (query.id) {
+    const s = songs.find((x) => x.id === query.id);
+    return s ? { ...songCard(s, null, { audio: false }), notes: s.notes || '', capo: +s.capo || 0 } : null;
+  }
+  return { songs: songs.slice().sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''))).map((s) => songCard(s, null, { audio: false })), setlists: setlistsOf(state) };
+}
+
 /* ---------- запросы гостей ---------- */
 
 // Обработать запрос гостя. req: { method, path, q, body }; ctx: { app, cfg, rt, name } — rt: состояние раздачи
