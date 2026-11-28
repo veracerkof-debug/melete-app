@@ -4,6 +4,7 @@
 // в секунду, а стрелка, точка и полосы движутся плавно между ними (экспоненциальное сглаживание по кадрам).
 // Микрофон включается сам, пока окно тюнера открыто.
 import './tuner.css';
+import '../../ui/nview.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
@@ -97,6 +98,28 @@ function micNote() {
   return '<div class="tnomic" role="alert"><span>' + t(micErr === 'denied' ? 'micDenied' : 'micNone') + '</span><button class="link" data-x="tretry">' + t('micRetry') + '</button></div>';
 }
 
+// Новичок (макет Н5): большая нота, «чисто», шкала низко/высоко, ряд струн, подсказка «дальше»; движок и показания те же
+const isBegLevel = () => ((ctx && ctx.profile) || {}).level === 'beginner';
+function hintText(tn) {
+  const { t } = ctx, n = tn.names.length, num = (i) => n - i, last = [...tuned].pop();
+  const next = tn.names.map((_, i) => i).find((i) => !tuned.has(i));
+  if (next === undefined) return t('nb.allDone');
+  if (last === undefined) return t('nb.start', { n: num(next) });
+  return t('nb.next', { n: num(last), m: num(next) });
+}
+function updHint() {
+  const e = q('tbhint'), tn = tuning();
+  if (e && tn) e.textContent = hintText(tn);
+}
+function begView(tn) {
+  const { t, ui } = ctx;
+  return '<div class="tbeg">' + ui.icb('data-x="tset"', ui.icons.gear, t('settings'), 'sm tgear') +
+    '<div class="ncard nhero tbhero">' + noteHTML() + '<div id="tcent" class="tcent nchip" aria-live="polite">' + t('play') + '</div>' +
+    '<div class="tbsc">' + barHTML() + '<div class="tbl"><span>' + t('nb.low') + '</span><span>' + t('nb.high') + '</span></div></div></div>' +
+    (tn ? '<div class="tbbot"><div class="nlbl">' + t('strings') + '</div>' + stringsHTML(tn) + '<div class="nmut tbhint" id="tbhint" aria-live="polite">' + hintText(tn) + '</div></div>' : '') +
+    micNote() + '</div>';
+}
+
 function view() {
   const { t, ui } = ctx, s = st(), tn = tuning(), style = s.style; // стрелка или стробоскоп
   const cents = '<div id="tcent" class="tcent" aria-live="polite">' + t('play') + '</div>';
@@ -104,6 +127,7 @@ function view() {
   // слово автора 26.11.2026: в уменьшенном окне — стробоскоп; в самом маленьком — только нота и цифры (зелёные, когда нота взята точно)
   if (size === 'quarter') return '<div class="tq">' + noteHTML() + strobeHTML() + hz + micNote() + '</div>';
   if (size === 'strip') return '<div class="ts">' + noteHTML() + hz + micNote() + '</div>';
+  if (size === 'full' && isBegLevel()) return begView(tn);
   const vis = style === 'strobe' ? strobeHTML() : '<div class="tgw">' + gaugeSVG() + '</div>';
   // в половине окна — короткое напоминание, чтобы шкале хватило места
   const warn = tn ? '<div class="twarn" role="note">' + WARN + '<span>' + t(size === 'half' ? 'warnShort' : 'warn') + '</span></div>' : '';
@@ -150,11 +174,11 @@ function centsText(c, ok, tn) {
 function showText() {
   const nE = q('tnote');
   if (!nE) return;
-  const { t, num } = ctx, cE = q('tcent'), hE = q('thz'), oE = q('toct'), w = q('tnoteW'), tn = tuning();
+  const { t, num } = ctx, cE = q('tcent'), hE = q('thz'), oE = q('toct'), w = q('tnoteW'), tn = tuning(), beg = !!host.querySelector('.tbeg');
   if (!R) {
     nE.textContent = '—';
     if (oE) oE.textContent = '';
-    if (cE) { cE.textContent = micErr ? '' : t('play'); cE.className = 'tcent'; }
+    if (cE) { cE.textContent = micErr ? '' : t('play'); cE.className = 'tcent' + (beg ? ' nchip' : ''); }
     if (hE) { hE.textContent = t('hzNone'); hE.classList.remove('ok'); }
     if (w) w.classList.remove('ok');
     host.querySelectorAll('.tsb').forEach((b) => b.classList.remove('near'));
@@ -162,7 +186,7 @@ function showText() {
   }
   nE.textContent = R.note;
   if (oE) oE.textContent = R.oct;
-  if (cE) { cE.textContent = centsText(R.cents, R.ok, tn); cE.className = 'tcent' + (R.ok ? ' ok' : R.cents < 0 ? ' flat' : ' sharp'); }
+  if (cE) { cE.textContent = beg && R.ok ? t('nb.clean') : centsText(R.cents, R.ok, tn); cE.className = 'tcent' + (beg ? ' nchip' : '') + (R.ok ? ' ok' : R.cents < 0 ? ' flat' : ' sharp'); }
   if (hE) hE.textContent = tn ? t('hzTarget', { f: num(R.f, 1), target: num(R.targetHz, 1) }) : t('hz', { f: num(R.f, 1) });
   if (hE) hE.classList.toggle('ok', R.ok);
   if (w) w.classList.toggle('ok', R.ok);
@@ -178,6 +202,7 @@ function markTuned() {
     tuned.add(R.si);
     const b = host && host.querySelector('.tsb[data-v="' + R.si + '"]');
     if (b) { b.classList.add('done'); b.setAttribute('aria-label', b.getAttribute('aria-label') + ', ' + ctx.t('tuned')); }
+    updHint();
   }
 }
 

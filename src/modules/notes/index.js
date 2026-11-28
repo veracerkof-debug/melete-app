@@ -3,6 +3,7 @@
 // файлы .mid и проекты чужих студий (Ableton, Reaper, FL Studio; src/music/daw.js) нотами через MusicXML, «В студию» — править. Перенесено из legacy/practice.html (AT, ATP, notesHTML, tabSheet, lyricsEdit).
 import { Capacitor } from '@capacitor/core';
 import './notes.css';
+import '../../ui/nview.css';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
 import en from './i18n/en.json';
@@ -545,7 +546,37 @@ function textBody() {
       : '<div class="vq l2" style="font-size:14px">' + t('textEmpty') + '<button class="btn sm" data-x="nedit" style="margin-top:8px">' + t('addText') + '</button></div>');
 }
 
+// Новичок (макет Н6): «Аккорды | Табы», карточка песни с аккордами, список песен, «Метроном» и «Играть»
+const isBeg = () => ((ctx && ctx.profile) || {}).level === 'beginner' && size === 'full';
+const chordLine = (id, bpm) => [[...new Set(chordsIn(ctx.songNotes(id)))].slice(0, 5).join(' '), bpm ? bpm + ' bpm' : ''].filter(Boolean).join(' · ');
+function begChords() {
+  const { t } = ctx, all = ctx.songs(), first = all.find((x) => x.text), cur = curSong() || (first && ctx.song(first.id)) || null;
+  let card = '';
+  if (cur) {
+    const key = songKey(cur), n = cur.tr || 0, capo = Math.max(0, Math.min(7, Math.round(+cur.capo || 0))), fs = st().fs || 15;
+    card = '<div class="ncard nbcard"><div class="nrow"><div class="ngrow"><b class="nbt">' + esc(cur.title) + '</b><div class="nmut num">' + esc(chordLine(cur.id, cur.bpm)) + '</div></div>' +
+      (cur.mastery > 0 ? '<span class="nchip ok">' + t('nb.learned', { n: cur.mastery }) + '</span>' : '') + '</div>' +
+      (cur.notes
+        ? '<div class="lyr" style="margin-top:10px;font-size:' + fs + 'px">' + lyricsHTML(cur.notes, n - capo, key, { view: viewOf(), style: dstyle() }) + '</div>'
+        : '<div class="nmut" style="margin-top:10px">' + t('textEmpty') + '</div><button class="nbtn" data-x="nedit" style="margin-top:8px">' + t('addText') + '</button>') + '</div>';
+  }
+  const rest = all.filter((x) => !cur || x.id !== cur.id);
+  const list = rest.length ? '<div class="nlist">' + rest.map((x) => '<button class="nli" data-x="npick" data-id="' + esc(x.id) + '"><span class="ngrow"><b>' + esc(x.title) + '</b><small class="num">' +
+    esc(x.text ? chordLine(x.id, x.bpm) : t('nb.noText')) + '</small></span>' + (x.mastery > 0 ? '<span class="nchip">' + x.mastery + '%</span>' : '') + '</button>').join('') + '</div>' : '';
+  if (!cur && !rest.length) return '<div class="nbwrap"><div class="nmut" style="text-align:center;margin:24px 8px">' + t('textNeedsSong') + '</div></div>';
+  const bar = cur ? '<div class="nrow nbbar"><button class="nbtn" data-x="nbmetro" data-bpm="' + (cur.bpm || 0) + '">' + (cur.bpm ? t('nb.metro', { bpm: cur.bpm }) : t('nb.metroPlain')) + '</button>' +
+    (ctx.session ? '' : '<button class="nbtn pri ngrow" data-x="nbplay" data-id="' + esc(cur.id) + '">' + t('nb.play') + '</button>') + '</div>' : '';
+  return '<div class="nbwrap">' + card + list + bar + '</div>';
+}
+function begHtml() {
+  const { t } = ctx, b = st().bsec, tabsOn = b !== 'text' && (b === 'tabs' || (!!AT.cur && AT.state !== 'idle' && AT.state !== 'error'));
+  return '<div class="comp notes-root full nbeg"><div class="nseg" role="tablist">' + [['text', t('nb.chords')], ['tabs', t('tabsShort')]].map(([k, n]) =>
+    '<button class="' + ((k === 'tabs') === tabsOn ? 'on' : '') + '" data-x="nbsec" data-v="' + k + '" role="tab" aria-selected="' + ((k === 'tabs') === tabsOn) + '">' + n + '</button>').join('') + '</div>' +
+    '<div class="cbody">' + (tabsOn ? tabsBody() : begChords()) + '</div></div>';
+}
+
 function html() {
+  if (isBeg()) return begHtml();
   const { t } = ctx, sec = st().sec === 'text' ? 'text' : st().sec === 'midi' ? 'midi' : 'tabs';
   if (sec !== 'text' && !big()) {
     return '<div class="comp ' + size + '"><div class="csw"><button class="cswb on txt" data-x="nsec" data-v="text" aria-label="' + t('toText') + '">' + t('tabsShort') + ' ›</button></div>' +
@@ -779,6 +810,9 @@ function act(a, el) {
     case 'nsec': st().sec = el.dataset.v; ctx.store.save(); render(); break;
     case 'ntr': { const s = curSong(); if (s) { updCur({ tr: s.tr + +el.dataset.d }); render(); } break; }
     case 'nlib': libSheet(); break;
+    case 'nbsec': st().bsec = el.dataset.v; ctx.store.save(); render(); break;
+    case 'nbmetro': { const b = +el.dataset.bpm; if (b >= 20) { ctx.audio.metro.setBpm(b); ctx.audio.metro.save(); } ctx.openTool('metro'); break; }
+    case 'nbplay': ctx.playSong(el.dataset.id); break;
     case 'npick': st().textPick = { id: el.dataset.id, sess: (ctx.session && ctx.session.songId) || null }; ctx.store.save(); render(); break;
     case 'nfs': st().fs = Math.max(11, Math.min(40, (st().fs || 15) + +el.dataset.d)); ctx.store.save(); render(); break;
     case 'nedit': lyricsEdit(); break;

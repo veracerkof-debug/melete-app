@@ -275,5 +275,13 @@
   "micBusy": "Mikrofonni boshqa asbobdagi yozuv band qilgan — uni hech narsa uzmaydi.",
   "lost.silent": "Kirish jim (qoʻngʻiroq yoki boshqa ilova). Yozuv davom etadi, ovoz qaytganda yoziladi",
   "mark.silent": "Kirish jim boʻldi",
-  "mark.back": "Ovoz qaytdi"
+  "mark.back": "Ovoz qaytdi",
+  "nb.vTap": "Yozish uchun bosing",
+  "nb.vRec": "Yozilmoqda",
+  "nb.vSaving": "Saqlanmoqda…",
+  "nb.vEmpty": "Yozuvlar hali yo‘q",
+  "nb.recs": "Yozuvlar",
+  "nb.today": "bugun",
+  "nb.yest": "kecha",
+  "nb.all": "Barcha yozuvlar ({n})"
 }

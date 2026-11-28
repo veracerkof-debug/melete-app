@@ -109,5 +109,11 @@
   "modeSw": "Tyuner rejimi",
   "byTuning": "Qurilma bo‘yicha",
   "dirLow": "past",
-  "dirHigh": "baland"
+  "dirHigh": "baland",
+  "nb.clean": "toza",
+  "nb.low": "past",
+  "nb.high": "baland",
+  "nb.start": "{n}-simdan boshlang.",
+  "nb.next": "{n}-sim sozlandi. Keyingisi: {m}-sim.",
+  "nb.allDone": "Barcha simlar sozlandi."
 }

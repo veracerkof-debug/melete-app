@@ -1,6 +1,7 @@
 // Метроном: колесо темпа, акценты по долям, дробления, тап, тренер ускорения, тихие такты.
 // Перенесено из legacy/practice.html (metroHTML, wheelHTML, drawBeats, meterSheet, moreSheet).
 import './metro.css';
+import '../../ui/nview.css';
 import { WEB } from '../../core/platform.js';
 import ru from './i18n/ru.json';
 import uz from './i18n/uz.json';
@@ -123,6 +124,7 @@ function view() {
       '<div class="bpmbox">' + bpmButton(c) + '<div class="bpmlbl" id="tname">' + tempoName(c.bpm) + '</div></div>' +
       ui.icb('data-hold="1"', ui.icons.right, t('faster'), 'round') + playButton() + '</div></div>';
   }
+  if (size === 'full' && isBeg()) return begView(c, meter);
   const tags = [c.sub === 2 && c.swing ? t('tag.swing') : '', c.trainer.on ? t('tag.trainer', { step: c.trainer.step, every: c.trainer.every }) : '',
     c.gap.on ? t('tag.gap', { play: c.gap.play, mute: c.gap.mute }) : ''].filter(Boolean);
   const ctl = size === 'quarter' ? [meter, sub]
@@ -134,6 +136,20 @@ function view() {
     '</div><div class="barct num" id="barct" aria-live="off">' + tags.join(' · ') + '</div>' + sigHTML() + '</div></div>';
   const bar = size !== 'quarter' && SL ? SL.html() : '';
   return bar ? '<div class="mwrap sl">' + mv + bar + '</div>' : mv;
+}
+
+// Новичок (макет Н4): крупный темп, подпись, четыре доли, −5 −1 +1 +5, ползунок, «Тап»/«Размер», «Старт» — те же движок и жесты
+const isBeg = () => ((ctx && ctx.profile) || {}).level === 'beginner';
+function begView(c, meter) {
+  const { t, ui } = ctx, on = M().running;
+  const stp = (d) => '<button class="nbtn nstp" data-hold="' + d + '" aria-label="' + ui.esc(t(d < 0 ? 'slower' : 'faster') + ' ' + Math.abs(d)) + '">' + (d < 0 ? '− ' : '+ ') + Math.abs(d) + '</button>';
+  return '<div class="nmv">' +
+    '<div class="ncard nhero"><button class="num nbpm bpm bpmb" data-x="bpmin" id="bpm" aria-label="' + ui.esc(t('tempoBtn', { bpm: c.bpm })) + '">' + c.bpm + '</button>' +
+    '<div class="nmut">' + t('nb.unit') + ' · <span id="tname">' + tempoName(c.bpm) + '</span></div><div class="beats nbeats" id="beats"></div></div>' +
+    '<div class="nrow">' + stp(-5) + stp(-1) + '<span class="ngrow"></span>' + stp(1) + stp(5) + '</div>' +
+    '<input type="range" class="nsl" id="nsl" min="20" max="300" step="1" value="' + c.bpm + '" aria-label="' + ui.esc(t('tempo')) + '" style="--p:' + ((c.bpm - 20) / 2.8).toFixed(1) + '%">' +
+    '<div class="nrow"><button class="nbtn ngrow" data-s="tap">' + t('nb.tap') + '</button><button class="nbtn ngrow" data-s="meter" aria-label="' + ui.esc(t('meterBtn', { meter: c.num + '/' + c.den })) + '">' + t('nb.meter', { meter: c.num + '/' + c.den }) + '</button></div>' +
+    '<button class="nstart' + (on ? ' on' : '') + '" data-s="metro" id="mbtn" aria-label="' + t(on ? 'stop' : 'start') + '">' + t(on ? 'stop' : 'start') + '</button></div>';
 }
 
 function drawBeats() {
@@ -165,6 +181,7 @@ function drawBeats() {
   const g = groupsOf(c);
   // в полоске доли только показываются: точки 12 px — не цель для пальца; акценты — в окне побольше
   if (size === 'strip') { b.setAttribute('aria-hidden', 'true'); b.innerHTML = c.accents.map((a, i) => '<span class="beat' + (g.has(i) && c.num > 4 ? ' grp' : '') + '" data-beat="' + i + '" data-l="' + a + '"><i></i></span>').join(''); return; }
+  if (b.classList.contains('nbeats')) { b.innerHTML = c.accents.map((a, i) => '<button class="beat" data-beat="' + i + '" data-l="' + a + '" aria-label="' + t('beatLevel', { n: i + 1, level: t('level.' + a) }) + '">' + (i + 1) + '</button>').join(''); return; }
   b.innerHTML = c.accents.map((a, i) => '<button class="beat' + (g.has(i) && c.num > 4 ? ' grp' : '') + '" data-beat="' + i + '" data-l="' + a +
     '" aria-label="' + t('beatLevel', { n: i + 1, level: t('level.' + a) }) + '"><i></i></button>').join('');
 }
@@ -189,6 +206,8 @@ function updBpm() {
   if (tn) tn.textContent = tempoName(c.bpm);
   const w = q('#mwsl');
   if (w) w.setAttribute('aria-valuenow', c.bpm);
+  const ns = q('#nsl');
+  if (ns) { ns.value = c.bpm; ns.style.setProperty('--p', ((c.bpm - 20) / 2.8).toFixed(1) + '%'); }
 }
 
 function setBpm(v) {
@@ -227,7 +246,8 @@ function toggle(btn) {
   const m = M(), { t, ui } = ctx;
   if (m.running) m.stop();
   else if (!m.start()) { ui.toast(t('noAudio')); return; }
-  btn.innerHTML = m.running ? ui.icons.stop : ui.icons.play;
+  if (btn.classList.contains('nstart')) { btn.textContent = t(m.running ? 'stop' : 'start'); btn.classList.toggle('on', m.running); }
+  else btn.innerHTML = m.running ? ui.icons.stop : ui.icons.play;
   btn.setAttribute('aria-label', t(m.running ? 'stop' : 'start'));
   if (!m.running) render(); // вернуть подписи вместо «Такт N»
 }
@@ -430,6 +450,10 @@ function bind() {
     else if (a === 'sl') SL.toggle();
     else if (a === 'more') moreSheet();
   });
+
+  // Ползунок новичка: тянуть — темп, отпустить — сохранить
+  on(host, 'input', (e) => { if (e.target.id === 'nsl') setBpm(+e.target.value); });
+  on(host, 'change', (e) => { if (e.target.id === 'nsl') M().save(); });
 
   // Колесо: поворот на 4° — 1 bpm
   let wh = null;

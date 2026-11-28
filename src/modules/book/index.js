@@ -5,6 +5,7 @@
 // язык — языка интерфейса. Состояние — device.book.book: { ch — глава, sec — раздел }.
 import meta from './meta.js';
 import './book.css';
+import '../../ui/nview.css';
 
 let host = null, ctx = null, size = 'full', BK = null, loading = null;
 

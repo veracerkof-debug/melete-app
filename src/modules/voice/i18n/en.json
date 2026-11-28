@@ -275,5 +275,13 @@
   "micBusy": "The microphone is busy with a recording in another tool — it will not be interrupted.",
   "lost.silent": "The input is silent (a call or another app). Recording continues and will pick up the sound",
   "mark.silent": "Input went silent",
-  "mark.back": "Sound is back"
+  "mark.back": "Sound is back",
+  "nb.vTap": "Tap to record",
+  "nb.vRec": "Recording",
+  "nb.vSaving": "Saving…",
+  "nb.vEmpty": "No recordings yet",
+  "nb.recs": "Recordings",
+  "nb.today": "today",
+  "nb.yest": "yesterday",
+  "nb.all": "All recordings ({n})"
 }
