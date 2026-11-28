@@ -9,6 +9,7 @@ import './styles/desk.css';
 import './styles/desk-shell.css';
 import './styles/desk-songs.css';
 import './styles/desk-tools.css';
+import './styles/devices.css';
 // Движение (переходы, отклик) — после стилей экранов, чтобы перекрыть их старые анимации
 import './styles/motion.css';
 // «Минимал» (эксперимент) — последним: перекрывает обычные стили только при data-style="mono"
