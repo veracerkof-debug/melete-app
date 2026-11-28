@@ -43,6 +43,8 @@ deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "978576
 ndarray = "0.15"
 # обновление из GitHub (src/update.rs): скачать установщик своего канала — HTTPS, rustls
 ureq = "2"
+# автопоиск устройств в сети (src/discover.rs): объявление и поиск _melete._tcp по mDNS, совместимо с NSD телефона; только по воле человека
+mdns-sd = { version = "0.13", default-features = false }
 
 # Linux: WebKitGTK — включить микрофон и медиа в окне (lib.rs: linux_media), та же версия, что у wry
 [target.'cfg(target_os = "linux")'.dependencies]

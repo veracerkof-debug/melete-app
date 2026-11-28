@@ -50,6 +50,7 @@
     "allow-sync-body",
     "allow-sync-reply",
     "allow-net-http",
+    "allow-discover-find",
     "allow-guest-start",
     "allow-guest-stop",
     "allow-guest-status",

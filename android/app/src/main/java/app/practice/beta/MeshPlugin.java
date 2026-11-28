@@ -66,13 +66,13 @@ public class MeshPlugin extends Plugin {
     public void start(PluginCall call) {
         int port = call.getInt("port", 53329);
         new Thread(() -> {
-            try { srv().start(port); call.resolve(status()); }
+            try { srv().start(port); NetDiscovery.announce(getContext(), name(), port, srv.fp()); call.resolve(status()); }
             catch (Exception e) { call.reject(String.valueOf(e.getMessage()), "port"); }
         }, "mesh-start").start();
     }
 
     @PluginMethod
-    public void stop(PluginCall call) { if (srv != null) srv.stop(); call.resolve(status()); }
+    public void stop(PluginCall call) { NetDiscovery.unannounce(); if (srv != null) srv.stop(); call.resolve(status()); }
 
     @PluginMethod
     public void info(PluginCall call) { call.resolve(status()); }
@@ -87,5 +87,5 @@ public class MeshPlugin extends Plugin {
     }
 
     @Override
-    protected void handleOnDestroy() { if (srv != null) srv.stop(); }
+    protected void handleOnDestroy() { NetDiscovery.unannounce(); if (srv != null) srv.stop(); }
 }

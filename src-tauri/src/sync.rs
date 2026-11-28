@@ -115,7 +115,7 @@ fn tls_cfg(cert: Vec<u8>, key: Vec<u8>) -> Result<Arc<rustls::ServerConfig>, Str
 }
 // Отпечаток — SHA-256 сертификата (DER), шестнадцатеричный, строчные буквы: так же считает телефон
 pub fn fingerprint(der: &[u8]) -> String { Sha256::digest(der).iter().map(|b| format!("{:02x}", b)).collect() }
-fn cert_fp(app: &AppHandle) -> String {
+pub(crate) fn cert_fp(app: &AppHandle) -> String {
     app.path().app_data_dir().ok().and_then(|d| std::fs::read(d.join("sync-cert.der")).ok()).map(|c| fingerprint(&c)).unwrap_or_default()
 }
 
@@ -207,7 +207,7 @@ pub fn sync_start(app: AppHandle, st: State<'_, SyncSrv>) -> Status {
         let (o, n, b, w) = (st.on.clone(), st.next.clone(), st.bodies.clone(), st.waits.clone());
         // сертификат — сразу (первый раз создаётся): отпечаток нужен в ответе, телефон сверяет его по экрану
         match tls(&app) {
-            Ok((cfg, _)) => { let a = app.clone(); std::thread::spawn(move || serve(a, cfg, o, n, b, w)); }
+            Ok((cfg, _)) => { crate::discover::announce(&host_name(), port_of(&app), &cert_fp(&app)); let a = app.clone(); std::thread::spawn(move || serve(a, cfg, o, n, b, w)); }
             Err(e) => { let _ = app.emit("sync-error", e); st.on.store(false, Ordering::Relaxed); }
         }
     }
@@ -216,6 +216,7 @@ pub fn sync_start(app: AppHandle, st: State<'_, SyncSrv>) -> Status {
 #[tauri::command]
 pub fn sync_stop(st: State<'_, SyncSrv>) {
     st.on.store(false, Ordering::Relaxed);
+    crate::discover::stop();
     if let Ok(mut w) = st.waits.lock() { for (_, tx) in w.drain() { let _ = tx.send((503, "text/plain".into(), Vec::new())); } }
 }
 // Адреса компьютера в сети и его имя — и для раздачи гостям (guest.rs)

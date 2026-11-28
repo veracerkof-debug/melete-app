@@ -15,6 +15,7 @@ import { modeOf } from '../linkmode.js';
 import { ROLES, roleOf, roleToMode } from '../roles.js';
 import { scanQR, parsePair, pairPayload, qrHTML } from './qrscan.js';
 import { CHEV } from './common.js';
+import { nearHTML, nearAvail, nearSearch, nearReset, nearAt, pickHTML, pairAddr, fpHint } from './devfind.js'; // автопоиск: блок «Рядом»
 
 /* ---------- чистая логика (без DOM, проверяется тестами) ---------- */
 
@@ -193,6 +194,7 @@ export function devicesHTML(app, ctx = {}) {
   return '<div class="dvpage"><div class="large">' + esc(t('page.link')) + '</div>' + netBar() +
     '<div class="hdr">' + esc(t('dv.mine')) + '</div>' + (!pcOf() && oldPc() ? '<p class="dvhint solo" role="status">' + esc(t('sy.err.repair')) + '</p>' : '') + cards +
     (ways.length ? '<button class="dvadd" data-dv="add">' + IC.plus + '<span>' + esc(t('dv.add')) + '</span></button>' : '') +
+    (nearAvail(ways.some((w) => w.roles.includes('join'))) ? nearHTML('data-dv') : '') +
     acceptHTML(app) + otherHTML(app, ctx, list) + '</div>';
 }
 
@@ -306,14 +308,14 @@ export function deviceSheet(app, ctx, id) {
 
 /* ---------- мастер «Подключить устройство» ---------- */
 
-export function wizard(app, ctx, { show = false } = {}) {
+export function wizard(app, ctx, { show = false, pick = null } = {}) {
   const types = waysOf(env(app));
   if (!types.length) return null;
   const S = app.syncSrv && app.syncSrv.avail ? app.syncSrv : app.mesh && app.mesh.avail ? app.mesh : null;
   const trail = []; // пройденные шаги — для «Назад»
-  const s = { step: 'type', type: '', role: '', grant: 'own', addr: '', code: '', fp: '', busy: false, msg: '', res: null, known: [], syncing: '', syncMsg: '' };
+  const s = { step: 'type', type: '', role: '', grant: 'own', addr: '', code: '', fp: '', busy: false, msg: '', res: null, known: [], syncing: '', syncMsg: '', pick: null };
   let unsub = [];
-  const go = (step) => { trail.push(s.step); s.step = step; s.msg = ''; if (step === 'show') startShow(); if (step === 'join') s.fp = ''; api.update(); };
+  const go = (step) => { trail.push(s.step); s.step = step; s.msg = ''; if (step === 'show') startShow(); if (step === 'join') { s.fp = ''; s.pick = null; if (nearAvail(true)) nearSearch(app, () => { try { api.update(); } catch { /* закрыта */ } }); } api.update(); };
   const back = () => { if (!trail.length) { api.close(); return; } s.step = trail.pop(); s.msg = ''; api.update(); };
   const pickType = (id) => {
     s.type = id;
@@ -388,9 +390,10 @@ export function wizard(app, ctx, { show = false } = {}) {
         ROLES.map((r) => tile('grant', r, r === 'own' ? IC.ok : r === 'view' ? IC.wifi : IC.plus, t('role.' + r), t('role.' + r + '.sub'))).join('') + '</div>';
     }
     if (s.step === 'show') return head(t('dv.w.show')) + dots(2) + netBar() + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' + (s.grant !== 'own' ? '<p class="dvnote">' + esc(t('role.once', { role: t('role.' + s.grant) })) + '</p>' : '') + showHTML();
+    if (s.step === 'join' && s.pick) return head(t('dv.w.join')) + dots(2) + netBar() + pickHTML(s.pick, { code: s.code, busy: s.busy, msg: s.msg });
     if (s.step === 'join') {
       const wt = warnText();
-      return head(t('dv.w.join')) + dots(2) + netBar() + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' +
+      return head(t('dv.w.join')) + dots(2) + netBar() + (nearAvail(true) ? nearHTML('data-dvw') : '') + '<p class="dvnote">' + IC.ok + esc(t('dv.w.wifi')) + '</p>' +
         (Capacitor.isNativePlatform() ? '<div class="group"><button class="cell act" data-dvw="scan"' + (s.busy ? ' disabled' : '') + '>' + esc(t('qr.scan')) + '</button></div><p class="dvnote">' + esc(t('dv.w.or')) + '</p>' : '<p class="dvnote">' + esc(t('dv.w.joinHint')) + '</p>') +
         '<div class="group"><label class="cell"><span>' + esc(t('sy.addr')) + '</span><input class="inp" data-dvin="addr" inputmode="decimal" placeholder="192.168.1.23" value="' + esc(s.addr) + '" aria-label="' + esc(t('sy.addr')) + '"></label>' +
         '<label class="cell"><span>' + esc(t('sy.code')) + '</span><input class="inp" data-dvin="code" inputmode="numeric" maxlength="7" placeholder="000 000" value="' + esc(s.code) + '" aria-label="' + esc(t('sy.code')) + '"></label>' +
@@ -422,7 +425,10 @@ export function wizard(app, ctx, { show = false } = {}) {
       else if (a === 'role') { s.role = b.dataset.v; go(s.role === 'show' ? 'grant' : s.role); }
       else if (a === 'grant' && ROLES.includes(b.dataset.v)) { s.grant = b.dataset.v; if (S) S.setPairRole(s.grant); go('show'); } // роль новому устройству назначает эта сторона
       else if (a === 'scan' && !s.busy) scan();
-      else if (a === 'join' && !s.busy) doJoin({ addr: s.addr, code: s.code, fp: '' });
+      else if (a === 'join' && !s.busy) doJoin({ addr: s.addr, code: s.code, fp: s.pick ? s.fp : '' });
+      else if (a === 'nfind') nearSearch(app, () => { try { api.update(); } catch { /* закрыта */ } });
+      else if (a === 'npick') { const f = nearAt(b.dataset.i); if (f) { s.pick = f; s.addr = pairAddr(f); s.fp = fpHint(f); s.code = ''; s.msg = ''; api.update(); } }
+      else if (a === 'unpick') { s.pick = null; s.addr = ''; s.fp = ''; s.code = ''; s.msg = ''; api.update(); }
       else if (a === 'sync' && s.res) syncCard(app, ctx, s.res.id, () => { try { api.update(); } catch { /* закрыта */ } });
       else if (a === 'finish') api.close();
     });
@@ -433,7 +439,8 @@ export function wizard(app, ctx, { show = false } = {}) {
     }));
   }, { onClose: () => { unsub.forEach((f) => f()); unsub = []; if (S) S.setPairRole('own'); } });
   // один вариант — без лишних вопросов
-  if (show && S && types.some((x) => x.id === 'phone' && x.roles.includes('show'))) { s.type = 'phone'; s.role = 'show'; go('grant'); trail.length = 0; }
+  if (pick && types.some((x) => x.roles.includes('join'))) { s.pick = pick; s.addr = pairAddr(pick); s.fp = fpHint(pick); s.step = 'join'; }
+  else if (show && S && types.some((x) => x.id === 'phone' && x.roles.includes('show'))) { s.type = 'phone'; s.role = 'show'; go('grant'); trail.length = 0; }
   else if (types.length === 1) { pickType(types[0].id); trail.length = 0; }
   refreshNet().then(() => { try { api.update(); } catch { /* закрыта */ } });
   return api;
@@ -451,6 +458,8 @@ export function devicesClick(app, target, ctx) {
   else if (a === 'sync') syncCard(app, ctx, id);
   else if (a === 'rc') { const d = find(app, id); if (d) import('./remote.js').then((m) => m.remoteSheet(app, d.entry)); }
   else if (a === 'code') wizardShow(app, ctx);
+  else if (a === 'nfind') nearSearch(app, ctx.render);
+  else if (a === 'npick') { const f = nearAt(b.dataset.i); if (f) wizard(app, ctx, { pick: f }); }
   else if (a === 'grp') { const g = b.dataset.g; if (open.has(g)) open.delete(g); else open.add(g); ctx.render(); }
   else return false;
   return true;
@@ -465,7 +474,7 @@ export function devicesMount(app, ctx) {
   if (Date.now() - netAt > 8000) refreshNet().then((n) => { if (n !== null && lastCtx) lastCtx.render(); });
   if (!tick) {
     tick = setInterval(() => {
-      if (!document.querySelector('.dvpage')) { clearInterval(tick); tick = 0; return; }
+      if (!document.querySelector('.dvpage')) { clearInterval(tick); tick = 0; nearReset(); return; }
       refreshNet().finally(() => { if (lastCtx) lastCtx.render(); });
     }, 15000);
   }
