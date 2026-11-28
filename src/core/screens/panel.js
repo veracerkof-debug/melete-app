@@ -1074,6 +1074,7 @@ export function legalSheet(kind) {
       lic('DeepFilterNet · tract', t('lic.df.sub'), '<p>© Hendrik Schröter; © Sonos, Inc.</p><p>' + t('lic.df.text') + '</p>') +
       lic('Airwindows', t('lic.aw.sub'), '<p>© Chris Johnson (Airwindows)</p><p>' + t('lic.mit') + '</p>') +
       lic('ureq', t('lic.ureq.sub'), '<p>© Martin Algesten ' + t('lic.andContrib') + '</p><p>' + t('lic.ureq.text') + '</p>') +
+      lic('mdns-sd', t('lic.mdns.sub'), '<p>© Keepsimple ' + t('lic.andContrib') + '</p><p>' + t('lic.mdns.text') + '</p>') +
       lic('rustls · rcgen · RustCrypto sha2', t('lic.tls.sub'), '<p>© rustls, rcgen, RustCrypto ' + t('lic.andContrib') + '</p><p>' + t('lic.tls.text') + '</p>') +
       lic('FFmpeg · ffmpeg.wasm', t('lic.ff.sub'), '<p>© FFmpeg developers; © Jerome Wu (ffmpeg.wasm)</p><p>' + t('lic.ff.text') + '</p>') +
       lic('lamejs · mp4-muxer', t('lic.lame.sub'), '<p>© LAME developers, Alex Zhukov; © Vanilagy</p><p>' + t('lic.lame.text') + '</p>') +

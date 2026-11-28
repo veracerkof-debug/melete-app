@@ -25,3 +25,5 @@
 ## Состояние
 
 План. Реализация — по частям (роли; полная синхронизация и фон; автопоиск), поверх экрана «Устройства» (`screens/devices.js`).
+
+**Автопоиск (28.11.2026) — сделан в ветке `eco-discovery`:** Android NSD (`NetDiscovery*.java`), компьютер mDNS (`src-tauri/src/discover.rs`, крейт `mdns-sd`), `src/core/discover.js`, блок «Рядом» (`screens/devfind.js`). Тесты зелёные; на телефоне и в Windows/Linux не проверен. Подробности — `docs/tech/connect.md`.

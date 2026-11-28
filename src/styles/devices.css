@@ -67,3 +67,14 @@
 .dvdone .dvic.big { width: 64px; height: 64px; border-radius: 50%; }
 /* компьютер: карточки в две колонки по ширине колонки раздела — grid сам; шторки остаются узкими */
 @media (min-width: 900px) { .dvq { text-align: left; } }
+/* автопоиск: блок «Рядом» (screens/devfind.js) */
+.dvnear { margin-top: var(--sp-3); }
+.dvnrow { display: flex; align-items: center; gap: var(--sp-3); min-height: 56px; width: 100%; text-align: left; }
+.dvnrow .dvtx { display: flex; flex-direction: column; min-width: 0; }
+.dvnrow.paired { opacity: .7; }
+.dvnrow .chev { width: 8px; height: 13px; flex: none; fill: none; stroke: var(--l3); stroke-width: 2; }
+.dvnfind { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 44px; }
+.dvnfind svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.dvnearst { justify-content: center; text-align: center; }
+.dvnearst .dvdot { background: var(--ok); animation: dvpulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .dvnearst .dvdot { animation: none; } }
