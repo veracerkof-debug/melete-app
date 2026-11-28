@@ -37,7 +37,7 @@ test('песни: таблица и предпросмотр', async ({ page, me
 test('сет-лист на компьютере', async ({ page, melete, errors }) => {
   await melete.open({ songs });
   await withEvent(page); await page.reload(); await page.waitForTimeout(1200);
-  await page.click('.htdh'); await page.waitForTimeout(600);
+  await page.click('.dtab[data-go="calendar"]'); await page.waitForTimeout(600); // календарь: у компьютера верхняя вкладка «Служение/Календарь»
   await page.evaluate(() => { const b = document.querySelector('[data-cev]'); b && b.click(); });
   await page.waitForTimeout(500);
   await page.evaluate(() => { const b = document.querySelector('[data-ce="setlist"]'); b && b.click(); });

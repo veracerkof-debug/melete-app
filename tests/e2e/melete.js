@@ -54,6 +54,8 @@ export function helpers(page) {
       const REP = { beat: 'ear', vocal: 'ear', looper: 'studio', book: 'theory', theremin: 'glider' };
       await h.tab('tools');
       const rep = REP[id] || id;
+      // у новичка во вкладке «Инструменты» — пять плиток (.bggrid), учебник открывается своей плиткой напрямую
+      if (await page.locator('.bggrid').count()) { await page.click('.bggrid [data-open-tool="' + id + '"]'); await page.waitForTimeout(900); return; }
       await page.click('.tgrid [data-open-tool="' + rep + '"]'); await page.waitForTimeout(700);
       if (rep !== id) { await page.click('[data-tv-grp="' + id + '"]'); await page.waitForTimeout(900); }
     },
