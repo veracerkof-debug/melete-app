@@ -187,6 +187,8 @@ test('учебник: уровни — новичку «Первые шаги»,
   await page.locator('.book [data-btoc]').click();
   await page.locator('.book .bklvl [data-blvl="amateur"]').click();
   await expect(page.locator('.book .bsecs .bsec')).toHaveCount(2);
+  // дальше — главы с заданным уровнем; занятие новичка (Н9) без окон, поэтому открываем как любитель
+  await melete.open({ settings: { profile: { name: 'A', instruments: ['piano'], level: 'amateur', priorHours: 0, createdAt: 1760000000000 } } });
   await open(melete, page, 'book', { book: { ch: 'iivi', lvl: 'amateur' } });
   await expect(page.locator('.book .bkles.locked')).toHaveCount(3);
   await page.locator('.book [data-lopen]').first().click();
