@@ -8,6 +8,8 @@ import { ensureLib, emptySong, saveSong, addSongs, PALETTE } from '../library.js
 import { parseKey, keyName } from '../songinfo.js';
 import { log, logErr } from '../log.js';
 import { folderAvailable } from '../folder.js';
+import { isDesk } from '../../ui/desk.js';
+import { statCardsHTML } from './songsdesk.js';
 
 // «C#» → «C♯», «Bb» → «B♭», «A#m» → написание приложения по высоте
 export function normKey(k) {
@@ -36,6 +38,7 @@ export function importPreview(app, songs, errors = [], source = 'files', onDone 
   log('import', source + ': найдено ' + songs.length + ', повторов ' + items.filter((x) => x.dup).length + ', ошибок ' + errors.length, errors.length ? 'w' : 'i');
   const api = sheet(() => snav(t('imp.title'), { right: '<button class="link b r" data-imp="go">' + t('imp.go', { n: items.filter((x) => x.on).length }) + '</button>' }) +
     (items.length ? '' : '<p class="ftr">' + t('imp.none') + '</p>') +
+    (isDesk() && items.length ? statCardsHTML([[items.filter((x) => !x.dup && x.title).length, t('dsk.impNew'), 'ok'], [items.filter((x) => x.dup).length, t('dsk.impSame')], [items.length, t('dsk.impAll')]]) : '') +
     (items.length ? '<label class="cell" style="margin-bottom:8px"><span class="grow">' + t('imp.cat') + '</span><select class="sortsel" data-impcat aria-label="' + esc(t('imp.cat')) + '">' +
       L.cats.map((c) => '<option value="' + c.id + '"' + (c.id === cat ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '<option value=""' + (!cat ? ' selected' : '') + '>' + t('songs.noCat') + '</option></select></label>' +
       '<div class="group">' + items.map((x, i) => '<label class="cell"><input type="checkbox" data-impi="' + i + '"' + (x.on ? ' checked' : '') + ' style="width:22px;height:22px;margin-right:12px">' +

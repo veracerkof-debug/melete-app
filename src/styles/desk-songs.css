@@ -1,0 +1,85 @@
+/* Песни и служение на компьютере (html.desk): таблица «Песни» с предпросмотром, страница песни с панелью, сет-лист в две колонки, сводка импорта.
+   Макеты автора (28.11.2026): DLibrary, DSong, Desk «Служение», DImport. Разметка — screens/songsdesk.js; телефон и планшет пальцем этого не видят.
+   Только токены темы и шкала размеров (--fs-*, --r-*): стиль «Классика» и остальные видят то же. */
+
+.dx, .dprev, .dchip { box-sizing: border-box; }
+.dx { display: none; }
+
+/* ---------- «Песни»: таблица слева, предпросмотр справа ---------- */
+html.desk .dlib { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr); gap: 28px; align-items: start; }
+html.desk .dlist { min-width: 0; }
+html.desk .dlist .slist { display: flex; flex-direction: column; gap: 0; background: var(--cell); border-radius: var(--r-4); padding: 4px 6px; }
+html.desk .dlist .stile3 { min-height: 54px; border-radius: var(--r-2); background: transparent; padding: 6px 12px 6px 10px; gap: 14px; cursor: pointer; }
+html.desk .dlist .stile3::before { display: none; }
+html.desk .dlist .stile3 + .stile3 { border-top: .5px solid var(--sep); border-top-left-radius: 0; border-top-right-radius: 0; }
+html.desk .dlist .stile3:hover { background: color-mix(in srgb, var(--tint) 7%, var(--cell)); }
+html.desk .dlist .stile3.cur { background: color-mix(in srgb, var(--tint) 14%, var(--cell)); }
+html.desk .dlist .stile3 .tagrow { display: none; }
+html.desk .dx { display: inline-flex; align-items: center; flex: none; }
+html.desk .dskey { min-width: 38px; height: 34px; justify-content: center; border-radius: var(--r-2); background: color-mix(in srgb, var(--tint) 18%, var(--cell)); color: var(--tint-text); font-weight: 700; font-size: var(--fs-4); }
+html.desk .dbpm { width: 76px; color: var(--l2); font-size: var(--fs-4); }
+html.desk .dsrc { width: 84px; color: var(--l2); font-size: var(--fs-3); }
+html.desk .dst2 { width: 112px; justify-content: center; min-height: 26px; padding: 0 10px; border-radius: var(--r-pill); font-size: var(--fs-3); font-weight: 600; background: var(--fill); }
+html.desk .dst2.ok, html.desk .dchip.ok { background: color-mix(in srgb, var(--ok) 18%, var(--cell)); color: var(--ok); }
+html.desk .dst2.wn, html.desk .dchip.wn { background: var(--gold-bg); color: var(--gold); }
+html.desk .dlist .stile3 .val { min-width: 54px; }
+
+html.desk .dprev { position: sticky; top: calc(var(--top) + 16px); display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - var(--top) - 40px); overflow-y: auto; padding: 4px 2px 8px; min-width: 0; }
+html.desk .dprevhd { font-size: var(--fs-2); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--l2); }
+html.desk .dprev h2 { margin: 0; font-size: var(--fs-7); line-height: 1.2; }
+html.desk .dprevsub, html.desk .dsum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+html.desk .dchip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: var(--fill); font-size: var(--fs-3); font-weight: 600; white-space: nowrap; }
+html.desk .dchip.ac { background: color-mix(in srgb, var(--tint) 18%, var(--cell)); color: var(--tint-text); }
+html.desk .dprevact { display: flex; gap: 10px; flex-wrap: wrap; }
+html.desk .dprevact .btn { min-height: 44px; }
+.dskeys { margin: 0; font-size: var(--fs-3); color: var(--l2); }
+.dskeys .dkb { display: inline-block; min-width: 24px; padding: 1px 7px; border: 1px solid var(--sep); border-bottom-width: 2px; border-radius: var(--r-1); background: var(--cell); font: 600 var(--fs-2) var(--font); color: var(--l2); text-align: center; }
+
+/* текст песни: аккорды над словами, моноширинно */
+.dtext { margin: 0; padding: 14px 18px; border-radius: var(--r-3); background: var(--cell); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--fs-6); line-height: 1.6; white-space: pre; overflow: auto; color: var(--ink); }
+.dtext.empty { color: var(--l2); font-family: var(--font); white-space: normal; }
+.dtext .chd { color: var(--tint-text); font-weight: 700; }
+html.desk .dprev .dtext { font-size: var(--fs-5); max-height: 46vh; }
+
+/* ---------- страница песни: текст крупно слева, панель справа ---------- */
+html.desk .dtextcard { margin-bottom: 14px; }
+html.desk .dtextcard .dtext { font-size: var(--fs-7); line-height: 1.55; padding: 20px 24px; max-height: 58vh; }
+html.desk .dpanel { display: flex; flex-direction: column; gap: 4px; background: var(--cell); border-radius: var(--r-4); padding: 8px 18px 14px; margin-bottom: 16px; }
+html.desk .dpr { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+html.desk .dpr + .dpr { border-top: .5px solid var(--sep); }
+html.desk .dpr.col { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 0; }
+html.desk .dprl { flex: 1; font-size: var(--fs-2); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--l2); }
+html.desk .dpr b { font-size: var(--fs-6); }
+html.desk .dprm { font-size: var(--fs-4); color: var(--ink); }
+html.desk .dpanel .dskeys { padding-top: 10px; border-top: .5px solid var(--sep); }
+
+/* ---------- сет-лист: порядок слева, предпросмотр справа ---------- */
+html.desk .sheet.wide { max-width: 1180px; width: min(1180px, 94vw); }
+html.desk .dset { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, 1fr); gap: 24px; align-items: start; }
+html.desk .dsetl, html.desk .dsetr { min-width: 0; }
+html.desk .dsetr { position: sticky; top: 8px; display: flex; flex-direction: column; gap: 12px; padding-top: 52px; }
+html.desk .dsetr .dprev { position: static; max-height: none; overflow: visible; }
+html.desk .dsum { margin: 4px 0 12px; }
+html.desk .dsrows { background: var(--cell); border-radius: var(--r-4); padding: 4px 6px; }
+html.desk .dsrow { display: flex; align-items: center; gap: 8px; min-height: 60px; border-radius: var(--r-2); padding: 0 6px 0 10px; }
+html.desk .dsrow + .dsrow { border-top: .5px solid var(--sep); }
+html.desk .dsrow.cur { background: color-mix(in srgb, var(--tint) 14%, var(--cell)); }
+html.desk .dsmain { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left; background: none; border: 0; padding: 6px 0; cursor: pointer; font: inherit; color: inherit; }
+html.desk .dsmain .grow { min-width: 0; }
+html.desk .dsmain .bksub { display: block; font-size: var(--fs-3); color: var(--l2); }
+html.desk .dx2 { display: inline-flex; flex: none; }
+html.desk .dsact { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+html.desk .dsact .btn { min-height: 44px; }
+
+/* ---------- импорт и источник: три числа сверху ---------- */
+html.desk .dstats { display: flex; gap: 12px; margin: 4px 0 14px; }
+html.desk .dstat { flex: 1; text-align: center; background: var(--cell); border-radius: var(--r-3); padding: 12px 8px; }
+html.desk .dstat b { display: block; font-size: var(--fs-8); line-height: 1.15; }
+html.desk .dstat.ok b { color: var(--ok); }
+html.desk .dstat span { font-size: var(--fs-3); color: var(--l2); }
+
+@media (max-width: 1180px) {
+  html.desk .dlib, html.desk .dset { grid-template-columns: minmax(0, 1fr); }
+  html.desk .dprev { position: static; max-height: none; }
+  html.desk .dsrc { display: none; }
+}

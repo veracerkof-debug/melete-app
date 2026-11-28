@@ -37,6 +37,8 @@ import { dragSort, onHold, holdMenu } from '../../ui/hold.js';
 import { pageSwipe } from '../../ui/gestures.js';
 import { createDeskShell } from './deskshell.js';
 import { deskTodayHTML, deskAct } from './deskhome.js';
+import { isDesk } from '../../ui/desk.js';
+import { initSongsDeskKeys } from './songsdesk.js';
 
 // Значки меню песни (удержание строки в списке)
 const SM = {
@@ -197,7 +199,8 @@ export function createShell(app, root) {
     else if (d.act && d.act.startsWith('desk') && (d.act === 'deskclassic' ? ((view.classic = !view.classic), render(), true) : deskAct(app, d, render))) { /* центр управления и рабочая станция (deskhome.js) */ }
     else if (d.play) app.startSession('song', d.play);
     else if (d.song && view.sel instanceof Set) { if (view.sel.has(d.song)) view.sel.delete(d.song); else view.sel.add(d.song); render(); } // выбор нескольких песен
-    else if (d.song) go('library', d.song);
+    else if (d.song) { if (isDesk() && view.tab === 'library' && !view.song && view.prev !== d.song) { view.prev = d.song; render(); } else go('library', d.song); } // компьютер: касание — предпросмотр, второе — открыть
+    else if (d.dsk === 'open') go('library', d.sid);
     else if (d.act === 'selall') { const L = listSongs(app.store.songs(), app.store.sessions(), ensureLib(app.store.state, t), view, getLang()).list; const on = L.length && L.every(({ s }) => view.sel.has(s.id)); L.forEach(({ s }) => { if (on) view.sel.delete(s.id); else view.sel.add(s.id); }); render(); }
     else if (d.act === 'dupsel') { // «Выбрать лишние»: в каждой группе остаётся песня, где больше занятий (при равенстве — старшая)
       const st2 = app.store.sessions(), nm = (x) => String(x || '').trim().toLowerCase(), g = new Map(), sel = new Set();
@@ -389,6 +392,7 @@ export function createShell(app, root) {
   app.go = go;
   app.shellState = () => ({ tab: view.tab, panel: panel.page || '' }); // для верхней полосы компьютера (deskshell.js)
   app.deskStart = () => { if (!dpro() || view.classic || view.tab !== 'home') return false; deskAct(app, { act: 'deskstart' }, render); return true; }; // Пробел на «Сегодня»
+  initSongsDeskKeys({ app, view, go, render, edit: (id) => songForm(app, id, (nid) => go('library', nid)) });
   app.homeEditDone = () => { if (!homeEditing()) return false; setHomeEdit(false); render(); return true; };
   app.render = render;
   // урок пройден — «Добавить на главную?» (учёба: часы в неделю)

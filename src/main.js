@@ -7,6 +7,7 @@ import { loadLang, guessLang } from './i18n/index.js';
 import { installDesk } from './ui/desk.js';
 import './styles/desk.css';
 import './styles/desk-shell.css';
+import './styles/desk-songs.css';
 // Движение (переходы, отклик) — после стилей экранов, чтобы перекрыть их старые анимации
 import './styles/motion.css';
 // «Минимал» (эксперимент) — последним: перекрывает обычные стили только при data-style="mono"
