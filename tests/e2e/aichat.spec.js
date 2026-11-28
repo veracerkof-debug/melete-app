@@ -188,7 +188,7 @@ test('нейросеть: отказ сети — причина словами,
   await page.waitForTimeout(400);
   await page.locator('.topbar .hai[data-act="aichat"]').click(); await page.waitForTimeout(600);
   await page.fill('.aichat textarea', 'привет'); await page.click('.aichat [data-ai="send"]'); await page.waitForTimeout(600);
-  await expect(page.locator('.aierr')).toContainText('Адрес сервера не находится'); await expect(page.locator('.aierr')).toContainText('Проверьте интернет');
+  await expect(page.locator('.aierr')).toContainText('Адрес сервера не находится'); await expect(page.locator('.aierr')).toContainText('Проверить интернет');
   await page.click('.aierr [data-ai="why"]'); await page.waitForTimeout(700);
   await expect(page.locator('.aidgl').first()).toContainText('Адрес указан верно'); await expect(page.locator('.aidgl').first()).toContainText('Запрос не прошёл');
   await expect(page.locator('.sheet [data-dg="send"]')).toBeVisible();

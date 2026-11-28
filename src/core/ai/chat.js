@@ -51,13 +51,20 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
         const hist = past.map((m) => (m.role === 'tool' ? { role: 'user', content: '=== ОТВЕТ ПРИЛОЖЕНИЯ НА ЗАПРОСЫ ===\n' + (m.result || '') }
           : m.id === userId && atts.length ? { role: m.role, content: m.text + (textBlock(atts) ? '\n\n' + textBlock(atts) : ''), images: imagesOf(atts) }
           : { role: m.role, content: m.text + (m.att && m.att.length ? '\n[вложения были: ' + m.att.map((a) => a.name).join(', ') + ']' : '') }));
-        const res = await post(buildRequest(c, { system: sys, messages: hist }));
-        const out = parseResponse(c, res.status, res.data);
+        // устойчивость: пустой ответ, перегрузка (429/5xx) и обрыв сети — одна-две повторные попытки с паузой; ошибки ключа и адреса не повторяются
+        let out = null;
+        for (let at = 0; at < 3; at++) {
+          try { const res = await post(buildRequest(c, { system: sys, messages: hist })); out = parseResponse(c, res.status, res.data); }
+          catch (e) { if (at >= 1 || !e || e.kind !== 'net') throw e; out = null; }
+          if (out && (out.ok || !['empty', 'server', 'rate'].includes(out.kind))) break;
+          if (at < 2) await new Promise((r) => setTimeout(r, 1500 * (at + 1)));
+        }
+        if (!out) throw Object.assign(new Error('net'), { kind: 'net' });
         if (!out.ok) { error = { kind: out.kind, message: out.message }; return { ok: false, why: out.kind }; }
         const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
         messages.push(msg);
         // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»; студия и запросы — никогда
-        if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && p.kind !== 'query' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
+        if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && p.kind !== 'plan' && p.kind !== 'query' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);
         const qp = msg.proposals.filter((p) => p.kind === 'query' && p.status === 'pending');
         if (!qp.length || round >= ROUNDS_MAX) return { ok: true };
         const result = qp.map((p) => { p.status = 'answered'; return answerQueries(p.queries, data(), c); }).join('\n\n');

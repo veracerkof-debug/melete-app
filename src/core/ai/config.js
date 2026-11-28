@@ -3,9 +3,9 @@
 // Выключено по умолчанию. Только https. Без DOM (хранилище передаётся для тестов).
 export const KEY = 'melete.ai';
 export const FORMATS = ['openai', 'anthropic'];
-export const LEVELS = { songs: ['none', 'read', 'write'], media: ['none', 'read', 'write'], studio: ['none', 'read', 'write'], stats: ['none', 'read'], log: ['none', 'read'] };
+export const LEVELS = { songs: ['none', 'read', 'write'], media: ['none', 'read', 'write'], studio: ['none', 'read', 'write'], plan: ['none', 'read', 'write'], stats: ['none', 'read'], log: ['none', 'read'] };
 // attach — вложения в чат: files (файл с телефона уходит провайдеру целиком) и links (приложение само открывает ссылку по нажатию; по умолчанию выключено)
-export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
+export const DEFAULTS = { on: false, format: 'openai', url: '', model: '', key: '', access: { songs: 'none', media: 'none', studio: 'none', plan: 'none', stats: 'none', log: 'none' }, attach: { files: true, links: false }, auto: false, instruction: '' };
 
 // Агенты — несколько подключений (слово автора 27.11.2026: «ChatGPT, Gemini, Claude — выбирать, кто лучше, дешевле, быстрее»).
 // Это не аккаунты, а разные нейросети и их ключи. Верхние поля format/url/model/key — всегда у выбранного агента (весь прочий код читает их как раньше).

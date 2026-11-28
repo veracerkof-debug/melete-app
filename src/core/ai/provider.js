@@ -13,7 +13,7 @@ export function buildRequest(cfg, { system, messages }) {
   };
   const msgs = messages.map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: part(m) }));
   if (cfg.format === 'anthropic') {
-    return { url, headers: { 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: { model: cfg.model, max_tokens: MAX_TOKENS, system, messages: msgs } };
+    return { url, headers: { 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: { model: cfg.model, max_tokens: MAX_TOKENS, system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }], messages: msgs } };
   }
   return { url, headers: { Authorization: 'Bearer ' + cfg.key, 'Content-Type': 'application/json' }, body: { model: cfg.model, messages: [{ role: 'system', content: system }, ...msgs] } };
 }
@@ -29,5 +29,7 @@ export function parseResponse(cfg, status, data) {
   let text = '';
   if (cfg.format === 'anthropic') text = (Array.isArray(j.content) ? j.content : []).filter((b) => b && b.type === 'text').map((b) => b.text).join('');
   else { const m = j.choices && j.choices[0] && j.choices[0].message; text = m ? (typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map((p) => p.text || '').join('') : '') : ''; }
-  return text.trim() ? { ok: true, text: String(text) } : { ok: false, kind: 'empty', message: '' };
+  // пустой ответ: причина остановки (stop_reason / finish_reason) — в диагностику
+  const why = cfg.format === 'anthropic' ? j.stop_reason : j.choices && j.choices[0] && j.choices[0].finish_reason;
+  return text.trim() ? { ok: true, text: String(text), cut: why === 'max_tokens' || why === 'length' } : { ok: false, kind: 'empty', message: why ? String(why).slice(0, 40) : '' };
 }

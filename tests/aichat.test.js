@@ -25,10 +25,10 @@ describe('чат с нейросетью: настройки', () => {
     expect(endpoint({ format: 'openai', url: 'http://x' })).toBeNull();
   });
   it('по умолчанию выключено и без доступа; ключ лежит не в practice.v1', () => {
-    const c = clean(null); expect(c.on).toBe(false); expect(c.access).toEqual({ songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }); expect(ready(c)).toBe(false);
+    const c = clean(null); expect(c.on).toBe(false); expect(c.access).toEqual({ songs: 'none', media: 'none', studio: 'none', plan: 'none', stats: 'none', log: 'none' }); expect(ready(c)).toBe(false);
     const st = mem(); save(CFG(), st); expect(KEY.startsWith('practice.v1')).toBe(false); expect([...st._m.keys()]).toEqual(['melete.ai']);
     expect(load(st).key).toBe('sk-SECRET'); wipe(st); expect(load(st).key).toBe('');
-    expect(clean({ access: { songs: 'root', stats: 'write' } }).access).toEqual({ songs: 'none', media: 'none', studio: 'none', stats: 'none', log: 'none' }); // чужие уровни отброшены
+    expect(clean({ access: { songs: 'root', stats: 'write' } }).access).toEqual({ songs: 'none', media: 'none', studio: 'none', plan: 'none', stats: 'none', log: 'none' }); // чужие уровни отброшены
   });
 });
 
@@ -37,12 +37,12 @@ describe('чат с нейросетью: форматы запросов', () =
     const o = buildRequest(CFG(), { system: 'S', messages: [{ role: 'user', content: 'hi' }] });
     expect(o.url).toBe('https://api.example.com/v1/chat/completions'); expect(o.headers.Authorization).toBe('Bearer sk-SECRET'); expect(o.body.messages[0]).toEqual({ role: 'system', content: 'S' });
     const a = buildRequest(CFG({ format: 'anthropic', url: 'https://api.anthropic.com' }), { system: 'S', messages: [{ role: 'assistant', content: 'x' }, { role: 'user', content: 'hi' }] });
-    expect(a.url).toBe('https://api.anthropic.com/v1/messages'); expect(a.headers['x-api-key']).toBe('sk-SECRET'); expect(a.body.system).toBe('S'); expect(a.body.max_tokens).toBeGreaterThan(0);
+    expect(a.url).toBe('https://api.anthropic.com/v1/messages'); expect(a.headers['x-api-key']).toBe('sk-SECRET'); expect(a.body.system[0].text).toBe('S'); expect(a.body.system[0].cache_control).toEqual({ type: 'ephemeral' }); expect(a.body.max_tokens).toBeGreaterThan(0);
     expect(() => buildRequest(CFG({ url: '' }), { system: '', messages: [] })).toThrow();
   });
   it('ответы и ошибки', () => {
     const oc = CFG(), an = CFG({ format: 'anthropic' });
-    expect(parseResponse(oc, 200, JSON.stringify({ choices: [{ message: { content: 'Привет' } }] }))).toEqual({ ok: true, text: 'Привет' });
+    expect(parseResponse(oc, 200, JSON.stringify({ choices: [{ message: { content: 'Привет' } }] }))).toMatchObject({ ok: true, text: 'Привет' });
     expect(parseResponse(an, 200, { content: [{ type: 'text', text: 'А' }, { type: 'text', text: 'Б' }] }).text).toBe('АБ');
     expect(parseResponse(oc, 401, { error: { message: 'bad key' } })).toMatchObject({ ok: false, kind: 'auth' });
     expect(parseResponse(oc, 429, {}).kind).toBe('rate'); expect(parseResponse(oc, 503, 'oops').kind).toBe('server');

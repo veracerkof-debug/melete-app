@@ -6,6 +6,7 @@ import { esc, toast, confirm } from '../../ui/index.js';
 import { checkUrl, FORMATS, LEVELS } from '../ai/config.js';
 import { brandOf } from '../ai/brand.js';
 import { badge, agentLabel } from './aichat.js';
+import { PRESETS, presetOf } from '../ai/presets.js';
 
 const sw = (k, on, l) => '<label class="sw"><input type="checkbox" data-ai-sw="' + k + '"' + (on ? ' checked' : '') + ' aria-label="' + esc(l) + '"><i></i></label>';
 const field = (k, label, val, o = {}) => '<label class="aifield"><span>' + esc(label) + '</span>' + (o.area
@@ -16,7 +17,7 @@ const ICON = '<svg viewBox="0 0 24 24"><path d="M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L
 export function aiHTML(app) {
   const ai = app.ai, c = ai.cfg();
   if (!ai.avail) return '<div class="large">' + t('page.ai') + '</div><p class="ftr keep">' + t('ai.noPlatform') + '</p>';
-  const u = c.url ? checkUrl(c.url) : { ok: true }, ok = ai.ready();
+  const u = c.url ? checkUrl(c.url) : { ok: true }, ok = ai.ready(), pre = presetOf(c);
   let h = '<div class="large">' + t('page.ai') + '</div>' +
     '<div class="aistat' + (ok ? ' ok' : '') + '">' + (c.on && c.model ? badge(brandOf(c), 40) : '<i class="aiic" aria-hidden="true">' + ICON + '</i>') + '<span class="grow"><b>' + t(ok ? 'ai.st.ready' : c.on ? 'ai.st.setup' : 'ai.st.off') + '</b>' +
     '<span class="l2">' + (c.on && c.model ? esc(brandOf(c).name + ' · ' + c.model) : t('ai.intro.short')) + '</span></span>' +
@@ -27,9 +28,11 @@ export function aiHTML(app) {
     c.agents.map((a, i) => '<button class="cell aiagent' + (a.id === c.agent ? ' cur' : '') + '" data-ai-agent="' + a.id + '" aria-pressed="' + (a.id === c.agent) + '">' + badge(brandOf(a), 30) + '<span class="grow"><b>' + esc(agentLabel(a, i)) + '</b>' + (a.id === c.agent ? ' ✓' : '') + '<span class="psub">' + esc(brandOf(a).host || t('ai.agent.blank')) + '</span></span></button>').join('') +
     '<button class="cell act" data-ai-act="agentadd">' + t('ai.agent.add') + '</button></div><p class="ftr keep">' + t('ai.agent.hint') + '</p>' +
     '<div class="hdr">' + t('ai.conn') + '</div><div class="group aicard">' + field('name', t('ai.agent.name'), c.agents.find((a) => a.id === c.agent).name, { ph: t('ai.agent.namePh') }) +
-    '<div class="aifield"><span>' + t('ai.format') + '</span><div class="seg aiseg2" role="group">' + FORMATS.map((f) => '<button type="button" data-ai-fmt="' + f + '" aria-pressed="' + (c.format === f) + '"' + (c.format === f ? ' class="on"' : '') + '>' + t('ai.fmt.' + f) + '</button>').join('') + '</div></div>' +
+    '<div class="aifield"><span>' + t('ai.prov') + '</span><div class="aiprov" role="group" aria-label="' + esc(t('ai.prov')) + '">' + PRESETS.map((p) => '<button type="button" data-ai-pre="' + p.id + '" aria-pressed="' + (pre === p) + '"' + (pre === p ? ' class="on"' : '') + '>' + esc(p.name) + '</button>').join('') + '<button type="button" data-ai-pre="" aria-pressed="' + (!pre) + '"' + (!pre ? ' class="on"' : '') + '>' + t('ai.prov.own') + '</button></div></div>' +
+    (pre && pre.models.length ? '<div class="aifield"><span>' + t('ai.model.pick') + '</span><div class="aiprov" role="group" aria-label="' + esc(t('ai.model.pick')) + '">' + pre.models.map((m) => '<button type="button" data-ai-mod="' + esc(m) + '" aria-pressed="' + (c.model === m) + '"' + (c.model === m ? ' class="on"' : '') + '>' + esc(m) + '</button>').join('') + '</div></div>' : '') +
+    (pre ? '' : '<div class="aifield"><span>' + t('ai.format') + '</span><div class="seg aiseg2" role="group">' + FORMATS.map((f) => '<button type="button" data-ai-fmt="' + f + '" aria-pressed="' + (c.format === f) + '"' + (c.format === f ? ' class="on"' : '') + '>' + t('ai.fmt.' + f) + '</button>').join('') + '</div></div>' +
     field('url', t('ai.url'), c.url, { mode: 'url', ph: c.format === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1' }) +
-    (!u.ok ? '<p class="aierrl">' + t('ai.url.' + u.why) + '</p>' : '') +
+    (!u.ok ? '<p class="aierrl">' + t('ai.url.' + u.why) + '</p>' : '')) +
     field('model', t('ai.model'), c.model, { ph: c.format === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-4o-mini' }) +
     field('key', t('ai.key'), '', { type: 'password', ph: c.key ? '••••••••••••  (' + t('ai.key.saved') + ')' : 'sk-…' }) +
     '<button class="cell act" data-ai-act="ping">' + t('ai.ping') + '</button>' +
@@ -37,7 +40,7 @@ export function aiHTML(app) {
     '<div class="hdr">' + t('ai.access') + '</div><div class="group aicard">' +
     Object.entries(LEVELS).map(([cat, vals]) => '<div class="aifield"><span class="aicat"><b>' + t('ai.cat.' + cat) + '</b><i class="l2">' + t('ai.cat.' + cat + '.sub') + '</i></span><div class="seg aiseg2" role="group" aria-label="' + esc(t('ai.cat.' + cat)) + '">' +
       vals.map((v) => '<button type="button" data-ai-acc="' + cat + '" data-v="' + v + '" aria-pressed="' + (c.access[cat] === v) + '"' + (c.access[cat] === v ? ' class="on"' : '') + '>' + t('ai.lvl.' + v) + '</button>').join('') + '</div></div>').join('') + '</div>' +
-    '<p class="ftr keep">' + t('ai.accHint') + '</p>' +
+    '<div class="group aicard"><button class="cell act" data-ai-act="fullaccess">' + t('ai.full') + '</button></div><p class="ftr keep">' + t('ai.accHint') + ' ' + t('ai.full.sub') + '</p>' +
     ((c.access.songs === 'write' || c.access.media === 'write') ? '<div class="group aicard"><div class="cell"><span class="grow">' + t('ai.auto') + '<span class="psub">' + t('ai.autoSub') + '</span></span>' + sw('auto', c.auto, t('ai.auto')) + '</div></div>' + (c.auto ? '<p class="aierrl">' + t('ai.autoWarn') + '</p>' : '') : '') +
     '<div class="hdr">' + t('ai.att') + '</div><div class="group aicard">' +
     '<div class="cell"><span class="grow">' + t('ai.att.files') + '<span class="psub">' + t('ai.att.filesSub') + '</span></span>' + sw('att:files', c.attach.files, t('ai.att.files')) + '</div>' +
@@ -52,6 +55,12 @@ export function aiHTML(app) {
 export function aiClick(app, target, rerender, openChat) {
   const ai = app.ai; let e;
   if ((e = target.closest('[data-ai-agent]'))) { ai.selectAgent(e.dataset.aiAgent); rerender(); return true; }
+  if ((e = target.closest('[data-ai-pre]'))) {
+    const p = PRESETS.find((x) => x.id === e.dataset.aiPre);
+    if (p) ai.save({ format: p.format, url: p.url, model: p.models[0] || '', name: ai.cfg().agents.find((a) => a.id === ai.cfg().agent).name || p.name }); else ai.save({ url: '', model: '' });
+    rerender(); return true;
+  }
+  if ((e = target.closest('[data-ai-mod]'))) { ai.save({ model: e.dataset.aiMod }); rerender(); return true; }
   if ((e = target.closest('[data-ai-fmt]'))) { ai.save({ format: e.dataset.aiFmt }); rerender(); return true; }
   if ((e = target.closest('button[data-ai-acc]'))) {
     ai.save({ access: { [e.dataset.aiAcc]: e.dataset.v } }); if (ai.cfg().access.songs !== 'write' && ai.cfg().access.media !== 'write') ai.save({ auto: false }); rerender(); return true;
@@ -62,6 +71,7 @@ export function aiClick(app, target, rerender, openChat) {
     if (a === 'diag') { import('./aidiag.js').then((m) => m.openDiag(app)); return true; }
     if (a === 'agentadd') { ai.addAgent(); rerender(); return true; }
     if (a === 'agentdel') { confirm(t('ai.agent.del'), t('ai.agent.delAsk'), t('ai.agent.delYes')).then((ok) => { if (ok) { ai.removeAgent(ai.cfg().agent); rerender(); } }); return true; }
+    if (a === 'fullaccess') { confirm(t('ai.full'), t('ai.full.ask'), t('ai.full.yes')).then((ok) => { if (ok) { ai.save({ access: { songs: 'write', media: 'write', studio: 'write', plan: 'write', stats: 'read', log: 'read' } }); rerender(); } }); return true; }
     if (a === 'open') { openChat(); return true; }
     if (a === 'wipe') { confirm(t('ai.wipe'), t('ai.wipeAsk'), t('ai.wipeYes')).then((ok) => { if (ok) { ai.wipe(); toast(t('ai.wiped')); rerender(); } }); return true; }
   }

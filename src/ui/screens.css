@@ -1016,3 +1016,4 @@ html.desk .hstart .hfree{min-height:64px}
 .aicrow.cur{background:color-mix(in srgb,var(--tint) 10%,var(--cell))}
 .aicpick{text-align:left;min-width:0}
 .aicpick b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.aiprov{display:flex;flex-wrap:wrap;gap:6px;width:100%}.aiprov button{min-height:40px;padding:6px 12px;border-radius:999px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:14px}.aiprov button.on{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12);font-weight:600}

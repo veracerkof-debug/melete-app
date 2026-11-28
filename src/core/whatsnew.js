@@ -156,6 +156,9 @@ export const NEWS = [
   { n: 52, d: '2026-11-27', ru: ['Компьютер: навигация сверху, главная в две колонки; поиск на Ctrl K, клавиши разделов и инструментов (M — метроном, T — тюнер, Пробел — начать занятие); у песен на главной — полоса «темп к цели»', 'Тюнер у «Профи» без режима «По строю»; Библия: переводы сокращениями (RST, NRT 23)'],
     en: ['Computer: top navigation and a two-column home; search on Ctrl K, keys for sections and tools (M — metronome, T — tuner, Space — start a session); a “tempo to goal” bar on songs at home', 'Tuner for Pro without “By tuning” mode; Bible: translations by abbreviation (RST, NRT 23)'],
     uz: ['Kompyuter: yuqorida navigatsiya, ikki ustunli bosh ekran; Ctrl K qidiruvi, bo‘lim va asbob tugmalari (M — metronom, T — tyuner, Probel — mashqni boshlash); bosh ekrandagi qo‘shiqlarda «maqsadgacha temp» chizig‘i', '«Pro» uchun tyunerda «Qurilma bo‘yicha» rejimi yo‘q; Injil: tarjimalar qisqartma bilan (RST, NRT 23)'] },
+  { n: 53, d: '2026-11-28', ru: ['Нейросеть: готовые подключения — выбрать ChatGPT, Claude, Gemini и другие касанием, вводить только ключ', 'Нейросеть видит расписание и может предложить занятия; «Полный доступ» одной кнопкой; повтор запроса при пустом ответе'],
+    en: ['AI: ready-made connections — pick ChatGPT, Claude, Gemini and others with a tap, only the key is typed', 'AI sees the schedule and can suggest practice blocks; “Full access” in one button; request retries on an empty reply'],
+    uz: ['Neyrotarmoq: tayyor ulanishlar — ChatGPT, Claude, Gemini va boshqalarni bosib tanlash, faqat kalit kiritiladi', 'Neyrotarmoq jadvalni koʻradi va mashgʻulot taklif qila oladi; «Toʻliq kirish» bitta tugmada; boʻsh javobda soʻrov takrorlanadi'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);
