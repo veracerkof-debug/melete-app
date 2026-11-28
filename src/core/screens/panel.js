@@ -237,8 +237,9 @@ async function outSheet(app, done) {
   const O = app.audio.outputs; let list = await O.list();
   if (!list.length || list.every((d) => /^#\d+$/.test(d.label))) { try { const m = await app.audio.openMic(''); m.stop(); list = await O.list(); } catch { /* без разрешения — только «Авто» */ } }
   const row = (id, name) => '<button class="cell act" data-od="' + esc(id) + '" aria-pressed="' + (O.id === id) + '"><span class="grow">' + esc(name) + '</span>' + (O.id === id ? '<span class="l2">✓</span>' : '') + '</button>';
-  const sh = sheet(() => snav(t('snd.out')) + '<div class="group">' + row('', t('snd.outAuto')) + list.map((d) => row(d.id, d.label)).join('') + '</div><p class="ftr">' + t('snd.outHint') + '</p>', (el) => {
+  const sh = sheet(() => snav(t('snd.out')) + '<div class="group">' + row('', t('snd.outAuto')) + list.map((d) => row(d.id, d.label)).join('') + '</div><div class="group"><button class="cell act" data-odp>' + esc(t('prof.title')) + '</button></div><p class="ftr">' + t('snd.outHint') + '</p>', (el) => {
     el.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-odp]')) { sh.close(); import('./profiles.js').then((m) => m.profilesSheet(app, done)); return; }
       const b = e.target.closest('[data-od]'); if (!b) return;
       const ok = await O.set(b.dataset.od);
       if (!ok && b.dataset.od) toast(t('snd.outFail')); else done();
@@ -260,8 +261,9 @@ function soundHTML(app) {
     '<div class="cellcol">' + lseg('sndverb', [['light', t('snd.verbLight')], ['conv', t('snd.verbConv')]], app.audio.mixer.verb, t('snd.verb')) + '<div class="segcap">' + t('snd.verbHint') + '</div></div>' +
     '<div class="cellcol">' + lseg('sndalgo', [['melete', 'Melete'], ['galactic', 'Galactic'], ['verbity', 'Verbity']], app.audio.mixer.verbAlgo, t('snd.algo')) + '<div class="segcap">' + t('snd.algoHint') + '</div></div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
-    (app.audio.outputs && app.audio.outputs.supported() ? '<div class="group"><button class="cell act" data-act="sndout"><span class="grow">' + t('snd.out') + '</span><span class="val l2" data-sndoutn>' + esc(app.audio.outputs.id ? t('snd.outSel') : t('snd.outAuto')) + '</span></button></div><p class="ftr">' + t('snd.outHint') + '</p>' : '') +
-    '<div class="group"><button class="cell act" data-act="sndprof"><span class="grow">' + t('prof.title') + '</span><span class="val l2">' + t('prof.sub') + '</span></button></div>' +
+    '<div class="group">' + (app.audio.outputs && app.audio.outputs.supported() ? '<button class="cell act" data-act="sndout"><span class="grow">' + t('snd.out') + '</span><span class="val l2" data-sndoutn>' + esc(app.audio.outputs.id ? t('snd.outSel') : t('snd.outAuto')) + '</span></button>' : '') +
+    '<button class="cell act" data-act="sndprof"><span class="grow">' + t('prof.title') + '</span><span class="val l2">' + t('prof.sub') + '</span></button></div>' +
+    (app.audio.outputs && app.audio.outputs.supported() ? '<p class="ftr">' + t('snd.outHint') + '</p>' : '') +
     '<div class="group"><button class="cell act" data-act="sndscn"><span class="grow">' + t('scn.title') + '</span><span class="val l2">' + t('scn.sub') + '</span></button></div>' +
     '';
 }

@@ -18,3 +18,21 @@ test('профили вывода: сохранить, изменить гром
   expect(before).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
+
+test('профили и сцены под рукой: в «Выход звука» и в боковом микшере', async ({ page, melete, errors }) => {
+  await melete.open();
+  await melete.click('[data-act="panel"]'); await page.waitForTimeout(400);
+  await page.click('#panelLayer [data-pp="sound"]'); await page.waitForTimeout(500);
+  // «Профили вывода» — в той же группе, что и «Выход звука» (если выход выбирается)
+  const same = await page.evaluate(() => { const p = document.querySelector('[data-act="sndprof"]'), o = document.querySelector('[data-act="sndout"]'); return !o || (p && p.parentElement === o.parentElement); });
+  expect(same).toBe(true);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // боковой микшер: язычок виден, когда что-то звучит или он открыт — открываем напрямую
+  await page.evaluate(() => { const e = document.querySelector('#mixd'); e.classList.add('show', 'open'); });
+  await page.evaluate(() => window.__melete.audio.mixer.apply && 0);
+  const has = await page.locator('#mixd [data-mxprof], #mixd [data-mxscn]').count();
+  expect(has).toBe(2);
+  await page.evaluate(() => document.querySelector('#mixd [data-mxprof]').click()); await page.waitForTimeout(600);
+  await expect(page.locator('.sheet')).toContainText('Профили вывода');
+  expect(errors).toEqual([]);
+});

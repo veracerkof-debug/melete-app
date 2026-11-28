@@ -29,6 +29,9 @@ export function createMixerDrawer(app) {
       '<b style="height:' + (v / MIX_MAX) * 100 + '%"></b><i style="bottom:' + (v / MIX_MAX) * 100 + '%"></i><em style="bottom:' + (1 / MIX_MAX) * 100 + '%"></em></div>' +
       '<button class="mxi" data-mute="' + k + '" aria-label="' + esc(t(mu ? 'mix.unmute' : 'mix.mute', { src: lab })) + '" title="' + esc(lab) + '">' + ((moduleById(icon) || {}).icon || '') + '</button></div>';
   };
+  // профили вывода и сцены — под рукой в боковом микшере (слово автора 28.11.2026)
+  const QIC = { prof: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>', scn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l9 5-9 5-9-5z"/><path d="M3 14l9 5 9-5"/></svg>' };
+  const quickCol = () => '<div class="mxf mxq"><button class="mxi" data-mxprof aria-label="' + esc(t('prof.title')) + '" title="' + esc(t('prof.title')) + '">' + QIC.prof + '</button><button class="mxi" data-mxscn aria-label="' + esc(t('scn.title')) + '" title="' + esc(t('scn.title')) + '">' + QIC.scn + '</button></div>';
   const tamaCol = () => {
     const tm = app.tama;
     if (!tm || !tm.here()) return '';
@@ -37,7 +40,7 @@ export function createMixerDrawer(app) {
   };
   let hadTama = false;
   const loadCol = () => '<div class="mxf mxld" role="meter" aria-label="' + esc(t('snd.load')) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="' + esc(t('snd.load')) + '"><span class="mxv num" data-ldv>–</span><div class="mxt mxlt"><b style="height:0"></b></div><span class="mxll">' + esc(t('snd.loadShort')) + '</span></div>';
-  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + loadCol() + tamaCol(); tick(); showLoad(); };
+  const render = () => { hadTama = !!(app.tama && app.tama.here()); el.querySelector('.mxp').innerHTML = SRC.map(fader).join('') + loadCol() + quickCol() + tamaCol(); tick(); showLoad(); };
   // нагрузка звука: колонка-измеритель справа; язычок краснеет при перегрузке
   const showLoad = () => {
     const m = app.audio.load, col = el.querySelector('.mxld');
@@ -119,6 +122,8 @@ export function createMixerDrawer(app) {
     tsw = null;
   }, { passive: true });
   el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-mxprof]')) { import('./profiles.js').then((m) => m.profilesSheet(app, () => render())); return; }
+    if (e.target.closest('[data-mxscn]')) { import('./scenes.js').then((m) => m.scenesSheet(app, () => render())); return; }
     if (e.target.closest('[data-tama]')) { app.tama.toggle(); render(); return; }
     const fxb = e.target.closest('[data-fx]');
     if (fxb) { openFx(app, fxb.dataset.fx); return; }
