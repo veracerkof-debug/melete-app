@@ -1,0 +1,1 @@
+function e(e){return new Worker(new URL(`pdf.worker.min-CAf3cv40.js`,import.meta.url).href,{type:`module`,name:e?.name})}export{e as t};

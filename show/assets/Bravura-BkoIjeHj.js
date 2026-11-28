@@ -1,0 +1,1 @@
+var e=new URL(`Bravura-BVtSfpnN.woff2`,import.meta.url).href;export{e as t};

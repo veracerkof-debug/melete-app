@@ -1,0 +1,57 @@
+{
+  "tag_name": "pre",
+  "name": "Melete 1.2 Pre-release",
+  "published_at": "2026-10-08T10:23:10Z",
+  "html_url": "https://github.com/veracerkof-debug/melete-app/releases/tag/pre",
+  "assets": [
+    {
+      "name": "android-344.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/android-344.ver",
+      "updated_at": "2026-11-23T01:58:05Z"
+    },
+    {
+      "name": "linux-123.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/linux-123.ver",
+      "updated_at": "2026-11-23T02:12:49Z"
+    },
+    {
+      "name": "Melete-PreRelease.apk",
+      "state": "uploaded",
+      "size": 144251886,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/Melete-PreRelease.apk",
+      "updated_at": "2026-11-23T01:58:04Z"
+    },
+    {
+      "name": "Melete-Setup.exe",
+      "state": "uploaded",
+      "size": 1479069482,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/Melete-Setup.exe",
+      "updated_at": "2026-11-23T02:22:47Z"
+    },
+    {
+      "name": "Melete.AppImage",
+      "state": "uploaded",
+      "size": 1670744568,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/Melete.AppImage",
+      "updated_at": "2026-11-23T02:12:48Z"
+    },
+    {
+      "name": "melete.deb",
+      "state": "uploaded",
+      "size": 1520364758,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/melete.deb",
+      "updated_at": "2026-11-23T02:12:28Z"
+    },
+    {
+      "name": "windows-256.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/pre/windows-256.ver",
+      "updated_at": "2026-11-23T02:22:48Z"
+    }
+  ]
+}

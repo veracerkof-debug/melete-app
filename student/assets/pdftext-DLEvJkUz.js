@@ -1,0 +1,6 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./pdf-C1bhXXkb.js","./preload-helper-BaNbYf_w.js"])))=>i.map(i=>d[i]);
+import{t as e}from"./preload-helper-BaNbYf_w.js";import{s as t}from"./main-BVgkdyKc.js";import{t as n}from"./pdf.worker.min-B2N54gEi.js";var r=null,i=()=>r||=e(()=>import(`./pdf-C1bhXXkb.js`),__vite__mapDeps([0,1]),import.meta.url).catch(e=>{throw r=null,e});async function a(e,r=80){let a=await i();a.GlobalWorkerOptions.workerPort||(a.GlobalWorkerOptions.workerPort=new n);let o=await a.getDocument({data:e.slice(),useSystemFonts:!0}).promise;try{let e=``;for(let n=1;n<=Math.min(o.numPages,r)&&e.length<t.textChars;n++){let t=await(await o.getPage(n)).getTextContent(),r=``,i=null;for(let n of t.items){if(!(`str`in n))continue;let t=n.transform?Math.round(n.transform[5]):null;i!==null&&t!==null&&Math.abs(t-i)>2&&(e+=r.trimEnd()+`
+`,r=``),r+=n.str+(n.hasEOL?`
+`:` `),i=t}e+=r.trimEnd()+`
+
+`}return e.trim()}finally{try{await o.destroy()}catch{}}}export{a as pdfText};

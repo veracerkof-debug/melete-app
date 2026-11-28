@@ -1,0 +1,57 @@
+{
+  "tag_name": "dev",
+  "name": "Melete DEV",
+  "published_at": "2026-10-24T16:11:25Z",
+  "html_url": "https://github.com/veracerkof-debug/melete-app/releases/tag/dev",
+  "assets": [
+    {
+      "name": "melete-dev.deb",
+      "state": "uploaded",
+      "size": 1522428428,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/melete-dev.deb",
+      "updated_at": "2026-11-28T10:47:59Z"
+    },
+    {
+      "name": "Melete-Dev.AppImage",
+      "state": "uploaded",
+      "size": 1672849912,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/Melete-Dev.AppImage",
+      "updated_at": "2026-11-28T10:48:02Z"
+    },
+    {
+      "name": "linux-159.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/linux-159.ver",
+      "updated_at": "2026-11-28T10:48:03Z"
+    },
+    {
+      "name": "Melete-Dev.apk",
+      "state": "uploaded",
+      "size": 147104485,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/Melete-Dev.apk",
+      "updated_at": "2026-11-28T10:50:31Z"
+    },
+    {
+      "name": "android-380.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/android-380.ver",
+      "updated_at": "2026-11-28T10:50:32Z"
+    },
+    {
+      "name": "Melete-Dev-Setup.exe",
+      "state": "uploaded",
+      "size": 1480898313,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/Melete-Dev-Setup.exe",
+      "updated_at": "2026-11-28T11:00:31Z"
+    },
+    {
+      "name": "windows-292.ver",
+      "state": "uploaded",
+      "size": 4,
+      "browser_download_url": "https://github.com/veracerkof-debug/melete-app/releases/download/dev/windows-292.ver",
+      "updated_at": "2026-11-28T11:00:33Z"
+    }
+  ]
+}

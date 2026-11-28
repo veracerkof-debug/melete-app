@@ -1,0 +1,1 @@
+function e(e,{top:t=!1}={}){if(!e)return;let n=e.closest(`.pane`);if(!n){e.style.margin=``,e.classList.remove(`bleed`);return}let r=getComputedStyle(n),i=e=>Math.max(0,Math.round(parseFloat(e)||0)),a=t?i(r.paddingTop):0;e.style.margin=`-`+a+`px -`+i(r.paddingRight)+`px -`+i(r.paddingBottom)+`px -`+i(r.paddingLeft)+`px`,e.classList.add(`bleed`)}export{e as t};

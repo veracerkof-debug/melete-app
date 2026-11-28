@@ -1,0 +1,12 @@
+Готовые звуки пульта «Звуки». Все файлы — CC0 1.0 (общественное достояние), источник — OpenGameArt.org.
+Обрезаны и сжаты в mp3; указывать авторство не требуется, но вот авторы:
+
+applause.mp3  — «Applause in a large hall or church» (expl0it3r), CC0
+fanfare.mp3   — «Classic Fanfare Lick» (fvcalderan), CC0
+triumph.mp3   — «Hyper Ultra Fanfare» (Zane Little Music), CC0
+laugh.mp3     — «Do You Remember Laughter?» (supergeek), CC0
+bell.mp3      — «Correct Bell» (fupi), CC0
+win.mp3       — «Win sound effect» (listener), CC0
+rain.mp3      — «AMB Rain Loop 1» (kresiek-the-furry), CC0
+whoosh.mp3    — «Air Whoosh» (pyranostudios), CC0
+sting.mp3     — «Mystery Sting» (railkill), CC0

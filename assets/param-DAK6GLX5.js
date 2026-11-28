@@ -1,0 +1,1 @@
+function e(e,t){if(e.cancelAndHoldAtTime)try{e.cancelAndHoldAtTime(t);return}catch{}e.cancelScheduledValues(t),e.setValueAtTime(Math.max(e.value,1e-4),t)}export{e as t};
