@@ -66,9 +66,11 @@ test('телефон и компьютер — одно место в настр
   const pg = page.locator('.pdpage');
   await expect(pg.locator('[data-psw="syncSrv"]')).toHaveCount(1);
   await expect(pg.locator('[data-act="ens"]')).toHaveCount(1);
+  await pg.locator('[data-dv="grp"][data-g="guest"]').click(); await page.waitForTimeout(300); // «Другие способы» → раздача гостям
   await expect(pg.locator('[data-psw="guestOn"]')).toHaveCount(1);
   await pg.locator('[data-psw="syncSrv"]').check({ force: true }); await page.waitForTimeout(400);
-  await expect(pg.locator('.sypair')).toContainText('192.168.1.23');
+  await pg.locator('[data-dv="code"]').click(); await page.waitForTimeout(500); // «Показать код» — шаг мастера с адресом и кодом
+  await expect(page.locator('#sheetLayer .sypair')).toContainText('192.168.1.23');
   await page.screenshot({ path: 'test-results/link-page.png' });
   // «Данные и копии» — без связи
   await melete.click('.pdnav [data-pp="data"]'); await page.waitForTimeout(400);
