@@ -1,0 +1,130 @@
+/* Оболочка компьютера для не-новичка (html.desk.dpro — core/screens/deskshell.js; слово автора 28.11.2026, макеты «экран профи»):
+   верхняя полоса, рельса инструментов слева, «Сегодня» (deskhome.js) и микшер рабочей станции (deskwork.js).
+   Подключается после desk.css. Размеры и радиусы — из шкалы tokens.css, цвета — токены темы: любой стиль и тема работают. */
+
+.dtop, .drail { display: none; }
+html.dpro { --top: 56px; --rail: 78px; }
+html.dpro .tabbar { display: none; } /* прежняя полоса вкладок остаётся в документе (клавиши Ctrl 1–9 и тесты читают её), но не видна */
+html.dpro .deskfind { display: none; }
+
+/* ---------- верхняя полоса ---------- */
+html.dpro .dtop {
+  display: flex; align-items: center; gap: 6px; position: fixed; z-index: 36; left: 0; right: 0; top: 0; height: var(--top); padding: 0 16px;
+  background: var(--bg); border-bottom: .5px solid var(--sep);
+}
+.dlogo { font: 600 var(--fs-7)/1 'Noto Serif', Georgia, serif; letter-spacing: .02em; color: var(--ink); margin-right: 14px; flex: none; }
+.dtabs { display: flex; gap: 4px; }
+.dtab, .dbtn {
+  min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--r-2); background: transparent; color: var(--l2);
+  font: 600 var(--fs-5) var(--font); cursor: pointer; white-space: nowrap;
+}
+.dtab:hover, .dbtn:hover { color: var(--ink); background: var(--fill); }
+.dtab[aria-current="page"] { background: color-mix(in srgb, var(--tint) 16%, var(--cell)); color: var(--tint-text); }
+.dsp { flex: 1; }
+.dfind { display: flex; align-items: center; gap: 8px; height: 40px; width: 260px; padding: 0 14px; border: 0; border-radius: var(--r-2); background: var(--fill); color: var(--l2); font: 500 var(--fs-4) var(--font); cursor: pointer; }
+.dfind:hover { background: var(--fill2); }
+.dfind svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; flex: none; }
+.dfind kbd { margin-left: auto; font: 500 var(--fs-2) var(--font); border: 1px solid var(--sep); border-radius: var(--r-1); padding: 1px 6px; background: var(--bg); }
+.dchip { display: inline-flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 12px; margin: 0 8px; border: 0; border-radius: var(--r-pill); background: var(--fill); color: var(--ink); font: 600 var(--fs-3) var(--font); cursor: pointer; white-space: nowrap; }
+.dchip[hidden] { display: none; }
+.dchip i { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--l3); flex: none; }
+.dchip.ok i { background: var(--ok); }
+
+/* ---------- рельса инструментов ---------- */
+html.dpro .drail {
+  display: flex; flex-direction: column; align-items: center; position: fixed; z-index: 36; left: 0; top: var(--top); bottom: 0; width: var(--rail); padding: 8px 0;
+  background: var(--bg); border-right: .5px solid var(--sep); overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+}
+html.dpro .drail::-webkit-scrollbar { display: none; }
+.drg { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; }
+.drg + .drg::before { content: ""; display: block; width: 32px; height: 1px; background: var(--sep); margin: 5px auto; }
+.drt { width: 70px; min-height: 44px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 3px 0; border: 0; border-radius: var(--r-3); background: transparent; color: var(--l2); cursor: pointer; }
+.drt svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.drt span { font: 600 var(--fs-1)/1.15 var(--font); max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drt:hover { background: var(--fill); color: var(--ink); }
+.drt[aria-current="true"] { background: color-mix(in srgb, var(--tint) 16%, var(--cell)); color: var(--tint-text); }
+.drt.live { color: var(--ok); }
+
+/* ---------- содержимое: правее рельсы ---------- */
+html.dpro #app > .wrap, html.dpro main.wrap { margin-left: var(--rail); padding: calc(var(--top) + 20px) 40px 40px 32px; }
+html.dpro .tview { left: var(--rail); }
+html.dpro #panelLayer { left: var(--rail); }
+html.dpro .scrim { left: 0; } /* окно поверх всего: рельса под ним не нажимается */
+html.dpro .fab { left: calc(50% + var(--rail) / 2); }
+html.dpro .session { top: var(--top); left: var(--rail); grid-template-columns: minmax(0, 1fr); }
+html.dpro .session .sin { grid-column: 1; }
+html.dpro .session .sdock { display: none; } /* значки инструментов — в рельсе */
+html.dpro .session.toolmode .sin { grid-column: 1; }
+
+/* ---------- «Сегодня» ---------- */
+.dday { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 28px; align-items: start; max-width: 1680px; margin: 0 auto; }
+.dcol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.dcd { display: block; width: 100%; background: var(--cell); border: 0; border-radius: var(--r-4); padding: 14px 18px; color: var(--ink); font: inherit; text-align: left; }
+.dcd.ac { background: var(--tint); color: var(--on-tint); }
+button.dcd { cursor: pointer; }
+button.dcd:hover { background: color-mix(in srgb, var(--tint) 8%, var(--cell)); }
+.dlist { padding-top: 6px; padding-bottom: 6px; }
+.dlb { font: 600 var(--fs-2) var(--font); letter-spacing: .04em; text-transform: uppercase; color: var(--l2); }
+.dcd.ac .dlb, .dcd.ac .dsub { color: var(--on-tint); opacity: .82; }
+.dbig { font: 700 var(--fs-8)/1.2 var(--font); margin-top: 2px; }
+.dq { font: 700 var(--fs-6) var(--font); }
+.dnum { font: 700 var(--fs-8) var(--font); }
+.dcnt { text-align: right; }
+.dcnt .dnum { font-size: var(--fs-9); }
+.dsub, .dm2 { font-size: var(--fs-3); color: var(--l2); }
+.dm2.dplan { margin: 8px 0 12px; }
+.dnone { padding: 12px 0; }
+.drow { display: flex; align-items: center; gap: 12px; }
+.dbts { margin-top: 14px; flex-wrap: wrap; }
+.dg1 { flex: 1; min-width: 0; }
+.dg2 { flex: 2; min-width: 0; }
+.dconts { gap: 10px; align-items: stretch; }
+.dcont { flex: 1; min-width: 0; }
+.dcont b { font-size: var(--fs-5); }
+.dbt { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 20px; border: 0; border-radius: var(--r-3); background: var(--tint); color: var(--on-tint); font: 600 var(--fs-4) var(--font); cursor: pointer; white-space: nowrap; }
+.dbt.sec { background: var(--fill); color: var(--ink); }
+.dbt.inv { background: var(--on-tint); color: var(--tint); }
+.dbt.ghost { background: color-mix(in srgb, var(--on-tint) 22%, transparent); color: var(--on-tint); }
+.dbt kbd { font: 600 var(--fs-2) var(--font); padding: 1px 7px; border-radius: var(--r-1); background: color-mix(in srgb, var(--on-tint) 24%, transparent); }
+.dsg { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: var(--r-3); background: var(--fill); }
+.dsg button { min-height: 36px; min-width: 44px; padding: 0 14px; border: 0; border-radius: var(--r-2); background: transparent; color: var(--l2); font: 600 var(--fs-4) var(--font); cursor: pointer; }
+.dsg button[aria-pressed="true"] { background: var(--cell); color: var(--ink); box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 14%, transparent); }
+.dsg > span { padding: 0 10px 0 4px; color: var(--l2); font-size: var(--fs-4); font-weight: 600; }
+.drw { display: flex; align-items: center; gap: 14px; min-height: 56px; }
+.drw + .drw { border-top: .5px solid var(--sep); }
+.dk4 { min-width: 40px; height: 40px; border-radius: var(--r-2); background: color-mix(in srgb, var(--tint) 18%, var(--cell)); color: var(--tint-text); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+.dch { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: var(--fill); color: var(--ink); font: 600 var(--fs-3) var(--font); white-space: nowrap; }
+button.dch { cursor: pointer; }
+.dch.ok { background: color-mix(in srgb, var(--ok) 20%, var(--cell)); }
+.dch.wn, .dch.ac { background: color-mix(in srgb, var(--tint) 20%, var(--cell)); }
+.dpr { height: 8px; margin-top: 10px; border-radius: var(--r-1); background: var(--fill); overflow: hidden; }
+.dpr i { display: block; height: 100%; background: var(--tint); }
+.dinp { display: block; width: 100%; min-height: 44px; margin-top: 8px; padding: 0 16px; border: 0; border-radius: var(--r-3); background: var(--fill); color: var(--l2); font: 500 var(--fs-4) var(--font); text-align: left; cursor: pointer; }
+.dclassic { display: block; margin: 22px auto 0; padding: 8px 14px; border: 0; background: transparent; color: var(--l2); font: 500 var(--fs-3) var(--font); cursor: pointer; }
+.dclassic:hover { color: var(--ink); }
+.dclassic.top { margin: 0 0 8px; }
+@media (max-width: 1180px) {
+  .dday { grid-template-columns: minmax(0, 1fr); }
+  .dconts { flex-wrap: wrap; }
+}
+
+/* ---------- рабочая станция: микшер справа ---------- */
+html.dpro .session.dws { grid-template-columns: minmax(0, 1fr) 300px; }
+html.dpro .session.dws .dmix { grid-column: 2; grid-row: 1; }
+.dmix { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; min-height: 0; overflow-y: auto; border-left: .5px solid var(--sep); }
+.dsgw { align-self: stretch; }
+.dsgw button { flex: 1; padding: 0 6px; }
+.dpn { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: var(--r-4); background: var(--cell); }
+.dfaders { flex: 1; flex-direction: row; gap: 10px; min-height: 200px; }
+.dfd { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.dtk { position: relative; width: 30px; flex: 1; min-height: 100px; border-radius: var(--r-3); background: var(--fill); overflow: hidden; touch-action: none; cursor: pointer; }
+.dtk i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--tint); }
+.dfd.mu .dtk i { background: var(--l3); }
+.dfv { font-size: var(--fs-2); color: var(--l2); }
+.dfl { max-width: 100%; padding: 2px 0; border: 0; background: transparent; color: var(--l2); font: 600 var(--fs-1) var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.dfl { cursor: pointer; }
+.dscn .dbt { min-height: 36px; padding: 0 10px; }
+.dscn .dg2 { overflow: hidden; text-overflow: ellipsis; }
+html.dpro .toast { top: calc(var(--top) + 12px); left: calc(50% + var(--rail) / 2); } /* сообщения — под верхней полосой, не поверх вкладок */
+.dfd:not([data-k="master"]) .dtk::after { content: ""; position: absolute; left: 0; right: 0; bottom: 66.67%; height: 1px; background: var(--l3); } /* метка «100 %» (шкала до 150 %) */
+body:has(.session.dws) #mixd { display: none; } /* боковой язычок микшера не нужен: микшер на виду */

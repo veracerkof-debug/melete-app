@@ -7,6 +7,7 @@ import { moduleById } from '../../modules/index.js';
 import { moduleName } from '../modules.js';
 import { toolsTab } from './tools.js';
 import { isPage } from './common.js';
+import { topTabs } from './deskshell.js';
 
 // Клавиши инструментов (латиница; в подсказках — заглавной)
 export const TOOL_KEYS = { metro: 'm', tuner: 't', piano: 'p', glider: 'g', drone: 'd', studio: 's', theory: 'h', ear: 'e', beat: 'r', vocal: 'v', notes: 'n', audio: 'l', voice: 'q', timer: 'o', spectrum: 'x', looper: 'u', theremin: 'w' };
@@ -36,12 +37,14 @@ export function initPalette(app) {
     b.addEventListener('click', () => open());
     nav.appendChild(b); mo.disconnect();
   };
+  app.openPalette = () => open(); // кнопка поиска в верхней полосе (deskshell.js)
   const mo = new MutationObserver(() => mountBtn());
   mo.observe(document.body, { childList: true, subtree: true });
   mountBtn();
 
   const tabsOf = () => {
     const st = app.store.state.settings;
+    if (html.classList.contains('dpro')) return topTabs(st, app.deskNav || {}).map((x) => [x.go, x.label]); // порядок верхней полосы (deskshell.js)
     const L = [['home', t('nav.home')], ['library', t('nav.library')], ['calendar', t('nav.calendar')], ['tools', t('nav.tools')]];
     if (st.church) L.push(['bible', t('nav.bible')]);
     return L;
@@ -54,6 +57,7 @@ export function initPalette(app) {
     const out = [];
     out.push({ g: 'act', label: t('palette.free'), hint: t('palette.space'), run: () => app.startSession('free') });
     out.push({ g: 'act', label: t('palette.settings'), run: () => app.go('settings') });
+    if (html.classList.contains('dpro')) out.push({ g: 'act', label: t('desk.work.title'), run: () => import('./deskwork.js').then((m) => m.openStation(app)) });
     tabsOf().forEach(([k, name], i) => out.push({ g: 'go', label: name, hint: 'Ctrl ' + (i + 1), run: () => app.go(k) }));
     toolsOf().forEach((x) => out.push({ g: 'tool', label: x.name, hint: TOOL_KEYS[x.id] ? TOOL_KEYS[x.id].toUpperCase() : '', run: () => app.showTool(x.id) }));
     (app.store.songs() || []).forEach((s) => out.push({ g: 'song', label: s.title || '', sub: [s.artist, s.key].filter(Boolean).join(' · '), find: (s.title || '') + ' ' + (s.artist || ''), run: () => app.go('library', s.id) }));
@@ -111,15 +115,15 @@ export function initPalette(app) {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K' || e.code === 'KeyK')) { e.preventDefault(); open(); return; }
     if (mod && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key) && !el) {
-      const tabs = [...document.querySelectorAll('.tabbar .tab[data-tab]')], b = tabs[+e.key - 1];
-      if (b) { e.preventDefault(); app.go(b.dataset.tab); }
+      const dts = [...document.querySelectorAll('.dtop .dtab[data-go]')], tabs = [...document.querySelectorAll('.tabbar .tab[data-tab]')], b = dts.length ? dts[+e.key - 1] : tabs[+e.key - 1];
+      if (b) { e.preventDefault(); app.go(b.dataset.go || b.dataset.tab); }
       return;
     }
     if (mod || e.altKey || e.repeat || el || typing(e.target) || busy()) return;
     if (e.key === '/') { e.preventDefault(); open(); return; }
     if (e.key === ' ' && (e.target === document.body || e.target === document.documentElement)) {
       const home = document.querySelector('.tabbar .tab[data-tab="home"][aria-current="page"]');
-      if (home && !app.active) { e.preventDefault(); app.startSession('free'); }
+      if (home && !app.active) { e.preventDefault(); if (!(app.deskStart && app.deskStart())) app.startSession('free'); }
       return;
     }
     if (e.target && e.target.closest && e.target.closest('button, a, [role="button"], [role="slider"]') && e.target !== document.body) return;

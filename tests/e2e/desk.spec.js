@@ -27,8 +27,8 @@ const fakeTauri = (page) => page.addInitScript(() => {
 test('настольная раскладка', async ({ page, melete, errors }) => {
   await melete.open();
   expect(await page.evaluate(() => document.documentElement.classList.contains('desk'))).toBe(true);
-  const rail = await page.evaluate(() => { const r = document.querySelector('.tabbar').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width), Math.round(r.height)]; });
-  expect(rail[0]).toBe(0); // навигация — полоса сверху на всю ширину (27.11.2026), боковой нет
+  const rail = await page.evaluate(() => { const r = document.querySelector('.dtop').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width), Math.round(r.height)]; });
+  expect(rail[0]).toBe(0); // навигация — полоса сверху на всю ширину (27.11.2026; у не-новичка — .dtop, deskshell.js), рельса инструментов — отдельно слева
   expect(rail[1]).toBeGreaterThan(1400);
   expect(rail[2]).toBeLessThan(90);
   expect(await melete.overflow()).toEqual([]);
