@@ -57,7 +57,7 @@ export function aiClick(app, target, rerender, openChat) {
   if ((e = target.closest('[data-ai-agent]'))) { ai.selectAgent(e.dataset.aiAgent); rerender(); return true; }
   if ((e = target.closest('[data-ai-pre]'))) {
     const p = PRESETS.find((x) => x.id === e.dataset.aiPre);
-    if (p) ai.save({ format: p.format, url: p.url, model: p.models[0] || '', name: ai.cfg().agents.find((a) => a.id === ai.cfg().agent).name || p.name }); else ai.save({ url: '', model: '' });
+    if (p) ai.save({ format: p.format, url: p.url, model: p.def || p.models[0] || '', name: ai.cfg().agents.find((a) => a.id === ai.cfg().agent).name || p.name }); else ai.save({ url: '', model: '' });
     rerender(); return true;
   }
   if ((e = target.closest('[data-ai-mod]'))) { ai.save({ model: e.dataset.aiMod }); rerender(); return true; }
