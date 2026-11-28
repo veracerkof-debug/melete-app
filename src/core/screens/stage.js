@@ -31,6 +31,8 @@ import { fileSongs } from '../files.js';
 import { swipe, pinch } from '../../ui/gestures.js';
 import { onHold, holdMenu } from '../../ui/hold.js';
 import { outBtnHTML, bindOutput, outRefresh } from './outputsheet.js';
+import { isDesk } from '../../ui/desk.js';
+import { songStatus, keyText, previewHTML, setSummary, bpmText } from './songsdesk.js';
 const fmtDur = (sec) => Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0');
 
 const RESUME = 'melete.stage';
@@ -61,11 +63,48 @@ function itemSub(app, it) {
   return [it.bpm ? it.bpm + ' bpm' + (it.click ? '' : ' · ' + t('stage.noClick')) : '', it.key ? keyLabel(it.key) : '', it.pad ? t('stage.pad') : '', tr ? '♪ ' + tr : ''].filter(Boolean).join(' · ');
 }
 
+// Сет-лист на компьютере (макет «Служение»): слева порядок песен с тональностью, темпом и готовностью, справа предпросмотр выбранной
+// песни; «Все в одной тональности» — сдвиг `tr` каждой песни к тональности первой (обратимо: вторым нажатием сдвиги снимаются)
+const SAME_TR = (ev, songs, files) => {
+  const its = songs.map((s) => itemOf(ev, s, files)), tgt = its[0] && its[0].key;
+  return { its, tgt, on: its.length > 1 && its.every((x) => !x.srcKey || x.tr === 0) === false };
+};
+function sameKey(ev, songs, files, undo) {
+  const { its, tgt } = SAME_TR(ev, songs, files);
+  if (!tgt) return;
+  its.forEach((x) => {
+    if (!x.srcKey) return;
+    if (undo) { setItem(ev, x.songId, { tr: 0 }); return; }
+    if (x.srcKey.minor !== tgt.minor) return; // другой лад не трогаем: тональность мажора и минора не сводится сдвигом
+    const d = ((tgt.pc - x.srcKey.pc + 18) % 12) - 6;
+    setItem(ev, x.songId, { tr: d });
+  });
+}
+function deskSetHTML(app, ev, songs, files, pick) {
+  const cur = songs.find((s) => s.id === pick) || songs[0], sm = SAME_TR(ev, songs, files);
+  const rows = songs.map((s, i) => {
+    const it = itemOf(ev, s, files), st = songStatus(s);
+    return '<div class="dsrow' + (cur && cur.id === s.id ? ' cur' : '') + '"><span class="num sgn">' + (i + 1) + '</span><button class="dsmain" data-sgp="' + s.id + '"><span class="dx2 dskey num">' + (esc(it.key ? keyLabel(it.key) : keyText(s)) || '–') + '</span>' +
+      '<span class="grow"><b>' + esc(s.title) + '</b><span class="bksub">' + esc([it.bpm ? it.bpm + ' bpm' : bpmText(s), it.tr ? (it.tr > 0 ? '+' : '') + it.tr : '', it.note].filter((x) => x && x !== '—').join(' · ') || t('stage.nothing')) + '</span></span>' +
+      '<span class="dchip ' + st.k + '">' + esc(st.label) + '</span></button>' +
+      '<button class="ic sm plain" data-sgmv="' + i + '" data-d="-1"' + (i ? '' : ' disabled') + ' aria-label="' + esc(t('stage.up')) + '">' + I.up + '</button>' +
+      '<button class="ic sm plain" data-sgmv="' + i + '" data-d="1"' + (i < songs.length - 1 ? '' : ' disabled') + ' aria-label="' + esc(t('stage.down')) + '">' + I.down + '</button></div>';
+  }).join('');
+  const dur = songs.reduce((a, s) => a + (itemOf(ev, s, files).dur || 0), 0);
+  return '<div class="dset"><div class="dsetl">' + snav(ev.title || t('stage.setlist')) + '<p class="ftr" style="margin-top:0">' + esc(t('stage.setHint')) + '</p>' +
+    setSummary(songs, dur) + '<div class="dsrows">' + rows + '</div>' +
+    '<div class="dsact"><button class="btn" data-dsa="same"' + (sm.tgt ? '' : ' disabled') + '>' + esc(t(sm.on ? 'dsk.sameOff' : 'dsk.same')) + '</button>' +
+    '<button class="btn" data-dsa="share">' + esc(t('dsk.sendTeam')) + '</button><span class="grow"></span><button class="btn fill" data-sgopen>' + esc(t('stage.go')) + '</button></div></div>' +
+    '<div class="dsetr">' + (cur ? previewHTML(cur, false) + '<div class="dprevact"><button class="btn" data-sgi="' + cur.id + '">' + esc(t('dsk.itemSet')) + '</button></div>' : '') + '</div></div>';
+}
+
 export function setlistSheet(app, evId, onChange = () => {}) {
+  let pick = '';
   const body = () => {
     const ev = evOf(app, evId);
     if (!ev) return snav(t('stage.setlist'));
     const songs = setSongs(ev, app.store.songById), files = audioFiles(app);
+    if (isDesk() && songs.length) return deskSetHTML(app, ev, songs, files, pick);
     return snav(t('stage.setlist')) + '<p class="ftr" style="margin-top:0">' + esc(t('stage.setHint')) + '</p>' +
       (songs.length ? '<div class="group">' + songs.map((s, i) => '<div class="cell sgrow"><span class="num sgn">' + (i + 1) + '</span><button class="grow sgitem" data-sgi="' + s.id + '"><b>' + esc(s.title) + '</b><span class="bksub">' +
         esc(itemSub(app, itemOf(ev, s, files)) || t('stage.nothing')) + '</span></button>' +
@@ -74,14 +113,19 @@ export function setlistSheet(app, evId, onChange = () => {}) {
         '<div class="group" style="margin-top:16px"><button class="cell act center b" data-sgopen>' + esc(t('stage.go')) + '</button></div>'
         : '<p class="ftr">' + esc(t('stage.empty')) + '</p>');
   };
-  sheet(body, (el, sh) => el.addEventListener('click', (e) => {
+  sheet(body, (el, sh) => { if (isDesk()) el.classList.add('wide'); el.addEventListener('click', (e) => {
     const ev = evOf(app, evId);
     if (!ev) return;
     let b;
-    if ((b = e.target.closest('[data-sgmv]'))) { moveSong(ev, +b.dataset.sgmv, +b.dataset.d); persist(app, ev); sh.update(); onChange(); }
+    if ((b = e.target.closest('[data-sgp]'))) { pick = b.dataset.sgp; sh.update(); }
+    else if ((b = e.target.closest('[data-dsa]'))) {
+      if (b.dataset.dsa === 'same') { const songs = setSongs(ev, app.store.songById); sameKey(ev, songs, audioFiles(app), SAME_TR(ev, songs, audioFiles(app)).on); persist(app, ev); sh.update(); onChange(); }
+      else import('./share.js').then((m) => m.shareSheet(app, { ev: evOf(app, evId) }));
+    }
+    else if ((b = e.target.closest('[data-sgmv]'))) { moveSong(ev, +b.dataset.sgmv, +b.dataset.d); persist(app, ev); sh.update(); onChange(); }
     else if ((b = e.target.closest('[data-sgi]'))) itemSheet(app, evId, b.dataset.sgi, () => { sh.update(); onChange(); });
     else if (e.target.closest('[data-sgopen]')) { sh.close(); openStage(app, evId, 0); }
-  }));
+  }); });
 }
 
 // Настройки одной песни в сет-листе

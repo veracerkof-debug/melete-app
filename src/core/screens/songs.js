@@ -19,6 +19,8 @@ import { lookup, KEYS, keyName } from '../songinfo.js';
 import { analyzeAudio } from '../songanalyze.js';
 import { fileSongs } from '../files.js';
 import { SHARE_IC } from './share.js';
+import { isDesk } from '../../ui/desk.js';
+import { rowKeyHTML, rowColsHTML, previewHTML, textHTML, panelHTML } from './songsdesk.js';
 
 const chipHTML = (it, cls, attrs) => '<span class="lchip ' + (cls || '') + '" style="--c:' + it.color + ';--t:' + textColor(it) + '" ' + (attrs || '') + '>' + esc(it.name) + '</span>';
 const diffLabel = (d) => t('diff.' + d);
@@ -72,14 +74,16 @@ export function libraryHTML(app, view) {
   const dupBar = view.dup && !sel && list.length ? '<div class="selbar"><span class="selt">' + t('songs.dupsHint') + '</span><button class="link b" data-act="dupsel">' + t('songs.dupsPick') + '</button></div>' : '';
   const selBar = sel ? '<div class="selbar" role="group"><button class="link" data-act="selall">' + t(allOn ? 'songs.selNone' : 'songs.selAll') + '</button><b class="selt" aria-live="polite">' + t('songs.selN', { n: sel.size }) + '</b><button class="link b" data-act="seldone">' + t('songs.selDone') + '</button></div>' : '';
   const selAct = sel ? '<div class="selacts"><button class="cell act" data-act="selsend"' + (sel.size ? '' : ' disabled') + '>' + t('share.title') + '</button><button class="cell act" data-act="selcat"' + (sel.size ? '' : ' disabled') + '>' + t('songs.selCat') + '</button><button class="cell act danger" data-act="seldel"' + (sel.size ? '' : ' disabled') + '>' + t('song.delete') + '</button></div>' : '';
-  return h + dupBar + selBar + '<div class="slist">' + list.map(({ s, st: ss }) => {
+  // компьютер: таблица слева, предпросмотр выбранной песни справа (songsdesk.js, desk-songs.css)
+  const dk = isDesk(), prevId = dk && !sel ? (list.some(({ s }) => s.id === view.prev) ? view.prev : list[0].s.id) : '';
+  return h + dupBar + selBar + (dk ? '<div class="dlib"><div class="dlist">' : '') + '<div class="slist">' + list.map(({ s, st: ss }) => {
     const g = genreOf(L, s.genre), c = catOf(L, s.cat), tags = (s.tags || []).map((id) => tagOf(L, id)).filter(Boolean);
-    return '<button class="stile3' + (sel && sel.has(s.id) ? ' sel' : '') + '" data-song="' + s.id + '"' + (sel ? ' role="checkbox" aria-checked="' + sel.has(s.id) + '"' : '') + ' style="--g:' + (g ? g.color : 'var(--l3)') + '"><div class="grow"><div class="ttl">' + (sel ? '<i class="selmk" aria-hidden="true">' + (sel.has(s.id) ? '✓' : '') + '</i>' : '') +
+    return '<button class="stile3' + (sel && sel.has(s.id) ? ' sel' : '') + (prevId === s.id ? ' cur' : '') + '" data-song="' + s.id + '"' + (sel ? ' role="checkbox" aria-checked="' + sel.has(s.id) + '"' : '') + ' style="--g:' + (g ? g.color : 'var(--l3)') + '">' + (dk ? rowKeyHTML(s) : '') + '<div class="grow"><div class="ttl">' + (sel ? '<i class="selmk" aria-hidden="true">' + (sel.has(s.id) ? '✓' : '') + '</i>' : '') +
       (c ? '<i class="cdot" style="background:' + c.color + '" title="' + esc(c.name) + '"></i>' : '') + esc(s.title) + '</div><div class="st">' +
       esc([s.artist, g ? g.name : s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + (due.has(s.id) ? '<span class="rvmark">' + t('rv.mark') + '</span>' : '') + '</div>' +
       (tags.length ? '<div class="tagrow">' + tags.map((x) => chipHTML(x, 'sm')).join('') + '</div>' : '') +
-      '</div><div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
-  }).join('') + '</div>' + selAct;
+      '</div>' + (dk ? rowColsHTML(s) : '') + '<div class="val"><div>' + mBadge(getPct(s), st) + '</div>' + (st.toolsOnly ? '' : '<div class="num" style="font-size:12px;margin-top:3px">' + fmtDur(ss.total) + '</div>') + '</div></button>';
+  }).join('') + '</div>' + (dk ? '</div>' + (sel ? '' : previewHTML(app.store.songById(prevId))) + '</div>' : '') + selAct;
 }
 
 /* ---------- карточка песни ---------- */
@@ -108,17 +112,17 @@ export function songHTML(app, id) {
   let h = '<div class="navrow"><button class="link" data-go="library">' + BACK + t('songs.title') + '</button>' + '<span class="vrow tight">' + icb('data-act="share" data-sid="' + s.id + '"', SHARE_IC, t('share.title'), 'plain') + icb('data-edit="' + s.id + '"', IC.pen, t('song.edit'), 'plain') + '</span></div>' +
     '<div class="large" style="margin:6px 4px 2px">' + esc(s.title) + '</div><p class="sub" style="margin:0 4px 16px">' + esc([s.artist, s.genre].filter(Boolean).join(' · ') || t('songs.noArtist')) + '</p>' +
     (!short && (g || c || tg.length) ? '<div class="tagrow" style="margin:-8px 4px 14px">' + (c ? chipHTML(c) : '') + (g ? chipHTML(g) : '') + tg.map((x) => chipHTML(x)).join('') + '</div>' : '') +
-    '<div class="sdcols"><div class="sdmain"><div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +
+    '<div class="sdcols"><div class="sdmain">' + (isDesk() ? '<div class="dtextcard">' + textHTML(s) + '</div>' : '') + '<div class="card shero"><div class="mring">' + mRing(p, 72, scaleOf(app.store.state.settings)) + '</div><div class="grow">' +
     // «Только инструменты»: без времени и числа занятий
     (plain ? '' : '<div class="srow" title="' + t('song.time') + '">' + IC.clock + '<b class="num">' + fmtDur(st.total) + '</b></div>' +
     '<div class="srow" title="' + t('song.sessions') + '">' + IC.stack + '<b class="num">' + st.count + '</b><span>' + (st.last ? relDay(st.last) : '—') + '</span></div>') +
     '<div class="srow" title="' + t('song.tempo') + '">' + IC.metro + '<b class="num">' + (s.currentBpm || '—') + '</b><span>' + (s.targetBpm ? '→ ' + s.targetBpm : '') + ' bpm' + (s.key ? ' · ' + esc(s.key) : '') + '</span></div>' +
     (short ? '' : '<div class="srow">' + IC.bolt + '<span class="dots" role="img" aria-label="' + esc(t('song.diffAria', { n: s.difficulty })) + '">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= s.difficulty ? 'on' : '') + '"></i>').join('') + '</span></div>') + '</div></div>';
   if (!plain && !short && st.tempo.length >= 2) h += '<div class="card">' + tempoChart(st.tempo, s.targetBpm) + '</div>';
-  if (s.notes) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
+  if (s.notes && !isDesk()) h += '<div class="group" style="margin-top:12px"><div class="notes">' + esc(s.notes) + '</div></div>';
   const nTakes = takesOf(app, s.id).length; // записи песни: «неделю назад и сейчас» (screens/compare.js)
   if (nTakes >= 2 && !short) h += '<div class="group" style="margin-top:12px"><button class="cell act" data-act="compare" data-sid="' + s.id + '"><span class="grow">' + t('cmp.open') + '</span><span class="l2 num">' + nTakes + '</span></button></div>';
-  h += '</div><div class="sdside">' + (short ? '' : songEventsHTML(app, s.id));
+  h += '</div><div class="sdside">' + (isDesk() ? panelHTML(app, s, songAudio(app, s.id)) : '') + (short ? '' : songEventsHTML(app, s.id));
   h += '<div style="text-align:center;margin-top:28px"><button class="link" data-del="' + s.id + '" style="color:var(--red);font-size:15px">' + t('song.delete') + '</button></div></div></div>';
   h += '<div class="fab"><button class="btn fill" data-play="' + s.id + '" aria-label="' + t('song.playAria') + '">' + PLAY + '<span>' + t('song.play') + '</span></button></div>';
   return h;
