@@ -176,8 +176,8 @@ export async function apply(app, p) {
     return { ok: true, undo: { kind: 'studio', pid: r.pid, undo: r.undo }, n: r.n };
   }
   if (p.kind === 'plan') {
-    const r = applyPlanOps(st, p.ops || [], st.songs || []); if (!r.n) return { ok: false, why: 'none' };
-    save(store);
+    const r = applyPlanOps(st.settings, p.ops || [], st.songs || []); if (!r.n) return { ok: false, why: 'none' };
+    store.settingsChanged(); // расписание — в настройках: метка времени нужна синхронизации
     return { ok: true, undo: { kind: 'plan', prev: r.prev }, n: r.n };
   }
   if (p.kind === 'show') {
@@ -232,7 +232,7 @@ export async function apply(app, p) {
 export function undo(app, u) {
   const store = app.store, st = store.state, now = store.now ? store.now() : Date.now();
   if (!u) return false;
-  if (u.kind === 'plan') { const ok = undoPlanOps(st, u.prev); if (ok) save(store); return ok; }
+  if (u.kind === 'plan') { const ok = undoPlanOps(st.settings, u.prev); if (ok) store.settingsChanged(); return ok; }
   if (u.kind === 'studio') { const h = app.studioAI; return !!(h && h.undo(u.pid, u.undo)); }
   if (u.kind === 'songs') {
     (u.added || []).forEach((id) => { const s = st.songs.find((q) => q.id === id); if (s && !s.deleted) deleteSong(store, id); });

@@ -162,6 +162,9 @@ export const NEWS = [
   { n: 54, d: '2026-11-28', ru: ['Песни: «Папка-источник» — подключить папку Holyrics или другой программы; песни читаются только в одну сторону, обновляются при изменениях, без дублей, ваши аккорды не затираются', 'Нейросеть читает тексты песен (по отдельному разрешению) и может проставлять аккорды сразу во многих песнях; импорт сотен файлов — быстро'],
     en: ['Songs: “Source folder” — connect a Holyrics (or other) folder; read-only, updates on changes, no duplicates, your chords are kept', 'The AI can read song text (with separate permission) and add chords to many songs at once; importing hundreds of files is fast'],
     uz: ['Qoʻshiqlar: «Manba papka» — Holyrics (yoki boshqa) papkasini ulang; faqat oʻqiladi, oʻzgarganda yangilanadi, takrorlarsiz, akkordlaringiz saqlanadi', 'Neyrotarmoq qoʻshiq matnini oʻqiy oladi (alohida ruxsat bilan) va koʻp qoʻshiqqa birdan akkord qoʻya oladi; yuzlab faylni import qilish tez'] },
+  { n: 55, d: '2026-11-28', ru: ['Чат нейросети: клавиатура не закрывает последнее сообщение, лента не прыгает; ответы без «звёздочек» — жирный и списки показываются как есть', 'Недельная норма часами: «Расписание → В неделю» — блоки растягиваются поровну; нейросеть тоже умеет менять норму и видит расписание'],
+    en: ['AI chat: the keyboard no longer hides the last message and the list no longer jumps; replies show bold and lists instead of asterisks', 'Weekly goal in hours: Schedule → Per week — blocks stretch evenly; the AI can also change the goal and sees the schedule'],
+    uz: ['Neyrotarmoq chati: klaviatura oxirgi xabarni yopmaydi, roʻyxat sakramaydi; javoblarda yulduzchalar oʻrniga qalin matn va roʻyxatlar', 'Haftalik meʼyor soatlarda: Jadval → Haftasiga — bloklar teng choʻziladi; neyrotarmoq ham meʼyorni oʻzgartira oladi va jadvalni koʻradi'] },
 ];
 
 export const lastNews = () => NEWS.reduce((m, e) => Math.max(m, e.n), 0);

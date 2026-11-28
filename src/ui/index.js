@@ -143,7 +143,7 @@ function trackKeyboard() {
     const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
     document.documentElement.style.setProperty('--kb', (kb > 80 ? kb : 0) + 'px'); // меньше 80 — не клавиатура (адресная строка, жесты)
     const a = document.activeElement;
-    if (kb > 80 && a && a.closest && a.closest('.sheet') && a.scrollIntoView) setTimeout(() => { try { a.scrollIntoView({ block: 'nearest' }); } catch { /* */ } }, 60);
+    if (kb > 80 && a && a.closest && a.closest('.sheet') && !a.closest('.aichat') && a.scrollIntoView) setTimeout(() => { try { a.scrollIntoView({ block: 'nearest' }); } catch { /* */ } }, 60);
   };
   vv.addEventListener('resize', set); vv.addEventListener('scroll', set); set();
 }

@@ -20,7 +20,11 @@ const PASTE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="16"
 const LINK = '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
 const ACCEPT = 'text/*,.txt,.md,.csv,.json,.html,.htm,.docx,.pdf,.cho,.chopro,.crd,.lrc,image/png,image/jpeg,image/webp,image/gif';
 
-const nl = (s) => esc(s).replace(/\n/g, '<br>');
+// Ответ модели: разметка без звёздочек и решёток (безопасно: сначала экранирование, потом только свои теги) — жирный, курсив, код, списки, заголовки
+const nl = (s) => esc(s)
+  .replace(/^[ \t]*[-*•][ \t]+/gm, '• ').replace(/^#{1,4}[ \t]+(.+)$/gm, '<b>$1</b>')
+  .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*\w])\*([^*\n]+)\*(?![*\w])/g, '$1<i>$2</i>').replace(/`([^`\n]+)`/g, '<code>$1</code>')
+  .replace(/\n/g, '<br>');
 const CATS = { songs: 'ai.cat.songs', media: 'ai.cat.media', studio: 'ai.cat.studio', plan: 'ai.cat.plan', stats: 'ai.cat.stats', log: 'ai.cat.log' };
 const STUDIO_CHIPS = ['ai.studio.chip1', 'ai.studio.chip2', 'ai.studio.chip3', 'ai.studio.chip4'];
 // копирование: Clipboard API, а где его нет (WebView без жеста) — через выделение
@@ -54,7 +58,9 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
   }
   if (rec) app.aiFocus = { rec };
   const manual = studio || !!rec, chat = app.ai.chat(), name = mascotName();
-  let off = null, draft = '', atts = [], reading = 0, linkOpen = false;
+  let off = null, offVV = null, draft = '', atts = [], reading = 0, linkOpen = false;
+  const hashStr = (x) => { let h = 5381; for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+  let pinned = true; // лента у конца: тогда клавиатура и новые сообщения держат её внизу
   const GEAR = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
   const html = () => snav(name, { left: '<button class="ic sm" data-ai="settings" aria-label="' + esc(t('ai.settingsBtn')) + '">' + GEAR + '</button>', right: '<span class="aisnr"><button class="ic sm" data-ai="chats" aria-label="' + esc(t('ai.chats')) + '" title="' + esc(t('ai.chats')) + '">' + LIST + '</button><button class="link b r" data-close>' + esc(t('ui.done')) + '</button></span>' }) + '<div class="aibrand" data-aibrand data-ai="agents" role="button" tabindex="0" aria-label="' + esc(t('ai.agent.pick')) + '"></div><div class="aichat' + (manual ? ' studio' : '') + '"><div class="aimsgs" data-aimsgs role="log" aria-live="polite"></div>' +
     '<div class="aiatt" data-aiatt></div><div class="aictx" data-aictx></div><div class="aiin"><div class="aitools" data-aitools></div><textarea class="inp left" data-aiin rows="1" maxlength="4000" placeholder="' + esc(t('ai.ph')) + '" aria-label="' + esc(t('ai.ph')) + '"></textarea><button class="hcta aisend" data-ai="send" aria-label="' + esc(t('ai.send')) + '"><svg viewBox="0 0 24 24"><path d="M4 12l16-7-6 16-3-6z"/></svg></button></div><input type="file" data-aifile multiple hidden accept="' + ACCEPT + '"></div>';
@@ -82,11 +88,17 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       drawBrand();
       const songs = app.store.state.songs || [], recs = app.files ? app.files.list('audio') : [], msgs = chat.messages;
       const keepTop = list.scrollTop, atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 80 || !list.dataset.drawn, seen = +list.dataset.n || 0;
-      list.innerHTML = (msgs.length ? '' : '<p class="aihint">' + t(rec ? 'ai.rec.hello' : studio ? 'ai.studio.hello' : 'ai.hello', { name, file: recRec ? recRec.name : '' }) + '</p>' + (rec ? '<div class="aichips2">' + TASKS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t('ai.task.' + k.id + '.tz')) + '">' + esc(t('ai.task.' + k.id)) + '</button>').join('') + '</div>' : studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + (m.pasted ? esc(t('ai.studio.pastedWho')) : badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name)) + '</span>') + nl(m.text) + (m.cut ? '<div class="aiatl">' + esc(t('ai.cut')) + '</div>' : '') + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show, app.store.state)).join('')).join('') +
+      const nextHtml = (msgs.length ? '' : '<p class="aihint">' + t(rec ? 'ai.rec.hello' : studio ? 'ai.studio.hello' : 'ai.hello', { name, file: recRec ? recRec.name : '' }) + '</p>' + (rec ? '<div class="aichips2">' + TASKS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t('ai.task.' + k.id + '.tz')) + '">' + esc(t('ai.task.' + k.id)) + '</button>').join('') + '</div>' : studio ? '<div class="aichips2">' + STUDIO_CHIPS.map((k) => '<button class="sgchip aich" data-ai="chip" data-t="' + esc(t(k)) + '">' + esc(t(k)) + '</button>').join('') + '</div>' : '')) + msgs.map((m) => (m.role === 'tool' ? '<div class="aim t">⟳ ' + esc(t('ai.tool.sent', { what: m.text })) + '</div>' : m.text ? '<div class="aim ' + (m.role === 'user' ? 'u' : 'a') + '">' + (m.role === 'user' ? '' : '<span class="aiwho">' + (m.pasted ? esc(t('ai.studio.pastedWho')) : badge(brandOf(app.ai.cfg()), 18) + esc(brandOf(app.ai.cfg()).name)) + '</span>') + nl(m.text) + (m.cut ? '<div class="aiatl">' + esc(t('ai.cut')) + '</div>' : '') + (m.att && m.att.length ? '<div class="aiatl">' + m.att.map((a) => '📎 ' + esc(a.name)).join('<br>') + '</div>' : '') + '</div>' : '') + (m.proposals || []).map((p) => propHTML(m, p, songs, recs, app.device && app.device.show, app.store.state.settings)).join('')).join('') +
         (chat.busy ? '<div class="aim a think" aria-label="' + esc(t('ai.thinking')) + '"><i></i><i></i><i></i></div>' : '') +
         (chat.error ? '<div class="aierr"><span>' + esc(t('ai.err.' + chat.error.kind) + (chat.error.message ? ' — ' + chat.error.message : '')) + '</span><span class="l2">' + esc(t('ai.why.' + chat.error.kind)) + '</span><button class="link b" data-ai="why">' + t('ai.why.btn') + '</button><button class="link b" data-ai="retry">' + t('ai.retry') + '</button><button class="link" data-ai="dismiss">' + t('ai.close') + '</button></div>' : '');
-      // лента прыгает вниз только если читали конец или пришло новое сообщение; листание вверх не сбрасывается перерисовкой
-      list.scrollTop = atEnd || msgs.length !== seen || chat.busy ? list.scrollHeight : keepTop;
+      // не перерисовывать то, что не изменилось: замена содержимого сбрасывает прокрутку и рвёт инерцию листания (лента «прыгала»)
+      const sig = nextHtml.length + ':' + hashStr(nextHtml);
+      if (list.dataset.h !== sig) {
+        list.innerHTML = nextHtml; list.dataset.h = sig;
+        // лента прыгает вниз только если читали конец или пришло новое сообщение; листание вверх не сбрасывается (клавиатура ниже — stick)
+        list.scrollTop = atEnd || msgs.length !== seen || chat.busy ? list.scrollHeight : keepTop;
+        pinned = atEnd || msgs.length !== seen || chat.busy;
+      }
       list.dataset.drawn = '1'; list.dataset.n = String(msgs.length);
       const pv = chat.preview(atts);
       const cats = pv.parts.map((p) => t(CATS[p.cat])).concat(atts.length ? [t('ai.ctx.att', { n: atts.length })] : []);
@@ -103,6 +115,12 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       ta.style.overflowY = ta.scrollHeight + 2 > max ? 'auto' : 'hidden';
     };
     ta.addEventListener('input', grow); grow();
+    // Клавиатура: поле ввода открыто — последнее сообщение остаётся на виду (лента была у конца → плавно к концу после смены высоты)
+    list.addEventListener('scroll', () => { pinned = list.scrollHeight - list.scrollTop - list.clientHeight < 80; }, { passive: true });
+    const stick = () => { if (!pinned) return; const go = () => { if (list.isConnected) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' }); }; requestAnimationFrame(go); setTimeout(go, 180); setTimeout(() => { if (pinned && list.isConnected) list.scrollTop = list.scrollHeight; }, 420); };
+    const vv = window.visualViewport;
+    if (vv) { vv.addEventListener('resize', stick); offVV = () => vv.removeEventListener('resize', stick); }
+    ta.addEventListener('focus', stick);
     const send = async () => {
       const v = ta.value.trim(); if ((!v && !atts.length) || chat.busy) return;
       draft = v; ta.value = ''; grow();
@@ -177,5 +195,5 @@ export async function openChat(app, { onSettings = () => {}, studio = false, rec
       });
     };
     fin.addEventListener('change', () => { const fs = [...fin.files]; fin.value = ''; addFiles(fs); });
-  }, { onClose: () => { if (off) off(); if (rec && app.aiFocus && app.aiFocus.rec === rec) app.aiFocus = null; } });
+  }, { onClose: () => { if (off) off(); if (offVV) offVV(); if (rec && app.aiFocus && app.aiFocus.rec === rec) app.aiFocus = null; } });
 }

@@ -123,5 +123,21 @@ export function prune(p, now = Date.now()) {
   p.off = p.off.filter((o) => o.to >= k);
   return p;
 }
+// Недельная норма (слово автора 28.11.2026: «хочу менять норму часами»): норма — сумма блоков расписания, поэтому новая норма
+// растягивает или сжимает все повторяющиеся блоки поровну (начало не сдвигается, шаг 15 мин, блок не короче 15 и до конца суток)
+export function scaleWeek(p, targetMin) {
+  const cur = weekMin(p), target = Math.max(STEP, Math.round(targetMin / STEP) * STEP);
+  if (!p.slots.length || !cur) return p;
+  const k = target / cur, end = (s) => minOf(s.from) + durOf(s);
+  p.slots.forEach((s) => { s.to = hmOf(Math.min(minOf(s.from) + Math.max(STEP, snap(durOf(s) * k)), 24 * 60 - STEP)); });
+  for (let i = 0; i < 400; i++) { // добор: подгон по 15 минут тем блокам, где это ближе к цели
+    const diff = target - weekMin(p); if (!diff) break;
+    const dir = diff > 0 ? 1 : -1;
+    const s = [...p.slots].sort((a, b) => a.days.length - b.days.length).find((x) => Math.abs(diff - dir * STEP * x.days.length) < Math.abs(diff) && durOf(x) + dir * STEP >= STEP && end(x) + dir * STEP <= 24 * 60 - STEP + 0);
+    if (!s) break;
+    s.to = hmOf(minOf(s.to) + dir * STEP);
+  }
+  return p;
+}
 // Минут в неделю по обычному расписанию
 export const weekMin = (p) => p.slots.reduce((a, s) => a + durOf(s) * s.days.length, 0);

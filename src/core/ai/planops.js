@@ -1,7 +1,7 @@
 // Расписание занятий для нейросети (слово автора 28.11.2026: «поставь репетиции по пятницам…» — нейросеть должна уметь всё в приложении).
 // Чтение: блоки расписания. Правка — предложением (блок ```melete-plan), применяет человек; перед применением — копия, после — «Отменить».
 // Только блоки расписания: добавить, изменить, убрать, перерыв. Занятия задним числом и данные песен здесь не меняются. Без DOM и сети.
-import { planOf, savePlan, addSlot, editSlot, removeSlot, addOff, removeOff, minOf, hmOf, durOf, dateKey } from '../schedule.js';
+import { planOf, savePlan, addSlot, editSlot, removeSlot, addOff, removeOff, scaleWeek, weekMin, minOf, hmOf, durOf, dateKey } from '../schedule.js';
 
 export const PLAN_MAX = { ops: 30 };
 const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
@@ -31,6 +31,10 @@ export function cleanPlanOp(o) {
     if (o.days != null) { const d = dayList(o.days); if (d.length) f.days = d; }
     return Object.keys(f).length > 2 ? f : null;
   }
+  if (o.op === 'goal') { // недельная норма: часы или минуты; блоки растягиваются поровну
+    const m = o.minutes != null ? +o.minutes : o.hours != null ? +o.hours * 60 : NaN;
+    return Number.isFinite(m) && m >= 30 && m <= 3000 ? { op: 'goal', minutes: Math.round(m) } : null;
+  }
   if (o.op === 'remove') return typeof o.ref === 'string' && o.ref ? { op: 'remove', ref: o.ref } : null;
   if (o.op === 'off') { // перерыв (отпуск, болезнь): даты включительно
     if (!okDate(o.from) || !okDate(o.to)) return null;
@@ -45,6 +49,7 @@ export function describePlan(ops, st) {
   const p = planOf(st);
   return ops.map((o) => {
     if (o.op === 'add') return '+ ' + when(o) + (o.title ? ' · ' + o.title : '');
+    if (o.op === 'goal') return '⏱ норма недели → ' + Math.round(o.minutes / 6) / 10 + ' ч';
     if (o.op === 'off') return '⏸ перерыв ' + o.from + ' — ' + o.to + (o.title ? ' · ' + o.title : '');
     const s = p.slots.find((q) => q.id === o.ref);
     if (o.op === 'remove') return '✕ ' + (s ? when(s) + (s.title ? ' · ' + s.title : '') : '? ' + o.ref);
@@ -70,6 +75,7 @@ export function applyPlanOps(st, ops, songs = []) {
       if (!p.slots.some((s) => s.id === o.ref)) continue;
       removeSlot(p, o.ref); n++;
     } else if (o.op === 'off') { addOff(p, o.from, o.to, o.title); n++; }
+    else if (o.op === 'goal') { if (!p.slots.length) continue; scaleWeek(p, o.minutes); n++; }
   }
   if (!n) return { n: 0, prev };
   savePlan(st, p);
@@ -89,7 +95,7 @@ export function planContext(st, now = Date.now()) {
   const lines = p.slots.map((s) => [s.id, s.days.map((d) => DAYS[d]).join(','), s.from + '–' + s.to, durOf(s) + ' мин', s.title || ''].join(' | '));
   const once = Object.entries(p.once).filter(([d]) => d >= k).sort().slice(0, 20).map(([d, l]) => d + ': ' + (l.map((s) => s.from + '–' + s.to + (s.title ? ' ' + s.title : '')).join(', ') || 'свободно'));
   const off = p.off.filter((o) => o.to >= k).map((o) => o.from + ' — ' + o.to + (o.title ? ' (' + o.title + ')' : ''));
-  return 'РАСПИСАНИЕ ЗАНЯТИЙ (повторяющиеся блоки). Строка: id | дни | время | длительность | название\n' + (lines.join('\n') || 'пусто') +
+  return 'НЕДЕЛЬНАЯ НОРМА: ' + Math.round(weekMin(p) / 6) / 10 + ' ч (' + weekMin(p) + ' мин) — это сумма блоков ниже; менять её можно правкой «goal».\nРАСПИСАНИЕ ЗАНЯТИЙ (повторяющиеся блоки). Строка: id | дни | время | длительность | название\n' + (lines.join('\n') || 'пусто') +
     (once.length ? '\nПравки на отдельные даты:\n' + once.join('\n') : '') + (off.length ? '\nПерерывы: ' + off.join('; ') : '');
 }
 
@@ -97,5 +103,6 @@ export const PLAN_PROMPT = [
   '7) Расписание занятий (данные «РАСПИСАНИЕ»): блок ```melete-plan с массивом правок. Дни — числа: 0 пн, 1 вт, 2 ср, 3 чт, 4 пт, 5 сб, 6 вс.',
   '{"op":"add","days":[4],"from":"17:00","to":"18:00","title":"Репетиция"} — новый повторяющийся блок; вместо days можно "date":"ГГГГ-ММ-ДД" — один день; "song":"<id песни>" — необязательно.',
   '{"op":"edit","ref":"<id блока>","from":"…","to":"…","days":[…],"title":"…"} — изменить блок; {"op":"remove","ref":"<id блока>"} — убрать; {"op":"off","from":"ГГГГ-ММ-ДД","to":"ГГГГ-ММ-ДД","title":"отпуск"} — перерыв.',
+  '{"op":"goal","hours":12} — недельная норма часами: все повторяющиеся блоки растянутся или сожмутся поровну (норма и есть сумма блоков).',
   'Время «ЧЧ:ММ», 24 часа, конец позже начала. Одно предложение — один блок; сначала коротко скажи, что поставишь. Не обещай, что уже сделано: применяет человек.',
 ].join('\n');

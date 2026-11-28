@@ -13,7 +13,7 @@ import { esc, sheet, snav, toast } from '../../ui/index.js';
 import { weekday } from '../time.js';
 import { weekdays } from './common.js';
 import { fmtDur } from '../format.js';
-import { planOf, savePlan, slotsOn, offOn, addSlot, editSlot, removeSlot, resetDay, addOff, removeOff, prune, weekMin, minOf, hmOf, snap, dateKey, durOf, STEP } from '../schedule.js';
+import { scaleWeek, planOf, savePlan, slotsOn, offOn, addSlot, editSlot, removeSlot, resetDay, addOff, removeOff, prune, weekMin, minOf, hmOf, snap, dateKey, durOf, STEP } from '../schedule.js';
 
 const DAY = 86400000, PX = 52; // пикселей на час
 const mid = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
@@ -45,7 +45,7 @@ export function planHTML(app) {
   return '<div class="hdr">' + t('plan.title') + '</div><div class="plan">' + strip + head +
     '<div class="pscroll" data-noswipe><div class="pgrid' + (off ? ' isoff' : '') + '" style="height:' + 24 * PX + 'px">' + hours + now + blocks + '</div></div>' +
     '<p class="ftr">' + t('plan.hint') + '</p></div>' +
-    '<div class="wkinfo"><div class="wkhead"><span>' + t('plan.week') + '</span><b class="num">' + (mins ? fmtDur(mins * 60) + ' · ' + t('plan.nDays', { n: days }) : t('plan.empty')) + '</b></div>' + wkBars(p, w0, WD, today) + '</div>' +
+    '<div class="wkinfo"><button class="wkhead" data-pl="goal" style="all:unset;display:flex;justify-content:space-between;width:100%;cursor:pointer" aria-label="' + esc(t('plan.goal')) + '"><span>' + t('plan.week') + '</span><b class="num">' + (mins ? fmtDur(mins * 60) + ' · ' + t('plan.nDays', { n: days }) : t('plan.empty')) + ' ✎</b></button>' + wkBars(p, w0, WD, today) + '</div>' +
     '<p class="ftr">' + t('plan.weekHint') + '</p>' +
     '<div class="hdr">' + t('plan.breaks') + '</div><div class="group">' + p.off.map((o) => '<div class="cell"><span class="grow"><span>' + esc(o.title || t('plan.break')) + '</span><span class="st l2" style="display:block;font-size:13px">' +
       esc(o.from === o.to ? dShort(new Date(o.from + 'T12:00').getTime()) : dShort(new Date(o.from + 'T12:00').getTime()) + ' — ' + dShort(new Date(o.to + 'T12:00').getTime())) + '</span></span><button class="ic sm plain" data-poff="' + esc(o.id) + '" aria-label="' + esc(t('plan.delBreak')) + '">×</button></div>').join('') +
@@ -124,6 +124,21 @@ export function toolSlotSheet(app, tool) {
   slotSheet(app, s || { from: '19:00', to: '19:30', title: toolTitle(tool), tool }, () => app.store.settingsChanged());
 }
 
+// Недельная норма часами: растягивает или сжимает все блоки расписания поровну
+function goalSheet(app, done) {
+  const p0 = planOf(app.store.state.settings);
+  if (!p0.slots.length) { toast(t('plan.goalEmpty')); return; }
+  let h = Math.round(weekMin(p0) / 15) / 4;
+  const api = sheet(() => snav(t('plan.goal'), { left: '<button class="link l" data-close>' + t('ui.cancel') + '</button>', right: '<button class="link b r" data-gsave>' + t('ui.save') + '</button>' }) +
+    '<div class="group"><div class="cell"><button class="ic" data-g="-1" aria-label="−1">−1</button><button class="ic" data-g="-.5" aria-label="−0,5">−½</button><span class="grow num" style="text-align:center;font-size:28px" data-gval>' + t('plan.goalH', { n: h }) + '</span><button class="ic" data-g=".5" aria-label="+0,5">+½</button><button class="ic" data-g="1" aria-label="+1">+1</button></div></div><p class="ftr">' + t('plan.goalHint') + '</p>', (el) => {
+    el.addEventListener('click', (e) => {
+      const g = e.target.closest('[data-g]');
+      if (g) { h = Math.max(0.5, Math.min(50, h + +g.dataset.g)); el.querySelector('[data-gval]').textContent = t('plan.goalH', { n: h }); return; }
+      if (e.target.closest('[data-gsave]')) { const q = planOf(app.store.state.settings); scaleWeek(q, h * 60); api.close(); commit(app, q, done); }
+    });
+  });
+}
+
 function offSheet(app, done) {
   const k = dateKey(sel);
   const api = sheet(() => snav(t('plan.addBreak'), { left: '<button class="link l" data-close>' + t('ui.cancel') + '</button>', right: '<button class="link b r" data-osave>' + t('ui.save') + '</button>' }) +
@@ -150,6 +165,7 @@ export function bindPlan(el, app, done) {
       if (k === 'prev') go(addDays(sel, -7)); else if (k === 'next') go(addDays(sel, 7)); else if (k === 'today') go(Date.now());
       else if (k === 'reset') commit(app, resetDay(p, sel), () => done(true));
       else if (k === 'addoff') offSheet(app, () => done(true));
+      else if (k === 'goal') goalSheet(app, () => done(true));
       return;
     }
     if ((b = g('[data-poff]'))) { commit(app, removeOff(planOf(app.store.state.settings), b.dataset.poff), () => done(true)); return; }

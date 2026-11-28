@@ -33,3 +33,24 @@ describe('нейросеть: расписание', () => {
     expect(ro.status).toBe('blocked');
   });
 });
+
+import { scaleWeek, weekMin } from '../src/core/schedule.js';
+describe('недельная норма', () => {
+  it('scaleWeek приводит неделю к цели с шагом 15 минут', () => {
+    const st = { days: [1, 0, 0, 0, 0, 0, 0], remind: { time: '19:00' }, goalMin: 420 };
+    applyPlanOps(st, [{ op: 'add', days: [0, 2], from: '18:00', to: '19:00' }, { op: 'add', days: [4], from: '17:00', to: '18:00' }, { op: 'add', days: [5], from: '12:00', to: '15:00' }].map(cleanPlanOp));
+    const p = planOf(st);
+    scaleWeek(p, 720); expect(Math.abs(weekMin(p) - 720)).toBeLessThan(15);
+    scaleWeek(p, 300); expect(Math.abs(weekMin(p) - 300)).toBeLessThan(15);
+    p.slots.forEach((s) => expect(durOfTest(s)).toBeGreaterThanOrEqual(15));
+  });
+  it('op goal: очищается и применяется, goalMin пересчитан', () => {
+    const st = { days: [0, 0, 0, 0, 0, 0, 0], remind: {}, goalMin: 60 };
+    applyPlanOps(st, [{ op: 'add', days: [0, 1, 2], from: '09:00', to: '10:00' }].map(cleanPlanOp));
+    expect(cleanPlanOp({ op: 'goal', hours: 12 }).minutes).toBe(720); expect(cleanPlanOp({ op: 'goal', hours: 200 })).toBe(null);
+    const r = applyPlanOps(st, [cleanPlanOp({ op: 'goal', hours: 6 })]);
+    expect(r.n).toBe(1); expect(Math.abs(st.goalMin - 360)).toBeLessThan(15);
+    expect(undoPlanOps(st, r.prev)).toBe(true); expect(st.goalMin).toBe(180);
+  });
+});
+const durOfTest = (s) => { const m = (v) => { const [h, k] = v.split(':').map(Number); return h * 60 + k; }; return m(s.to) - m(s.from); };
