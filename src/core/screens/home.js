@@ -15,6 +15,7 @@ import { modules, moduleById } from '../../modules/index.js';
 import { studyCard } from './study.js';
 import { updSlot } from './update.js';
 import { dueSongs } from '../review.js';
+import { homeBeginnerHTML } from './homebeg.js';
 
 // Помодоро — кнопкой рядом с профилем (слово автора 06.11.2026); идёт — кольцо с минутами
 // Лицо маскота рядом с таймером (слово автора 25.11.2026): касание открывает чат с нейросетью (если ИИ на этом устройстве доступен; не подключён —
@@ -283,6 +284,8 @@ function firstHTML() {
 }
 export function homeHTML(app) {
   if (app.store.state.settings.uiStyle === 'mono') return homeMonoHTML(app);
+  // новичку — своя главная: один урок, время, четыре кнопки, неделя (макет 28.11.2026); правка блоков ему не нужна
+  if (beginnerOf(app.store.state.settings) && !app.store.state.settings.toolsOnly && !EDIT) return homeBeginnerHTML(app);
   const st = app.store.state.settings, w = weekData(app.store.sessions()), wp = weekPlan(st), goal = wp.goal, p = w.total / Math.max(1, goal);
   const today = weekday(Date.now()), plan = wp.days, WD = weekdays(), P = {};
   // «Только инструменты»: без недели, цели и лиги — сразу рабочее место и инструменты

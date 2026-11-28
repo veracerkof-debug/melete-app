@@ -3334,5 +3334,15 @@
   "palette.songs": "Songs",
   "palette.free": "Free practice",
   "palette.space": "Space",
-  "palette.settings": "Settings"
+  "palette.settings": "Settings",
+  "beg.next": "Next lesson",
+  "beg.nextLoading": "Book",
+  "beg.start": "Start lesson",
+  "beg.howLong": "How much time do you have?",
+  "beg.plan": "Plan for {n} minutes: warm-up, lesson, chord changes, free play.",
+  "beg.quick": "Quick",
+  "beg.week": "Week",
+  "beg.allDone": "All lessons done",
+  "beg.lesson": "Lesson {n}",
+  "beg.of": "Lesson {n} of {m}"
 }

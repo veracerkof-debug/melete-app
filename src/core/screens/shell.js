@@ -12,6 +12,7 @@ import { moduleById } from '../../modules/index.js';
 import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
+import { mountHomeBeginner } from './homebeg.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, goalSheet, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
 import { listSongs, ensureLib } from '../library.js';
@@ -105,7 +106,7 @@ export function createShell(app, root) {
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
       coreHelp(app, 'songs');
-    } else { main.innerHTML = homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
+    } else { main.innerHTML = homeHTML(app); mountStones(app, main); mountHomeBeginner(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
@@ -163,7 +164,7 @@ export function createShell(app, root) {
 
   // Предпросмотр масштаба в «Оформлении»: разметка главной и инструментов без обработчиков
   app.preview = {
-    home: (el) => { el.innerHTML = homeHTML(app); mountStones(app, el); },
+    home: (el) => { el.innerHTML = homeHTML(app); mountStones(app, el); mountHomeBeginner(app, el); },
     tools: (el) => { renderTools(app, el); el.onclick = null; },
     tabs: () => tabs.innerHTML,
   };
@@ -217,6 +218,7 @@ export function createShell(app, root) {
       if (d.key) { const [code, ch] = d.key.split('.'); app.bible.setPos({ code, ch: +ch, y: 0 }); }
       if (tabsNow().includes('bible')) { unmountBible(); go('bible'); } else openToolView(app, 'bible', render); // есть вкладка — в неё
     }
+    else if (d.act === 'begmin') { app.store.state.settings.begMin = +d.v; app.store.settingsChanged(); render(); }
     else if (d.act === 'pomo') openToolView(app, 'timer', render);
     else if (d.act === 'study') import('./study.js').then((m) => m.openStudy(app, d.k, openToolView, render));
     else if (d.act === 'lvlup' || d.act === 'lvlno') { // предложение повысить уровень: спрашиваем один раз на уровень

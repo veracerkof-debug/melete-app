@@ -1017,3 +1017,33 @@ html.desk .hstart .hfree{min-height:64px}
 .aicpick{text-align:left;min-width:0}
 .aicpick b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .aiprov{display:flex;flex-wrap:wrap;gap:6px;width:100%}.aiprov button{min-height:40px;padding:6px 12px;border-radius:999px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:14px}.aiprov button.on{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12);font-weight:600}
+
+/* Главная новичка (макет «Н1 · Сегодня»): урок, время занятия, четыре кнопки, неделя */
+.bghome{display:flex;flex-direction:column;gap:12px;padding:8px 0 12px}
+.bgey{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+.bgey.l{color:var(--l2);opacity:1}
+.bgnext{background:var(--tint);color:var(--on-tint);border-radius:20px;padding:16px}
+.bgtt{font-size:24px;font-weight:700;margin-top:4px;line-height:1.2}
+.bgsub{font-size:14px;opacity:.85;margin-top:2px;min-height:1.3em}
+.bgbar{height:8px;border-radius:4px;background:color-mix(in srgb,var(--on-tint) 28%,transparent);margin-top:12px;overflow:hidden}
+.bgbar i{display:block;height:100%;background:var(--on-tint);border-radius:4px}
+.bgcta{width:100%;min-height:48px;margin-top:14px;border:0;border-radius:14px;background:var(--on-tint);color:var(--tint-text);font:inherit;font-size:16px;font-weight:600}
+.bgcard{background:var(--cell);border-radius:18px;padding:14px 16px;border:0;color:var(--ink);font:inherit;text-align:left;width:100%}
+.bgseg{display:flex;gap:2px;background:var(--fill);border-radius:12px;padding:3px;margin-top:8px}
+.bgseg button{flex:1;min-height:40px;border:0;border-radius:10px;background:transparent;color:var(--l2);font:inherit;font-size:15px;font-weight:600}
+.bgseg button.on{background:var(--cell);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.bgplan{margin:8px 0 0;font-size:13px;color:var(--l2)}
+.bgqh{margin:2px 2px -4px}
+.bggrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bgt{background:var(--cell);border:0;border-radius:18px;padding:14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;color:var(--ink);font:inherit;text-align:left}
+.bgt b{font-size:15px;font-weight:600}
+.bgi{width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);display:flex;align-items:center;justify-content:center}
+.bgi svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bgweek{display:flex;align-items:center;gap:12px}
+.bgwl{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bgbig{font-size:22px;font-weight:700}
+.bgbig small{font-size:14px;font-weight:500;color:var(--l2)}
+.bgdots{display:flex;gap:5px}
+.bgd{width:10px;height:10px;border-radius:5px;background:var(--fill2);display:inline-block}
+.bgd.on{background:var(--ok)}
+.bgd.today{outline:2px solid var(--tint);outline-offset:1px}

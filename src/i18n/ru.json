@@ -3359,5 +3359,15 @@
   "palette.songs": "Песни",
   "palette.free": "Свободная практика",
   "palette.space": "Пробел",
-  "palette.settings": "Настройки"
+  "palette.settings": "Настройки",
+  "beg.next": "Следующий урок",
+  "beg.nextLoading": "Учебник",
+  "beg.start": "Начать урок",
+  "beg.howLong": "Сколько времени есть?",
+  "beg.plan": "План на {n} минут: разминка, урок, смена аккордов, свободная игра.",
+  "beg.quick": "Быстро",
+  "beg.week": "Неделя",
+  "beg.allDone": "Все уроки пройдены",
+  "beg.lesson": "Урок {n}",
+  "beg.of": "Урок {n} из {m}"
 }

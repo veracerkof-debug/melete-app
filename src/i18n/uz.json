@@ -3295,5 +3295,15 @@
   "palette.songs": "Qo‘shiqlar",
   "palette.free": "Erkin mashq",
   "palette.space": "Probel",
-  "palette.settings": "Sozlamalar"
+  "palette.settings": "Sozlamalar",
+  "beg.next": "Keyingi dars",
+  "beg.nextLoading": "Darslik",
+  "beg.start": "Darsni boshlash",
+  "beg.howLong": "Qancha vaqt bor?",
+  "beg.plan": "{n} daqiqalik reja: qizish, dars, akkord almashtirish, erkin chalish.",
+  "beg.quick": "Tez",
+  "beg.week": "Hafta",
+  "beg.allDone": "Barcha darslar tugadi",
+  "beg.lesson": "{n}-dars",
+  "beg.of": "{n}-dars, jami {m}"
 }
