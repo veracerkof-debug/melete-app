@@ -217,6 +217,7 @@
   "src.taken": "Text updated",
   "src.staleHint": "These songs were edited both here and in the source. “Update” takes the source text (a backup is made first); “Keep mine” keeps the text with chords.",
   "src.hint": "Read only: Melete never writes to or deletes from this folder. New and changed files are read; no duplicates. Refreshes at launch and on the button.",
+  "imp.encrypted": "Holyrics .muf and .mufl files are encrypted by Holyrics, so Melete cannot read them. Export the songs from Holyrics in a plain format (text, ProPresenter, PowerPoint, OpenLyrics) or load them over Wi-Fi via “Holyrics over Wi-Fi”.",
   "imp.files": "From files",
   "imp.holyrics": "From Holyrics over Wi-Fi",
   "imp.formats": "ProPresenter 6 and 7 (.pro6, .pro, .proBundle), Holyrics (.muf, .mufl, .json), PowerPoint (.pptx), EasyWorship (Songs.db and SongWords.db, .ewsx), OpenLyrics (.xml), ChordPro and OnSong, text (.txt). Many files or a zip archive at once.",

@@ -42,6 +42,7 @@ export function importPreview(app, songs, errors = [], source = 'files', onDone 
         '<span class="grow"><span>' + esc(x.title || '—') + '</span><span class="st l2" style="display:block;font-size:12.5px">' +
         esc([x.artist, normKey(x.key), x.bpm ? x.bpm + ' BPM' : '', tn('imp.lines', x.notes ? x.notes.split('\n').length : 0)].filter(Boolean).join(' · ')) +
         (x.dup ? ' · <b>' + t('imp.dup') + '</b>' : '') + '</span></span></label>').join('') + '</div>' : '') +
+    (errors.some((e) => /\.muf[l]?$/i.test(e.name)) ? '<p class="ftr">' + t('imp.encrypted') + '</p>' : '') +
     (errors.length ? '<p class="ftr" style="color:var(--red)">' + esc(t('imp.errors', { list: errors.map((e) => e.name).join(', ') })) + '</p>' : '') +
     '<p class="ftr">' + t('imp.hint') + '</p>', (el) => {
     el.addEventListener('change', (e) => {

@@ -18,6 +18,7 @@ export async function runSource(app, src, { quiet = false } = {}) {
     if (!quiet) toast(t('src.reading'));
     const r = await scanSource({ sourceId: src.id, drv, store: app.store, base: emptySong(app.store.state.settings), onProgress: (n, total) => { if (!quiet && total > 200 && n % 100 === 0) toast(t('src.progress', { n, total })); } });
     const list = loadSources(); const me = list.find((x) => x.id === src.id); if (me) { me.at = Date.now(); me.n = r.scanned; saveSources(list); }
+    if (r.errors.some((e) => /\.muf[l]?$/i.test(e.name)) && !r.added && !r.updated) toast(t('imp.encrypted'));
     log('import', 'источник ' + src.id + ': файлов ' + r.scanned + ', изменено ' + r.changed + ', новых ' + r.added + ', обновлено ' + r.updated + ', ждут решения ' + r.stale + ', ошибок ' + r.errors.length, r.errors.length ? 'w' : 'i');
     r.errors.slice(0, 20).forEach((e) => log('import', 'источник: не прочитан файл ' + e.name + ' — ' + e.error, 'w'));
     return r;

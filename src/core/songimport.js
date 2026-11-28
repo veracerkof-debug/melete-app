@@ -291,7 +291,7 @@ export async function importSongs(files) {
         if (hs) { songs.push(...hs); return; }
         if (e === 'json' || e === 'muf' || e === 'mufl') throw new Error('unknown json');
       }
-      if (e === 'muf' || e === 'mufl') throw new Error('holyrics format');
+      if (e === 'muf' || e === 'mufl') throw new Error('holyrics encrypted'); // настоящие .mufl — зашифрованные данные (28.11.2026, файл автора): без ключа Holyrics не читаются
       if (e === 'pro6' || /<RVPresentationDocument/.test(txt)) songs.push(fromPro6(txt, name));
       else if (/<song[\s>][\s\S]*openlyrics/i.test(txt.slice(0, 2000)) || (e === 'xml' && /<lyrics/.test(txt))) songs.push(fromOpenLyrics(txt, name));
       else if (e === 'xml') throw new Error('unknown xml');
