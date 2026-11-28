@@ -112,5 +112,11 @@
   "modeSw": "Tuner mode",
   "byTuning": "By tuning",
   "dirLow": "flat",
-  "dirHigh": "sharp"
+  "dirHigh": "sharp",
+  "nb.clean": "in tune",
+  "nb.low": "low",
+  "nb.high": "high",
+  "nb.start": "Start with string {n}.",
+  "nb.next": "String {n} is in tune. Next: string {m}.",
+  "nb.allDone": "All strings are in tune."
 }

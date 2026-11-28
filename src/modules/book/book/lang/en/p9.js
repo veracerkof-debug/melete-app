@@ -9,6 +9,7 @@ export const S = {
   'bk.lvl': 'Level', 'bk.lvl.beginner': 'Beginner', 'bk.lvl.amateur': 'Intermediate', 'bk.lvl.advanced': 'Advanced', 'bk.lvl.pro': 'Pro',
   'bk.lvlMore': 'Open: the lesson for the "{l}" level',
   'bk.lead.first': 'Music from the very start: plain words, one step at a time, straight on the instrument. No knowledge needed.',
+  'nb.done': 'Completed', 'nb.now': 'now', 'nb.full': 'Whole textbook', 'nb.lessons': '‹ Lessons',
   'bk.part8': 'First steps', 'bk.sec.first': 'First steps', 'bk.sub.first': 'For starting from zero.',
   'lp.first.kicker': 'From zero', 'lp.first.title': 'First steps', 'lp.first.sub': '24 short lessons: from the first sound to a song of one\'s own',
   'lp.first.lead': 'A lesson takes 10–15 minutes. Every step can be heard, repeated and checked: the app listens to the playing and gives hints. When something does not work, the bottom of the lesson has "Easier" and "If it doesn\'t work".',

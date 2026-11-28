@@ -175,6 +175,7 @@ test('учебник: вид «Уроки» по умолчанию, «Учеб�
 test('учебник: уровни — новичку «Первые шаги», уроки выше уровня свёрнуты', async ({ page, melete, errors }) => {
   await melete.open({ settings: { profile: { name: 'A', instruments: ['piano'], level: 'beginner', priorHours: 0, createdAt: 1760000000000 } } });
   await open(melete, page, 'book');
+  await page.locator('.book [data-bfull="1"]').click(); // у новичка сначала список уроков (Н8); весь учебник — кнопкой
   await expect(page.locator('.book .bklvl [data-blvl="beginner"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.book .bsecs')).toHaveCount(0);
   await expect(page.locator('.book .bcard')).toHaveCount(66);

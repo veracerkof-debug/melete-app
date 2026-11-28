@@ -150,5 +150,8 @@
   "cap.tap": "Tap",
   "cap.sub": "Bo‘linma",
   "cap.more": "Yana",
-  "wheelHint": "Halqani buring yoki ± bosing"
+  "wheelHint": "Halqani buring yoki ± bosing",
+  "nb.unit": "daqiqada urish",
+  "nb.tap": "Tap",
+  "nb.meter": "O‘lchov {meter}"
 }

@@ -108,6 +108,17 @@ export function createBook(ctx, L, { save }) {
       SECTIONS[sec].map((p, i) => { const ids = PARTS[p]; return !ids.some(byId) ? '' : '<section class="bpart"><h3><span>' + (i + 1) + '</span>' + T('bk.part' + p) + '</h3><div class="bcards">' +
         ids.map((id) => { const c = byId(id); return c ? '<button class="bcard p' + p + '" data-bch="' + id + '"><i class="num">' + num(id) + '</i><b>' + c.t + '</b><span>' + c.s + '</span></button>' : ''; }).join('') + '</div></section>'; }).join('');
   }
+  // Новичок (макет Н8): «Пройдено N из M» с полосой и список уроков пути с галочками и текущим; весь учебник — одной кнопкой
+  const begOn = () => !!ctx.profile && ctx.profile.level === 'beginner';
+  const begPath = () => (curInst() === 'g' && PATHS.guitar ? 'guitar' : 'first');
+  function begHTML() {
+    const id = begPath(), P = PATHS[id], d = pathDone(id), next = pathNext(id);
+    return '<div class="bgwrap"><div class="ncard"><div class="nlbl">' + T('nb.done') + ' · ' + T('lp.' + id + '.title') + '</div><div class="bgnum num">' + d + ' ' + T('bk.of', { n: P.length }) + '</div>' +
+      '<div class="nbar" role="progressbar" aria-valuemin="0" aria-valuemax="' + P.length + '" aria-valuenow="' + d + '" style="margin-top:10px"><i style="width:' + Math.round((d / P.length) * 100) + '%"></i></div></div>' +
+      '<div class="nlist">' + P.map((x, i) => { const l = lessonById(x), ok = !!doneMap()[x], cur = x === next && d < P.length; return !l || !byId(l.ch) ? '' :
+        '<button class="nli' + (cur ? ' now' : '') + '" data-lgo="' + x + '"><span class="nstep' + (ok ? ' d' : cur ? ' n' : '') + '">' + (ok ? '✓' : i + 1) + '</span><span class="ngrow"><b>' + lsTitle(x) + '</b></span>' + (cur ? '<span class="nchip ac">' + T('nb.now') + '</span>' : '') + '</button>'; }).join('') + '</div>' +
+      '<button class="nbtn" data-bfull="1">' + T('nb.full') + '</button></div>';
+  }
   function readerHTML(id) {
     const sec = curSec(), list = secChs(sec), c = byId(id), i = num(id), prev = list[i - 2], next = list[i];
     return '<div class="bkhbar"><button class="bback" data-btoc aria-label="' + T('bk.toc') + '">‹ ' + T('bk.toc') + '</button><span class="num">' + T('bk.sec.' + sec) + ' · ' + i + ' ' + T('bk.of', { n: list.length }) + '</span></div>' +
@@ -177,7 +188,12 @@ export function createBook(ctx, L, { save }) {
 
   return {
     T,
-    html(th) { const b = th.book || {}; return '<div class="swrap bkwrap"><div class="book">' + (b.ch && byId(b.ch) ? readerHTML(b.ch) : b.view === 'path' ? pathHTML(PATHS[b.path] ? b.path : 'start') : tocHTML()) + '</div></div>'; },
+    html(th) {
+      const b = th.book || {}, beg = begOn();
+      const body = b.ch && byId(b.ch) ? readerHTML(b.ch) : b.view === 'path' ? pathHTML(PATHS[b.path] ? b.path : 'start')
+        : beg && !b.bfull ? begHTML() : (beg ? '<button class="nbtn bgback" data-bfull="0">' + T('nb.lessons') + '</button>' : '') + tocHTML();
+      return '<div class="swrap bkwrap"><div class="book">' + body + '</div></div>';
+    },
     // после вставки в окно: схемы и события
     mount(root) {
       const box = root.querySelector('.book'); if (!box) return;
@@ -194,6 +210,7 @@ export function createBook(ctx, L, { save }) {
         const bp = t.closest('[data-bpath]'); if (bp) { openPath(PATHS[bp.dataset.bpath] ? bp.dataset.bpath : 'start'); return; }
         const lg = t.closest('[data-lgo]'); if (lg) { goLesson(lg.dataset.lgo); return; }
         const lj = t.closest('[data-ljump]'); if (lj) { const x = box.querySelector('#les-' + lj.dataset.ljump); if (x) x.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+        const bf = t.closest('[data-bfull]'); if (bf) { BS().bfull = bf.dataset.bfull === '1'; save(); return; }
         const bl = t.closest('[data-blvl]'); if (bl) { Object.assign(BS(), { lvl: bl.dataset.blvl, ch: null, view: null, sec: null }); snd.stop(); stopSing(); save(); return; }
         const lo = t.closest('[data-lopen]'); if (lo) { (BS().opened ||= {})[lo.dataset.lopen] = 1; save(); return; }
         const bm = t.closest('[data-bmode]'); if (bm) { BS().mode = bm.dataset.bmode; snd.stop(); stopSing(); save(); return; }

@@ -153,5 +153,8 @@
   "cap.tap": "Tap",
   "cap.sub": "Subdiv.",
   "cap.more": "More",
-  "wheelHint": "Turn the ring or tap ±"
+  "wheelHint": "Turn the ring or tap ±",
+  "nb.unit": "beats per minute",
+  "nb.tap": "Tap",
+  "nb.meter": "Meter {meter}"
 }

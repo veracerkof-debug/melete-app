@@ -330,5 +330,11 @@
   "tr.tonicsHint": "Tanlov qoʻshiqning tonalligi sifatida saqlanadi.",
   "tr.tonicSet": "Qoʻshiq tonalligi — {k}",
   "deg.bad": "Tanilmadi: «{t}». Rim raqamlari I…VII, akkordlar qavsda: [Am].",
-  "deg.badFix": "Tanilmadi: «{t}». Balki «{f}»?"
+  "deg.badFix": "Tanilmadi: «{t}». Balki «{f}»?",
+  "nb.chords": "Akkordlar",
+  "nb.learned": "o‘rganildi {n}%",
+  "nb.noText": "matn yo‘q",
+  "nb.metro": "Metronom {bpm}",
+  "nb.metroPlain": "Metronom",
+  "nb.play": "Chalish"
 }

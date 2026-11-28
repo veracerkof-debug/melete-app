@@ -15,6 +15,7 @@ import uz from './i18n/uz.json';
 import en from './i18n/en.json';
 import el from './i18n/el.json';
 import './voice.css';
+import '../../ui/nview.css';
 import { engine, isLav, KIND, devKind } from '../../audio/voiceengine.js';
 import { setStopper } from '../../audio/micowner.js';
 import { decodeWav, encodeWav, processVoice, peaks, spectrumDb, migrateVoiceFx, withCue } from '../../audio/voicefx.js';
@@ -310,12 +311,13 @@ async function saveRecorded(r) {
   finally { S.saving--; refreshRecs(); loadKept(); }
 }
 function refreshRecs() {
+  if (host && host.querySelector('.vbeg') && S.phase === 'idle') { render(); return; }
   if (listSh && listSh.el.isConnected) listSh.update();
   const b = host && host.querySelector('[data-x="recs"]');
   if (b) { const n = dictList().length; let c = b.querySelector('.vc-mn'); if (n || S.saving) { if (!c) { b.insertAdjacentHTML('beforeend', '<span class="vc-mn num"></span>'); c = b.querySelector('.vc-mn'); } c.textContent = S.saving ? '…' : n; } else if (c) c.remove(); }
 }
 // Воспроизведение из списка: прямо из файла (HTMLAudio), без разбора и обработки — мгновенно и без нагрузки
-function stopItem() { if (!PL) return; const p = PL; PL = null; try { p.a.pause(); p.a.src = ''; } catch { /* уже */ } URL.revokeObjectURL(p.url); if (listSh && listSh.el.isConnected) listSh.update(); }
+function stopItem() { if (!PL) return; const p = PL; PL = null; try { p.a.pause(); p.a.src = ''; } catch { /* уже */ } URL.revokeObjectURL(p.url); if (listSh && listSh.el.isConnected) listSh.update(); begList(); }
 function playItem(id) {
   if (PL && PL.id === id) { stopItem(); return; }
   stopItem();
@@ -331,7 +333,7 @@ function playItem(id) {
     const bar = listSh.el.querySelector('[data-pbar="' + id + '"]'); if (bar && !bar.dataset.drag) bar.value = String(Math.round((a.currentTime / (a.duration || f.dur || 1)) * 1000));
     const tm = listSh.el.querySelector('[data-ptm="' + id + '"]'); if (tm) tm.textContent = fmt(a.currentTime);
   });
-  a.play().then(() => listSh && listSh.update()).catch((e) => { ctx.logErr(e); ctx.ui.toast(t('playFail')); stopItem(); });
+  a.play().then(() => { if (listSh) listSh.update(); begList(); }).catch((e) => { ctx.logErr(e); ctx.ui.toast(t('playFail')); stopItem(); });
 }
 const dstamp = (ms) => { const x = new Date(ms), p = (n) => String(n).padStart(2, '0'); return p(x.getDate()) + '.' + p(x.getMonth() + 1) + ' ' + p(x.getHours()) + ':' + p(x.getMinutes()); };
 function recsHTML() {
@@ -513,6 +515,7 @@ function meterUpdate(e) {
   const r = q('#vc-barr'); if (r) r.style.clipPath = cut(pctOf(rm));
   const p = q('#vc-barp'); if (p) p.style.clipPath = cut(pctOf(pk));
   const h = q('#vc-hold'); if (h) h.style.left = pctOf(M.hold) + '%';
+  vuUpdate(pk);
   const lamp = lampOf(now);
   if (lamp !== M.lamp) {
     M.lamp = lamp; const l = q('#vc-lamp'); if (l) { l.className = 'vc-lamp ' + lamp; l.querySelector('em').textContent = t('lamp.' + lamp); }
@@ -895,6 +898,40 @@ function moreSheet() {
 
 /* ---------- разметка ---------- */
 
+// Новичок (макет Н7): уровень, таймер, большая красная кнопка записи, список записей с ▶; запись и воспроизведение — те же
+const isBegV = () => ((ctx && ctx.profile) || {}).level === 'beginner' && size === 'full' && big();
+const clock = (sec) => { sec = Math.max(0, Math.floor(sec || 0)); const m = Math.floor(sec / 60), s = sec % 60; return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s; };
+const mmss = (sec) => { sec = Math.max(0, Math.round(sec || 0)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+const dayWord = (ms) => { const d = new Date(ms), n = new Date(), day = (x) => Math.floor(new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime() / 864e5), k = day(n) - day(d); return k === 0 ? t('nb.today') : k === 1 ? t('nb.yest') : String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); };
+const VU_N = 16;
+let vuAt = 0; const vuBuf = new Array(VU_N).fill(0);
+function vuUpdate(pk) {
+  const now = performance.now(), el = host && host.querySelector('#vbvu');
+  if (!el || now - vuAt < 70) return;
+  vuAt = now; vuBuf.shift(); vuBuf.push(pctOf(pk));
+  const bars = el.children;
+  for (let i = 0; i < bars.length; i++) bars[i].style.height = Math.max(6, vuBuf[i]) + '%';
+}
+function begRows() {
+  const L = dictList().slice(0, 6);
+  if (!L.length) return '<p class="nmut" style="text-align:center;margin:14px 0">' + t('nb.vEmpty') + '</p>';
+  return L.map((x) => {
+    const on = PL && PL.id === x.id;
+    return '<div class="nli"><span class="ngrow"><b>' + esc(x.name.replace(/\.wav$/i, '')) + '</b><small class="num">' + dayWord(x.created) + ' · ' + mmss(x.dur || 0) + '</small></span>' +
+      '<button class="nbtn" data-rplay="' + esc(x.id) + '" aria-label="' + esc(t(on ? 'stop' : 'play')) + '" style="min-height:40px">' + (on ? '■' : '▶') + '</button></div>';
+  }).join('');
+}
+function begList() { const l = host && host.querySelector('#vblist'); if (l) l.innerHTML = begRows(); }
+function begHTML() {
+  const rec = S.phase === 'rec', n = dictList().length;
+  const err = S.err ? '<p class="ftr vc-err">' + t(S.err === 'denied' && curIn() && curIn().type === 'display' && engine().native ? 'err.capture' : { denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing', busy: 'micBusy' }[S.err] || 'micNone') + '</p>' : '';
+  return '<div class="vbeg">' + err + '<div class="ncard nhero vbhero">' + bt('more', I.more, t('more'), 'vbmore') +
+    '<div class="vbvu" id="vbvu" aria-hidden="true">' + '<i></i>'.repeat(VU_N) + '</div><div class="num vbt" id="vc-time" data-clk="1">' + clock(rec ? S.sec : 0) + '</div>' +
+    '<button class="vbrec' + (rec ? ' on' : '') + '" data-x="' + (rec ? 'stop' : 'rec') + '" aria-label="' + esc(t(rec ? 'stop' : 'record')) + '"><i></i></button>' +
+    '<div class="nmut">' + t(rec ? 'nb.vRec' : S.saving ? 'nb.vSaving' : 'nb.vTap') + '</div></div>' +
+    '<div class="nlbl">' + t('nb.recs') + '</div><div class="nlist" id="vblist">' + begRows() + '</div>' +
+    (n > 6 ? '<button class="nbtn" data-x="recs">' + t('nb.all', { n }) + '</button>' : '') + '</div>';
+}
 const bottom = (inner) => '<div class="vc-bot">' + inner + '</div>';
 const bt = (x, icon, label, cls = '', extra = '') => '<button class="vc-btn sec' + (cls ? ' ' + cls : '') + '" data-x="' + x + '" aria-label="' + esc(label) + '"' + extra + '>' + icon + '</button>';
 const recsBtn = () => { const n = dictList().length; return '<button class="vc-btn sec vc-mk" data-x="recs" aria-label="' + esc(t('recs.title')) + '">' + I.list + (S.saving ? '<span class="vc-mn num">…</span>' : n ? '<span class="vc-mn num">' + n + '</span>' : '') + '</button>'; };
@@ -910,6 +947,7 @@ function stageHTML() {
     '<div class="vc-bar vcled" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div></div>';
 }
 function html() {
+  if (isBegV() && S.phase !== 'take') return begHTML();
   const err = S.err ? '<p class="ftr vc-err">' + t(S.err === 'denied' && curIn() && curIn().type === 'display' && engine().native ? 'err.capture' : { denied: 'micDenied', space: 'noSpace', noaudio: 'noAudio', nomic: 'micMissing', busy: 'micBusy' }[S.err] || 'micNone') + '</p>' : '';
   if (S.phase === 'rec') {
     if (!big()) return '<div class="vc-rec ' + size + '"><div class="vc-time num" id="vc-time">' + fmt(S.sec) + '</div><div class="vc-bar vcled mini" aria-hidden="true"><i id="vc-barr"></i><i id="vc-barp"></i><b id="vc-hold"></b></div>' +
@@ -989,7 +1027,7 @@ function onLevel(e) {
   if (S.phase !== 'rec' || !host) return;
   meterUpdate(e);
   S.sec = e.sec; S.paused = !!e.paused;
-  const tm = host.querySelector('#vc-time'); if (tm) tm.textContent = fmt(e.sec);
+  const tm = host.querySelector('#vc-time'); if (tm) tm.textContent = tm.dataset.clk ? clock(e.sec) : fmt(e.sec);
   silenceWatch(e);
 }
 // Сторож тишины: вход молчит до цифрового нуля дольше SIL_SEC (звонок, другое приложение взяло микрофон, вынули
@@ -1069,6 +1107,8 @@ export default {
         if (k === 'vmode') { stopPlay(); S.mode = sg.dataset.v; ctx.store.set('vmode', S.mode); render(); } // как слушать — помнится
         return;
       }
+      const rp = e.target.closest('[data-rplay]');
+      if (rp) { playItem(rp.dataset.rplay); return; }
       const pr = e.target.closest('[data-preset]');
       if (pr) { pickPreset(pr.dataset.preset); return; }
       const x = e.target.closest('[data-x]');

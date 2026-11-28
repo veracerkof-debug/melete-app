@@ -331,5 +331,11 @@
   "tr.tonicsHint": "Your pick is saved as the song key: degrees and chords are recalculated.",
   "tr.tonicSet": "Song key — {k}",
   "deg.bad": "Not recognised: “{t}”. Roman numerals are I…VII (capitals — major, lowercase — minor), chords go in brackets: [Am].",
-  "deg.badFix": "Not recognised: “{t}”. Maybe “{f}”?"
+  "deg.badFix": "Not recognised: “{t}”. Maybe “{f}”?",
+  "nb.chords": "Chords",
+  "nb.learned": "learned {n}%",
+  "nb.noText": "no text",
+  "nb.metro": "Metronome {bpm}",
+  "nb.metroPlain": "Metronome",
+  "nb.play": "Play"
 }

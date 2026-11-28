@@ -189,7 +189,7 @@ export function makeCtx(app, mod) {
     // согласие на загрузку уже дано — выбор файла открывается прямо в нажатии (iPhone иначе его не покажет)
     uploadOk: () => app.store.state.settings.upOk >= 2,
     // Песни библиотеки — только чтение: [{ id, title, artist, key, text }] (text — есть ли текст с аккордами)
-    songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim() })),
+    songs: () => app.store.songs().map((s) => ({ id: s.id, title: s.title, artist: s.artist || '', key: s.key || null, text: !!String(s.notes || '').trim(), bpm: Math.round(+s.targetBpm || +s.currentBpm || (s.metro && +s.metro.bpm) || 0) || 0, mastery: Math.round(+s.masteryPct || 0) })),
     // Сет-листы (те же, что у сцены; core/metrosets.js): list, get, create, add, quick, remove, move, setBpm, setMeter, songs
     get setlists() { return createSetlists(app.store); },
     // открыть сцену сет-листа (весь экран, текст, клик, пэд, минусовка)
@@ -241,6 +241,8 @@ export function makeCtx(app, mod) {
     },
     // Вывод на другое устройство (dev; null — нет): btn(cls) → html кнопки «Вывод», bind(root, { cat }) → отписка, refresh(root)
     output: app.output ? { btn: (cls) => outBtnHTML(app, cls), bind: (root, o) => bindOutput(app, root, o), refresh: (root) => outRefresh(app, root) } : null,
+    // Начать занятие по песне (вид «Новичок» в нотах: кнопка «Играть»)
+    playSong: (id) => { if (app.startSession && id) app.startSession('song', id); },
     // Открыть другой инструмент (например, пианино с подсветкой гаммы)
     openTool: (id) => (app.openTool ? app.openTool(id) : app.showTool && app.showTool(id)), // вне занятия (вкладка Библии) — окно инструмента через оболочку
     // Своё расписание инструмента в «Неделе» (дни, время, напоминание называет инструмент) — шторка занятия
@@ -282,7 +284,7 @@ export function makeCtx(app, mod) {
     // (библиотека текстов и аккордов в «Табах и текстах»)
     song(id) {
       const s = id ? app.store.songById(id) : app.active && app.active.songId && app.store.songById(app.active.songId);
-      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, capo: s.capo || 0, key: s.key || null } : null;
+      return s ? { id: s.id, title: s.title, notes: s.notes || '', tr: s.tr || 0, capo: s.capo || 0, key: s.key || null, bpm: Math.round(+s.targetBpm || +s.currentBpm || (s.metro && +s.metro.bpm) || 0) || 0, mastery: Math.round(+s.masteryPct || 0) } : null;
     },
     // Правка песни (без id — текущей сессии): текст с аккордами (notes), транспонирование (tr), капо (capo) и тональность (key)
     updateSong(patch, id) {

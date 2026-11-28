@@ -9,6 +9,7 @@ export const S = {
   'bk.lvl': 'Daraja', 'bk.lvl.beginner': 'Yangi', 'bk.lvl.amateur': 'Oʻrta', 'bk.lvl.advanced': 'Ilgʻor', 'bk.lvl.pro': 'Profi',
   'bk.lvlMore': 'Ochish: «{l}» darajadagi dars',
   'bk.lead.first': 'Musiqa eng boshidan: oddiy soʻzlar bilan, har safar bir qadam, darhol cholgʻuda. Oldindan hech narsa bilish shart emas.',
+  'nb.done': 'Oʻtildi', 'nb.now': 'hozir', 'nb.full': 'Butun darslik', 'nb.lessons': '‹ Darslar',
   'bk.part8': 'Ilk qadamlar', 'bk.sec.first': 'Ilk qadamlar', 'bk.sub.first': 'Noldan boshlovchilar uchun.',
   'lp.first.kicker': 'Noldan', 'lp.first.title': 'Ilk qadamlar', 'lp.first.sub': '24 ta qisqa dars: birinchi tovushdan oʻz qoʻshigʻigacha',
   'lp.first.lead': 'Bir dars — 10–15 daqiqa. Har bir qadamni tinglash, takrorlash va tekshirish mumkin: ilova chalishni eshitadi va maslahat beradi. Biror narsa chiqmasa — dars pastida «Soddaroq» va «Chiqmasa» boʻlimlari bor.',
