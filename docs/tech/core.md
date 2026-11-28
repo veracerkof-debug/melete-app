@@ -144,6 +144,14 @@ e2e `layout.spec.js`. Не сделано: деление экрана на не
 `session.js: paintBadges`). Логика без DOM — `outputcats.js` (категории, порядок целей, подписи, состояние канала, ошибки),
 слой вывода — `app.output` (одна точка, `core/index.js`; сейчас временный `outputstub.js`).
 
+**Занятие новичка** (28.11.2026; телефон, `beginner.js: begUiOn`). «Начать урок» и «Играть» (`screens/begsess.js: startBeg`) стартуют
+обычную свободную сессию с `app.active.beg = { min, lesson, stage, step, reps, rounds, done, over }` (`session.js: start`, `beginner.js: makeBeg`).
+`session.js: openNow` для такой сессии вызывает `openBeg`: тот же слой `.session`, но вместо окон и панели — `begsess.js: mountBeg`
+(«Н2 · Урок»: шаги из строк учебника `lx.<урок>.<инструмент>`, схема аккорда `chordSVG`; «Н9 · Занятие»: метроном `audio.metro`,
+смена аккордов, Тюнер/Запись/Ноты через `openToolView` поверх). Остаток времени — от `beg.min` по `elapsed(a)`, правится в `tickNow`
+(`bg.tick`). Завершение — `begdone.js` («Н10 · Итог») вместо шторки с метками. Настройки: `begpanel.js` — «Н11 · Неделя» (`bweek`) и «Н12 · Ещё»
+(корень панели; «Настройки» → `bgAll` в `panel.js` открывает прежний полный список). Пройденные уроки — `device.begLog` (id → время).
+
 ## Неделя, статистика, расписание, напоминания
 
 - `stats.js` — чистые функции `(sessions, songs, settings, now) → данные экрана`; неделя с понедельника, местное время

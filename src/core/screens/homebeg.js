@@ -8,7 +8,7 @@ import { weekday } from '../time.js';
 import { begTile } from './begtools.js';
 import { topbar, weekdays } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
-import { BEG_MINUTES, begMin, pathOrder, nextLessonOf, loadBook } from '../beginner.js';
+import { BEG_MINUTES, begMin, pathOrder, nextLessonOf, loadBook, bookDone } from '../beginner.js';
 import { dayTone } from './home.js';
 
 const TILES = ['metro', 'tuner', 'notes', 'voice'];
@@ -21,12 +21,12 @@ export function homeBeginnerHTML(app) {
   return topbar(logoHTML(), '') + '<div class="hlist bghome">' +
     '<section class="bgnext" data-bgnext><div class="bgey">' + esc(t('beg.next')) + '</div><div class="bgtt" data-bgtitle>' + esc(t('beg.nextLoading')) + '</div>' +
     '<div class="bgsub" data-bgsub></div><div class="bgbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i style="width:0"></i></div>' +
-    '<button class="bgcta" data-act="study" data-k="book">' + esc(t('beg.start')) + '</button></section>' +
+    '<button class="bgcta" data-act="begstart">' + esc(t('beg.start')) + '</button></section>' +
     '<section class="bgcard"><div class="bgey l">' + esc(t('beg.howLong')) + '</div><div class="bgseg" role="group" aria-label="' + esc(t('beg.howLong')) + '">' +
     BEG_MINUTES.map((m) => '<button data-act="begmin" data-v="' + m + '" aria-pressed="' + (m === min) + '"' + (m === min ? ' class="on"' : '') + '>' + m + '</button>').join('') + '</div>' +
     '<p class="bgplan">' + esc(t('beg.plan', { n: min })) + '</p></section>' +
     '<div class="bgey l bgqh">' + esc(t('beg.quick')) + '</div><div class="bggrid">' + TILES.map((x) => begTile(st, x)).join('') + '</div>' +
-    '<button class="bgcard bgweek" data-pp="week" aria-label="' + esc(t('home.stats')) + '"><span class="bgwl"><span class="bgey l">' + esc(t('beg.week')) + '</span>' +
+    '<button class="bgcard bgweek" data-pp="bweek" aria-label="' + esc(t('home.stats')) + '"><span class="bgwl"><span class="bgey l">' + esc(t('beg.week')) + '</span>' +
     '<span class="bgbig num">' + esc(fmtDur(w.total)) + ' <small>' + esc(t('home.of', { goal: fmtDur(goal) })) + '</small></span></span><span class="bgdots">' + dots + '</span></button>' +
     '<i hidden data-bgp="' + p + '"></i></div>';
 }
@@ -37,7 +37,7 @@ export function mountHomeBeginner(app, root) {
   if (!box) return;
   loadBook(getLang()).then((b) => {
     if (!b || !box.isConnected) return;
-    const done = ((app.device.book || {}).done) || {};
+    const done = bookDone(app);
     const nx = nextLessonOf(b.PATHS, pathOrder(app.store.state.settings.profile), done);
     const ttl = box.querySelector('[data-bgtitle]'), sub = box.querySelector('[data-bgsub]'), bar = box.querySelector('.bgbar');
     if (!nx) { ttl.textContent = t('beg.allDone'); sub.textContent = ''; return; }

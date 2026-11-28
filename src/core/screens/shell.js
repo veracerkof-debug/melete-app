@@ -14,6 +14,7 @@ import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
 import { mountHomeBeginner } from './homebeg.js';
 import { begBarOn, begBarHTML } from './begtools.js';
+import { startBeg } from './begsess.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, goalSheet, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
 import { listSongs, ensureLib } from '../library.js';
@@ -183,6 +184,7 @@ export function createShell(app, root) {
     if (d.hbe) { if (homeEditAct(app, d.hbe)) render(); return true; }
     if (homeEditing() && b.closest('.hblk')) return true; // в правке главной кнопки блоков (календарь, события, начать) не срабатывают
     if (routinesClick(app, e, render)) return true; // планы занятия на экране «Песни»
+    if ((d.act === 'free' || d.act === 'begstart' || d.act === 'study') && panel.page && begBarOn(app.store.state.settings)) panel.close(); // нижняя панель новичка видна и над «Ещё»/«Неделей»
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);
     else if (d.play) app.startSession('song', d.play);
@@ -249,7 +251,8 @@ export function createShell(app, root) {
     else if (d.fclear !== undefined) { view.genre = ''; view.tag = ''; render(); }
     else if (d.openTool && isPage(d.openTool)) go(d.openTool); // «Календарь», «Песни» значком — своя страница
     else if (d.openTool) openToolView(app, d.openTool, render);
-    else if (d.act === 'free') app.startSession('free');
+    else if (d.act === 'begstart') startBeg(app, true);
+    else if (d.act === 'free') { if (begBarOn(app.store.state.settings)) startBeg(app, false); else app.startSession('free'); } // новичок: занятие по плану (время с главной)
     else if (d.act === 'stage') import('./stage.js').then((m) => m.stagePick(app));
     else if (d.act === 'addSong') songForm(app, null, (id) => go('library', id));
     // команда: отправить песню или выбрать песни; принять файл .melete

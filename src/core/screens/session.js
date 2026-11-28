@@ -34,6 +34,9 @@ import { routinesOf, routineById, startRun, itemLeft, goTo, runRecord, slotRouti
 import { pickRoutine } from './routine.js';
 import { outBtnHTML, bindOutput, badgeHTML } from './outputsheet.js';
 import { askName } from './onboard.js';
+import { mountBeg } from './begsess.js';
+import { begDoneSheet } from './begdone.js';
+import { begUiOn, makeBeg } from '../beginner.js';
 
 const IC = {
   down: '<svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg>',
@@ -115,7 +118,7 @@ export function createSessionScreen(app) {
       return;
     }
     // свободное занятие при планах — «Свободно» или план (план из расписания на это время — первым)
-    if (type === 'free' && opts.routine === undefined && !st().toolsOnly && routinesOf(st()).length) {
+    if (type === 'free' && opts.routine === undefined && !opts.beg && !st().toolsOnly && routinesOf(st()).length) {
       pickRoutine(app, (id) => start(type, songId, tool, { routine: id || null }));
       return;
     }
@@ -124,6 +127,8 @@ export function createSessionScreen(app) {
     app.active = createActive({ type, songId, tool, mode: trackMode(st()) });
     const rt = opts.routine && type === 'free' ? routineById(st(), opts.routine) : null;
     if (rt) app.active.routine = startRun(rt, 0);
+    // новичок: занятие по плану с главной (время 10/20/30/45 и урок), экран «Н2/Н9» (begsess.js)
+    if (opts.beg && begUiOn(st(), isDesk())) { app.active.beg = makeBeg(opts.beg.min, opts.beg.lesson); saveActive(app.active); }
     audio.metro.cfg = metroForSession(s, st().metro);
     lockWake();
     open();
@@ -200,6 +205,7 @@ export function createSessionScreen(app) {
   function openNow() {
     if (!app.active) return;
     if (layer) return;
+    if (app.active.beg && begUiOn(st(), isDesk())) return openBeg(app.active);
     const a = app.active, tm = a.type === 'tool', hide = st().showClock === false || !!st().toolsOnly;
     w = fixWS(getWS(device, a, { desk: isDesk() }), sessionGroups(st(), song()), a, minOf);
     layer = document.createElement('div');
@@ -261,6 +267,24 @@ export function createSessionScreen(app) {
     ro = new ResizeObserver(() => classify());
     ro.observe(wsEl);
     updClock();
+    clearInterval(tickT);
+    tickT = setInterval(tick, 500);
+  }
+
+  // Занятие новичка (макеты «Н2/Н9»): тот же слой сессии, но вместо окон и панели — экран begsess.js; часы, пауза, завершение, «назад» — прежние
+  let bg = null;
+  function openBeg(a) {
+    w = null;
+    layer = document.createElement('div');
+    layer.innerHTML = '<div class="session bgsess" role="dialog" aria-modal="true" aria-label="' + esc(t('ses.aria')) + '"><div class="sin"><div class="bgmount"></div></div></div>';
+    document.body.appendChild(layer);
+    layer.pureExit = () => false;
+    layer.calmExit = () => false;
+    const ses = layer.querySelector('.session');
+    ses.addEventListener('pointerdown', () => { if (app.active) { touch(app.active); saveActive(app.active); } });
+    ses.addEventListener('click', onClick);
+    prevOpenTool = app.openTool;
+    bg = mountBeg(app, layer.querySelector('.bgmount'));
     clearInterval(tickT);
     tickT = setInterval(tick, 500);
   }
@@ -329,6 +353,7 @@ export function createSessionScreen(app) {
   function hide() {
     if (!layer) return;
     setPanePure(-1);
+    if (bg) { bg.destroy(); bg = null; }
     unmountAll();
     if (ro) ro.disconnect();
     if (offPage) offPage();
@@ -734,7 +759,7 @@ export function createSessionScreen(app) {
   }
   function calmTick() {
     const ses = layer && layer.querySelector('.session');
-    if (!ses || ses.classList.contains('calm') || st().calmView === false || !app.active || app.active.pausedAt) return;
+    if (!ses || ses.classList.contains('bgsess') || ses.classList.contains('calm') || st().calmView === false || !app.active || app.active.pausedAt) return;
     if (layer.querySelectorAll('.ws .pane').length > 1) return; // окно разделено самим человеком — не фокус, авто-полного экрана нет
     if (Date.now() - calmAt < calmMs() || document.querySelector('#sheetLayer .scrim:not(.leaving), .ask, .tour') || layer.querySelector('.sbrk')) return;
     ses.classList.add('calm');
@@ -742,6 +767,7 @@ export function createSessionScreen(app) {
   function tickNow() {
     calmTick();
     updClock();
+    if (bg) bg.tick();
     studyTick();
     breakTick();
     planTick();
@@ -795,6 +821,19 @@ export function createSessionScreen(app) {
         sh.close();
         if (k.dataset.k === 'drop') end();
       }));
+      return;
+    }
+    // новичок («Н10 · Итог»): большое время, что нового, «Дальше», «Готово» — без меток и разбора
+    if (a.beg && begUiOn(st(), isDesk())) {
+      begDoneSheet(app, a, sum, () => {
+        if (app.active !== a) return;
+        const rec = buildRecord(a, { dur: sum.dur, best: sum.best, quiet: sum.quiet, endAt });
+        planInto(rec, a);
+        commitSession(store, rec);
+        app.pomodoro.reset();
+        end();
+        setTimeout(() => askName(app), 900);
+      });
       return;
     }
     let tag = '', readM = null;

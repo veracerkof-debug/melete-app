@@ -371,6 +371,8 @@ function paletteHTML(st) {
 
 // «Оформление» разбито по смыслу на три вкладки (слово автора 22.11.2026: сжать и разбить): вид · цвета · ещё
 let lookTab = 'view';
+import { begPanelOn, begWeekHTML, begMoreHTML, mountBegWeek } from './begpanel.js';
+let bgAll = false; // новичок: «Настройки» из «Ещё» открывают полный список (до закрытия панели)
 let moreOpen = false; // у новичка короткий список настроек, остальное под «Ещё» (слово автора 25.11.2026)
 const BEGINNER_MORE = ['tabs', 'data', 'notif', 'mascot', 'bible', 'ai', 'class', 'link'];
 // Тема и стиль — мини-экраны (слово автора 22.11.2026: настройки — картинкой, не только переключателем); выбор — тот же st.theme
@@ -781,7 +783,7 @@ export function createPanel(app, onChange) {
   // Смена языка или вида: строки и стили меняются на месте — настройки остаются открытыми на той же странице
   const relang = () => { const st = app.store.state.settings; loadLang(st.lang).then(() => { app.relang(); render(); onChange(); }); };
   const render = () => {
-    if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; return; }
+    if (!page) { if (layer) { leave(layer, 260); layer = null; } lastPage = null; bgAll = false; document.body.dataset.bgp = ''; return; }
     if (!layer) {
       layer = document.createElement('div');
       layer.id = 'panelLayer';
@@ -798,6 +800,13 @@ export function createPanel(app, onChange) {
     const TIGHT = { week: 1, feat: 1, mods: 1, tabs: 1, help: 1 };
     for (const k of Object.keys(TIGHT)) { const f = PAGE_HTML[k]; PAGE_HTML[k] = (a) => f(a).replace(/<div class="group">/g, '<div class="group tight">'); }
     // Компьютер (ui/desk.js): две колонки, как настройки системы — слева профиль и разделы, справа выбранный раздел
+    // новичок («Н11/Н12»): короткие страницы «Ещё» и «Неделя», нижняя панель остаётся видна
+    PAGE_HTML.bweek = begWeekHTML;
+    const begP = begPanelOn(app.store.state.settings, isDesk()) && !bgAll && (page === 'root' || page === 'bweek');
+    if (begP && page === 'root') PAGE_HTML.root = begMoreHTML;
+    layer.classList.toggle('bgp-on', begP);
+    document.body.dataset.bgp = begP ? page : '';
+    layer.style.bottom = begP ? ((document.querySelector('.tabbar') || {}).offsetHeight || 0) + 'px' : '';
     const desk = isDesk(), shown = desk && page === 'root' ? 'me' : page;
     const body = desk ? '<div class="pdesk"><aside class="pdnav">' + rootHTML(app) + '</aside><section class="pdpage" data-shown="' + shown + '">' + PAGE_HTML[shown](app) + '</section></div>' : PAGE_HTML[page](app);
     const html = '<div class="wrap" style="padding-bottom:40px"><div class="navrow">' + (sub && !desk ? '<button class="ic sm plain" data-pp="' + (page === 'mods' ? 'feat' : 'root') + '" aria-label="' + esc(t('panel.back')) + '">' + icons.back + '</button>' : '<span></span>') +
@@ -821,6 +830,7 @@ export function createPanel(app, onChange) {
     if (page === 'class') import('./classpage.js').then((m) => m.autoPull(app, () => { if (page === 'class') render(); }));
     if (page === 'notif') mountMelete(layer);
     if (page === 'week' || shown === 'week') mountPlan(layer, app);
+    if (page === 'bweek') mountBegWeek(app, layer);
     // работа в фоне: отметки ✓ у выданных разрешений — после ответа системы
     const bb = page === 'feat' && layer.querySelector('[data-bgbox]');
     if (bb) {
@@ -951,6 +961,7 @@ export function createPanel(app, onChange) {
       if (g('[data-act="scen"]')) { globalThis.__SCEN__.set(g('[data-act="scen"]').dataset.v); location.reload(); return; }
       if ((b = g('[data-act="gd"]'))) { gdriveAct(app, b.dataset.v, render); return; }
       if (g('[data-act="moreset"]')) { moreOpen = !moreOpen; render(); return; }
+      if (g('[data-act="begall"]')) { bgAll = true; render(); return; }
       if (g('[data-act="variants"]')) { variantsSheet(app); return; }
       if (g('[data-act="syforget"]')) { app.syncSrv.forget(g('[data-act="syforget"]').dataset.k); render(); return; }
       if (g('[data-act="meshforget"]')) { app.mesh.forget(g('[data-act="meshforget"]').dataset.k); render(); return; }
