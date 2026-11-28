@@ -1047,3 +1047,4 @@ html.desk .hstart .hfree{min-height:64px}
 .bgd{width:10px;height:10px;border-radius:5px;background:var(--fill2);display:inline-block}
 .bgd.on{background:var(--ok)}
 .bgd.today{outline:2px solid var(--tint);outline-offset:1px}
+.bgmore{border:1px dashed var(--sep);background:transparent;color:var(--l2);border-radius:18px;padding:12px;font:inherit;font-size:13px;text-align:center;min-height:44px}

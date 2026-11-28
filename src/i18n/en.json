@@ -3344,5 +3344,6 @@
   "beg.week": "Week",
   "beg.allDone": "All lessons done",
   "beg.lesson": "Lesson {n}",
-  "beg.of": "Lesson {n} of {m}"
+  "beg.of": "Lesson {n} of {m}",
+  "beg.hidden": "Other tools are hidden. Open: Features"
 }

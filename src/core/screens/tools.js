@@ -13,6 +13,7 @@ import { canRecord } from '../recorder.js';
 import { pureEnter, pureLeave, NEEDS_FULL_BTN } from '../pure.js';
 import { spread, NOSPREAD } from '../../ui/gestures.js';
 import { bareScope } from '../../i18n/index.js';
+import { toolsBeginnerHTML } from './begtools.js';
 import { isAbsorbed, groupMembers, toolLabel, repOf } from '../groups.js';
 
 const NOSPREAD_IDS = ['piano', 'glider']; // двумя пальцами там играют — окном управляют кнопки
@@ -39,6 +40,12 @@ function renderToolsNow(app, root) {
   const arr = document.documentElement.classList.contains('arrange') && st.uiStyle !== 'mono';
   const badge = (id) => (arr ? '<i class="arrb in" data-arr="in:' + id + '" role="button" tabindex="0" aria-label="' + esc(t('hold.makeTab')) + '">+</i>' +
     (isPage(id) ? '' : '<i class="arrb off" data-arr="off:' + id + '" role="button" tabindex="0" aria-label="' + esc(t('tools.offBtn')) + '">−</i>') : '');
+  // новичку — пять плиток по макету «Н3»; остальное скрыто (Функции)
+  if (((st.profile || {}).level) === 'beginner' && !st.toolsOnly && st.uiStyle !== 'mono' && !arr) {
+    root.innerHTML = toolsBeginnerHTML(st);
+    root.onclick = (e) => { const b = e.target.closest('[data-open-tool]'); if (b) openToolView(app, b.dataset.openTool, () => renderTools(app, root)); };
+    return;
+  }
   root.innerHTML = '<h1 class="vh">' + t('tools.title') + '</h1><div class="tgrid tgtop" style="--rows:' + Math.max(1, Math.ceil(list.length / 3)) + '">' + list.map((m) => {
     if (m.page) return '<button class="tcard2 tpage" data-open-tool="' + m.id + '" style="--c:var(--tint);--on:var(--on-tint)">' + badge(m.id) + '<span class="tci2">' + m.icon + '</span><span class="tcb"><span class="tcn2">' + esc(m.name) + '</span><span class="tcs2"></span></span></button>';
     let s2 = '';

@@ -18,3 +18,12 @@ test('главная любителя прежняя', async ({ page, melete, er
   await melete.open();
   await expect(page.locator('.bgnext')).toHaveCount(0);
 });
+
+test('новичок: «Инструменты» — пять плиток и подсказка про скрытое', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { profile: { name: 'A', instruments: ['guitar'], level: 'beginner', priorHours: 0, createdAt: 1760000000000 } } });
+  await melete.tab('tools');
+  await expect(page.locator('.bggrid .bgt')).toHaveCount(5);
+  await expect(page.locator('.bgmore')).toBeVisible();
+  await page.click('.bggrid [data-open-tool="metro"]');
+  await expect(page.locator('.mring, .metro, [data-tv]').first()).toBeVisible({ timeout: 5000 });
+});

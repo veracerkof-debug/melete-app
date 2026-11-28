@@ -4,22 +4,14 @@ import { t, getLang } from '../../i18n/index.js';
 import { esc } from '../../ui/index.js';
 import { fmtDur } from '../format.js';
 import { weekData, weekPlan } from '../stats.js';
-import { isOn } from '../settings.js';
 import { weekday } from '../time.js';
-import { moduleById } from '../../modules/index.js';
-import { moduleName } from '../modules.js';
+import { begTile } from './begtools.js';
 import { topbar, weekdays } from './common.js';
 import { logoHTML } from '../../ui/logo.js';
 import { BEG_MINUTES, begMin, pathOrder, nextLessonOf, loadBook } from '../beginner.js';
 import { dayTone } from './home.js';
 
 const TILES = ['metro', 'tuner', 'notes', 'voice'];
-
-const tile = (st, id) => {
-  const m = moduleById(id);
-  if (!m || !isOn(st, id)) return '';
-  return '<button class="bgt" data-open-tool="' + id + '" style="--c:' + (m.color || 'var(--tint)') + '"><span class="bgi" aria-hidden="true">' + m.icon + '</span><b>' + esc(moduleName(m)) + '</b></button>';
-};
 
 export function homeBeginnerHTML(app) {
   const st = app.store.state.settings, min = begMin(st), w = weekData(app.store.sessions()), wp = weekPlan(st), goal = wp.goal;
@@ -33,7 +25,7 @@ export function homeBeginnerHTML(app) {
     '<section class="bgcard"><div class="bgey l">' + esc(t('beg.howLong')) + '</div><div class="bgseg" role="group" aria-label="' + esc(t('beg.howLong')) + '">' +
     BEG_MINUTES.map((m) => '<button data-act="begmin" data-v="' + m + '" aria-pressed="' + (m === min) + '"' + (m === min ? ' class="on"' : '') + '>' + m + '</button>').join('') + '</div>' +
     '<p class="bgplan">' + esc(t('beg.plan', { n: min })) + '</p></section>' +
-    '<div class="bgey l bgqh">' + esc(t('beg.quick')) + '</div><div class="bggrid">' + TILES.map((x) => tile(st, x)).join('') + '</div>' +
+    '<div class="bgey l bgqh">' + esc(t('beg.quick')) + '</div><div class="bggrid">' + TILES.map((x) => begTile(st, x)).join('') + '</div>' +
     '<button class="bgcard bgweek" data-pp="week" aria-label="' + esc(t('home.stats')) + '"><span class="bgwl"><span class="bgey l">' + esc(t('beg.week')) + '</span>' +
     '<span class="bgbig num">' + esc(fmtDur(w.total)) + ' <small>' + esc(t('home.of', { goal: fmtDur(goal) })) + '</small></span></span><span class="bgdots">' + dots + '</span></button>' +
     '<i hidden data-bgp="' + p + '"></i></div>';

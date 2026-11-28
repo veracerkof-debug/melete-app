@@ -3305,5 +3305,6 @@
   "beg.week": "Hafta",
   "beg.allDone": "Barcha darslar tugadi",
   "beg.lesson": "{n}-dars",
-  "beg.of": "{n}-dars, jami {m}"
+  "beg.of": "{n}-dars, jami {m}",
+  "beg.hidden": "Boshqa asboblar yashirin. Ochish: Funksiyalar"
 }
