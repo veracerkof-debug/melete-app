@@ -8,7 +8,9 @@
 // на обоих устройствах, не задваиваются (ключ «запись + часть + режим + версия»). Сведения о записи, посчитанные позже
 // (тональность, доли и аккорды rec.ana, текст rec.lyr, отсутствующие части, песни), сливаются, даже если сам файл уже на обоих.
 // Удаление файла переносится: телефон помнит, какие файлы были на обоих после прошлой синхронизации (3-стороннее
-// сравнение). Настройки и оформление у каждого устройства свои. Ключи сопряжения — не в резервной копии.
+// сравнение). Настройки и оформление (28.11.2026) — между своими устройствами (роль own или без роли), слиянием по ключам со
+// временем правки (settingssync.js: белый список, секретное и привязанное к железу — никогда); для остальных ролей — нет.
+// Ключи сопряжения — не в резервной копии. Фон (tick) обходит все устройства, которым разрешена синхронизация.
 // «Считать на компьютере» (settings.pcWork, вкл): телефон не считает дорожки и разбор записей, которые посчитает
 // компьютер (он сообщает, что умеет), а сам синхронизируется в фоне (settings.syncAuto, вкл) — только в тишине;
 // компьютер берёт записи телефона в свою фоновую очередь (autostems.js, режим — как просил телефон: rec.want) и
@@ -23,11 +25,27 @@ import { netInfo, noWifiFor, netLabel } from './netinfo.js';
 import { isDesktop } from './desktop.js';
 import { modeOf, applyMode, allows, activeCount } from './linkmode.js'; // режимы связи: «Пульт» и «Синхронизация базы»
 import { roleOf, roleAllows, normRole, canSend, ROLES, DEFAULT_ROLE } from './roles.js'; // роли доступа: своё, приёмник, пульт, зритель
+import { isOwn, stampSettings } from './settingssync.js'; // настройки между своими устройствами
 
 // Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
 export const PORT_PRE = 53319, PORT_DEV = 53329;
 export const PORT = typeof __CHANNEL__ !== 'undefined' && __CHANNEL__ === 'pre' ? PORT_PRE : PORT_DEV;
-export const SYNC_PARTS = ['songs', 'profile', 'reading', 'calendar'];
+export const SYNC_PARTS = ['songs', 'profile', 'reading', 'calendar', 'settings'];
+// Части для устройства: настройки — только своему (роль own или роли ещё нет)
+export const partsFor = (entry) => (isOwn(entry) ? SYNC_PARTS : SYNC_PARTS.filter((k) => k !== 'settings'));
+// Перед первым слиянием настроек — копия на устройстве (snapshots.take('sync')); не вышла — настройки в этот раз не вливаем
+async function settingsOk(app, p) {
+  if (!p || !p.sset) return true;
+  if (readLS().ssync) return true;
+  if (app.snapshots) {
+    const id = await app.snapshots.take('sync');
+    if (!id) { log('sync', 'копия перед первым слиянием настроек не получилась — настройки пока не вливаем', 'w'); return false; }
+  }
+  writeLS({ ...readLS(), ssync: Date.now() });
+  log('sync', 'первое слияние настроек: копия на устройстве сделана');
+  return true;
+}
+const withoutSettings = (parts) => parts.filter((k) => k !== 'settings');
 export const RETRY_MS = [1000, 3000, 8000]; // паузы повторов куска файла
 export const CHUNK = 2 << 20; // кусок файла — 2 МБ (в base64 ~2,7 МБ на запрос)
 const LS_KEY = 'melete.sync'; // { peers: { ключ: { name, at } } } на компьютере; { pc: { addr, key, name, last, ids } } на телефоне
@@ -176,11 +194,12 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   // «Зритель»: только чтение списка песен и сет-листов, без записи; личное (занятия, профиль, календарь, файлы) не отдаётся
   if (req.path === '/melete/v1/view') { const v = (await import('./guest.js')).viewOf(app.store.state, req.query || {}); return v ? { status: 200, json: v } : { status: 404, json: {} }; }
   if (req.path === '/melete/v1/sync') {
-    const p = req.json && req.json.data;
-    if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), SYNC_PARTS, { fresh: true }));
+    const p = req.json && req.json.data, parts = partsFor(peer), now = (ctx.now || Date.now)();
+    stampSettings(app.store.state.settings, now); // время правок — до того, как придёт чужое
+    if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), (await settingsOk(app, p)) ? parts : withoutSettings(parts), { fresh: true, now }));
     peer.at = Date.now();
     if (F && F.ready) await F.ready.catch(() => {}); // список файлов — только дочитанный
-    return { status: 200, json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), files: manifestOf(allFiles(F)), ...(F && F.noDb ? { noDb: true } : {}), work: ctx.work ? ctx.work() : null } };
+    return { status: 200, json: { data: pickParts(stripDemo(app.store.state), parts, { sync: true }), files: manifestOf(allFiles(F)), ...(F && F.noDb ? { noDb: true } : {}), work: ctx.work ? ctx.work() : null } };
   }
   if (req.path === '/melete/v1/setmeta') {
     const m = (req.json && req.json.meta) || {}, r = F && F.get(m.id);
@@ -456,7 +475,9 @@ export function nearAddrs(base) {
 }
 
 // → новый адрес компьютера с этим отпечатком или null. Параллельно по `wide` запросов, первый найденный — ответ.
-export async function findMoved(base, fp, H = http, { wide = 48, connect = 1500 } = {}) {
+// anyKind — для устройств «Мои устройства» (телефон или компьютер): отпечаток один, вид не важен; для компьютера
+// телефоны отсеиваются как раньше
+export async function findMoved(base, fp, H = http, { wide = 48, connect = 1500, anyKind = false } = {}) {
   if (!/^[0-9a-f]{64}$/.test(String(fp || ''))) return null;
   const list = nearAddrs(base);
   let i = 0, found = null;
@@ -465,14 +486,14 @@ export async function findMoved(base, fp, H = http, { wide = 48, connect = 1500 
       const u = list[i++];
       try {
         const h = await H('GET', u + '/melete/v1/hello', { timeout: 3000, connect, pin: fp });
-        if (h && h.app === 'melete' && h.kind !== 'phone' && !found) found = u;
+        if (h && h.app === 'melete' && (anyKind || h.kind !== 'phone') && !found) found = u;
       } catch { /* не он */ }
     }
   };
   await Promise.all(Array.from({ length: Math.min(wide, list.length) }, one));
   return found;
 }
-let searchedAt = 0; // фоновая синхронизация ищет не чаще раза в полчаса: компьютер может быть просто выключен
+const searchedAt = new Map(); // адрес-ключ ('' — компьютер) → когда искали; фоновая синхронизация ищет не чаще раза в полчаса: устройство может быть просто выключено
 const SEARCH_GAP = 30 * 60 * 1000;
 
 // Синхронизировать с сопряжённым компьютером. onStep({ stage, done, total }) — ход. opts: auto — фоновая (компьютер
@@ -483,8 +504,10 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   pcOf(); // переезд адреса DEV (выше)
   const m = readLS(), dev = opts.dev ? (m.devs || {})[opts.dev] : null, pc = opts.dev ? dev : m.pc;
   if (!pc) throw Object.assign(new Error('no pc'), { reason: 'nopc' });
-  const put = (o) => { const mm = readLS(); if (opts.dev) mm.devs = { ...(mm.devs || {}), [opts.dev]: o }; else mm.pc = o; writeLS(mm); };
-  const cur = () => { const mm = readLS(); return opts.dev ? (mm.devs || {})[opts.dev] : mm.pc; };
+  const nowMs = opts.now || Date.now;
+  let devKey = opts.dev; // устройство лежит под своим адресом: сменился адрес — запись переезжает под новый
+  const put = (o) => { const mm = readLS(); if (devKey) mm.devs = { ...(mm.devs || {}), [devKey]: o }; else mm.pc = o; writeLS(mm); };
+  const cur = () => { const mm = readLS(); return devKey ? (mm.devs || {})[devKey] : mm.pc; };
   if (!modeOf(pc).sync) throw Object.assign(new Error('mode'), { reason: 'mode' }); // «только Пульт»: база не синхронизируется
   let base = pc.addr;
   const key = pc.key, F = app.files, auto = !!opts.auto, q = auto ? '&auto=1' : '';
@@ -516,24 +539,32 @@ export async function syncNow(app, onStep = () => {}, H = http, opts = {}) {
   };
   const before = { songs: app.store.songs().length, sessions: app.store.allSessions().length };
   onStep({ stage: 'data' });
-  const first = () => call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), SYNC_PARTS), auto }, timeout: 120000 });
+  const parts = partsFor(pc);
+  const first = () => { stampSettings(app.store.state.settings, nowMs()); return call('POST', '/melete/v1/sync', { json: { data: pickParts(stripDemo(app.store.state), parts, { sync: true }), auto }, timeout: 120000 }); };
   let r;
   try { r = await first(); } catch (e) {
     // не отвечает по старому адресу — поискать тот же компьютер в сети (только телефон с отпечатком; устройства
     // Melete DEV — по-прежнему по своему адресу)
-    const can = e.reason === 'unreachable' && !opts.dev && pc.fp && (H !== http || Capacitor.isNativePlatform()) && (!auto || Date.now() - searchedAt > SEARCH_GAP);
+    // ищут все сопряжённые устройства (не только компьютер): отпечаток закреплён — найденный и есть то самое устройство
+    const canPin = H !== http || Capacitor.isNativePlatform() || (isDesktop() && meshClient());
+    const sk = devKey || '', can = e.reason === 'unreachable' && pc.fp && canPin && (!auto || nowMs() - (searchedAt.get(sk) || 0) > SEARCH_GAP);
     if (!can) throw e;
-    searchedAt = Date.now();
+    searchedAt.set(sk, nowMs());
     onStep({ stage: 'search' });
-    const nb = await findMoved(base, pc.fp, H);
-    if (!nb) { log('sync', 'компьютер не найден ни по старому адресу, ни в сети ' + base.replace(/\.\d+(:\d+)?$/, '.*'), 'w'); throw e; }
-    log('sync', 'компьютер сменил адрес: ' + base.replace(/^https:\/\//, '') + ' → ' + nb.replace(/^https:\/\//, '') + ' (тот же отпечаток)');
+    const nb = await findMoved(base, pc.fp, H, { anyKind: !!devKey });
+    const who = devKey ? 'устройство' : 'компьютер';
+    if (!nb) { log('sync', who + ' не найден ни по старому адресу, ни в сети ' + base.replace(/\.\d+(:\d+)?$/, '.*'), 'w'); throw e; }
+    log('sync', who + ' сменил адрес: ' + base.replace(/^https:\/\//, '') + ' → ' + nb.replace(/^https:\/\//, '') + ' (тот же отпечаток)');
     base = nb; pc.addr = nb; // pc ниже сохраняется целиком — со старым адресом затёр бы новый
-    put({ ...cur(), addr: nb });
+    if (devKey && devKey !== nb) { // записи устройств ищут по адресу-ключу (забыть, режим) — переезжает под новый
+      const mm = readLS(), old = (mm.devs || {})[devKey];
+      if (old) { delete mm.devs[devKey]; mm.devs[nb] = { ...old, addr: nb }; writeLS(mm); }
+      devKey = nb;
+    } else put({ ...cur(), addr: nb });
     onStep({ stage: 'data' });
     r = await first();
   }
-  app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), SYNC_PARTS, { fresh: true }));
+  app.store.replaceState(applyParts(app.store.state, stripDemo(r.data), (await settingsOk(app, r.data)) ? parts : withoutSettings(parts), { fresh: true, now: nowMs() }));
   if (!opts.dev) { pc.work = r.work || null; put({ ...cur(), work: pc.work }); } // cur(): режим мог смениться, пока шла синхронизация // что компьютер считает сам — для «Считать на компьютере»
   if (F && F.ready) await F.ready.catch(() => {}); // список файлов — только дочитанный
   const mine = manifestOf(allFiles(F)), plan = planFiles(mine, (r.files || []).filter((f) => !isDemoFile(f, CORE_DICTS)), pc.ids || [], { mineOk: !!F && !F.noDb, theirsOk: !r.noDb });
@@ -618,7 +649,10 @@ const DAY = 86400000, MIN = 60000;
 export function createSyncClient(app, { H = http, now = () => Date.now() } = {}) {
   const S = () => app.store.state.settings, subs = new Set();
   const emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
-  let busy = false, lastTry = 0, fails = 0, last = null, timer = 0;
+  let busy = false, last = null, timer = 0;
+  const lastDev = new Map(); // адрес устройства → итог его последней синхронизации; last — только компьютера (экран «Устройства» читает его)
+  // у каждого устройства свои попытки и неудачи: '' — компьютер, иначе адрес из «Моих устройств»
+  const slots = new Map(), slot = (id) => { let x = slots.get(id); if (!x) slots.set(id, (x = { lastTry: 0, fails: 0 })); return x; };
   const pcWork = () => S().pcWork !== false, syncAuto = () => S().syncAuto !== false;
   const quiet = () => !app.auto || !app.auto.quiet || app.auto.quiet();
   // компьютер «рядом»: синхронизировались за последние трое суток
@@ -632,34 +666,47 @@ export function createSyncClient(app, { H = http, now = () => Date.now() } = {})
     const age = now() - (r.created || 0);
     return age < DAY || ((pc.ids || []).includes(r.id) && age < 3 * DAY);
   }
-  const fresh = () => { const pc = pcOf(), ids = new Set((pc && pc.ids) || []); return manifestOf(allFiles(app.files)).some((x) => !ids.has(x.id)); };
+  const fresh = (e = pcOf()) => { const ids = new Set((e && e.ids) || []); return manifestOf(allFiles(app.files)).some((x) => !ids.has(x.id)); };
   // записей, которые ждут результатов от компьютера
   const waiting = () => (app.files ? app.files.list('audio').filter((r) => !r.stem && !r.dn && !r.noAuto && ((waits(r, 'stems') && !hasAnyStems(app.files, r.id)) || (waits(r, 'ana') && !r.ana))).length : 0);
-  const interval = () => (fails ? Math.min(30 * MIN, 2 * MIN * 2 ** (fails - 1)) : fresh() ? MIN : waiting() ? 5 * MIN : 30 * MIN);
+  // паузы между попытками: неудачи — реже (до 30 мин); у компьютера — ещё новые записи (минута) и ожидание результатов (5 мин)
+  const interval = (id = '', e = pcOf()) => { const f = slot(id).fails; return f ? Math.min(30 * MIN, 2 * MIN * 2 ** (f - 1)) : fresh(e) ? MIN : !id && waiting() ? 5 * MIN : 30 * MIN; };
+  // с кем синхронизироваться в фоне: компьютер и все «Мои устройства», которым разрешена синхронизация базы
+  // (режим linkmode.sync и роль own — или роли ещё нет), по очереди, давнее — раньше
+  const targets = () => {
+    const out = [], pc = pcOf();
+    if (pc) out.push({ id: '', e: pc });
+    devsOf().forEach((d) => { if (d && d.addr) out.push({ id: d.addr, e: d }); });
+    return out.filter((x) => modeOf(x.e).sync && isOwn(x.e));
+  };
   async function run(onStep = () => {}, opts = {}) {
     if (busy) throw Object.assign(new Error('busy'), { reason: 'running' });
-    busy = true; lastTry = now(); emit();
+    const id = opts.dev || '', sl = slot(id);
+    busy = true; sl.lastTry = now(); emit();
     try {
-      const r = await syncNow(app, onStep, H, { want: app.auto && app.auto.want ? app.auto.want() : null, ...opts });
-      fails = 0; last = { at: now(), ok: true, r };
+      const r = await syncNow(app, onStep, H, { want: app.auto && app.auto.want ? app.auto.want() : null, now, ...opts });
+      sl.fails = 0; const L = { at: now(), ok: true, r }; if (id) lastDev.set(id, L); else last = L;
       if (app.auto && app.auto.kick) app.auto.kick();
       return r;
     } catch (e) {
-      if (e.reason !== 'stopped' && e.reason !== 'busy' && e.reason !== 'mode') fails++;
-      last = { at: now(), ok: false, reason: e.reason };
+      if (e.reason !== 'stopped' && e.reason !== 'busy' && e.reason !== 'mode') sl.fails++;
+      const L = { at: now(), ok: false, reason: e.reason }; if (id) lastDev.set(id, L); else last = L;
       throw e;
     } finally { busy = false; emit(); }
   }
   async function tick() {
-    if (busy || !pcOf() || !modeOf(pcOf()).sync || !syncAuto() || !quiet()) return; // «только Пульт»: фоновой синхронизации нет
-    if (now() - lastTry < interval()) return;
+    if (busy || !syncAuto() || !quiet()) return; // «только Пульт»: фоновой синхронизации нет
+    // по очереди: за один проход — одно устройство, самое давнее из тех, кому пора (остальные — на следующих проходах)
+    const due = targets().filter((x) => now() - slot(x.id).lastTry >= interval(x.id, x.e)).sort((a, b) => slot(a.id).lastTry - slot(b.id).lastTry)[0];
+    if (!due) return;
     // не вышло — повторится позже (реже); первая неудача подряд — в журнал, чтобы отчёт показал причину
-    try { await run(() => {}, { auto: true, stop: () => !quiet() }); } catch (e) { if (fails === 1) log('sync', 'фоновая синхронизация не удалась: ' + (e.reason || e.message || e), 'w'); }
+    try { await run(() => {}, { auto: true, stop: () => !quiet(), ...(due.id ? { dev: due.id } : {}) }); } catch (e) { if (slot(due.id).fails === 1) log('sync', 'фоновая синхронизация' + (due.id ? ' с устройством' : '') + ' не удалась: ' + (e.reason || e.message || e), 'w'); }
   }
   return {
     waits, run, tick, quiet,
     get busy() { return busy; },
     get last() { return last; },
+    lastOf: (id) => (id ? lastDev.get(id) || null : last),
     waiting,
     start() { if (!timer) timer = setInterval(tick, MIN); setTimeout(tick, 20000); },
     stop() { clearInterval(timer); timer = 0; },

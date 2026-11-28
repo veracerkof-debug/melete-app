@@ -1,6 +1,7 @@
 // Хранение состояния: песни, сессии, события календаря, настройки. Local-first, формат совместим с прототипом (version: 1).
 import { seal, splitVerified, profileSeal } from './integrity.js';
 import { stripDemo } from './demo.js';
+import { stampSettings } from './settingssync.js';
 export const LS = 'practice.v1';
 
 export const METRO_DEF = {
@@ -93,6 +94,8 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
     if (broken) { try { storage.setItem(LS + '.broken', raw); storage.setItem(LS + '.brokenAt', String(now())); } catch { /* места нет — хотя бы не затираем молча ниже */ } }
   }
   state = normalize(state);
+  const stamp = () => { try { stampSettings(state.settings, now()); } catch { /* время правок — не повод ронять запись */ } };
+  stamp(); // первый раз у прежних данных: всё получает время последней правки настроек (settingssync.js)
   const runMigrate = () => {
     if (!migrate) return false;
     const r = migrate(state) || {};
@@ -147,7 +150,7 @@ export function createStore({ storage = safeStorage(), now = Date.now, clockBad 
       storage && storage.setItem(LS, body);
     } catch (e) { onWriteFail(e); }
   };
-  const write = () => { writeLS(); toSide(); };
+  const write = () => { stamp(); writeLS(); toSide(); }; // время правки каждого ключа настроек — для слияния между устройствами
   const emit = () => subs.forEach((fn) => fn(state));
   // Чтение базы при запуске; затем проекты из practice.v1 (прежний формат или правки откатанной сборки) переезжают
   // в базу и только после записи убираются из practice.v1
