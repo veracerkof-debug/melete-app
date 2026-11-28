@@ -32,6 +32,8 @@ import { coreHelp } from '../help.js';
 import { bareScope } from '../../i18n/index.js';
 import { dragSort, onHold, holdMenu } from '../../ui/hold.js';
 import { pageSwipe } from '../../ui/gestures.js';
+import { createDeskShell } from './deskshell.js';
+import { deskTodayHTML, deskAct } from './deskhome.js';
 
 // Значки меню песни (удержание строки в списке)
 const SM = {
@@ -47,7 +49,7 @@ const PLAY_TABS = ['piano', 'glider', 'drone', 'theremin', 'looper', 'studio', '
 export function createShell(app, root) {
   // «Минимал»: страниц две — главная и «Песни»; остальное — значками на главной (решение автора 28.10.2026)
   const tabsNow = () => (app.store.state.settings.uiStyle === 'mono' ? ['home', 'library', 'tools'] : visibleTabs(app.store.state.settings, tabIds(app.store.state.settings)));
-  const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {} };
+  const view = { tab: tabsNow()[0], song: null, q: '', genre: '', tag: '', cat: '', sort: 'recent', cal: {}, classic: false };
   root.innerHTML = '<main class="wrap" id="main"></main><nav class="tabbar" aria-label="' + t('nav.aria') + '"><div class="in" id="tabs"></div></nav>';
   const main = root.querySelector('#main'), tabs = root.querySelector('#tabs');
   // у вкладок — значок и подпись (слово автора 05.11.2026): любой инструмент, перенесённый во вкладки, подписан
@@ -56,6 +58,9 @@ export function createShell(app, root) {
   if (!pageSwiping) { pageSwiping = true; pageSwipe(document, { other: { ok: (tg) => !!tabSwipe && tabSwipe.ok(tg), step: (d) => tabSwipe && tabSwipe.step(d) } }); }
 
   const tabName = (k) => (TAB_ICONS[k] ? t('nav.' + k) : moduleName(moduleById(k)));
+  // компьютер, не новичок (deskshell.js): верхняя полоса и рельса инструментов; «Сегодня» — центр управления (deskhome.js)
+  const deskShell = createDeskShell(app, root);
+  const dpro = () => document.documentElement.classList.contains('dpro');
   const renderTabs = () => {
     const list = tabsNow();
     // вкладок может быть много (до 10): узкие — полоса прокручивается пальцем
@@ -89,6 +94,7 @@ export function createShell(app, root) {
     if (root.classList.contains('starting')) return;
     leagueCheck(app);
     renderTabs();
+    deskShell.sync();
     // режим правки: «Готово» и подсказка над вкладками
     let ab = root.querySelector('.arrbar');
     if (arrange.on() && !ab) { root.insertAdjacentHTML('beforeend', arrange.barHTML()); } else if (!arrange.on() && ab) ab.remove();
@@ -105,7 +111,8 @@ export function createShell(app, root) {
       if (!h) view.song = null;
       main.innerHTML = h || libraryHTML(app, view);
       coreHelp(app, 'songs');
-    } else { main.innerHTML = homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
+    } else if (dpro() && !view.classic) { main.innerHTML = deskTodayHTML(app); }
+    else { main.innerHTML = (dpro() ? '<button class="dclassic top" data-act="deskclassic">' + t('desk.centre') + '</button>' : '') + homeHTML(app); mountStones(app, main); if (!app.store.state.settings.toolsOnly) coreHelp(app, 'start'); }
   }
 
   // Новая вкладка или экран: содержимое поднимается, блоки — по очереди (styles/motion.css). Только при переходе,
@@ -181,6 +188,7 @@ export function createShell(app, root) {
     if (routinesClick(app, e, render)) return true; // планы занятия на экране «Песни»
     if (d.tab) go(d.tab);
     else if (d.go) go(d.go);
+    else if (d.act && d.act.startsWith('desk') && (d.act === 'deskclassic' ? ((view.classic = !view.classic), render(), true) : deskAct(app, d, render))) { /* центр управления и рабочая станция (deskhome.js) */ }
     else if (d.play) app.startSession('song', d.play);
     else if (d.song && view.sel instanceof Set) { if (view.sel.has(d.song)) view.sel.delete(d.song); else view.sel.add(d.song); render(); } // выбор нескольких песен
     else if (d.song) go('library', d.song);
@@ -371,6 +379,8 @@ export function createShell(app, root) {
     return false;
   };
   app.go = go;
+  app.shellState = () => ({ tab: view.tab, panel: panel.page || '' }); // для верхней полосы компьютера (deskshell.js)
+  app.deskStart = () => { if (!dpro() || view.classic || view.tab !== 'home') return false; deskAct(app, { act: 'deskstart' }, render); return true; }; // Пробел на «Сегодня»
   app.homeEditDone = () => { if (!homeEditing()) return false; setHomeEdit(false); render(); return true; };
   app.render = render;
   // урок пройден — «Добавить на главную?» (учёба: часы в неделю)
