@@ -6,6 +6,34 @@ import { parseDegree, chordToDegree, degreeToChord, degreeToRoman, degreeToNash 
 
 export const CH_RE = /^\(?[A-H](?:#|b|♯|♭)?(?:maj|min|m|M|dim|aug|sus|add|°|ø|\+)?[0-9]*(?:(?:sus|add|maj|b|#|♭|♯)[0-9]+)*(?:\/[A-H](?:#|b|♯|♭)?)?\)?$/;
 
+// Русские буквы вместо латинских в аккордах (слово автора 28.11.2026: из Holyrics приходят «[Е] [А] [Н]» с кириллицей): А В С Е Н М → A B C E H M,
+// м → m. Замена один к одному (длина текста та же — подсветка редактора не съезжает). В квадратных скобках — всегда, если после замены
+// получился аккорд; в строках без скобок — только если вся строка из аккордов и есть хотя бы один «не буква»-признак (знак, цифра, m, косая),
+// чтобы слова «А», «В», «Е» в тексте песни не превращались в аккорды.
+const GLYPH = { 'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'М': 'M', 'м': 'm', 'а': 'a', 'х': 'x', 'Х': 'x' };
+const GLYPH_RE = /[АВСЕНМмаХх]/;
+const fixTok = (t) => t.replace(/[АВСЕНМмаХх]/g, (c) => GLYPH[c]);
+export function fixGlyphs(txt) {
+  const src = String(txt || '');
+  if (!GLYPH_RE.test(src)) return src;
+  return src.split('\n').map((line) => {
+    if (!GLYPH_RE.test(line)) return line;
+    // [Е] [А/Н] — в скобках
+    let out = line.replace(/\[([^\]]+)\]/g, (m, c) => { if (!GLYPH_RE.test(c)) return m; const f = fixTok(c); return CH_RE.test(f) || /^[xX]\s*\d+$/.test(f) ? '[' + f + ']' : m; });
+    // смешанная строка из одних аккордов: часть в скобках, часть без («[Е][А]С#m[Н]») — аккорды без скобок тоже
+    if (/\[/.test(out)) {
+      const bare = out.replace(/\[[^\]]*\]/g, ' ').trim().split(/\s+/).filter(Boolean);
+      if (bare.length && bare.every((t) => CH_RE.test(fixTok(t)) || /^[|\-–/x]+$/.test(fixTok(t)) || /^[xX]\s*\d+$/.test(fixTok(t)))) out = out.split(/(\[[^\]]*\])/).map((seg) => (seg.startsWith('[') ? seg : fixTok(seg))).join('');
+    }
+    // строка без скобок: все слова — аккорды, и хотя бы одно не из одной буквы
+    if (!/\[/.test(out)) {
+      const toks = out.trim().split(/\s+/).filter(Boolean), fx = toks.map(fixTok);
+      if (toks.length && fx.every((t) => CH_RE.test(t) || /^[|\-–/x]+$/.test(t)) && fx.some((t) => CH_RE.test(t) && t.length > 1)) out = out.replace(/\S+/g, fixTok);
+    }
+    return out;
+  }).join('\n');
+}
+
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Сдвиг аккорда на n полутонов; бемольное написание сохраняется (и выбирается при сдвиге вниз)
@@ -29,6 +57,7 @@ const isChordLine = (line) => isLine(line, false) && line.trim().split(/\s+/).so
 
 // Все аккорды текста по порядку: строки только из аккордов и аккорды в квадратных скобках
 export function chordsIn(txt) {
+  txt = fixGlyphs(txt);
   const out = [];
   String(txt || '').split('\n').forEach((line) => {
     if (isChordLine(line)) line.trim().split(/\s+/).forEach((t) => { if (CH_RE.test(t)) out.push(t.replace(/^\(|\)$/g, '')); });
@@ -39,6 +68,7 @@ export function chordsIn(txt) {
 
 // Ступени, записанные в тексте (римские цифры или числа)
 export function degreesIn(txt) {
+  txt = fixGlyphs(txt);
   const numbers = !letterChords(txt), out = [];
   String(txt || '').split('\n').forEach((line) => {
     if (isLine(line, numbers)) line.trim().split(/\s+/).forEach((t) => { const d = !CH_RE.test(t) && parseDegree(t, { numbers }); if (d) out.push(d); });
@@ -59,6 +89,12 @@ const ATTEMPT = /^\(?(?:[b♭#♯]?[ivxIVX]+|[A-H][#b♯♭]?)[0-9majindugsbMAJD
 const REPEAT = /^[xXхХ×]\s*\d+$|^\d+\s*[xXхХ×]$/; // «x2», «2х» — повтор, не аккорд
 const looksLikeChord = (t) => !REPEAT.test(t) && (ATTEMPT.test(t) && /[ivxIVXA-H]/.test(t) && !/^[A-Ha-h]$/.test(t) || /^[ivxIVX]{2,}$/.test(t));
 const SEP = /^[|\-–/x]+$/;
+// Строка из одних аккордов, часть которых в скобках, часть без: «[E][A]C#m[H] [x2]» (слова песни такую строку не делают)
+const mixedChordLine = (line, numbers) => {
+  if (!/\[[^\]]+\]/.test(line)) return false;
+  const inner = [...line.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]), bare = line.replace(/\[[^\]]*\]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return inner.some((c) => tokOf(c, numbers)) && inner.every((c) => tokOf(c, numbers) || REPEAT.test(c) || looksLikeChord(c)) && bare.every((t) => tokOf(t, numbers) || SEP.test(t) || REPEAT.test(t));
+};
 // Строка аккордов с ошибкой: хотя бы две «лексемы», одна разобрана, остальные — разобраны, похожи на аккорд или разделитель
 const isLooseLine = (line, numbers) => {
   const toks = line.trim().split(/\s+/).filter(Boolean);
@@ -67,6 +103,7 @@ const isLooseLine = (line, numbers) => {
 const kindOf = (t, numbers) => (tokOf(t, numbers) ? 'ok' : looksLikeChord(t) && !SEP.test(t) ? 'bad' : null);
 // Сколько мест «не распознано» в тексте (для подсказки в редакторе)
 export function badIn(txt) {
+  txt = fixGlyphs(txt);
   const numbers = !letterChords(txt);
   let n = 0;
   String(txt || '').split('\n').forEach((line) => {
@@ -77,6 +114,7 @@ export function badIn(txt) {
 }
 // Подсветка при наборе: тот же текст дословно, распознанное и «не распознанное» — в <mark> (редактор рисует это под текстом)
 export function markupHTML(txt) {
+  txt = fixGlyphs(txt);
   const numbers = !letterChords(txt);
   return String(txt || '').split('\n').map((line) => {
     if (isLine(line, numbers) || isLooseLine(line, numbers)) return line.split(/(\s+)/).map((t) => { const k = /\S/.test(t) ? kindOf(t, numbers) : null; return k ? '<mark class="' + (k === 'ok' ? 'c' : 'x') + '">' + esc(t) + '</mark>' : esc(t); }).join('');
@@ -86,6 +124,7 @@ export function markupHTML(txt) {
 
 // view: 'chords' — аккордами в тональности со сдвигом n; 'degrees' — ступенями; 'both' — аккорд и под ним ступень (учить, привыкать).
 export function lyricsHTML(txt, n, key = null, { view = 'chords', style = 'roman' } = {}) {
+  txt = fixGlyphs(txt);
   const numbers = !letterChords(txt);
   const asDeg = (x) => (style === 'nash' ? degreeToNash(x) : degreeToRoman(x));
   const degOf = (c) => (CH_RE.test(c) ? (key ? chordToDegree(c, key) : null) : parseDegree(c, { numbers }));
@@ -107,6 +146,7 @@ export function lyricsHTML(txt, n, key = null, { view = 'chords', style = 'roman
   const bad = (c) => '<b class="chd bad" role="button" tabindex="0" data-bad="' + esc(c) + '">' + esc(c) + '</b>';
   return txt.split('\n').map((line) => {
     if (isLine(line, numbers) || isLooseLine(line, numbers)) return line.replace(/\S+/g, (t) => (tokOf(t, numbers) ? b(t) : kindOf(t, numbers) === 'bad' ? bad(t) : esc(t)));
+    if (mixedChordLine(line, numbers)) return line.split(/(\[[^\]]*\])/).map((seg) => (seg.startsWith('[') ? (tokOf(seg.slice(1, -1), numbers) ? b(seg.slice(1, -1)) : kindOf(seg.slice(1, -1), numbers) === 'bad' ? bad(seg.slice(1, -1)) : esc(seg)) : seg.replace(/\S+/g, (t) => (tokOf(t, numbers) ? b(t) : esc(t))))).join('');
     return esc(line).replace(/\[([^\]]+)\]/g, (m, c) => (tokOf(c, numbers) ? b(c) : kindOf(c, numbers) === 'bad' ? bad(c) : m));
   }).join('\n');
 }
@@ -115,6 +155,7 @@ export function lyricsHTML(txt, n, key = null, { view = 'chords', style = 'roman
 // 'chords' — ступени → аккорды в key. Строка аккордов сохраняет «колонки» над словами: короче — добавляются пробелы, длиннее — съедаются пробелы после.
 export function convertText(txt, key, to = 'deg') {
   if (!key) return txt;
+  txt = fixGlyphs(txt);
   const numbers = !letterChords(txt);
   const conv = (c) => {
     if (to === 'deg') { if (!CH_RE.test(c)) return c; const x = chordToDegree(c, key); return x ? degreeToRoman(x) : c; }
