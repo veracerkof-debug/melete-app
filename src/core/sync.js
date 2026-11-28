@@ -22,6 +22,7 @@ import { log } from './log.js';
 import { netInfo, noWifiFor, netLabel } from './netinfo.js';
 import { isDesktop } from './desktop.js';
 import { modeOf, applyMode, allows, activeCount } from './linkmode.js'; // режимы связи: «Пульт» и «Синхронизация базы»
+import { roleOf, roleAllows, normRole, canSend, ROLES, DEFAULT_ROLE } from './roles.js'; // роли доступа: своё, приёмник, пульт, зритель
 
 // Melete DEV — свой порт (src-tauri/src/sync.rs): обе версии на одном компьютере не мешают друг другу
 export const PORT_PRE = 53319, PORT_DEV = 53329;
@@ -132,10 +133,14 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     }
     pairGuard.fails = 0;
     const key = newKey();
-    mem.peers = { ...(mem.peers || {}), [key]: { name: String((req.json && req.json.name) || 'Телефон').slice(0, 60), at: Date.now() } };
-    log('sync', 'сопряжение: устройство ' + String(key).slice(0, 6));
+    // Роль новому устройству назначает ЭТА сторона (выбор в мастере при показе кода), а не пришедший запрос: поле role
+    // в теле запроса не читается совсем. Нет выбора — own (как до ролей).
+    const role = normRole(ctx.pairRole ? ctx.pairRole() : DEFAULT_ROLE);
+    mem.peers = { ...(mem.peers || {}), [key]: { name: String((req.json && req.json.name) || 'Телефон').slice(0, 60), at: Date.now(), role } };
+    if (ctx.rolePaired) ctx.rolePaired(role); // код с ограниченной ролью — одноразовый
+    log('sync', 'сопряжение: устройство ' + String(key).slice(0, 6) + ', роль ' + role);
     if (ctx.paired) ctx.paired(key, mem.peers[key].name); // ученик: первый сопряжённый — учитель
-    return { status: 200, json: { key, name: ctx.name || 'PC' } };
+    return { status: 200, json: { key, name: ctx.name || 'PC', role } };
   }
   const peer = mem.peers && mem.peers[req.key];
   if (!peer) {
@@ -144,6 +149,14 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
     if (!refused.has(k) || t - refused.get(k) > 60000) { refused.set(k, t); log('sync', 'отказ: незнакомый ключ ' + k + ' (' + req.path + '), знакомых устройств: ' + Object.keys(mem.peers || {}).length, 'w'); }
     return { status: 401, json: { error: 'key' } };
   }
+  // роль устройства (roles.js) — на каждом запросе; решает эта сторона. Отказ — 403 { error: 'role' }, в журнал раз в минуту
+  const role = roleOf(peer);
+  if (!roleAllows(role, req.path, req.json)) {
+    const k = String(req.key).slice(0, 6) + req.path + ':role', t = (ctx.now || Date.now)();
+    if (!refused.has(k) || t - refused.get(k) > 60000) { refused.set(k, t); log('sync', 'отказ: роль «' + role + '» устройства ' + String(req.key).slice(0, 6) + ' не допускает ' + req.path, 'w'); }
+    return { status: 403, json: { error: 'role' } };
+  }
+  if (req.path === '/melete/v1/me') return { status: 200, json: { role } };
   // режим устройства (linkmode.js): в «только Пульт» данные и файлы не идут, команды — идут; и наоборот
   if (!allows(peer, req.path, req.json)) {
     const k = String(req.key).slice(0, 6) + req.path, t = (ctx.now || Date.now)();
@@ -160,6 +173,8 @@ export async function handleRequest(ctx, req, incoming = new Map()) {
   // учитель ↔ ученик (classroom.js): задания, пакет, отчёт — только сопряжённый учитель
   if (req.path.startsWith('/melete/v1/ts/')) return ctx.ts ? ctx.ts(req.path, req.json, { key: req.key, name: peer.name }) : { status: 404, json: {} };
   if (req.path === '/melete/v1/ens') return ctx.ens ? ctx.ens.poll(req.key, peer.name, req.json || {}) : { status: 409, json: { error: 'off' } };
+  // «Зритель»: только чтение списка песен и сет-листов, без записи; личное (занятия, профиль, календарь, файлы) не отдаётся
+  if (req.path === '/melete/v1/view') { const v = (await import('./guest.js')).viewOf(app.store.state, req.query || {}); return v ? { status: 200, json: v } : { status: 404, json: {} }; }
   if (req.path === '/melete/v1/sync') {
     const p = req.json && req.json.data;
     if (p) app.store.replaceState(applyParts(app.store.state, stripDemo(p), SYNC_PARTS, { fresh: true }));
@@ -223,6 +238,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
   const mesh = transport === 'mesh', avail = mesh ? meshAvail() : isDesktop(), onKey = mesh ? 'meshOn' : 'on';
   const subs = new Set(), emit = () => subs.forEach((fn) => { try { fn(); } catch (e) { (globalThis.reportError || console.error)(e); } });
   let state = { on: false, ips: [], name: '', code: '', port: PORT, err: '' }, un = null, unErr = null, M = null;
+  let pairRole = DEFAULT_ROLE; // роль для устройства, которое сопрягается по текущему коду (выбор в мастере); не из запросов
   const mem = readLS(), incoming = new Map(), seen = {}; // seen: ключ → время последнего запроса (для «N устройств» в значке)
   const save = () => writeLS({ ...readLS(), peers: mem.peers, [onKey]: mem[onKey] }); // у телефона там же его собственные подключения
   let lastN = -1;
@@ -237,7 +253,7 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
       const u = new URL(r.url, 'http://x'), raw = r.raw;
       let json = null;
       if (raw.length) { try { json = JSON.parse(new TextDecoder().decode(raw)); } catch { json = null; } }
-      res = await handleRequest({ app, mem, got: (meta, peer) => import('../ui/index.js').then((U) => U.toast(i18nT('net.got', { name: meta.name || '', from: peer.name || '' }))), ts: (path, j, peer) => tsHandle(app, path, j, peer), pairBlocked: () => !!(mesh && (app.store.state.settings.student || {}).teacher), paired: (key, name) => { if (mesh && bindTeacher(app.store.state.settings, key, name)) { app.store.settingsChanged(); state.code = ''; emit(); } }, rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
+      res = await handleRequest({ app, mem, got: (meta, peer) => import('../ui/index.js').then((U) => U.toast(i18nT('net.got', { name: meta.name || '', from: peer.name || '' }))), ts: (path, j, peer) => tsHandle(app, path, j, peer), pairBlocked: () => !!(mesh && (app.store.state.settings.student || {}).teacher), paired: (key, name) => { if (mesh && bindTeacher(app.store.state.settings, key, name)) { app.store.settingsChanged(); state.code = ''; emit(); } }, pairRole: () => pairRole, rolePaired: (r) => { if (r !== DEFAULT_ROLE) { pairRole = DEFAULT_ROLE; state = { ...state, code: newCode() }; emit(); } }, rc: async (path, j, peer) => (await import('./netctl.js')).rcHandle(app, path, j, peer, (k) => { if (mem.peers) { delete mem.peers[k]; save(); emit(); } }), ens: !mesh && app.ens && app.ens.active ? app.ens : null, code: state.on ? state.code : '', name: state.name, busy: () => !!(app.auto && app.auto.playing && app.auto.playing()), work: () => (!mesh && app.auto && app.auto.caps ? app.auto.caps() : null) }, { method: r.method, path: u.pathname, query: Object.fromEntries(u.searchParams), key: r.key, json }, incoming);
       if (!u.pathname.startsWith('/melete/v1/rc/')) save(); // пульт опрашивает раз в секунду — хранить нечего
       if (u.pathname === '/melete/v1/sync' || u.pathname === '/melete/v1/put' || u.pathname === '/melete/v1/setmeta' || u.pathname === '/melete/v1/pair') { if (app.render && u.pathname !== '/melete/v1/pair') app.render(); emit(); }
     } catch (err) { log('sync', 'ошибка: ' + (err && err.message), 'w'); res = { status: 500, json: { error: String(err && err.message) } }; }
@@ -264,6 +280,11 @@ export function createSyncServer(app, { isDesktop, transport = 'tauri' }) {
     active() { lastN = activeCount(seen); return lastN; },
     // режим устройства: { rc?, sync? } — «Пульт» и «Синхронизация базы» (linkmode.js)
     setMode(key, patch) { const p = mem.peers && mem.peers[key]; if (!p) return null; p.mode = applyMode(p, patch); save(); log('sync', 'режим устройства ' + String(key).slice(0, 6) + ': ' + (p.mode.rc ? 'пульт ' : '') + (p.mode.sync ? 'синхронизация' : '')); emit(); return p.mode; },
+    // роль устройства: меняется с этой стороны и действует сразу (проверка — на каждом запросе)
+    setRole(key, role) { const p = mem.peers && mem.peers[key]; if (!p || !ROLES.includes(role)) return null; p.role = role; save(); log('sync', 'роль устройства ' + String(key).slice(0, 6) + ': ' + role); emit(); return role; },
+    // роль для следующего сопряжения по показанному коду; код с ролью не «own» одноразовый (после сопряжения меняется)
+    setPairRole(role) { pairRole = normRole(role); },
+    get pairRole() { return pairRole; },
     wasOn: () => !!mem[onKey],
     async start() {
       if (!avail) return state;
@@ -373,6 +394,20 @@ export function setLinkMode(patch, addr) {
   e.mode = applyMode(e, patch); writeLS(m);
   return e.mode;
 }
+// Узнать у устройства, какая роль у меня сейчас (её могли сменить): GET /me, запись обновляется. dev — адрес из «Моих устройств»,
+// иначе компьютер. → роль | null (не ответило)
+export async function refreshMyRole(dev, H = http) {
+  const m = readLS(), e = dev ? (m.devs || {})[dev] : m.pc;
+  if (!e) return null;
+  try {
+    const r = await H('GET', e.addr + '/melete/v1/me', { key: e.key, timeout: 5000 });
+    const role = r && ROLES.includes(r.role) ? r.role : null;
+    if (!role) return null;
+    const mm = readLS(), ee = dev ? (mm.devs || {})[dev] : mm.pc;
+    if (ee && ee.myRole !== role) { ee.myRole = role; writeLS(mm); }
+    return role;
+  } catch (er) { if (er && er.status === 404) return DEFAULT_ROLE; return null; } // старая версия без /me — роли нет, own
+}
 // Другие устройства (Melete DEV): { addr, key, name, fp, last, ids, phone }
 export const devsOf = () => Object.values(readLS().devs || {});
 export const forgetDev = (addr) => { const m = readLS(); if (m.devs) { delete m.devs[addr]; writeLS(m); } };
@@ -392,7 +427,7 @@ export async function pair(addr, code, myName = 'Телефон', H = http) {
   if (!r || typeof r.key !== 'string' || !r.key) { log('sync', 'сопряжение: в ответе нет ключа — пришло ' + String(JSON.stringify(r)).slice(0, 80), 'w'); throw Object.assign(new Error('no key'), { reason: 'off' }); }
   const m = readLS();
   delete m.old;
-  const rec = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp };
+  const rec = { addr: base, key: r.key, name: r.name || hello.name || 'PC', last: 0, ids: [], v: 3, fp, myRole: normRole(r.role) }; // роль мне выдало то устройство; старое — own
   // другой телефон (Melete DEV: связь всех со всеми) — в список устройств; компьютер — как раньше, один
   // компьютер подключается только к другим устройствам — всё в список
   if (hello.kind === 'phone' || isDesktop()) { m.devs = { ...(m.devs || {}), [base]: { ...rec, phone: true } }; writeLS(m); log('sync', 'сопряжено с устройством'); return m.devs[base]; }
@@ -562,6 +597,7 @@ export async function sendFile(app, rec, onStep = () => {}, H = http, opts = {})
   const m = readLS(), d = opts.dev ? (m.devs || {})[opts.dev] : m.pc;
   if (!d) throw Object.assign(new Error('no dev'), { reason: 'nopc' });
   if (!rec || !rec.blob) throw Object.assign(new Error('no file'), { reason: 'file' });
+  if (!canSend(roleOf(d))) throw Object.assign(new Error('role'), { reason: 'mode' }); // роль устройства не принимает файлы — запрос не шлём
   const meta = { ...metaOf(rec), size: rec.blob.size, sent: true };
   let off = 0;
   do {

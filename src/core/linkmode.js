@@ -3,19 +3,27 @@
 //   sync — «Синхронизация базы»: песни, профиль (занятия, часы), чтение, календарь и файлы (записи, видео, табы, ноты).
 // Можно оба, можно один. Хранится в записи устройства в `melete.sync`: peers[ключ].mode (на компьютере), pc.mode и
 // devs[адрес].mode (на телефоне). Нет поля — как до появления режимов: включено всё. Чистые функции, без DOM и памяти.
+// С 28.11.2026 режимы — производные от роли (roles.js): роль задаёт верхнюю границу (roleToMode), переключатели в её пределах.
+// Нет роли — own, всё как раньше.
+import { roleOf, roleToMode } from './roles.js';
 export const MODES = ['rc', 'sync'];
 export const DEFAULT_MODE = Object.freeze({ rc: true, sync: true });
 
-// Режим записи устройства (с умолчаниями для старых сопряжений)
-export const modeOf = (entry) => {
+// Переключатели записи как сохранены (без роли; умолчания для старых сопряжений)
+export const togglesOf = (entry) => {
   const m = (entry && entry.mode) || {};
   return { rc: m.rc !== false, sync: m.sync !== false };
+};
+// Действующий режим: переключатели в пределах роли. Роль «Приёмник» и «Зритель» — ни пульта, ни синхронизации
+export const modeOf = (entry) => {
+  const t = togglesOf(entry), r = roleToMode(roleOf(entry));
+  return { rc: t.rc && r.rc, sync: t.sync && r.sync };
 };
 
 // Новый режим после правки patch ({ rc?, sync? }). Оба выключить нельзя — связь осталась бы без дела: выключаемое
 // выключается, а второй включается (одно касание не должно оставить устройство «ни там ни там»)
 export function applyMode(entry, patch) {
-  const cur = modeOf(entry), next = { ...cur };
+  const cur = togglesOf(entry), next = { ...cur };
   for (const k of MODES) if (patch && typeof patch[k] === 'boolean') next[k] = patch[k];
   if (!next.rc && !next.sync) { const other = patch && patch.rc === false ? 'sync' : 'rc'; next[other] = true; }
   return next;
@@ -41,8 +49,8 @@ export function allows(entry, path, json) {
   return true;
 }
 
-// Описание режима для подписи под устройством: 'both' | 'rc' | 'sync'
-export const modeName = (entry) => { const m = modeOf(entry); return m.rc && m.sync ? 'both' : m.rc ? 'rc' : 'sync'; };
+// Описание режима для подписи под устройством: 'both' | 'rc' | 'sync' | 'none' (приёмник, зритель — режимов нет)
+export const modeName = (entry) => { const m = modeOf(entry); return m.rc && m.sync ? 'both' : m.rc ? 'rc' : m.sync ? 'sync' : 'none'; };
 
 // Устройство «в сети»: последний запрос не старше окна (пульт опрашивает раз в секунду). seen: ключ → время (мс)
 export const ACTIVE_MS = 20000;
