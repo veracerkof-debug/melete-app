@@ -1,0 +1,28 @@
+/* Экраны компьютера по макетам «профи» (28.11.2026): статистика, настройки. Только html.desk; телефон не меняется.
+   Токены — из tokens.css (без своих цветов). Подключается после desk.css (main.js). */
+
+/* ---------- статистика (DStats): на всю ширину; слева — итоги и графики, справа — прогресс темпа песен ---------- */
+html.desk .pdesk[data-shown="stats"] { grid-template-columns: minmax(0, 1fr); max-width: 1500px; }
+html.desk .pdesk[data-shown="stats"] > .pdnav { display: none; } /* из статистики — через верхнюю полосу; «Готово» закрывает */
+html.desk .pdesk[data-shown="stats"] .tiles .tile { padding: 14px 18px; }
+html.desk .pdesk[data-shown="stats"] .tiles .tile b { font-size: var(--fs-8); }
+html.desk .pdesk[data-shown="stats"] .sgrid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; grid-auto-flow: row dense; }
+html.desk .pdesk[data-shown="stats"] .sgrid > .card { grid-column: 1; }
+html.desk .pdesk[data-shown="stats"] .sgrid > .cdtempo { grid-column: 2; grid-row: 1 / span 3; }
+
+.cdtempo .tprow { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+.cdtempo .tprow + .tprow { border-top: .5px solid var(--sep); }
+.cdtempo .tpk { width: 40px; height: 40px; flex: none; border-radius: var(--r-2); display: flex; align-items: center; justify-content: center; font-weight: 700; background: color-mix(in srgb, var(--tint) 16%, var(--cell)); color: var(--tint-text); }
+.cdtempo .tpt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cdtempo .tpt b { font-size: var(--fs-5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdtempo .tpt small { font-size: var(--fs-3); color: var(--l2); }
+.cdtempo .tpc { flex: none; padding: 4px 12px; border-radius: var(--r-pill); font-size: var(--fs-3); font-weight: 600; background: color-mix(in srgb, var(--tint) 16%, var(--cell)); color: var(--tint-text); }
+.cdtempo .tpc.ok { background: color-mix(in srgb, var(--ok) 18%, var(--cell)); color: var(--ink); }
+
+/* ---------- настройки (DSettings): список разделов слева, карточки раздела справа, не растянутые на весь экран ---------- */
+html.desk .pdesk[data-shown]:not([data-shown="stats"]) { grid-template-columns: 340px minmax(0, 880px); gap: 40px; }
+html.desk .pdnav .cell { border-radius: var(--r-3); }
+html.desk .pdnav .cell[aria-current="page"] .grow { font-weight: 700; }
+html.desk .pdesk[data-shown="sound"] { grid-template-columns: 340px minmax(0, 1fr); } /* «Звук»: широкие карточки задержки и качества */
+html.desk .pdesk[data-shown="stats"] .card .chart { max-height: 200px; width: 100%; }
+html.desk .pdesk[data-shown="stats"] .wkhead { align-items: center; }
