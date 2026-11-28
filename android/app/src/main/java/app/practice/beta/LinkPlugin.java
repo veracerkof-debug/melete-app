@@ -1,6 +1,7 @@
 package app.practice.beta;
 
 import android.content.Context;
+import android.net.Network;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Base64;
@@ -70,12 +71,16 @@ public class LinkPlugin extends Plugin {
             if (old != null) old.kill();
             SyncHttpPlugin.Pinned tm = new SyncHttpPlugin.Pinned(call.getString("pin", ""));
             Socket raw = null;
+            String via = "default";
             try {
                 String host = call.getString("host", "");
                 int port = call.getInt("port", 53329), timeout = call.getInt("timeout", 4000);
                 SSLContext ctx = SSLContext.getInstance("TLS");
                 ctx.init(null, new TrustManager[] { tm }, null);
-                raw = new Socket();
+                // свой адрес в локальной сети — по Wi-Fi, даже если Android ведёт трафик через мобильную сеть
+                Network wf = NetBind.forHost(getContext(), host);
+                via = NetBind.label(wf);
+                raw = wf != null ? wf.getSocketFactory().createSocket() : new Socket();
                 raw.setTcpNoDelay(true);
                 raw.setKeepAlive(true);
                 raw.connect(new InetSocketAddress(host, port), timeout);
@@ -99,7 +104,7 @@ public class LinkPlugin extends Plugin {
                 call.reject(pin ? "pin" : "tls", pin ? "pin" : "tls");
             } catch (Exception e) {
                 if (raw != null) try { raw.close(); } catch (IOException ignored) { }
-                call.reject(String.valueOf(e.getMessage()), "net");
+                call.reject(String.valueOf(e.getMessage()) + " [via " + via + "]", "net");
             }
         });
     }

@@ -583,6 +583,7 @@
   "sy.done": "Tayyor: qoʻshiqlar +{songs}, mashgʻulotlar +{sessions}, kompyuterga {up}, kompyuterdan {down} fayl",
   "sy.err.addr": "Bu kompyuter manziliga oʻxshamaydi",
   "sy.err.unreachable": "Kompyuter javob bermayapti: bir Wi-Fi tarmogʻidami? «Telefonni qabul qilish» yoqilganmi?",
+  "sy.err.nowifi": "Wi-Fi yoʻq: telefonni ikkinchi qurilma bilan bir tarmoqqa ulash",
   "sy.err.code": "Kod mos emas — kompyuter ekranini qarang",
   "sy.err.wait": "Notoʻgʻri kod koʻp marta kiritildi — bir daqiqa kutish kerak",
   "sy.err.off": "Kompyuterda «Telefonni qabul qilish» oʻchiq",

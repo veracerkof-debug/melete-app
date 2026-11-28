@@ -32,6 +32,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PacksPlugin.class);
         registerPlugin(SyncHttpPlugin.class);
         registerPlugin(MeshPlugin.class);
+        registerPlugin(NetInfoPlugin.class);
         registerPlugin(LinkPlugin.class);
         registerPlugin(GAuthPlugin.class);
         super.onCreate(savedInstanceState);

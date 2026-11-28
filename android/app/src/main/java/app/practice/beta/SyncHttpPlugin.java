@@ -1,5 +1,6 @@
 package app.practice.beta;
 
+import android.net.Network;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -56,13 +57,17 @@ public class SyncHttpPlugin extends Plugin {
     public void request(PluginCall call) {
         pool.execute(() -> {
             HttpsURLConnection c = null;
+            String via = "default";
             Pinned tm = new Pinned(call.getString("pin", ""));
             try {
                 URL u = new URL(call.getString("url", ""));
                 if (!"https".equals(u.getProtocol())) { call.reject("https only", "addr"); return; }
                 SSLContext ctx = SSLContext.getInstance("TLS");
                 ctx.init(null, new TrustManager[] { tm }, null);
-                c = (HttpsURLConnection) u.openConnection();
+                // свой адрес в локальной сети — по Wi-Fi, даже если Android по умолчанию ведёт трафик через мобильную сеть
+                Network wf = NetBind.forHost(getContext(), u.getHost());
+                via = NetBind.label(wf);
+                c = (HttpsURLConnection) (wf != null ? wf.openConnection(u) : u.openConnection());
                 c.setSSLSocketFactory(ctx.getSocketFactory());
                 c.setHostnameVerifier((h, s) -> true);
                 c.setRequestMethod(call.getString("method", "GET"));
@@ -85,6 +90,7 @@ public class SyncHttpPlugin extends Plugin {
                 JSObject r = new JSObject();
                 r.put("status", status);
                 r.put("fp", tm.seen);
+                r.put("net", via);
                 r.put("data", call.getBoolean("bin", false) ? Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP) : new String(out.toByteArray(), StandardCharsets.UTF_8));
                 call.resolve(r);
             } catch (SSLHandshakeException e) {
@@ -93,7 +99,7 @@ public class SyncHttpPlugin extends Plugin {
                 for (Throwable t = e; t != null; t = t.getCause()) if (t instanceof CertificateException && "pin".equals(t.getMessage())) pin = true;
                 call.reject(pin ? "pin" : "tls", pin ? "pin" : "tls");
             } catch (Exception e) {
-                call.reject(String.valueOf(e.getMessage()), "net");
+                call.reject(String.valueOf(e.getMessage()) + " [via " + via + "]", "net");
             } finally {
                 if (c != null) c.disconnect();
             }

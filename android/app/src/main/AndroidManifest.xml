@@ -220,6 +220,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- какие сети есть (Wi-Fi/мобильная): локальная связь привязывается к Wi-Fi, NetBind.java -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Android 11+: видеть главный экран Ἐλάχιστον, чтобы адресные рассылки моста доходили -->
     <queries>
         <package android:name="app.elachiston" />
