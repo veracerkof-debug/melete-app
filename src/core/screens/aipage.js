@@ -71,7 +71,7 @@ export function aiClick(app, target, rerender, openChat) {
     if (a === 'diag') { import('./aidiag.js').then((m) => m.openDiag(app)); return true; }
     if (a === 'agentadd') { ai.addAgent(); rerender(); return true; }
     if (a === 'agentdel') { confirm(t('ai.agent.del'), t('ai.agent.delAsk'), t('ai.agent.delYes')).then((ok) => { if (ok) { ai.removeAgent(ai.cfg().agent); rerender(); } }); return true; }
-    if (a === 'fullaccess') { confirm(t('ai.full'), t('ai.full.ask'), t('ai.full.yes')).then((ok) => { if (ok) { ai.save({ access: { songs: 'write', media: 'write', studio: 'write', plan: 'write', stats: 'read', log: 'read' } }); rerender(); } }); return true; }
+    if (a === 'fullaccess') { confirm(t('ai.full'), t('ai.full.ask'), t('ai.full.yes')).then((ok) => { if (ok) { ai.save({ access: { songs: 'write', media: 'write', studio: 'write', plan: 'write', text: 'read', stats: 'read', log: 'read' } }); rerender(); } }); return true; }
     if (a === 'open') { openChat(); return true; }
     if (a === 'wipe') { confirm(t('ai.wipe'), t('ai.wipeAsk'), t('ai.wipeYes')).then((ok) => { if (ok) { ai.wipe(); toast(t('ai.wiped')); rerender(); } }); return true; }
   }

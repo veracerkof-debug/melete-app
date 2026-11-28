@@ -1,7 +1,7 @@
 // Форматы запросов и ответов: OpenAI-совместимый (OpenAI, OpenRouter и др.) и Anthropic. Без сети и DOM.
 import { endpoint } from './config.js';
 
-export const MAX_TOKENS = 4096;
+export const MAX_TOKENS = 12000;
 export function buildRequest(cfg, { system, messages }) {
   const url = endpoint(cfg); if (!url) throw Object.assign(new Error('url'), { kind: 'config' });
   // у реплики могут быть картинки: m.images = [{ mime, b64 }] — в формате своего провайдера (модель должна уметь читать картинки)

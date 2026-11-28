@@ -4,7 +4,7 @@
 import { Capacitor } from '@capacitor/core';
 import { t, tn } from '../../i18n/index.js';
 import { esc, sheet, snav, toast } from '../../ui/index.js';
-import { ensureLib, emptySong, saveSong, PALETTE } from '../library.js';
+import { ensureLib, emptySong, saveSong, addSongs, PALETTE } from '../library.js';
 import { parseKey, keyName } from '../songinfo.js';
 import { log, logErr } from '../log.js';
 
@@ -26,8 +26,11 @@ function churchCat(app) {
 
 // Песни → шторка выбора → библиотека. songs — [{ title, artist, key, bpm, notes }]; source — откуда (для журнала)
 export function importPreview(app, songs, errors = [], source = 'files', onDone = () => {}) {
-  const L = ensureLib(app.store.state, t), have = new Set(app.store.songs().map((s) => s.title.trim().toLowerCase()));
-  const items = songs.map((s) => ({ ...s, dup: have.has(s.title.trim().toLowerCase()), on: !have.has(s.title.trim().toLowerCase()) && !!s.title }));
+  const L = ensureLib(app.store.state, t);
+  // повтор — то же название и тот же исполнитель (разные песни с одним названием не теряются); одинаковые внутри самой пачки — тоже повтор
+  const idOf = (s) => (s.title || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ') + '|' + (s.artist || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  const have = new Set(app.store.songs().map(idOf));
+  const items = songs.map((s) => { const k = idOf(s), dup = have.has(k); have.add(k); return { ...s, dup, on: !dup && !!s.title }; });
   let cat = churchCat(app);
   log('import', source + ': найдено ' + songs.length + ', повторов ' + items.filter((x) => x.dup).length + ', ошибок ' + errors.length, errors.length ? 'w' : 'i');
   const api = sheet(() => snav(t('imp.title'), { right: '<button class="link b r" data-imp="go">' + t('imp.go', { n: items.filter((x) => x.on).length }) + '</button>' }) +
@@ -47,7 +50,7 @@ export function importPreview(app, songs, errors = [], source = 'files', onDone 
     el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-imp="go"]')) return;
       const st = app.store.state.settings, pick = items.filter((x) => x.on && x.title);
-      pick.forEach((x) => saveSong(app.store, null, { ...emptySong(st), title: x.title, artist: x.artist, notes: x.notes, key: normKey(x.key), targetBpm: x.bpm || '', cat: cat || null }));
+      addSongs(app.store, pick.map((x) => ({ ...emptySong(st), title: x.title, artist: x.artist, notes: x.notes, key: normKey(x.key), targetBpm: x.bpm || '', cat: cat || null })));
       log('import', source + ': добавлено ' + pick.length);
       api.close();
       toast(tn('imp.done', pick.length));

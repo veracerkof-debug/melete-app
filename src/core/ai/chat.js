@@ -61,7 +61,7 @@ export function createChat({ app, cfg, data, post, storage = globalThis.localSto
         }
         if (!out) throw Object.assign(new Error('net'), { kind: 'net' });
         if (!out.ok) { error = { kind: out.kind, message: out.message }; return { ok: false, why: out.kind }; }
-        const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals };
+        const ex = extract(out.text, c), msg = { id: uid(), role: 'assistant', text: ex.text || (ex.proposals.length ? '' : out.text), at: now(), proposals: ex.proposals, ...(out.cut ? { cut: true } : {}) };
         messages.push(msg);
         // полностью автоматический режим — отдельная галочка с предупреждением: применяется сразу, остаётся «Отменить»; студия и запросы — никогда
         if (c.auto) for (const p of msg.proposals) if (p.status === 'pending' && p.kind !== 'studio' && p.kind !== 'plan' && p.kind !== 'query' && canWrite(c, p.kind === 'rec' || p.kind === 'show' ? 'media' : 'songs')) await applyProposal(msg.id, p.id);

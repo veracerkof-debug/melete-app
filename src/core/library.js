@@ -130,6 +130,23 @@ export function saveSong(store, id, f) {
   return id;
 }
 
+// Много новых песен за одну запись (импорт из файлов: сотни и тысячи песен; запись состояния после каждой песни — минуты ожидания).
+// f — как у saveSong; без названия песня пропускается. → число добавленных
+export function addSongs(store, list) {
+  const now = store.now(); let n = 0;
+  for (const f of list) {
+    const title = String(f.title || '').trim(); if (!title) continue;
+    store.state.songs.push({
+      id: uid(), createdAt: now, title, artist: String(f.artist || '').trim(), genre: f.genre || '', cat: f.cat || null, tags: (f.tags || []).slice(),
+      difficulty: f.difficulty, masteryPct: f.masteryPct, mastery: Math.max(1, Math.round(f.masteryPct / 20)),
+      targetBpm: posInt(f.targetBpm), currentBpm: posInt(f.currentBpm), notes: f.notes || '', key: parseKey(f.key) ? f.key : null, updatedAt: now,
+    });
+    n++;
+  }
+  if (n) store.save();
+  return n;
+}
+
 // Песня помечается удалённой; время её сессий остаётся в общей статистике
 export function deleteSong(store, id) {
   const s = store.songById(id);
