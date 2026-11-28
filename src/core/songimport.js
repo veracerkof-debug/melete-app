@@ -3,6 +3,7 @@
 // .onsong), простой текст (.txt). Несколько файлов и zip-архивы — сразу (групповой импорт). Без DOM и без сети.
 // Результат — песни в формате приложения: { title, artist, key, bpm, notes } — текст в notes: части песни
 // («Куплет 1», «Припев») — строкой-заголовком, между частями — пустая строка, аккорды — [C] в тексте (как в ChordPro).
+import { readJava, simplify, isJavaStream } from './javaser.js';
 import { unzipSync, gunzipSync, strFromU8 } from 'fflate';
 
 const ext = (name) => (/\.([^.\\/]+)$/.exec(name || '') || [])[1]?.toLowerCase() || '';
@@ -261,6 +262,24 @@ export function fromHolyricsJSON(obj) {
   return ok.length ? ok.map(holySong) : null;
 }
 
+// Файл Holyrics, выгруженный командой «Экспорт» (.muf — одна песня, .mufl — список): поток сериализации Java, внутри объекты Music
+// (title, artist/author, lyrics — строфы через пустую строку; в начале строфы бывает её номер). Читаем как данные (javaser.js).
+// Ключа и темпа в экспорте обычно нет. Архивные песни пропускаются.
+export function fromHolyricsJava(u8) {
+  const root = simplify(readJava(u8)), found = [];
+  const walk = (v, d = 0) => {
+    if (d > 6 || !v || typeof v !== 'object' || v instanceof Uint8Array) return;
+    if (Array.isArray(v)) { v.forEach((x) => walk(x, d + 1)); return; }
+    if (typeof v.title === 'string' && (typeof v.lyrics === 'string' || v.lyrics == null)) { found.push(v); return; }
+    Object.values(v).forEach((x) => walk(x, d + 1));
+  };
+  walk(root);
+  return found.filter((m) => !m.archived && (m.title || '').trim()).map((m) => {
+    const blocks = String(m.lyrics || '').replace(/\r\n?/g, '\n').split(/\n[ \t]*\n/).map((b) => b.replace(/^[ \t]*\d{1,3}[ \t]*\n/, '').trim()).filter(Boolean);
+    return song({ title: m.title, artist: m.artist || m.author || '', key: m.key || null, bpm: m.bpm ? Math.round(+m.bpm) || null : null, notes: blocks.join('\n\n') });
+  });
+}
+
 /* ---------- всё вместе: файлы → песни ---------- */
 
 const TEXT_EXT = ['txt', 'cho', 'chordpro', 'chopro', 'crd', 'onsong', 'pro6', 'xml', 'json', 'muf', 'mufl', ''];
@@ -281,6 +300,7 @@ export async function importSongs(files) {
         for (const [p, data] of Object.entries(z)) if (!p.endsWith('/') && !/(^|\/)(__MACOSX|\.)/.test(p)) await one(p, data, depth + 1);
         return;
       }
+      if (isJavaStream(u8)) { const hs = fromHolyricsJava(u8); if (!hs.length) throw new Error('holyrics: песен нет'); songs.push(...hs); return; } // .muf/.mufl после «Экспорта»
       if (e === 'pro') { songs.push(fromPro7(u8, name)); return; }
       if (!TEXT_EXT.includes(e) && depth > 0) return; // внутри архива — картинки и прочее пропускаются
       const txt = utf8(u8).replace(/^﻿/, '');
