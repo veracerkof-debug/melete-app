@@ -13,6 +13,7 @@ import { mountModule, moduleName } from '../modules.js';
 import { visibleTabs, orderTabs } from '../settings.js';
 import { createArrange } from './arrange.js';
 import { mountHomeBeginner } from './homebeg.js';
+import { begBarOn, begBarHTML } from './begtools.js';
 import { homeHTML, mountStones, quickEdit, toolHoldMenu, homeEditAct, homeEditing, setHomeEdit, goalSheet, homeSetZoom, homeZoomOf, streakSheet, gemSheet, leagueCheck, nameSheet, homeLayout, setHomeLayout, QUICK_DEF } from './home.js';
 import { libraryHTML, songHTML, songForm, libManager, selCatSheet } from './songs.js';
 import { listSongs, ensureLib } from '../library.js';
@@ -58,6 +59,8 @@ export function createShell(app, root) {
 
   const tabName = (k) => (TAB_ICONS[k] ? t('nav.' + k) : moduleName(moduleById(k)));
   const renderTabs = () => {
+    // новичку — панель по макету из пяти кнопок
+    if (begBarOn(app.store.state.settings)) { tabs.style.gridTemplateColumns = 'repeat(5,1fr)'; tabs.innerHTML = begBarHTML(view.tab); return; }
     const list = tabsNow();
     // вкладок может быть много (до 10): узкие — полоса прокручивается пальцем
     tabs.style.gridTemplateColumns = 'repeat(' + list.length + ',minmax(52px,1fr))';

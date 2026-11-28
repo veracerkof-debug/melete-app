@@ -1048,3 +1048,9 @@ html.desk .hstart .hfree{min-height:64px}
 .bgd.on{background:var(--ok)}
 .bgd.today{outline:2px solid var(--tint);outline-offset:1px}
 .bgmore{border:1px dashed var(--sep);background:transparent;color:var(--l2);border-radius:18px;padding:12px;font:inherit;font-size:13px;text-align:center;min-height:44px}
+.tabbar .bgtab{background:transparent;border:0;font:inherit;font-size:11px;font-weight:600;min-width:44px}
+.tabbar .bgtab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar .bgtab.on{color:var(--tint-text)}
+.tabbar .bggo{color:var(--l2)}
+.tabbar .bggo .bgpl{width:44px;height:44px;border-radius:22px;background:var(--tint);display:flex;align-items:center;justify-content:center;margin-top:-2px;box-shadow:0 4px 12px color-mix(in srgb,var(--tint) 40%,transparent)}
+.tabbar .bggo .bgpl svg{stroke:var(--on-tint);fill:var(--on-tint)}

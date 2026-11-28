@@ -27,3 +27,16 @@ test('новичок: «Инструменты» — пять плиток и п
   await page.click('.bggrid [data-open-tool="metro"]');
   await expect(page.locator('.mring, .metro, [data-tv]').first()).toBeVisible({ timeout: 5000 });
 });
+
+test('новичок: нижняя панель из пяти кнопок', async ({ page, melete, errors }) => {
+  await melete.open({ settings: { profile: { name: 'A', instruments: ['guitar'], level: 'beginner', priorHours: 0, createdAt: 1760000000000 } } });
+  await expect(page.locator('.tabbar .bgtab')).toHaveCount(5);
+  await page.click('.tabbar [data-tab="tools"]');
+  await expect(page.locator('.bggrid')).toBeVisible();
+  await page.click('.tabbar [data-tab="home"]');
+  await expect(page.locator('.bgnext')).toBeVisible();
+  await page.screenshot({ path: 'test-results/beg-home-bar.png' });
+  await page.click('.tabbar [data-act="panel"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'test-results/beg-bar.png' });
+});

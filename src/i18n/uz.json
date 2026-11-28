@@ -3306,5 +3306,10 @@
   "beg.allDone": "Barcha darslar tugadi",
   "beg.lesson": "{n}-dars",
   "beg.of": "{n}-dars, jami {m}",
-  "beg.hidden": "Boshqa asboblar yashirin. Ochish: Funksiyalar"
+  "beg.hidden": "Boshqa asboblar yashirin. Ochish: Funksiyalar",
+  "beg.tabToday": "Bugun",
+  "beg.tabBook": "Darslik",
+  "beg.tabPlay": "Chalish",
+  "beg.tabTools": "Asboblar",
+  "beg.tabMore": "Yana"
 }

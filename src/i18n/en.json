@@ -3345,5 +3345,10 @@
   "beg.allDone": "All lessons done",
   "beg.lesson": "Lesson {n}",
   "beg.of": "Lesson {n} of {m}",
-  "beg.hidden": "Other tools are hidden. Open: Features"
+  "beg.hidden": "Other tools are hidden. Open: Features",
+  "beg.tabToday": "Today",
+  "beg.tabBook": "Book",
+  "beg.tabPlay": "Play",
+  "beg.tabTools": "Tools",
+  "beg.tabMore": "More"
 }
