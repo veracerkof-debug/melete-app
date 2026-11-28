@@ -403,6 +403,8 @@ export function boot(root) {
   app.folder = initFolder(app);
   // источники песен (папки Holyrics и др., только чтение): тихое обновление после запуска
   import('./screens/songsource.js').then((m) => m.initSongSources(app)).catch(() => {});
+  // профили вывода: уровни и эквалайзер под устройство (Bluetooth, наушники…) включаются сами
+  import('./screens/profiles.js').then((m) => m.initProfiles(app)).catch(() => {});
   // компьютер (Tauri): файлы, открытые двойным щелчком, F11
   initDesktop(app);
   // Компьютер: поиск Ctrl K и клавиши (screens/palette.js)

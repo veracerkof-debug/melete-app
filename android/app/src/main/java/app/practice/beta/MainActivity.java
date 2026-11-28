@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GuardPlugin.class);
         registerPlugin(SharePlugin.class);
         registerPlugin(FolderPlugin.class);
+        registerPlugin(AudioRoutePlugin.class);
         registerPlugin(VoicePlugin.class);
         registerPlugin(IconPlugin.class);
         registerPlugin(MidiPlugin.class);

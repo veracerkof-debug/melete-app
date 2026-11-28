@@ -261,6 +261,7 @@ function soundHTML(app) {
     '<div class="cellcol">' + lseg('sndalgo', [['melete', 'Melete'], ['galactic', 'Galactic'], ['verbity', 'Verbity']], app.audio.mixer.verbAlgo, t('snd.algo')) + '<div class="segcap">' + t('snd.algoHint') + '</div></div></div>' +
     '<p class="ftr">' + t('snd.hint') + '</p>' +
     (app.audio.outputs && app.audio.outputs.supported() ? '<div class="group"><button class="cell act" data-act="sndout"><span class="grow">' + t('snd.out') + '</span><span class="val l2" data-sndoutn>' + esc(app.audio.outputs.id ? t('snd.outSel') : t('snd.outAuto')) + '</span></button></div><p class="ftr">' + t('snd.outHint') + '</p>' : '') +
+    '<div class="group"><button class="cell act" data-act="sndprof"><span class="grow">' + t('prof.title') + '</span><span class="val l2">' + t('prof.sub') + '</span></button></div>' +
     '';
 }
 
@@ -941,6 +942,7 @@ export function createPanel(app, onChange) {
       if ((b = g('[data-act="glead"]'))) { app.guest.lead(b.dataset.k); return; }
       if (g('[data-act="ens"]')) { app.ensemble(); return; }
       if (g('[data-act="sndout"]')) { outSheet(app, () => render()); return; }
+      if (g('[data-act="sndprof"]')) { import('./profiles.js').then((m) => m.profilesSheet(app, () => render())); return; }
       if (g('[data-act="upd"]')) { updateSheet(app); return; }
       if (g('[data-act="scen"]')) { globalThis.__SCEN__.set(g('[data-act="scen"]').dataset.v); location.reload(); return; }
       if ((b = g('[data-act="gd"]'))) { gdriveAct(app, b.dataset.v, render); return; }
